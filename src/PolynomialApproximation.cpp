@@ -151,6 +151,14 @@ void PolynomialApproximation::response_data_to_surplus_data()
 }
 
 
+void PolynomialApproximation::clear_inactive()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.clear_inactive();
+}
+
+
 void PolynomialApproximation::
 integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
 		  RealVector& moments)

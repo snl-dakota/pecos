@@ -313,9 +313,7 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
 void HierarchInterpPolyApproximation::clear_inactive()
 {
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.clear_inactive();
+  PolynomialApproximation::clear_inactive();
 
   std::map<UShortArray, RealVector2DArray>::iterator e1c_it
     = expansionType1Coeffs.begin();

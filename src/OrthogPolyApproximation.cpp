@@ -49,10 +49,7 @@ void OrthogPolyApproximation::allocate_arrays()
 
 void OrthogPolyApproximation::clear_inactive()
 {
-  // mirror operations already performed on origSurrData for a
-  // disconnected/deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.clear_inactive();
+  PolynomialApproximation::clear_inactive();
 
   std::map<UShortArray, RealVector>::iterator ec_it = expansionCoeffs.begin();
   std::map<UShortArray, RealMatrix>::iterator eg_it

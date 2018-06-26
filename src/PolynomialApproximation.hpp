@@ -245,6 +245,8 @@ protected:
   const SurrogateData& surrogate_data() const;
   SurrogateData& surrogate_data();
 
+  void clear_inactive();
+
   void compute_coefficients();
 
   /// generic base class function mapped to gradient_basis_variables(x)

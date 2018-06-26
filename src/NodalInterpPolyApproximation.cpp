@@ -102,11 +102,114 @@ void NodalInterpPolyApproximation::compute_coefficients()
 }
 
 
-void NodalInterpPolyApproximation::clear_inactive()
+void NodalInterpPolyApproximation::increment_coefficients()
+{
+  synchronize_surrogate_data(); // TO DO: update_surrogate_data() ?
+
+  update_expansion_coefficients(); // updates iterators, clears computed bits
+
+  allocate_component_sobol();
+}
+
+
+void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
   // mirror changes to origSurrData for deep copied surrData
   if (deep_copied_surrogate_data())
-    surrData.clear_inactive();
+    surrData.pop(save_data);
+
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
+
+  size_t new_colloc_pts = surrData.points();
+  if (expansionCoeffFlag) {
+    RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
+    exp_t1_coeffs.resize(new_colloc_pts);
+    if (data_rep->basisConfigOptions.useDerivs) {
+      RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
+      size_t num_deriv_vars = exp_t2_coeffs.numRows();
+      exp_t2_coeffs.reshape(num_deriv_vars, new_colloc_pts);//prune trailing pts
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
+    size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
+    exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);// prune trailing
+  }
+
+  clear_computed_bits();
+}
+
+
+void NodalInterpPolyApproximation::push_coefficients()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data()) {
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    surrData.push(data_rep->retrieval_index());
+  }
+
+  update_expansion_coefficients(); // updates iterators, clears computed bits
+}
+
+
+void NodalInterpPolyApproximation::finalize_coefficients()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data()) {
+    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    for (i=0; i<num_popped; ++i)
+      surrData.push(data_rep->finalization_index(i), false);
+    surrData.clear_active_popped(); // only after process completed
+  }
+
+  update_expansion_coefficients(); // updates iterators, clears computed bits
+}
+
+
+void NodalInterpPolyApproximation::update_expansion_coefficients()
+{
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
+
+  size_t index, old_colloc_pts, new_colloc_pts = surrData.points();
+  const SDRArray& sdr_array = surrData.response_data();
+  if (expansionCoeffFlag) {
+    RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
+    RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
+    old_colloc_pts = exp_t1_coeffs.length();
+    exp_t1_coeffs.resize(new_colloc_pts);
+    if (data_rep->basisConfigOptions.useDerivs) {
+      size_t num_deriv_vars = exp_t2_coeffs.numRows();
+      exp_t2_coeffs.reshape(num_deriv_vars, new_colloc_pts);
+    }
+    index = old_colloc_pts;
+    for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index) {
+      const SurrogateDataResp& sdr = sdr_array[index];
+      exp_t1_coeffs[i] = sdr.response_function();
+      if (data_rep->basisConfigOptions.useDerivs)
+	Teuchos::setCol(sdr.response_gradient(), i, exp_t2_coeffs);
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
+    old_colloc_pts = exp_t1_coeff_grads.numCols();
+    size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
+    exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);
+    index = old_colloc_pts;
+    for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index)
+      Teuchos::setCol(sdr_array[index].response_gradient(), i,
+		      exp_t1_coeff_grads);
+  }
+
+  clear_computed_bits();
+}
+
+
+void NodalInterpPolyApproximation::clear_inactive()
+{
+  PolynomialApproximation::clear_inactive();
 
   std::map<UShortArray, RealVector>::iterator e1c_it
     = expansionType1Coeffs.begin();
@@ -290,111 +393,6 @@ void NodalInterpPolyApproximation::combined_to_active()
 
   // resize sobolIndices to sync with resize of sobolIndexMap
   allocate_component_sobol();
-
-  clear_computed_bits();
-}
-
-
-void NodalInterpPolyApproximation::increment_coefficients()
-{
-  synchronize_surrogate_data(); // TO DO: update_surrogate_data() ?
-
-  update_expansion_coefficients(); // updates iterators, clears computed bits
-
-  allocate_component_sobol();
-}
-
-
-void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.pop(save_data);
-
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  update_active_iterators(data_rep->activeKey);
-
-  size_t new_colloc_pts = surrData.points();
-  if (expansionCoeffFlag) {
-    RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
-    exp_t1_coeffs.resize(new_colloc_pts);
-    if (data_rep->basisConfigOptions.useDerivs) {
-      RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
-      size_t num_deriv_vars = exp_t2_coeffs.numRows();
-      exp_t2_coeffs.reshape(num_deriv_vars, new_colloc_pts);//prune trailing pts
-    }
-  }
-  if (expansionCoeffGradFlag) {
-    RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-    size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
-    exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);// prune trailing
-  }
-
-  clear_computed_bits();
-}
-
-
-void NodalInterpPolyApproximation::finalize_coefficients()
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-    for (i=0; i<num_popped; ++i)
-      surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_active_popped(); // only after process completed
-  }
-
-  update_expansion_coefficients(); // updates iterators, clears computed bits
-}
-
-
-void NodalInterpPolyApproximation::push_coefficients()
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data()) {
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-    surrData.push(data_rep->retrieval_index());
-  }
-
-  update_expansion_coefficients(); // updates iterators, clears computed bits
-}
-
-
-void NodalInterpPolyApproximation::update_expansion_coefficients()
-{
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  update_active_iterators(data_rep->activeKey);
-
-  size_t index, old_colloc_pts, new_colloc_pts = surrData.points();
-  const SDRArray& sdr_array = surrData.response_data();
-  if (expansionCoeffFlag) {
-    RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
-    RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
-    old_colloc_pts = exp_t1_coeffs.length();
-    exp_t1_coeffs.resize(new_colloc_pts);
-    if (data_rep->basisConfigOptions.useDerivs) {
-      size_t num_deriv_vars = exp_t2_coeffs.numRows();
-      exp_t2_coeffs.reshape(num_deriv_vars, new_colloc_pts);
-    }
-    index = old_colloc_pts;
-    for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index) {
-      const SurrogateDataResp& sdr = sdr_array[index];
-      exp_t1_coeffs[i] = sdr.response_function();
-      if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(sdr.response_gradient(), i, exp_t2_coeffs);
-    }
-  }
-  if (expansionCoeffGradFlag) {
-    RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-    old_colloc_pts = exp_t1_coeff_grads.numCols();
-    size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
-    exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);
-    index = old_colloc_pts;
-    for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index)
-      Teuchos::setCol(sdr_array[index].response_gradient(), i,
-		      exp_t1_coeff_grads);
-  }
 
   clear_computed_bits();
 }
