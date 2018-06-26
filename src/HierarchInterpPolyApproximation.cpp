@@ -1743,6 +1743,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
 
+  /*
   // delta_combined_covariance() cannot leverage surrData for r1r2 and must
   // form an interpolant for r1 * r2 using the combined coefficients:
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
@@ -1755,20 +1756,18 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 		      r1r2_t1_coeffs, r1r2_t2_coeffs);//, incr_key);
   // only need expectation of R1R2 on incr_key, but product interpolant is
   // nonlinear and we form hierarchical evaluations based on deltaR1R2
-
-  /*
-  // *** Even with origSurrData, this is not sufficient as we do not have
-  //     Q^{HF} at all values on the combined grid.
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
-  // only need expectation of R1R2 on incr_key, but product interpolant is
-  // nonlinear and we form hierarchical evaluations based on deltaR1R2
   */
+  
+  // Short cut: change in R^2 interpolant can be restricted to active expansion
+  // --> use original surrData (containing Q^l) to compute hierarchical
+  // differences in product interpolant
+  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
+  product_interpolant(hip_approx_2, false, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   return delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
 			  hip_approx_2->expansionType1Coeffs,
 			  hip_approx_2->expansionType2Coeffs, same,
-			  r1r2_t1_coeffs, r1r2_t2_coeffs, // ***
+			  r1r2_t1_coeffs, r1r2_t2_coeffs,// only active contribs
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(),
 			  data_rep->activeKey, ref_key_map, incr_key_map);
@@ -1788,15 +1787,16 @@ delta_combined_covariance(const RealVector& x,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
-  //std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
-  //hsg_driver->partition_keys(ref_key_map, incr_key_map);
+  //UShort2DArray ref_key, incr_key;
+  //hsg_driver->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  hsg_driver->partition_keys(ref_key_map, incr_key_map);
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
 
+  /*
   // delta_combined_covariance() cannot leverage surrData for r1r2 and must
   // form interpolants for r1 and r2 using the combined coefficients:
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
@@ -1810,11 +1810,29 @@ delta_combined_covariance(const RealVector& x,
                       //, incr_key);
   // only need expectation of R1R2 on incr_key, but product interpolant is
   // nonlinear and we form hierarchical evaluations based on deltaR1R2
+  */
+  
+  // Short cut: change in R^2 interpolant can be restricted to active expansion
+  // since shifted reference point cancels out when interpolating R^2 via
+  // hierarchical differences --> use original surrData (containing Q^l) to
+  // compute these hierarchical differences in the product interpolant for the
+  // active model key.
+  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
+  product_interpolant(hip_approx_2, false, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
+  return delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
+			  hip_approx_2->expansionType1Coeffs,
+			  hip_approx_2->expansionType2Coeffs, same,
+			  r1r2_t1_coeffs, r1r2_t2_coeffs,// only active contribs
+			  hsg_driver->smolyak_multi_index_map(),
+			  hsg_driver->collocation_key_map(),
+			  data_rep->activeKey, ref_key_map, incr_key_map);
+  /*
   return delta_covariance(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-			  comb_t1c_2, comb_t2c_2, same, r1r2_t1_coeffs,
-			  r1r2_t2_coeffs, comb_sm_mi, comb_key,
-			  ref_key, incr_key);
+			  comb_t1c_2, comb_t2c_2, same,
+			  r1r2_t1_coeffs, r1r2_t2_coeffs,// only active contribs
+			  comb_sm_mi, comb_key, ref_key, incr_key);
+  */
 }
 
 
@@ -1859,7 +1877,8 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
 		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
-		 bool same, const RealVector2DArray& r1r2_t1c, // *** Verify
+		 bool same,
+		 const RealVector2DArray& r1r2_t1c, // *** Verify sufficient
 		 const RealMatrix2DArray& r1r2_t2c, // *** Verify sufficient
 		 const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
@@ -1910,7 +1929,7 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
   }
   Real delta_mean_r1r2 =
     expectation(r1r2_t1c, r1r2_t2c, active_t1_wts, active_t2_wts,
-		active_incr_key); // shortcut  *** Verify!
+		active_incr_key); // shortcut
 
   // Hierarchical increment to covariance:
   // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
@@ -1959,8 +1978,9 @@ delta_covariance(const RealVector& x,
 		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
 		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
-		 bool same, const RealVector2DArray& r1r2_t1c,
-		 const RealMatrix2DArray& r1r2_t2c,
+		 bool same,
+		 const RealVector2DArray& r1r2_t1c, // *** Verify sufficient
+		 const RealMatrix2DArray& r1r2_t2c, // *** Verify sufficient
 		 const std::map<UShortArray, UShort3DArray>& sm_mi_map,
 		 const std::map<UShortArray, UShort4DArray>& colloc_key_map,
 		 const UShortArray& active_key,
@@ -2585,8 +2605,9 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   }
 
 #ifdef DEBUG
-  PCout << "Product interpolant type1 coeffs:\n" << r1r2_t1_coeffs
-	<< "Product interpolant type2 coeffs:\n" << r1r2_t2_coeffs << std::endl;
+  PCout << "Product interpolant type1 coeffs:\n" << r1r2_t1_coeffs;
+  if (data_rep->basisConfigOptions.useDerivs)
+    PCout << "Product interpolant type2 coeffs:\n" << r1r2_t2_coeffs;
 #endif // DEBUG
 }
 
@@ -2711,8 +2732,9 @@ product_interpolant(const RealMatrix2DArray& var_sets,
   }
 
 #ifdef DEBUG
-  PCout << "Product interpolant type1 coeffs:\n" << r1r2_t1_coeffs
-	<< "Product interpolant type2 coeffs:\n" << r1r2_t2_coeffs << std::endl;
+  PCout << "Product interpolant type1 coeffs:\n" << r1r2_t1_coeffs;
+  if (data_rep->basisConfigOptions.useDerivs)
+    PCout << "Product interpolant type2 coeffs:\n" << r1r2_t2_coeffs;
 #endif // DEBUG
 }
 
@@ -2917,9 +2939,9 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   }
 
 #ifdef DEBUG
-  PCout << "Central product interpolant type1 coeffs:\n" << cov_t1_coeffs
-	<< "Central product interpolant type2 coeffs:\n" << cov_t2_coeffs
-	<< std::endl;
+  PCout << "Central product interpolant type1 coeffs:\n" << cov_t1_coeffs;
+  if (data_rep->basisConfigOptions.useDerivs)
+    PCout << "Central product interpolant type2 coeffs:\n" << cov_t2_coeffs;
 #endif // DEBUG
 }
 
@@ -3037,9 +3059,9 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
   }
 
 #ifdef DEBUG
-  PCout << "Central product interpolant type1 coeffs:\n" << cov_t1_coeffs
-	<< "Central product interpolant type2 coeffs:\n" << cov_t2_coeffs
-	<< std::endl;
+  PCout << "Central product interpolant type1 coeffs:\n" << cov_t1_coeffs;
+  if (data_rep->basisConfigOptions.useDerivs)
+    PCout << "Central product interpolant type2 coeffs:\n" << cov_t2_coeffs;
 #endif // DEBUG
 }
 

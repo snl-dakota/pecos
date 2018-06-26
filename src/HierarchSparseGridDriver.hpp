@@ -143,6 +143,8 @@ public:
   void collocation_key(const UShort4DArray& key);
   /// return collocKey[key]
   const UShort4DArray& collocation_key(const UShortArray& key) const;
+  /// return collocKey
+  const std::map<UShortArray, UShort4DArray>& collocation_key_map() const;
 
   /// return active entry in collocIndices
   const Sizet3DArray& collocation_indices() const;
@@ -454,6 +456,11 @@ collocation_key(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline const std::map<UShortArray, UShort4DArray>& HierarchSparseGridDriver::
+collocation_key_map() const
+{ return collocKey; }
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
