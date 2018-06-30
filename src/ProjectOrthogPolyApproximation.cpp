@@ -57,7 +57,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
 void ProjectOrthogPolyApproximation::integration_checks()
 {
-  if (surrData.anchor()) {
+  if (modSurrData.anchor()) {
     PCerr << "Error: anchor point not supported for numerical integration in "
 	  << "ProjectOrthogPolyApproximation." << std::endl;
     abort_handler(-1);
@@ -70,7 +70,7 @@ void ProjectOrthogPolyApproximation::integration_checks()
 	  << "ProjectOrthogPolyApproximation." << std::endl;
     abort_handler(-1);
   }
-  size_t num_data_pts = surrData.points(),
+  size_t num_data_pts = modSurrData.points(),
          num_grid_pts = driver_rep->grid_size();
   if (num_data_pts != num_grid_pts) {
     PCerr << "Error: number of current points (" << num_data_pts << ") is "
@@ -101,7 +101,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
 
   // calculate polynomial chaos coefficients
   size_t i, num_v = sharedDataRep->numVars,
-    num_data_pts = surrData.points();
+    num_data_pts = modSurrData.points();
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     // verify quad_order stencil matches num_data_pts
@@ -125,8 +125,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
 
     // single expansion integration
     integration_checks();
-    integrate_expansion(data_rep->multi_index(), surrData.variables_data(),
-			surrData.response_data(),
+    integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
+			modSurrData.response_data(),
 			tpq_driver->type1_weight_sets(),
 			expCoeffsIter->second, expCoeffGradsIter->second);
     break;
@@ -135,8 +135,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     // single expansion integration
     integration_checks();
     CubatureDriver* cub_driver = (CubatureDriver*)data_rep->driver();
-    integrate_expansion(data_rep->multi_index(), surrData.variables_data(),
-			surrData.response_data(),
+    integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
+			modSurrData.response_data(),
 			cub_driver->type1_weight_sets(),
 			expCoeffsIter->second, expCoeffGradsIter->second);
     break;
@@ -185,7 +185,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     break;
   }
   case SAMPLING:
-    surrData.data_checks();
+    modSurrData.data_checks();
     expectation();
     break;
   default:
@@ -275,10 +275,10 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
 
 void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror operations already performed on origSurrData for a surrData
+  // mirror operations already performed on origSurrData for a modSurrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
-    surrData.pop(save_data);
+    modSurrData.pop(save_data);
 
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
@@ -343,10 +343,10 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
 
-  // mirror operations already performed on origSurrData for a surrData
+  // mirror operations already performed on origSurrData for a modSurrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
-    surrData.push(data_rep->retrieval_index());
+    modSurrData.push(data_rep->retrieval_index());
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -415,13 +415,13 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
 
-  // mirror operations already performed on origSurrData for a surrData
+  // mirror operations already performed on origSurrData for a modSurrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
     for (i=0; i<num_popped; ++i)
-      surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_active_popped(); // only after process completed
+      modSurrData.push(data_rep->finalization_index(i), false);
+    modSurrData.clear_active_popped(); // only after process completed
   }
 
   // synchronize expansionCoeff{s,Grads} and approxData
@@ -532,7 +532,8 @@ void ProjectOrthogPolyApproximation::
 integration_data(size_t tp_index, SDVArray& tp_data_vars,
 		 SDRArray& tp_data_resp, RealVector& tp_weights)
 {
-  // extract tensor vars/resp from surrData and tensor wts from type1CollocWts1D
+  // extract tensor vars/resp from modSurrData and tensor wts from
+  // type1CollocWts1D
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   CombinedSparseGridDriver* csg_driver
@@ -541,8 +542,8 @@ integration_data(size_t tp_index, SDVArray& tp_data_vars,
   const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = csg_driver->collocation_indices()[tp_index];
   const Real3DArray& colloc_wts_1d = csg_driver->type1_collocation_weights_1d();
-  const SDVArray& data_vars = surrData.variables_data();
-  const SDRArray& data_resp = surrData.response_data();
+  const SDVArray& data_vars = modSurrData.variables_data();
+  const SDRArray& data_resp = modSurrData.response_data();
   size_t i, j, index, num_tp_pts = colloc_index.size(),
     num_v = sharedDataRep->numVars;
   tp_data_vars.resize(num_tp_pts); tp_data_resp.resize(num_tp_pts);
@@ -676,14 +677,15 @@ void ProjectOrthogPolyApproximation::expectation()
   RealVector& exp_coeffs      = expCoeffsIter->second;
   RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
 
-  const SDVArray& sdv_array   = surrData.variables_data();
-  const SDRArray& sdr_array   = surrData.response_data();
+  const SDVArray& sdv_array   = modSurrData.variables_data();
+  const SDRArray& sdr_array   = modSurrData.response_data();
 
   // "lhs" or "random", no weights needed
-  size_t i, j, k, num_surr_data_pts = surrData.points(), num_failed_surr_fn = 0,
-    num_failed_surr_grad = 0, num_deriv_vars = exp_coeff_grads.numRows();
+  size_t i, j, k, num_deriv_vars = exp_coeff_grads.numRows(),
+    num_surr_data_pts = modSurrData.points(), num_failed_surr_fn = 0,
+    num_failed_surr_grad = 0;
   SizetShortMap::const_iterator fit;
-  const SizetShortMap& failed_resp_data = surrData.failed_response_data();
+  const SizetShortMap& failed_resp_data = modSurrData.failed_response_data();
   for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
     if (fit->second & 1) ++num_failed_surr_fn;
     if (fit->second & 2) ++num_failed_surr_grad;
@@ -794,8 +796,8 @@ void ProjectOrthogPolyApproximation::
 integrate_response_moments(size_t num_moments)
 {
   // define data_coeffs
-  size_t i, num_pts = surrData.points();
-  const SDRArray& sdr_array = surrData.response_data();
+  size_t i, num_pts = modSurrData.points();
+  const SDRArray& sdr_array = modSurrData.response_data();
   RealVector data_coeffs(num_pts);
   for (i=0; i<num_pts; ++i)
     data_coeffs[i] = sdr_array[i].response_function();
@@ -807,7 +809,7 @@ integrate_response_moments(size_t num_moments)
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
   std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
   if (combine_type) {
-    const SDVArray& sdv_array = surrData.variables_data();
+    const SDVArray& sdv_array = modSurrData.variables_data();
     std::map<UShortArray, RealVector>::const_iterator ec_cit;
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
 	 ++ec_cit, ++mi_cit)

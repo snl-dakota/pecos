@@ -434,7 +434,7 @@ private:
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void push_coefficients(const UShortArray& push_set);
 
-  /// helper function for common case where coefficients and surrData
+  /// helper function for common case where coefficients and modSurrData
   /// are synchronized
   void integrate_response_moments(size_t num_moments,
 				  const UShort3DArray& sm_mi,
@@ -442,8 +442,8 @@ private:
 				  const Sizet3DArray&  colloc_index,
 				  const SDVArray& sdv_array,
 				  const SDRArray& sdr_array);
-  /// helper function for expansion combination case surrData does not span
-  /// the aggregate set of combined terms
+  /// helper function for expansion combination case where modSurrData
+  /// does not span the aggregate set of combined terms
   void integrate_response_moments(size_t num_moments,
 				  const RealMatrix2DArray& var_sets,
 				  const UShort3DArray&     sm_mi,
@@ -643,9 +643,9 @@ integrate_response_moments(size_t num_moments)
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
 
   // if expansions have been combined, there is no consolidated colloc_index
-  // --> surrData access is replaced with value()/gradient_bases_variables()
+  // --> modSurrData access is replaced with value()/gradient_bases_variables()
   // combined_to_active() should precede this call -> can use active coeffs/wts,
-  // but rely on combinedVarSets instead of surrData variables
+  // but rely on combinedVarSets instead of modSurrData variables
   // *** TO DO: cleaner logic, unification, etc.
   if (data_rep->expConfigOptions.combineType &&
       !data_rep->combinedVarSets.empty())
@@ -655,10 +655,10 @@ integrate_response_moments(size_t num_moments)
       expT1CoeffsIter->second, expT2CoeffsIter->second,
       hsg_driver->type1_hierarchical_weight_sets(),
       hsg_driver->type2_hierarchical_weight_sets());
-  else // colloc_index is valid -> can pull from surrData variables/responses
+  else // colloc_index is valid -> can pull from modSurrData variables/responses
     integrate_response_moments(num_moments, hsg_driver->smolyak_multi_index(),
       hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
-      surrData.variables_data(), surrData.response_data());
+      modSurrData.variables_data(), modSurrData.response_data());
 }
 
 

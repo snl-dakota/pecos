@@ -248,39 +248,75 @@ const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
 }
 
 
-void BasisApproximation::surrogate_data(const SurrogateData& data)
+void BasisApproximation::original_surrogate_data(const SurrogateData& data)
 {
   if (basisApproxRep)
-    basisApproxRep->surrogate_data(data);
+    basisApproxRep->original_surrogate_data(data);
   else {
-    PCerr << "Error: surrogate_data(SurrogateData&) not available for this "
-	  << "basis approximation type." << std::endl;
+    PCerr << "Error: original_surrogate_data(SurrogateData&) not available "
+	  << "for this basis approximation type." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-const SurrogateData& BasisApproximation::surrogate_data() const
+const SurrogateData& BasisApproximation::original_surrogate_data() const
 {
   if (!basisApproxRep) {
-    PCerr << "Error: surrogate_data() not available for this basis "
+    PCerr << "Error: original_surrogate_data() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
 
-  return basisApproxRep->surrogate_data();
+  return basisApproxRep->original_surrogate_data();
 }
 
 
-SurrogateData& BasisApproximation::surrogate_data()
+SurrogateData& BasisApproximation::original_surrogate_data()
 {
   if (!basisApproxRep) {
-    PCerr << "Error: surrogate_data() not available for this basis "
+    PCerr << "Error: original_surrogate_data() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
 
-  return basisApproxRep->surrogate_data();
+  return basisApproxRep->original_surrogate_data();
+}
+
+
+void BasisApproximation::modified_surrogate_data(const SurrogateData& data)
+{
+  if (basisApproxRep)
+    basisApproxRep->modified_surrogate_data(data);
+  else {
+    PCerr << "Error: modified_surrogate_data(SurrogateData&) not available "
+	  << "for this basis approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+const SurrogateData& BasisApproximation::modified_surrogate_data() const
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: modified_surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return basisApproxRep->modified_surrogate_data();
+}
+
+
+SurrogateData& BasisApproximation::modified_surrogate_data()
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: modified_surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return basisApproxRep->modified_surrogate_data();
 }
 
 

@@ -32,19 +32,19 @@ void PolynomialApproximation::compute_coefficients()
     return;
   }
 
-  // update surrData from origSurrData
+  // update modSurrData from origSurrData
   synchronize_surrogate_data();
 
   // For testing of anchor point logic:
-  //surrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
+  //modSurrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
 
   // anchor point, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/*_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  if (!surrData.points()) {
-    PCerr << "Error: nonzero number of sample points required in Polynomia"
+  if (!modSurrData.points()) {
+    PCerr << "Error: nonzero number of sample points required in Polynomial"
 	  << "Approximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
@@ -53,13 +53,13 @@ void PolynomialApproximation::compute_coefficients()
 
 void PolynomialApproximation::synchronize_surrogate_data()
 {
-  // when using a recursive approximation, subtract current PCE prediction
-  // from the surrData so that we form a PCE on the surplus
+  // when using a recursive approximation, subtract current polynomial approx
+  // prediction from the modSurrData so that we form expansion on the surplus
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
     response_data_to_surplus_data();
-  else if (surrData.is_null())
-    surrData = origSurrData; // shared rep
+  else if (modSurrData.is_null())
+    modSurrData = origSurrData; // shared rep
 }
 
 
@@ -74,22 +74,22 @@ void PolynomialApproximation::response_data_to_surplus_data()
     = resp_data_map.find(key);
   if (cit == resp_data_map.begin() || // first entry -> no offsets
       cit == resp_data_map.end()) {   // key not found
-    surrData = origSurrData; // shared rep
+    modSurrData = origSurrData; // shared rep
     return;
   }
 
   // We will only modify the response to reflect hierarchical surpluses,
-  // so initialize surrData with shared vars and unique resp instances
-  surrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
+  // so initialize modSurrData with shared vars and unique resp instances
+  modSurrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
   // TO DO: do this more incrementally as data sets evolve across levels
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
   size_t i, num_pts = origSurrData.points();
-  const SDVArray&      sdv_array =     surrData.variables_data();// shallow copy
+  const SDVArray&      sdv_array =  modSurrData.variables_data();// shallow copy
   const SDRArray& orig_sdr_array = origSurrData.response_data();
-  SDRArray&            sdr_array =     surrData.response_data();
+  SDRArray&            sdr_array =  modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE:
@@ -112,7 +112,7 @@ void PolynomialApproximation::response_data_to_surplus_data()
   case MULT_COMBINE: {
     Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
     RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
-    size_t j, k, num_deriv_vars = surrData.num_derivative_variables();
+    size_t j, k, num_deriv_vars = modSurrData.num_derivative_variables();
     std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = sdv_array[i].continuous_variables();
@@ -153,9 +153,9 @@ void PolynomialApproximation::response_data_to_surplus_data()
 
 void PolynomialApproximation::clear_inactive()
 {
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data())
-    surrData.clear_inactive();
+    modSurrData.clear_inactive();
 }
 
 

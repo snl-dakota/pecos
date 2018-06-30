@@ -31,7 +31,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
   const UShort4DArray& colloc_key = data_rep->hsg_driver()->collocation_key();
   size_t i, j, k, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    num_deriv_v = surrData.num_derivative_variables();
+    num_deriv_v = modSurrData.num_derivative_variables();
 
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -68,7 +68,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 
   // checking num_points is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total
-  //size_t num_points = surrData.points();
+  //size_t num_points = modSurrData.points();
   //bool update_exp_form =
   //  ( (expansionCoeffFlag     && exp_t1_coeffs.length() != num_points) ||
   //    (expansionCoeffGradFlag && exp_t1_coeff_grads.numCols() != num_points));
@@ -107,7 +107,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, v, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    cntr = 0, c_index, num_deriv_vars = surrData.num_derivative_variables();
+    cntr = 0, c_index, num_deriv_vars = modSurrData.num_derivative_variables();
 
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -115,8 +115,8 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 
   // always use modified surrogate data to build interpolants for either
   // the base or discrepancy levels (according to the active key)
-  const SDVArray& sdv_array = surrData.variables_data();
-  const SDRArray& sdr_array = surrData.response_data();
+  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDRArray& sdr_array = modSurrData.response_data();
 
   // level 0
   c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
@@ -172,7 +172,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 }
 
 
-/** In this case, surrData is comprised of discrepancy data (for active 
+/** In this case, modSurrData is comprised of discrepancy data (for active 
     keys beyond the first) and we estimate hierarchical coefficients for 
     each key independent of all others.
 void HierarchInterpPolyApproximation::compute_distinct_coefficients()
@@ -224,9 +224,9 @@ void HierarchInterpPolyApproximation::increment_coefficients()
 
 void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data())
-    surrData.pop(save_data);
+    modSurrData.pop(save_data);
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -262,9 +262,9 @@ void HierarchInterpPolyApproximation::push_coefficients()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
 
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data())
-    surrData.push(data_rep->retrieval_index());
+    modSurrData.push(data_rep->retrieval_index());
 
   bool updated = update_active_iterators(data_rep->activeKey);
   if (updated) clear_all_computed_bits();
@@ -280,12 +280,12 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
 
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
     for (i=0; i<num_popped; ++i)
-      surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_active_popped(); // only after process completed
+      modSurrData.push(data_rep->finalization_index(i), false);
+    modSurrData.clear_active_popped(); // only after process completed
   }
 
   // synchronize expansionCoeff{s,Grads} and approxData
@@ -337,7 +337,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   if (deep_copied_surrogate_data())
-    surrData.active_key(data_rep->activeKey);
+    modSurrData.active_key(data_rep->activeKey);
 
   // Coefficient combination is not dependent on active state
   //bool updated = update_active_iterators(data_rep->activeKey);
@@ -349,7 +349,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   const UShort4DArray&   comb_key = data_rep->combinedCollocKey;
   const Sizet3DArray& comb_sm_map = data_rep->combinedSmolyakMultiIndexMap;
   size_t i, lev, set, pt, num_lev = comb_key.size(), num_sets, num_tp_pts,
-    num_v = surrData.num_derivative_variables();
+    num_v = modSurrData.num_derivative_variables();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   // Resize combined expansion arrays and initialize to zero.
@@ -477,8 +477,8 @@ increment_coefficients(const UShortArray& index_set)
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  const SDVArray& sdv_array = surrData.variables_data();
-  const SDRArray& sdr_array = surrData.response_data();
+  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDRArray& sdr_array = modSurrData.response_data();
 
   size_t lev, old_levels = exp_t1_coeffs.size(), set, old_sets,
     pt, old_pts = 0;
@@ -1034,7 +1034,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (same && std_mode && (computedVariance & 1))
     return numericalMoments[1];
 
-  // covariance() is for active expansion --> uses modified surrData
+  // covariance() is for active expansion --> uses modSurrData
   // (containing discrepancies) for computing central product interpolants:
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   Real mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
@@ -1076,7 +1076,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
        data_rep->match_nonrandom_vars(x, xPrevVar) )
     return numericalMoments[1];
 
-  // covariance(x) is for active expansion --> uses modified surrData
+  // covariance(x) is for active expansion --> uses modSurrData
   // (containing discrepancies) for computing central product interpolants:
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   Real mean_1 = mean(x), mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
@@ -1451,7 +1451,7 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
   if (std_mode && (computedDeltaVariance & 1))
     return deltaMoments[1];
 
-  // delta_variance() can leverage surrData for computing product interpolant:
+  // delta-Variance can leverage modSurrData for computing product interpolant
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(this, true, r1r2_t1_coeffs, r1r2_t2_coeffs);//, incr_key);
 
@@ -1480,7 +1480,7 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar))
     return deltaMoments[1];
 
-  // delta_variance() can leverage surrData for computing product interpolant:
+  // delta-Variance can leverage modSurrData for computing product interpolant
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(this, true, r1r2_t1_coeffs, r1r2_t2_coeffs);//, incr_key);
 
@@ -1662,7 +1662,7 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  // delta_covariance() is for active expansion --> uses modified surrData
+  // delta_covariance() is for active expansion --> uses modSurrData
   // (containing model discrepancies) for computing product interpolants:
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(hip_approx_2, true, r1r2_t1_coeffs, r1r2_t2_coeffs);
@@ -1704,7 +1704,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  // delta_covariance() is for active expansion --> uses modified surrData
+  // delta_covariance() is for active expansion --> uses modSurrData
   // (containing model discrepancies) for computing product interpolants:
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(hip_approx_2, true, r1r2_t1_coeffs, r1r2_t2_coeffs);
@@ -1742,7 +1742,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   bool same = (this == hip_approx_2);
 
   /*
-  // delta_combined_covariance() cannot leverage surrData for r1r2 and must
+  // delta_combined_covariance() cannot leverage modSurrData for r1r2 and must
   // form an interpolant for r1 * r2 using the combined coefficients:
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
@@ -1757,7 +1757,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   */
   
   // Short cut: change in R^2 interpolant can be restricted to active expansion
-  // --> use original surrData (containing Q^l) to compute hierarchical
+  // --> use original modSurrData (containing Q^l) to compute hierarchical
   // differences in product interpolant
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(hip_approx_2, false, r1r2_t1_coeffs, r1r2_t2_coeffs);
@@ -1795,7 +1795,7 @@ delta_combined_covariance(const RealVector& x,
   bool same = (this == hip_approx_2);
 
   /*
-  // delta_combined_covariance() cannot leverage surrData for r1r2 and must
+  // delta_combined_covariance() cannot leverage modSurrData for r1r2 and must
   // form interpolants for r1 and r2 using the combined coefficients:
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
@@ -1812,7 +1812,7 @@ delta_combined_covariance(const RealVector& x,
   
   // Short cut: change in R^2 interpolant can be restricted to active expansion
   // since shifted reference point cancels out when interpolating R^2 via
-  // hierarchical differences --> use original surrData (containing Q^l) to
+  // hierarchical differences --> use original modSurrData (containing Q^l) to
   // compute these hierarchical differences in the product interpolant for the
   // active model key.
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
@@ -2513,11 +2513,11 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !ref_key.empty();
   // Support original (R) or modified (DeltaR) data for product interpolants
-  const SurrogateData& surr_data = (mod_surr_data) ? surrData : origSurrData;
+  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : origSurrData;
   const SDVArray& sdv_array   = surr_data.variables_data();
   const SDRArray& sdr_array_1 = surr_data.response_data();
   const SDRArray& sdr_array_2 = (mod_surr_data) ?
-    hip_approx_2->surrData.response_data() :
+    hip_approx_2->modSurrData.response_data() :
     hip_approx_2->origSurrData.response_data();
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
@@ -2849,11 +2849,11 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !ref_key.empty();
   // Support original (R) or modified (DeltaR) data for product interpolants
-  const SurrogateData& surr_data = (mod_surr_data) ? surrData : origSurrData;
+  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : origSurrData;
   const SDVArray& sdv_array   = surr_data.variables_data();
   const SDRArray& sdr_array_1 = surr_data.response_data();
   const SDRArray& sdr_array_2 = (mod_surr_data) ?
-    hip_approx_2->surrData.response_data() :
+    hip_approx_2->modSurrData.response_data() :
     hip_approx_2->origSurrData.response_data();
 
   cov_t1_coeffs.resize(num_levels); cov_t1_coeffs[0].resize(1);
@@ -3083,11 +3083,11 @@ central_product_gradient_interpolant(
     num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !ref_key.empty();
   // Support original (R) or modified (DeltaR) data for product interpolants
-  const SurrogateData& surr_data = (mod_surr_data) ? surrData : origSurrData;
+  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : origSurrData;
   const SDVArray& sdv_array   = surr_data.variables_data();
   const SDRArray& sdr_array_1 = surr_data.response_data();
   const SDRArray& sdr_array_2 = (mod_surr_data) ?
-    hip_approx_2->surrData.response_data() :
+    hip_approx_2->modSurrData.response_data() :
     hip_approx_2->origSurrData.response_data();
 
   // level 0 (assume this is always contained in a partial ref_key)
@@ -3691,7 +3691,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	// member dimensions later used in value()/gradient_basis_variables().
 	m_t1_wts_ls[m_index] = member_wt;
 	m_index_ls[m_index]  = (colloc_index.empty()) ? p_cntr :
-	  colloc_index[lev][set][pt];   // links back to surrData c_vars
+	  colloc_index[lev][set][pt];   // links back to modSurrData c_vars
 	m_key_ls[m_index]    = key_lsp; // links back to interp polynomials
 
 	// now do the same for the type2 coeffs and weights

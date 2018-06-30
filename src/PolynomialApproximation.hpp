@@ -202,7 +202,7 @@ public:
   //- Heading: Member functions
   //
 
-  /// returns true if surrData is a deep copy of origSurrData
+  /// returns true if modSurrData is a deep copy of origSurrData
   bool deep_copied_surrogate_data() const;
 
   /// return expansionMoments
@@ -241,9 +241,13 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void surrogate_data(const SurrogateData& data);
-  const SurrogateData& surrogate_data() const;
-  SurrogateData& surrogate_data();
+  void original_surrogate_data(const SurrogateData& data);
+  const SurrogateData& original_surrogate_data() const;
+  SurrogateData& original_surrogate_data();
+
+  void modified_surrogate_data(const SurrogateData& data);
+  const SurrogateData& modified_surrogate_data() const;
+  SurrogateData& modified_surrogate_data();
 
   void clear_inactive();
 
@@ -258,10 +262,10 @@ protected:
   //- Heading: Member functions
   //
 
-  /// update surrData from origSurrData based on deep or shallow copy
+  /// update modSurrData from origSurrData based on deep or shallow copy
   void synchronize_surrogate_data();
   /// modify origSurrData to create hierarchical surplus response data
-  /// within surrData
+  /// within modSurrData
   void response_data_to_surplus_data();
 
   /// clear bits for current moments (updated from reference)
@@ -288,8 +292,9 @@ protected:
   /// potential manipulations by the approximation classes
   SurrogateData origSurrData;
   /// SurrogateData instance used in current approximation builds, potentially
-  /// reflecting data modifications relative to origSurrData
-  SurrogateData surrData;
+  /// reflecting data modifications (e.g., calculation of hierarchical surplus)
+  /// relative to origSurrData
+  SurrogateData modSurrData;
 
   /// flag for calculation of expansion coefficients from response values
   bool expansionCoeffFlag;
@@ -362,22 +367,38 @@ inline PolynomialApproximation::~PolynomialApproximation()
 { }
 
 
-inline const SurrogateData& PolynomialApproximation::surrogate_data() const
-{ return surrData; }
+inline const SurrogateData& PolynomialApproximation::
+original_surrogate_data() const
+{ return origSurrData; }
 
 
-inline SurrogateData& PolynomialApproximation::surrogate_data()
-{ return surrData; }
+inline SurrogateData& PolynomialApproximation::original_surrogate_data()
+{ return origSurrData; }
 
 
-inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
-{ surrData = origSurrData = data; /* shared representations */ }
+inline void PolynomialApproximation::
+original_surrogate_data(const SurrogateData& data)
+{ origSurrData = data; } // shared representations
+
+
+inline const SurrogateData& PolynomialApproximation::
+modified_surrogate_data() const
+{ return modSurrData; }
+
+
+inline SurrogateData& PolynomialApproximation::modified_surrogate_data()
+{ return modSurrData; }
+
+
+inline void PolynomialApproximation::
+modified_surrogate_data(const SurrogateData& data)
+{ modSurrData = data; /* shared representations */ }
 
 
 inline bool PolynomialApproximation::deep_copied_surrogate_data() const
 { 
   //return (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP);
-  return (surrData.data_rep() != origSurrData.data_rep());
+  return (modSurrData.data_rep() != origSurrData.data_rep());
 }
 
 

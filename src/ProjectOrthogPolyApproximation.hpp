@@ -88,7 +88,7 @@ private:
   //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
   //				        size_t tp_index);
 
-  /// extract tp_data_points from surrData and tp_weights from
+  /// extract tp_data_points from modSurrData and tp_weights from
   /// driverRep->type1CollocWts1D
   void integration_data(size_t tp_index, SDVArray& tp_data_vars,
 			SDRArray& tp_data_resp, RealVector& tp_weights);
@@ -108,7 +108,7 @@ private:
   void append_tensor_expansions(size_t start_index);
 
   /// update numericalMoments using numerical integration applied
-  /// directly to surrData
+  /// directly to modSurrData
   void integrate_response_moments(size_t num_moments);
 
   //

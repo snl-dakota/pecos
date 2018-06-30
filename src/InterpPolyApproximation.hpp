@@ -130,7 +130,7 @@ update_active_iterators(const UShortArray& key)
 {
   origSurrData.active_key(key);
   if (deep_copied_surrogate_data())
-    surrData.active_key(key);
+    modSurrData.active_key(key);
   return true;
 }
 

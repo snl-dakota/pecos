@@ -126,7 +126,7 @@ private:
   //
 
   /// update expansionType{1Coeffs,2Coeffs,1CoeffGrads} following
-  /// changes to surrData
+  /// changes to surrogate data
   void update_expansion_coefficients();
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs

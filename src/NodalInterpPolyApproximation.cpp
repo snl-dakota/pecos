@@ -29,8 +29,8 @@ void NodalInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  size_t num_colloc_pts = surrData.points(),
-    num_deriv_vars = surrData.num_derivative_variables();
+  size_t num_colloc_pts = modSurrData.points(),
+    num_deriv_vars = modSurrData.num_derivative_variables();
   if (expansionCoeffFlag) { // else coeff arrays not entered into maps
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     if (exp_t1_coeffs.length() != num_colloc_pts)
@@ -70,8 +70,8 @@ void NodalInterpPolyApproximation::compute_coefficients()
 
   allocate_arrays();
 
-  const SDRArray& sdr_array = surrData.response_data();
-  size_t c_index, num_colloc_pts = surrData.points(); int i;
+  const SDRArray& sdr_array = modSurrData.response_data();
+  size_t c_index, num_colloc_pts = modSurrData.points(); int i;
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -114,14 +114,14 @@ void NodalInterpPolyApproximation::increment_coefficients()
 
 void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data())
-    surrData.pop(save_data);
+    modSurrData.pop(save_data);
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
 
-  size_t new_colloc_pts = surrData.points();
+  size_t new_colloc_pts = modSurrData.points();
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     exp_t1_coeffs.resize(new_colloc_pts);
@@ -143,10 +143,10 @@ void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
 
 void NodalInterpPolyApproximation::push_coefficients()
 {
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data()) {
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-    surrData.push(data_rep->retrieval_index());
+    modSurrData.push(data_rep->retrieval_index());
   }
 
   update_expansion_coefficients(); // updates iterators, clears computed bits
@@ -155,13 +155,13 @@ void NodalInterpPolyApproximation::push_coefficients()
 
 void NodalInterpPolyApproximation::finalize_coefficients()
 {
-  // mirror changes to origSurrData for deep copied surrData
+  // mirror changes to origSurrData for deep copied modSurrData
   if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     for (i=0; i<num_popped; ++i)
-      surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_active_popped(); // only after process completed
+      modSurrData.push(data_rep->finalization_index(i), false);
+    modSurrData.clear_active_popped(); // only after process completed
   }
 
   update_expansion_coefficients(); // updates iterators, clears computed bits
@@ -173,8 +173,8 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
 
-  size_t index, old_colloc_pts, new_colloc_pts = surrData.points();
-  const SDRArray& sdr_array = surrData.response_data();
+  size_t index, old_colloc_pts, new_colloc_pts = modSurrData.points();
+  const SDRArray& sdr_array = modSurrData.response_data();
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -237,7 +237,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
   if (deep_copied_surrogate_data())
-    surrData.active_key(key);
+    modSurrData.active_key(key);
 
   // Coefficient combination is not dependent on active state, but active
   // iterators used below to avoid additional key lookups in stored_*()
@@ -251,8 +251,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
   std::map<UShortArray, RealVector>::iterator ec1_it;
   std::map<UShortArray, RealMatrix>::iterator ec2_it
     = expansionType2Coeffs.begin(), eg1_it = expansionType1CoeffGrads.begin();
-  const SDVArray& sdv_array = surrData.variables_data();
-  size_t p, v, num_pts = surrData.points(),
+  const SDVArray& sdv_array = modSurrData.variables_data();
+  size_t p, v, num_pts = modSurrData.points(),
     num_t2v = ec2_it->second.numRows(), num_t1v = eg1_it->second.numRows();
   if (combinedExpT1Coeffs.length() != num_pts)
     combinedExpT1Coeffs.size(num_pts);
@@ -3518,8 +3518,8 @@ integrate_expansion_moments(size_t num_moments)
   // of the interpolant (integrates powers of the interpolant using the same
   // collocation rules/orders used to form the interpolant).
   else {
-    size_t i, num_pts = surrData.points();
-    const SDVArray& sdv_array = surrData.variables_data();
+    size_t i, num_pts = modSurrData.points();
+    const SDVArray& sdv_array = modSurrData.variables_data();
     RealVector t1_exp(num_pts);
     if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native
       size_t num_v = data_rep->numVars;
@@ -3626,7 +3626,7 @@ member_integral(const BitArray& member_bits, Real mean)
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   //IntegrationDriver* driver_rep = data_rep->driverRep;
-  const SDVArray& sdv_array = surrData.variables_data();
+  const SDVArray& sdv_array = modSurrData.variables_data();
 
   size_t i, j, num_member_coeffs, num_v = sharedDataRep->numVars;
   SizetList member_indices;

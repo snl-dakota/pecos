@@ -204,7 +204,7 @@ protected:
 			  const UShort2DArray& multi_index_c,
 			  RealVector& exp_coeffs_c, RealMatrix& exp_grads_c);
 
-  /// update add_val and add_gradient based on surrData's failure map
+  /// update add_val and add_gradient based on failure map from SurrogateData
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		     bool& add_val, bool& add_grad);
 
@@ -309,7 +309,7 @@ update_active_iterators(const UShortArray& key)
 
   origSurrData.active_key(key);
   if (deep_copied_surrogate_data())
-    surrData.active_key(key);
+    modSurrData.active_key(key);
 }
 
 
@@ -529,7 +529,7 @@ size_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
       exp_coeffs.sizeUninitialized(num_exp_terms);
   }
   if (expansionCoeffGradFlag) {
-    size_t num_deriv_vars = surrData.num_derivative_variables();
+    size_t num_deriv_vars = modSurrData.num_derivative_variables();
     if (exp_coeff_grads.numRows() != num_deriv_vars ||
 	exp_coeff_grads.numCols() != num_exp_terms)
       exp_coeff_grads.shapeUninitialized(num_deriv_vars, num_exp_terms);
@@ -563,7 +563,7 @@ inline void OrthogPolyApproximation::
 fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 	      bool& add_val, bool& add_grad)
 {
-  if (fit != surrData.failed_response_data().end() && fit->first == j) {
+  if (fit != modSurrData.failed_response_data().end() && fit->first == j) {
     short fail_bits = fit->second;
     if (fail_bits & 1) add_val  = false;
     if (fail_bits & 2) add_grad = false;

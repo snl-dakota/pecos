@@ -57,11 +57,18 @@ public:
   virtual const RealSymMatrix& hessian(const RealVector& x);
 
   /// set PolynomialApproximation::origSurrData
-  virtual void surrogate_data(const SurrogateData& data);
-  /// get PolynomialApproximation::surrData (const)
-  virtual const SurrogateData& surrogate_data() const;
-  /// get PolynomialApproximation::surrData (non-const)
-  virtual SurrogateData& surrogate_data();
+  virtual void original_surrogate_data(const SurrogateData& data);
+  /// get PolynomialApproximation::origSurrData (const)
+  virtual const SurrogateData& original_surrogate_data() const;
+  /// get PolynomialApproximation::origSurrData (non-const)
+  virtual SurrogateData& original_surrogate_data();
+
+  /// set PolynomialApproximation::modSurrData
+  virtual void modified_surrogate_data(const SurrogateData& data);
+  /// get PolynomialApproximation::modSurrData (const)
+  virtual const SurrogateData& modified_surrogate_data() const;
+  /// get PolynomialApproximation::modSurrData (non-const)
+  virtual SurrogateData& modified_surrogate_data();
 
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
