@@ -264,9 +264,12 @@ protected:
 
   /// update modSurrData from origSurrData based on deep or shallow copy
   void synchronize_surrogate_data();
-  /// modify origSurrData to create hierarchical surplus response data
-  /// within modSurrData
+  /// compute hierarchical surpluses from the origSurrData response data
+  /// and store in modSurrData
   void response_data_to_surplus_data();
+  /// compute discrepancy data using origSurrData (HF) and modSurrData (LF)
+  /// and store in modSurrData (update from LF to discrepancy)
+  void response_data_to_discrepancy_data();
 
   /// clear bits for current moments (updated from reference)
   void clear_computed_bits();
