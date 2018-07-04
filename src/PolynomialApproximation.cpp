@@ -54,17 +54,6 @@ void PolynomialApproximation::compute_coefficients()
 void PolynomialApproximation::synchronize_surrogate_data()
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  // No modifications for first level or key not found
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = origSurrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator cit
-    = resp_data_map.find(data_rep->activeKey);
-  if (cit == resp_data_map.begin() || // first entry -> no discrepancy/surplus
-      cit == resp_data_map.end()) {   // key not found
-    modSurrData = origSurrData; // shared rep
-    return;
-  }
-
   switch (data_rep->expConfigOptions.discrepancyType) {
   case RECURSIVE_DISCREP:
     response_data_to_surplus_data();     break;
@@ -82,6 +71,18 @@ void PolynomialApproximation::synchronize_surrogate_data()
     prediction from the modSurrData so that we form expansion on the surplus */
 void PolynomialApproximation::response_data_to_surplus_data()
 {
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  // No modifications for first level or key not found
+  const std::map<UShortArray, SDRArray>& resp_data_map
+    = origSurrData.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
+  if (cit == resp_data_map.begin() || // first entry -> no discrepancy/surplus
+      cit == resp_data_map.end()) {   // key not found
+    modSurrData = origSurrData; // shared rep
+    return;
+  }
+
   // For this case, no vars/response data has yet been provided for modSurrData,
   // and it needs to be initialized here.  We will reuse the variables data and
   // modify the response data to reflect hierarchical surpluses --> initialize
@@ -92,11 +93,6 @@ void PolynomialApproximation::response_data_to_surplus_data()
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = origSurrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator cit;
   size_t i, num_pts = origSurrData.points();
   const SDVArray&      sdv_array =  modSurrData.variables_data();// shallow copy
   const SDRArray& orig_sdr_array = origSurrData.response_data();
@@ -166,6 +162,21 @@ void PolynomialApproximation::response_data_to_surplus_data()
 
 void PolynomialApproximation::response_data_to_discrepancy_data()
 {
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  // No modifications for first level or key not found, but keep origSurrData
+  // and modSurrData distinct (don't share reps) since copy() will not restore
+  // independence when it is needed.
+  const std::map<UShortArray, SDRArray>& resp_data_map
+    = origSurrData.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator cit
+    = resp_data_map.find(data_rep->activeKey);
+  if (cit == resp_data_map.begin()) {  // first entry -> no discrepancy/surplus
+    modSurrData.copy_active(origSurrData, SHALLOW_COPY, SHALLOW_COPY);
+    return;
+  }
+  else if (cit == resp_data_map.end()) // key not found
+    return;
+
   // For this case, vars/response data has been provided for modSurrData (the
   // variables data is shared and the response data is distinct), but it is in
   // raw form (i.e., modSurrData contains LF and origSurrData contains HF).
@@ -180,7 +191,6 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   const SDRArray& orig_sdr_array = origSurrData.response_data();
   SDRArray&        mod_sdr_array =  modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE:
     for (i=0; i<num_pts; ++i) {

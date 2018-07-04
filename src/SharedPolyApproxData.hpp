@@ -336,7 +336,6 @@ public:
   void configuration_options(const ExpansionConfigOptions& ec_options);
   /// set basisConfigOptions (instead of per option below)
   void configuration_options(const BasisConfigOptions& bc_options);
-
   /*
   /// set ExpansionConfigOptions::expCoeffsSolnApproach
   void solution_approach(short soln_approach);
@@ -373,6 +372,8 @@ public:
   /// get ExpansionConfigOptions::convergenceTol
   Real convergence_tolerance() const;
   */
+  /// get ExpansionConfigOptions::discrepancyType
+  short discrepancy_type() const;
 
   /// return sobolIndexMap
   const BitArrayULongMap& sobol_index_map() const;
@@ -636,6 +637,10 @@ inline void SharedPolyApproxData::convergence_tolerance(Real conv_tol)
 inline Real SharedPolyApproxData::convergence_tolerance() const
 { return expConfigOptions.convergenceTol; }
 */
+
+
+inline short SharedPolyApproxData::discrepancy_type() const
+{ return expConfigOptions.discrepancyType; }
 
 
 inline const BitArrayULongMap& SharedPolyApproxData::sobol_index_map() const
