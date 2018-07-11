@@ -730,7 +730,6 @@ private:
   std::map<UShortArray, SDVArray> varsData;
   /// iterator to active entry within varsData
   std::map<UShortArray, SDVArray>::iterator varsDataIter;
-
   /// database of reference response data sets, with lookup by model/level index
   std::map<UShortArray, SDRArray> respData;
   /// iterator to active entry within respData
@@ -750,6 +749,7 @@ private:
   /// the key is a multi-index managing multiple modeling dimensions
   /// such as model form, doscretization level, etc.
   UShortArray activeKey;
+
   /// index of anchor point within {vars,resp}Data, _NPOS if none; for now,
   /// we restrict anchor to reference data to simplify bookkeeping (assume
   /// anchor does not migrate within pushed/popped data)
@@ -758,46 +758,6 @@ private:
   /// map from failed respData indices to failed data bits; defined
   /// in sample_checks() and used for fault tolerance
   std::map<UShortArray, SizetShortMap> failedRespData;
-
-  /*
-  /// a set of variables samples used to build the approximation.
-  /// These sample points are fit approximately (e.g., using least
-  /// squares regression); exact matching is not enforced.
-  SDVArray varsData;
-  /// a set of response samples used to build the approximation.  These
-  /// sample points are fit approximately (e.g., using least squares
-  /// regression); exact matching is not enforced.
-  SDRArray respData;
-
-  /// sets of variables samples that have been popped off varsData but
-  /// which are available for future restoration.  The granularity of
-  /// this 2D array corresponds to multiple trial sets, each
-  /// contributing an SDVArray.
-  SDVArrayDeque poppedVarsTrials;
-  /// sets of response samples that have been popped off respData but
-  /// which are available for future restoration.  The granularity of
-  /// this 2D array corresponds to multiple trial sets, each
-  /// contributing a SDRArray.
-  SDRArrayDeque poppedRespTrials;
-  /// a stack managing the number of points previously appended that
-  /// can be removed by calls to pop()
-  SizetArray popCountStack;
-
-  /// a set of variables samples that have been stored for future
-  /// restoration.  The granularity of this 2D array corresponds to a
-  /// wholesale caching of the current varsData state, where each of
-  /// multiple cachings contributes an SDVArray.
-  SDVArrayDeque storedVarsData;
-  /// a set of response samples that have been stored for future
-  /// restoration.  The granularity of this 2D array corresponds to a
-  /// wholesale caching of the current respData state, where each of
-  /// multiple cachings contributes an SDRArray.
-  SDRArrayDeque storedRespData;
-
-  /// map from failed respData indices to failed data bits; defined
-  /// in sample_checks() and used for fault tolerance
-  SizetShortMap failedRespData;
-  */
 
   /// number of handle objects sharing sdRep
   int referenceCount;
@@ -1315,17 +1275,24 @@ inline void SurrogateData::pop(bool save_data)
 
   // harden logic for case of an empty SurrogateData (e.g.,
   // distinct discrepancy at level 0)
-  if (sdRep->popCountStack.empty()) {
+  const UShortArray& key = sdRep->activeKey;
+  std::map<UShortArray, SizetArray>::iterator it
+    = sdRep->popCountStack.find(key);
+  if (it == sdRep->popCountStack.end()) {
     if (num_ref_pts == 0)
       return; // assume inactive SurrogateData -> ignore pop request
     else {
-      PCerr << "\nError: empty count stack in SurrogateData::pop()."<<std::endl;
+      PCerr << "\nError: active count stack not found in SurrogateData::pop()."
+	    << std::endl;
       abort_handler(-1);
     }
   }
 
-  const UShortArray& key = sdRep->activeKey;
-  SizetArray& pop_count_stack = sdRep->popCountStack[key];
+  SizetArray& pop_count_stack = it->second;
+  if (pop_count_stack.empty()) {
+    PCerr << "\nError: empty count stack in SurrogateData::pop()." << std::endl;
+    abort_handler(-1);
+  }
   size_t num_pop_pts = pop_count_stack.back();
   if (num_pop_pts) {
     if (num_ref_pts < num_pop_pts) {
@@ -1573,7 +1540,16 @@ inline void SurrogateData::failed_response_data(const SizetShortMap& fail_data)
 
 
 inline const SizetShortMap& SurrogateData::failed_response_data() const
-{ return sdRep->failedRespData[sdRep->activeKey]; }
+{
+  std::map<UShortArray, SizetShortMap>& fail_resp_data = sdRep->failedRespData;
+  const UShortArray& key = sdRep->activeKey;
+  std::map<UShortArray, SizetShortMap>::iterator cit = fail_resp_data.find(key);
+  if (cit == fail_resp_data.end()) {
+    std::pair<UShortArray, SizetShortMap> ssm_pair(key, SizetShortMap());
+    cit = fail_resp_data.insert(ssm_pair).first; // create empty array for key
+  }
+  return cit->second;
+}
 
 
 inline void SurrogateData::
@@ -1588,12 +1564,12 @@ failed_response_data_map() const
 
 inline const SDVArrayDeque& SurrogateData::popped_variables() const
 {
-  std::map<UShortArray, SDVArrayDeque>::const_iterator cit
-    = sdRep->poppedVarsData.find(sdRep->activeKey);
-  if (cit == sdRep->poppedVarsData.end()) {
-    PCerr << "Error: active key lookup failure in SurrogateData::"
-	  << "popped_variables()." << std::endl;
-    abort_handler(-1);
+  std::map<UShortArray, SDVArrayDeque>& pop_vars = sdRep->poppedVarsData;
+  const UShortArray& key = sdRep->activeKey;
+  std::map<UShortArray, SDVArrayDeque>::iterator cit = pop_vars.find(key);
+  if (cit == pop_vars.end()) {
+    std::pair<UShortArray, SDVArrayDeque> sdv_pair(key, SDVArrayDeque());
+    cit = pop_vars.insert(sdv_pair).first; // create empty array for key
   }
   return cit->second;
 }
@@ -1605,12 +1581,12 @@ inline void SurrogateData::popped_variables(const SDVArrayDeque& popped_vars)
 
 inline const SDRArrayDeque& SurrogateData::popped_response() const
 {
-  std::map<UShortArray, SDRArrayDeque>::const_iterator cit
-    = sdRep->poppedRespData.find(sdRep->activeKey);
-  if (cit == sdRep->poppedRespData.end()) {
-    PCerr << "Error: active key lookup failure in SurrogateData::"
-	  << "popped_response()." << std::endl;
-    abort_handler(-1);
+  std::map<UShortArray, SDRArrayDeque>& pop_resp = sdRep->poppedRespData;
+  const UShortArray& key = sdRep->activeKey;
+  std::map<UShortArray, SDRArrayDeque>::iterator cit = pop_resp.find(key);
+  if (cit == pop_resp.end()) {
+    std::pair<UShortArray, SDRArrayDeque> sdr_pair(key, SDRArrayDeque());
+    cit = pop_resp.insert(sdr_pair).first; // create empty array for key
   }
   return cit->second;
 }
