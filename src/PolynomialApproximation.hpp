@@ -400,8 +400,13 @@ modified_surrogate_data(const SurrogateData& data)
 
 inline bool PolynomialApproximation::deep_copied_surrogate_data() const
 { 
-  //return (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP);
-  return (modSurrData.data_rep() != origSurrData.data_rep());
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.discrepancyType) {
+  case RECURSIVE_DISCREP:
+    return (modSurrData.data_rep() != origSurrData.data_rep()); break;
+  case DISTINCT_DISCREP: default:
+    return false;                                               break;
+  }
 }
 
 

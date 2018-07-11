@@ -170,16 +170,20 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
     = origSurrData.response_data_map();
   std::map<UShortArray, SDRArray>::const_iterator cit
     = resp_data_map.find(data_rep->activeKey);
+
   if (cit == resp_data_map.begin()) {  // first entry -> no discrepancy/surplus
-    modSurrData.copy_active(origSurrData, SHALLOW_COPY, SHALLOW_COPY);
+    // level 0 mode is BYPASS_SURROGATE: modSurrData (approxData[0] from
+    // Dakota::PecosAproximation) receives level 0 data and origSurrData
+    // (approxData[1] from Dakota::PecosAproximation) receives nothing
+    origSurrData.copy_active(modSurrData, SHALLOW_COPY, SHALLOW_COPY);
     return;
   }
   else if (cit == resp_data_map.end()) // key not found
     return;
 
-  // For this case, vars/response data has been provided for modSurrData (the
-  // variables data is shared and the response data is distinct), but it is in
-  // raw form (i.e., modSurrData contains LF and origSurrData contains HF).
+  // level 1 -- L mode is AGGREGATED_MODELS: modSurrData (approxData[0] from
+  // Dakota::PecosAproximation) receives level l-1 data and origSurrData
+  // (approxData[1] from Dakota::PecosAproximation) receives level l data.
   // The remaining task is to modify modSurrData to reflect HF-LF discrepancy.
   //modSurrData = origSurrData.copy(SHALLOW_COPY, EXISTING_DATA);
 

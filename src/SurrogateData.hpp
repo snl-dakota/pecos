@@ -857,7 +857,7 @@ public:
 
   /// copy incoming sd instance with options for shallow or deep copies
   /// of the SurrogateData{Vars,Resp} objects
-  void copy(SurrogateData& sd, short sdv_mode = DEEP_COPY,
+  void copy(const SurrogateData& sd, short sdv_mode = DEEP_COPY,
 	    short sdr_mode = DEEP_COPY) const;
   /// returns a new SurrogateData instance with options for shallow or
   /// deep copies of the SurrogateData{Vars,Resp} objects
@@ -865,7 +865,8 @@ public:
 		     short sdr_mode = DEEP_COPY) const;
   /// copy active data for incoming sd instance with options for
   /// shallow or deep copies of the SurrogateData{Vars,Resp} objects
-  void copy_active(SurrogateData& sd, short sdv_mode, short sdr_mode) const;
+  void copy_active(const SurrogateData& sd, short sdv_mode,
+		   short sdr_mode) const;
   
   /// set anchor{Vars,Resp}
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
@@ -974,6 +975,8 @@ public:
 
   /// assign activeKey and update active iterators
   void active_key(const UShortArray& key);
+  /// return activeKey
+  const UShortArray& active_key() const;
   /// reset initial state by clearing all model keys (empties all maps)
   void clear_keys();
 
@@ -1099,6 +1102,10 @@ inline void SurrogateData::active_key(const UShortArray& key)
     sdRep->update_active_iterators();
   }
 }
+
+
+inline const UShortArray& SurrogateData::active_key() const
+{ return sdRep->activeKey; }
 
 
 inline void SurrogateData::
@@ -1302,22 +1309,30 @@ inline void SurrogateData::pop_front()
 
 inline void SurrogateData::pop(bool save_data)
 {
+  SDVArray& sdv_array_ref = sdRep->varsDataIter->second;
+  SDRArray& sdr_array_ref = sdRep->respDataIter->second;
+  size_t num_ref_pts = std::min(sdv_array_ref.size(), sdr_array_ref.size());
+
+  // harden logic for case of an empty SurrogateData (e.g.,
+  // distinct discrepancy at level 0)
   if (sdRep->popCountStack.empty()) {
-    PCerr << "\nError: empty count stack in SurrogateData::pop()." << std::endl;
-    abort_handler(-1);
+    if (num_ref_pts == 0)
+      return; // assume inactive SurrogateData -> ignore pop request
+    else {
+      PCerr << "\nError: empty count stack in SurrogateData::pop()."<<std::endl;
+      abort_handler(-1);
+    }
   }
+
   const UShortArray& key = sdRep->activeKey;
   SizetArray& pop_count_stack = sdRep->popCountStack[key];
   size_t num_pop_pts = pop_count_stack.back();
   if (num_pop_pts) {
-    size_t data_size = points();
-    if (data_size < num_pop_pts) {
+    if (num_ref_pts < num_pop_pts) {
       PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
-	    << data_size << ") in SurrogateData::pop(size_t)." << std::endl;
+	    << num_ref_pts << ") in SurrogateData::pop(size_t)." << std::endl;
       abort_handler(-1);
     }
-    SDVArray& sdv_array_ref = sdRep->varsDataIter->second;
-    SDRArray& sdr_array_ref = sdRep->respDataIter->second;
     SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
     SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
     if (save_data) {
@@ -1333,7 +1348,7 @@ inline void SurrogateData::pop(bool save_data)
       last_popped_sdr_array.insert(last_popped_sdr_array.begin(),
 				   r_end - num_pop_pts, r_end);
     }
-    size_t new_size = data_size - num_pop_pts;
+    size_t new_size = num_ref_pts - num_pop_pts;
     sdv_array_ref.resize(new_size); sdr_array_ref.resize(new_size);
 
     // TO DO: prune failedRespData[key] or leave in map ?
@@ -1345,27 +1360,39 @@ inline void SurrogateData::pop(bool save_data)
 
 inline void SurrogateData::push(size_t index, bool erase_popped)
 {
-  SDVArray& sdv_array_ref = sdRep->varsDataIter->second;
-  SDRArray& sdr_array_ref = sdRep->respDataIter->second;
   const UShortArray& key = sdRep->activeKey;
   SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
   SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
+  size_t num_popped
+    = std::min(popped_sdv_arrays.size(), popped_sdr_arrays.size());
 
-  SDVArrayDeque::iterator vit = popped_sdv_arrays.begin();
-  SDRArrayDeque::iterator rit = popped_sdr_arrays.begin();
-  std::advance(vit, index); std::advance(rit, index);
-  size_t num_pts = std::min(vit->size(), rit->size());
+  // harden logic for case of an empty SurrogateData (e.g.,
+  // distinct discrepancy at level 0)
+  if (num_popped > index) {
+    SDVArrayDeque::iterator vit = popped_sdv_arrays.begin();
+    SDRArrayDeque::iterator rit = popped_sdr_arrays.begin();
+    std::advance(vit, index); std::advance(rit, index);
+    size_t num_pts = std::min(vit->size(), rit->size());
 
-  sdv_array_ref.insert(sdv_array_ref.end(), vit->begin(), vit->end());
-  sdr_array_ref.insert(sdr_array_ref.end(), rit->begin(), rit->end());
+    SDVArray& sdv_array_ref = sdRep->varsDataIter->second;
+    SDRArray& sdr_array_ref = sdRep->respDataIter->second;
+    sdv_array_ref.insert(sdv_array_ref.end(), vit->begin(), vit->end());
+    sdr_array_ref.insert(sdr_array_ref.end(), rit->begin(), rit->end());
 
-  // TO DO: update failedRespData[activeKey] ?
-  data_checks(); // from scratch for now...
+    // TO DO: update failedRespData[activeKey] ?
+    data_checks(); // from scratch for now...
 
-  if (erase_popped)
-    { popped_sdv_arrays.erase(vit); popped_sdr_arrays.erase(rit); }
+    if (erase_popped)
+      { popped_sdv_arrays.erase(vit); popped_sdr_arrays.erase(rit); }
 
-  sdRep->popCountStack[key].push_back(num_pts);
+    sdRep->popCountStack[key].push_back(num_pts);
+  }
+  else if (num_popped) { // not empty
+    PCerr << "Error: index out of range for active popped arrays in "
+	  << "SurrogateData::push()." << std::endl;
+    abort_handler(-1);
+  }
+  // else ignore push request for empty popped (SurrogateData assumed inactive)
 }
 
 
@@ -1615,34 +1642,32 @@ popped_response_map(const std::map<UShortArray, SDRArrayDeque>& popped_resp)
 
 
 inline void SurrogateData::
-copy(SurrogateData& sd, short sdv_mode, short sdr_mode) const
+copy(const SurrogateData& sd, short sdv_mode, short sdr_mode) const
 {
-  //bool anchor_pt = anchor();
-
   if (sdv_mode == DEEP_COPY) {
-    //if (anchor_pt) sd.anchor_variables(sdRep->anchorVars.copy());
-
     size_t i, j, num_pts, num_sdva;
-    std::map<UShortArray, SDVArray>&    vars_map = sdRep->varsData;
-    std::map<UShortArray, SDVArray> new_vars_map;
-    std::map<UShortArray, SDVArray>::iterator v_iter;
-    for (v_iter=vars_map.begin(); v_iter!=vars_map.end(); ++v_iter) {
-      const SDVArray& sdv_array = v_iter->second;
+    const std::map<UShortArray, SDVArray>& vars_map = sd.variables_data_map();
+    std::map<UShortArray, SDVArray>::const_iterator v_cit;
+    std::map<UShortArray, SDVArray>& new_vars_map = sdRep->varsData;
+    new_vars_map.clear();
+    for (v_cit = vars_map.begin(); v_cit != vars_map.end(); ++v_cit) {
+      const SDVArray& sdv_array = v_cit->second;
       num_pts = sdv_array.size();
       SDVArray new_sdv_array(num_pts);
       for (i=0; i<num_pts; ++i)
 	new_sdv_array[i] = sdv_array[i].copy();
-      new_vars_map[v_iter->first] = sdv_array;
+      new_vars_map[v_cit->first] = sdv_array;
     }
-    sd.variables_data_map(new_vars_map);
 
-    std::map<UShortArray, SDVArrayDeque>& popped_vars_map
+    const std::map<UShortArray, SDVArrayDeque>& popped_vars_map
+      = sd.popped_variables_map();
+    std::map<UShortArray, SDVArrayDeque>::const_iterator v2_cit;
+    std::map<UShortArray, SDVArrayDeque>& new_popped_vars_map
       = sdRep->poppedVarsData;
-    std::map<UShortArray, SDVArrayDeque> new_popped_vars_map;
-    std::map<UShortArray, SDVArrayDeque>::iterator v2_iter;
-    for (v2_iter  = popped_vars_map.begin();
-	 v2_iter != popped_vars_map.end(); ++v2_iter) {
-      const SDVArrayDeque& sdv_2d_array = v2_iter->second;
+    new_popped_vars_map.clear();
+    for (v2_cit = popped_vars_map.begin(); v2_cit != popped_vars_map.end();
+	 ++v2_cit) {
+      const SDVArrayDeque& sdv_2d_array = v2_cit->second;
       num_sdva = sdv_2d_array.size();
       SDVArrayDeque new_popped_sdv_2d(num_sdva);
       for (i=0; i<num_sdva; ++i) {
@@ -1652,41 +1677,38 @@ copy(SurrogateData& sd, short sdv_mode, short sdr_mode) const
 	for (j=0; j<num_pts; ++j)
 	  new_popped_sdv_2d[i][j] = sdva_i[j].copy();
       }
-      new_popped_vars_map[v2_iter->first] = new_popped_sdv_2d;
+      new_popped_vars_map[v2_cit->first] = new_popped_sdv_2d;
     }
-    sd.popped_variables_map(new_popped_vars_map);
   }
   else { // shallow SDV copies based on operator=
-    //if (anchor_pt) sd.anchor_variables(sdRep->anchorVars);
-    sd.variables_data_map(sdRep->varsData);
-    //sd.stored_variables_data(sdRep->storedVarsData);
-    sd.popped_variables_map(sdRep->poppedVarsData);
+    sdRep->varsData       = sd.variables_data_map();
+    sdRep->poppedVarsData = sd.popped_variables_map();
   }
 
   if (sdr_mode == DEEP_COPY) {
-    //if (anchor_pt) sd.anchor_response(sdRep->anchorResp.copy());
-
     size_t i, j, num_pts, num_sdra;
-    std::map<UShortArray, SDRArray>&    resp_map = sdRep->respData;
-    std::map<UShortArray, SDRArray> new_resp_map;
-    std::map<UShortArray, SDRArray>::iterator r_iter;
-    for (r_iter = resp_map.begin(); r_iter != resp_map.end(); ++r_iter) {
-      const SDRArray& sdr_array = r_iter->second;
+    const std::map<UShortArray, SDRArray>& resp_map = sd.response_data_map();
+    std::map<UShortArray, SDRArray>::const_iterator r_cit;
+    std::map<UShortArray, SDRArray>& new_resp_map = sdRep->respData;
+    new_resp_map.clear();
+    for (r_cit = resp_map.begin(); r_cit != resp_map.end(); ++r_cit) {
+      const SDRArray& sdr_array = r_cit->second;
       num_pts = sdr_array.size();
       SDRArray new_sdr_array(num_pts);
       for (i=0; i<num_pts; ++i)
 	new_sdr_array[i] = sdr_array[i].copy();
-      new_resp_map[r_iter->first] = new_sdr_array;
+      new_resp_map[r_cit->first] = new_sdr_array;
     }
-    sd.response_data_map(new_resp_map);
 
-    std::map<UShortArray, SDRArrayDeque>& popped_resp_map
+    const std::map<UShortArray, SDRArrayDeque>& popped_resp_map
+      = sd.popped_response_map();
+    std::map<UShortArray, SDRArrayDeque>::const_iterator r2_cit;
+    std::map<UShortArray, SDRArrayDeque>& new_popped_resp_map
       = sdRep->poppedRespData;
-    std::map<UShortArray, SDRArrayDeque> new_popped_resp_map;
-    std::map<UShortArray, SDRArrayDeque>::iterator r2_iter;
-    for (r2_iter  = popped_resp_map.begin();
-	 r2_iter != popped_resp_map.end(); ++r2_iter) {
-      const SDRArrayDeque& sdr_2d_array = r2_iter->second;
+    new_popped_resp_map.clear();
+    for (r2_cit = popped_resp_map.begin(); r2_cit != popped_resp_map.end();
+	 ++r2_cit) {
+      const SDRArrayDeque& sdr_2d_array = r2_cit->second;
       num_sdra = sdr_2d_array.size();
       SDRArrayDeque new_popped_sdr_2d(num_sdra);
       for (i=0; i<num_sdra; ++i) {
@@ -1696,48 +1718,43 @@ copy(SurrogateData& sd, short sdv_mode, short sdr_mode) const
 	for (j=0; j<num_pts; ++j)
 	  new_popped_sdr_2d[i][j] = sdra_i[j].copy();
       }
-      new_popped_resp_map[r2_iter->first] = new_popped_sdr_2d;
+      new_popped_resp_map[r2_cit->first] = new_popped_sdr_2d;
     }
-    sd.popped_response_map(new_popped_resp_map);
   }
   else { // shallow SDR copies based on operator=
-    sd.response_data_map(sdRep->respData);
-    //sd.stored_response_data(sdRep->storedRespData);
-    sd.popped_response_map(sdRep->poppedRespData);
+    sdRep->respData       = sd.response_data_map();
+    sdRep->poppedRespData = sd.popped_response_map();
   }
 
-  sd.failed_response_data_map(sdRep->failedRespData);
-  sd.active_key(sdRep->activeKey);
+  sdRep->failedRespData = sd.failed_response_data_map();
+  sdRep->activeKey      = sd.active_key();
 }
 
 
 inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 {
   SurrogateData sd;
-  copy(sd, sdv_mode, sdr_mode);
+  sd.copy(*this, sdv_mode, sdr_mode);
   return sd;
 }
 
 
 inline void SurrogateData::
-copy_active(SurrogateData& sd, short sdv_mode, short sdr_mode) const
+copy_active(const SurrogateData& sd, short sdv_mode, short sdr_mode) const
 {
-  const UShortArray& key = sdRep->activeKey;
-  //bool anchor_pt = anchor();
-
-  const SDVArray&          sdv_array = sdRep->varsDataIter->second;
-  const SDVArrayDeque& pop_sdv_array = sdRep->poppedVarsData[key];
+  const UShortArray&           key = sdRep->activeKey;
+  SDVArray&          new_sdv_array = sdRep->varsDataIter->second;
+  SDVArrayDeque& new_pop_sdv_array = sdRep->poppedVarsData[key];
   if (sdv_mode == DEEP_COPY) {
-    //if (anchor_pt) sd.anchor_variables(sdRep->anchorVars.copy());
-
+    const SDVArray&          sdv_array = sd.variables_data();
+    const SDVArrayDeque& pop_sdv_array = sd.popped_variables();
     size_t i, j, num_pts = sdv_array.size();
-    SDVArray new_sdv_array(num_pts);
+    new_sdv_array.resize(num_pts);
     for (i=0; i<num_pts; ++i)
       new_sdv_array[i] = sdv_array[i].copy();
-    sd.variables_data(new_sdv_array);
 
     size_t num_sdva = pop_sdv_array.size();
-    SDVArrayDeque new_pop_sdv_array(num_sdva);
+    new_pop_sdv_array.resize(num_sdva);
     for (i=0; i<num_sdva; ++i) {
       const SDVArray& sdva_i = pop_sdv_array[i];
       num_pts = sdva_i.size();
@@ -1745,27 +1762,24 @@ copy_active(SurrogateData& sd, short sdv_mode, short sdr_mode) const
       for (j=0; j<num_pts; ++j)
 	new_pop_sdv_array[i][j] = sdva_i[j].copy();
     }
-    sd.popped_variables(new_pop_sdv_array);
   }
   else { // shallow SDV copies based on operator=
-    //if (anchor_pt) sd.anchor_variables(sdRep->anchorVars);
-    sd.variables_data(sdv_array);
-    sd.popped_variables(pop_sdv_array);
+    new_sdv_array     = sd.variables_data();
+    new_pop_sdv_array = sd.popped_variables();
   }
 
-  const SDRArray&          sdr_array = sdRep->respDataIter->second;
-  const SDRArrayDeque& pop_sdr_array = sdRep->poppedRespData[key];
+  SDRArray&          new_sdr_array = sdRep->respDataIter->second;
+  SDRArrayDeque& new_pop_sdr_array = sdRep->poppedRespData[key];
   if (sdr_mode == DEEP_COPY) {
-    //if (anchor_pt) sd.anchor_response(sdRep->anchorResp.copy());
-
+    const SDRArray&          sdr_array = sd.response_data();
+    const SDRArrayDeque& pop_sdr_array = sd.popped_response();
     size_t i, j, num_pts = sdr_array.size();
-    SDRArray new_sdr_array(num_pts);
+    new_sdr_array.resize(num_pts);
     for (i=0; i<num_pts; ++i)
       new_sdr_array[i] = sdr_array[i].copy();
-    sd.response_data(new_sdr_array);
 
     size_t num_sdra = pop_sdr_array.size();
-    SDRArrayDeque new_pop_sdr_array(num_sdra);
+    new_pop_sdr_array.resize(num_sdra);
     for (i=0; i<num_sdra; ++i) {
       const SDRArray& sdra_i = pop_sdr_array[i];
       num_pts = sdra_i.size();
@@ -1773,14 +1787,13 @@ copy_active(SurrogateData& sd, short sdv_mode, short sdr_mode) const
       for (j=0; j<num_pts; ++j)
 	new_pop_sdr_array[i][j] = sdra_i[j].copy();
     }
-    sd.popped_response(new_pop_sdr_array);
   }
   else { // shallow SDR copies based on operator=
-    sd.response_data(sdr_array);
-    sd.popped_response(pop_sdr_array);
+    new_sdr_array     = sd.response_data();
+    new_pop_sdr_array = sd.popped_response();
   }
 
-  sd.failed_response_data(sdRep->failedRespData[key]);
+  sdRep->failedRespData[key] = sd.failed_response_data();
 }
 
 
