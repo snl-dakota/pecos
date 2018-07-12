@@ -884,10 +884,14 @@ public:
   /// ends of {vars,resp}Data
   void push(size_t index, bool erase_popped = true);
 
-  /// append count to popCountStack
+  /// append count to popCountStack[activeKey]
   void pop_count(size_t count);
-  /// return popCountStack.back()
+  /// return popCountStack[activeKey].back()
   size_t pop_count() const;
+  /// return popCountStack[activeKey]
+  const SizetArray& pop_count_stack() const;
+  /// return popCountStack
+  const std::map<UShortArray, SizetArray>& pop_count_stack_map() const;
 
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
@@ -895,6 +899,8 @@ public:
   void anchor_index(size_t index);
   /// return anchorIndex[activeKey], if defined
   size_t anchor_index() const;
+  /// return anchorIndex
+  const std::map<UShortArray, size_t>& anchor_index_map() const;
   /// erase anchorIndex[activeKey]
   void clear_anchor_index();
 
@@ -908,8 +914,6 @@ public:
   /// return net number of active data components (total minus failed)
   size_t active_response_size() const;
 
-  // return number of 1D arrays within stored{Vars,Resp}Data 2D arrays
-  //size_t stored_sets() const;
   /// return number of 1D arrays within popped{Vars,Resp}Data 2D arrays
   size_t popped_sets() const;
 
@@ -1082,6 +1086,11 @@ inline void SurrogateData::anchor_index(size_t index)
 
 inline size_t SurrogateData::anchor_index() const
 { return retrieve_anchor_index(false); }
+
+
+inline const std::map<UShortArray, size_t>& SurrogateData::
+anchor_index_map() const
+{ return sdRep->anchorIndex; }
 
 
 inline void SurrogateData::clear_anchor_index()
@@ -1374,6 +1383,24 @@ inline size_t SurrogateData::pop_count() const
   return (pop_it == sdRep->popCountStack.end() || pop_it->second.empty()) ?
     _NPOS : pop_it->second.back();
 }
+
+
+inline const SizetArray& SurrogateData::pop_count_stack() const
+{
+  std::map<UShortArray, SizetArray>& pop_count_map = sdRep->popCountStack;
+  const UShortArray& key = sdRep->activeKey;
+  std::map<UShortArray, SizetArray>::iterator it = pop_count_map.find(key);
+  if (it == pop_count_map.end()) {
+    std::pair<UShortArray, SizetArray> us_pair(key, SizetArray());
+    it = pop_count_map.insert(us_pair).first; // create empty array for key
+  }
+  return it->second;
+}
+
+
+inline const std::map<UShortArray, SizetArray>& SurrogateData::
+pop_count_stack_map() const
+{ return sdRep->popCountStack; }
 
 
 inline bool SurrogateData::anchor() const
@@ -1702,8 +1729,10 @@ copy(const SurrogateData& sd, short sdv_mode, short sdr_mode) const
     sdRep->poppedRespData = sd.popped_response_map();
   }
 
-  sdRep->failedRespData = sd.failed_response_data_map();
+  sdRep->popCountStack  = sd.pop_count_stack_map();
   sdRep->activeKey      = sd.active_key();
+  sdRep->anchorIndex    = sd.anchor_index_map();
+  sdRep->failedRespData = sd.failed_response_data_map();
 }
 
 
@@ -1718,7 +1747,12 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 inline void SurrogateData::
 copy_active(const SurrogateData& sd, short sdv_mode, short sdr_mode) const
 {
-  const UShortArray&           key = sdRep->activeKey;
+  const UShortArray& key = sdRep->activeKey;
+  if (sd.active_key() != key) {
+    PCerr << "Error: active key mismatch in SurrogateData::copy_active()."
+	  << std::endl;
+    abort_handler(-1);
+  }
   SDVArray&          new_sdv_array = sdRep->varsDataIter->second;
   SDVArrayDeque& new_pop_sdv_array = sdRep->poppedVarsData[key];
   if (sdv_mode == DEEP_COPY) {
@@ -1769,6 +1803,8 @@ copy_active(const SurrogateData& sd, short sdv_mode, short sdr_mode) const
     new_pop_sdr_array = sd.popped_response();
   }
 
+  sdRep->popCountStack[key]  = sd.pop_count_stack();
+  sdRep->anchorIndex[key]    = sd.anchor_index();
   sdRep->failedRespData[key] = sd.failed_response_data();
 }
 
