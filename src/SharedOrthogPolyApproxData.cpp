@@ -334,30 +334,6 @@ void SharedOrthogPolyApproxData::pre_combine_data()
   //active_key(maximal_expansion());
 
   switch (expConfigOptions.combineType) {
-  case ADD_COMBINE: {
-    // combine all multiIndex keys into combinedMultiIndex{,Map}
-    size_t i, num_combine = multiIndex.size(), combine_mi_map_ref;
-    combinedMultiIndex.clear();  combinedMultiIndexMap.resize(num_combine);
-    std::map<UShortArray, UShort2DArray>::iterator mi_it;
-    for (mi_it=multiIndex.begin(), i=0; mi_it!=multiIndex.end(); ++mi_it, ++i)
-      append_multi_index(mi_it->second, combinedMultiIndex,
-			 combinedMultiIndexMap[i], combine_mi_map_ref);
-    /*
-    // update active (maximal) multiIndex with any non-active multiIndex
-    // terms not yet included.  An update in place is sufficient.
-    size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
-    combinedMultiIndexMap.resize(num_combine);
-    std::map<UShortArray, UShort2DArray>::iterator mi_it;
-    combinedMultiIndex = multiIndexIter->second; // copy
-    for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
-      if (mi_it->first != activeKey) {
-	append_multi_index(mi_it->second, combinedMultiIndex,
-			   combinedMultiIndexMap[cntr], combine_mi_map_ref);
-	++cntr;
-      }
-    */
-    break;
-  }
   case MULT_COMBINE: {
     // default implementation: product of total-order expansions
     // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
@@ -382,6 +358,30 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 	  << "in SharedOrthogPolyApproxData::combine_data()" << std::endl;
     abort_handler(-1);
     break;
+  default: { //case ADD_COMBINE:
+    // combine all multiIndex keys into combinedMultiIndex{,Map}
+    size_t i, num_combine = multiIndex.size(), combine_mi_map_ref;
+    combinedMultiIndex.clear();  combinedMultiIndexMap.resize(num_combine);
+    std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    for (mi_it=multiIndex.begin(), i=0; mi_it!=multiIndex.end(); ++mi_it, ++i)
+      append_multi_index(mi_it->second, combinedMultiIndex,
+			 combinedMultiIndexMap[i], combine_mi_map_ref);
+    /*
+    // update active (maximal) multiIndex with any non-active multiIndex
+    // terms not yet included.  An update in place is sufficient.
+    size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
+    combinedMultiIndexMap.resize(num_combine);
+    std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    combinedMultiIndex = multiIndexIter->second; // copy
+    for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
+      if (mi_it->first != activeKey) {
+	append_multi_index(mi_it->second, combinedMultiIndex,
+			   combinedMultiIndexMap[cntr], combine_mi_map_ref);
+	++cntr;
+      }
+    */
+    break;
+  }
   }
 
   // reset sobolIndexMap from aggregated multiIndex

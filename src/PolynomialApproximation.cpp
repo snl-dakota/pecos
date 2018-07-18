@@ -99,23 +99,6 @@ void PolynomialApproximation::response_data_to_surplus_data()
   SDRArray&        mod_sdr_array =  modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
-  case ADD_COMBINE:
-    for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = sdv_array[i].continuous_variables();
-      if (expansionCoeffFlag) {
-	delta_val = orig_sdr_array[i].response_function();
-	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
-	  delta_val -= stored_value(c_vars, cit->first);
-	mod_sdr_array[i].response_function(delta_val);
-      }
-      if (expansionCoeffGradFlag) {
-	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
-	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
-	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, cit->first);
-	mod_sdr_array[i].response_gradient(delta_grad);
-      }
-    }
-    break;
   case MULT_COMBINE: {
     Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
     RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
@@ -156,6 +139,23 @@ void PolynomialApproximation::response_data_to_surplus_data()
     }
     break;
   }
+  default: //case ADD_COMBINE: (correction specification not required)
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = sdv_array[i].continuous_variables();
+      if (expansionCoeffFlag) {
+	delta_val = orig_sdr_array[i].response_function();
+	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
+	  delta_val -= stored_value(c_vars, cit->first);
+	mod_sdr_array[i].response_function(delta_val);
+      }
+      if (expansionCoeffGradFlag) {
+	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
+	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
+	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, cit->first);
+	mod_sdr_array[i].response_gradient(delta_grad);
+      }
+    }
+    break;
   }
 }
 
@@ -196,20 +196,6 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   SDRArray&        mod_sdr_array =  modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
-  case ADD_COMBINE:
-    for (i=0; i<num_pts; ++i) {
-      if (expansionCoeffFlag) {
-	delta_val = orig_sdr_array[i].response_function()  // HF
-	          -  mod_sdr_array[i].response_function(); // LF
-	mod_sdr_array[i].response_function(delta_val);
-      }
-      if (expansionCoeffGradFlag) {
-	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
-	delta_grad -= mod_sdr_array[i].response_gradient();
-	mod_sdr_array[i].response_gradient(delta_grad);
-      }
-    }
-    break;
   case MULT_COMBINE: {
     size_t num_deriv_vars = origSurrData.num_derivative_variables();
     for (i=0; i<num_pts; ++i) {
@@ -229,6 +215,20 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
     }
     break;
   }
+  default: //case ADD_COMBINE: (correction specification not required)
+    for (i=0; i<num_pts; ++i) {
+      if (expansionCoeffFlag) {
+	delta_val = orig_sdr_array[i].response_function()  // HF
+	          -  mod_sdr_array[i].response_function(); // LF
+	mod_sdr_array[i].response_function(delta_val);
+      }
+      if (expansionCoeffGradFlag) {
+	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
+	delta_grad -= mod_sdr_array[i].response_gradient();
+	mod_sdr_array[i].response_gradient(delta_grad);
+      }
+    }
+    break;
   }
 }
 

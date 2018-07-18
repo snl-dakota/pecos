@@ -110,7 +110,7 @@ private:
   /// combinations (defined from HierarchSparseGridDriver::collocKey)
   UShort3DArray combinedSmolyakMultiIndex;
   /// mapping of terms when aggregating HierarchSparseGridDriver::collocKey
-  /// into combinedCollocKey in pre_combine_data() (case ADD_COMBINE)
+  /// into combinedCollocKey in pre_combine_data()
   Sizet3DArray combinedSmolyakMultiIndexMap;
   /// multi-index that is the final result of a sequence of expansion
   /// combinations (defined from combinedSmolyakMultiIndex)

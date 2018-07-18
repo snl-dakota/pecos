@@ -99,7 +99,7 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
 {
   // Don't mix additive approach for hierarchical interpolation with
   // multiplicative/combined across multilevel-multifidelity
-  if (expConfigOptions.combineType != ADD_COMBINE) {
+  if (expConfigOptions.combineType == MULT_COMBINE) {
     PCerr << "Error: only additive combinations supported in SharedHierarch"
 	  << "InterpPolyApproxData::pre_combine_data()." << std::endl;
     abort_handler(-1);

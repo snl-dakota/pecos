@@ -337,22 +337,6 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator eg_it;
   switch (data_rep->expConfigOptions.combineType) {
-  case ADD_COMBINE: {
-    // perform the overlay/addition of level expansions
-    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
-    size_t i, num_combine = combined_mi_map.size();
-    sp_it = sparseIndices.begin();
-    ec_it = expansionCoeffs.begin();  eg_it = expansionCoeffGrads.begin();
-    // avoid overhead of unnecessary reindexing on first overlay
-    combinedSparseIndices = sp_it->second; combinedExpCoeffs = ec_it->second;
-    combinedExpCoeffGrads = eg_it->second; ++sp_it; ++ec_it; ++eg_it;
-    // overlay with reindexing of sparse indices
-    for (i=1; i<num_combine; ++i, ++sp_it, ++ec_it, ++eg_it)
-      overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
-			eg_it->second, 1,  combinedSparseIndices,
-			combinedExpCoeffs, combinedExpCoeffGrads);
-    break;
-  }
   case MULT_COMBINE: {
     // perform the multiplication of level expansions
     const UShort3DArray& combined_mi_seq = data_rep->combinedMultiIndexSeq;
@@ -412,6 +396,22 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	  << std::endl;
     abort_handler(-1);
     break;
+  default: { //case ADD_COMBINE:
+    // perform the overlay/addition of level expansions
+    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
+    size_t i, num_combine = combined_mi_map.size();
+    sp_it = sparseIndices.begin();
+    ec_it = expansionCoeffs.begin();  eg_it = expansionCoeffGrads.begin();
+    // avoid overhead of unnecessary reindexing on first overlay
+    combinedSparseIndices = sp_it->second; combinedExpCoeffs = ec_it->second;
+    combinedExpCoeffGrads = eg_it->second; ++sp_it; ++ec_it; ++eg_it;
+    // overlay with reindexing of sparse indices
+    for (i=1; i<num_combine; ++i, ++sp_it, ++ec_it, ++eg_it)
+      overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
+			eg_it->second, 1,  combinedSparseIndices,
+			combinedExpCoeffs, combinedExpCoeffGrads);
+    break;
+  }
   }
 
   //clear_computed_bits(); // combined stats are managed separately

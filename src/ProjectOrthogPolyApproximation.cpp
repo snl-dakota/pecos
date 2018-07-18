@@ -805,26 +805,26 @@ integrate_response_moments(size_t num_moments)
   // update data_coeffs using evaluations from stored expansions
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  short combine_type = data_rep->expConfigOptions.combineType;
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-  std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-  if (combine_type) {
-    const SDVArray& sdv_array = modSurrData.variables_data();
+  if (mi.size() > 1) {
+    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
     std::map<UShortArray, RealVector>::const_iterator ec_cit;
+    short combine_type = data_rep->expConfigOptions.combineType;
+    const SDVArray& sdv_array = modSurrData.variables_data();
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
 	 ++ec_cit, ++mi_cit)
       if (ec_cit != expCoeffsIter) {
 	const UShort2DArray& mi_i = mi_cit->second;
 	const RealVector&    ec_i = ec_cit->second;
 	switch (combine_type) {
-	case ADD_COMBINE:
-	  for (i=0; i<num_pts; ++i)
-	    data_coeffs[i] += OrthogPolyApproximation::
-	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
-	  break;
 	case MULT_COMBINE:
 	  for (i=0; i<num_pts; ++i)
 	    data_coeffs[i] *= OrthogPolyApproximation::
+	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
+	  break;
+	default: //case ADD_COMBINE: (correction specification not required)
+	  for (i=0; i<num_pts; ++i)
+	    data_coeffs[i] += OrthogPolyApproximation::
 	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
 	  break;
 	}

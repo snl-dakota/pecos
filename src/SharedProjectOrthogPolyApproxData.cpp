@@ -323,17 +323,6 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 void SharedProjectOrthogPolyApproxData::pre_combine_data()
 {
   switch (expConfigOptions.combineType) {
-  case ADD_COMBINE:
-    // Note: would like to preserve tensor indexing (at least for QUADRATURE
-    // case) so that Horner's rule performance opt could be used within
-    // tensor_product_value()).  However, a tensor result in the overlay
-    // will not occur unless one expansion order dominates the other (partial
-    // domination results in sum of tensor expansions as for sparse grids).
-    // Therefore, stick with the general-purpose expansion overlay and exclude
-    // tensor_product_value() usage for combined coefficient sets.
-
-    // base class version is sufficient; no specialization based on exp form
-    SharedOrthogPolyApproxData::pre_combine_data();  break;
   case MULT_COMBINE:
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -431,8 +420,16 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       SharedOrthogPolyApproxData::pre_combine_data();  break;
     }
     break;
-  case ADD_MULT_COMBINE:
-    // base class manages this placeholder
+  default: //case ADD_COMBINE: case ADD_MULT_COMBINE:
+    // Note: would like to preserve tensor indexing (at least for QUADRATURE
+    // case) so that Horner's rule performance opt could be used within
+    // tensor_product_value()).  However, a tensor result in the overlay
+    // will not occur unless one expansion order dominates the other (partial
+    // domination results in sum of tensor expansions as for sparse grids).
+    // Therefore, stick with the general-purpose expansion overlay and exclude
+    // tensor_product_value() usage for combined coefficient sets.
+
+    // base class version is sufficient; no specialization based on exp form
     SharedOrthogPolyApproxData::pre_combine_data();  break;
   }
 }

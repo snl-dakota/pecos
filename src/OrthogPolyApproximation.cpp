@@ -80,40 +80,6 @@ void OrthogPolyApproximation::combine_coefficients()
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator eg_it;
   switch (data_rep->expConfigOptions.combineType) {
-  case ADD_COMBINE: {
-    // Note: would like to preserve tensor indexing (at least for QUADRATURE
-    // case) so that Horner's rule performance opt could be used within
-    // tensor_product_value()).  However, a tensor result in the overlay
-    // will not occur unless one expansion order dominates the other (partial
-    // domination results in sum of tensor expansions as for sparse grids).
-    // Therefore, stick with the general-purpose expansion overlay and exclude
-    // tensor_product_value() usage for combined coefficient sets.
-
-#ifdef DEBUG
-    PCout << "\ncombinedMultiIndex:\n" << data_rep->combinedMultiIndex;
-#endif // DEBUG
-
-    // resize combinedExp{Coeffs,CoeffGrads} based on combinedMultiIndex
-    resize_expansion(data_rep->combinedMultiIndex.size(), combinedExpCoeffs,
-		     combinedExpCoeffGrads);
-    combinedExpCoeffs = 0.;  combinedExpCoeffGrads = 0.;
-
-    // update combinedExp{Coeffs,CoeffGrads}
-    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
-    size_t i = 0;
-    for (ec_it =expansionCoeffs.begin(), eg_it =expansionCoeffGrads.begin();
-	 ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++eg_it, ++i) {
-#ifdef DEBUG
-      PCout << "\ni = " << i << " combinedMultiIndexMap:\n"
-	    << combined_mi_map[i] << "coeffs array:\n";
-      write_data(PCout, ec_it->second);
-#endif // DEBUG
-      overlay_expansion(combined_mi_map[i], ec_it->second, eg_it->second, 1,
-			combinedExpCoeffs, combinedExpCoeffGrads);
-    }
-    break;
-  }
   case MULT_COMBINE: {
     // perform the multiplication of level expansions
     const UShort3DArray& combined_mi_seq = data_rep->combinedMultiIndexSeq;
@@ -149,6 +115,40 @@ void OrthogPolyApproximation::combine_coefficients()
 	  << "in OrthogPolyApproximation::combine_coefficients()" << std::endl;
     abort_handler(-1);
     break;
+  default: { //case ADD_COMBINE: (correction spec not required)
+    // Note: would like to preserve tensor indexing (at least for QUADRATURE
+    // case) so that Horner's rule performance opt could be used within
+    // tensor_product_value()).  However, a tensor result in the overlay
+    // will not occur unless one expansion order dominates the other (partial
+    // domination results in sum of tensor expansions as for sparse grids).
+    // Therefore, stick with the general-purpose expansion overlay and exclude
+    // tensor_product_value() usage for combined coefficient sets.
+
+#ifdef DEBUG
+    PCout << "\ncombinedMultiIndex:\n" << data_rep->combinedMultiIndex;
+#endif // DEBUG
+
+    // resize combinedExp{Coeffs,CoeffGrads} based on combinedMultiIndex
+    resize_expansion(data_rep->combinedMultiIndex.size(), combinedExpCoeffs,
+		     combinedExpCoeffGrads);
+    combinedExpCoeffs = 0.;  combinedExpCoeffGrads = 0.;
+
+    // update combinedExp{Coeffs,CoeffGrads}
+    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
+    size_t i = 0;
+    for (ec_it =expansionCoeffs.begin(), eg_it =expansionCoeffGrads.begin();
+	 ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
+	 ++ec_it, ++eg_it, ++i) {
+#ifdef DEBUG
+      PCout << "\ni = " << i << " combinedMultiIndexMap:\n"
+	    << combined_mi_map[i] << "coeffs array:\n";
+      write_data(PCout, ec_it->second);
+#endif // DEBUG
+      overlay_expansion(combined_mi_map[i], ec_it->second, eg_it->second, 1,
+			combinedExpCoeffs, combinedExpCoeffGrads);
+    }
+    break;
+  }
   }
 }
 
