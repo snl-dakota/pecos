@@ -220,7 +220,7 @@ void RegressOrthogPolyApproximation::increment_coefficients()
 
 void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror operations already performed on origSurrData for a modSurrData
+  // mirror operations already performed on surrData for a modSurrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
     modSurrData.pop(save_data);
@@ -262,7 +262,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
   // all cases other than generalized sparse grids
   size_t pop_index = data_rep->retrieval_index();
 
-  // mirror operations already performed on origSurrData for a modSurrData
+  // mirror operations already performed on surrData for a modSurrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
     modSurrData.push(pop_index);

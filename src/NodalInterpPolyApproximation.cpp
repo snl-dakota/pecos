@@ -114,7 +114,7 @@ void NodalInterpPolyApproximation::increment_coefficients()
 
 void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror changes to origSurrData for deep copied modSurrData
+  // mirror changes to surrData for deep copied modSurrData
   if (deep_copied_surrogate_data())
     modSurrData.pop(save_data);
 
@@ -143,7 +143,7 @@ void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
 
 void NodalInterpPolyApproximation::push_coefficients()
 {
-  // mirror changes to origSurrData for deep copied modSurrData
+  // mirror changes to surrData for deep copied modSurrData
   if (deep_copied_surrogate_data()) {
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     modSurrData.push(data_rep->retrieval_index());
@@ -155,7 +155,7 @@ void NodalInterpPolyApproximation::push_coefficients()
 
 void NodalInterpPolyApproximation::finalize_coefficients()
 {
-  // mirror changes to origSurrData for deep copied modSurrData
+  // mirror changes to surrData for deep copied modSurrData
   if (deep_copied_surrogate_data()) {
     size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;

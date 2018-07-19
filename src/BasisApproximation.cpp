@@ -248,39 +248,40 @@ const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
 }
 
 
-void BasisApproximation::original_surrogate_data(const SurrogateData& data)
+void BasisApproximation::
+surrogate_data(const SurrogateData& data, size_t d_index)
 {
   if (basisApproxRep)
-    basisApproxRep->original_surrogate_data(data);
+    basisApproxRep->surrogate_data(data, d_index);
   else {
-    PCerr << "Error: original_surrogate_data(SurrogateData&) not available "
+    PCerr << "Error: surrogate_data(SurrogateData&) not available "
 	  << "for this basis approximation type." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-const SurrogateData& BasisApproximation::original_surrogate_data() const
+const SurrogateData& BasisApproximation::surrogate_data(size_t d_index) const
 {
   if (!basisApproxRep) {
-    PCerr << "Error: original_surrogate_data() not available for this basis "
+    PCerr << "Error: surrogate_data() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
 
-  return basisApproxRep->original_surrogate_data();
+  return basisApproxRep->surrogate_data(d_index);
 }
 
 
-SurrogateData& BasisApproximation::original_surrogate_data()
+SurrogateData& BasisApproximation::surrogate_data(size_t d_index)
 {
   if (!basisApproxRep) {
-    PCerr << "Error: original_surrogate_data() not available for this basis "
+    PCerr << "Error: surrogate_data() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
 
-  return basisApproxRep->original_surrogate_data();
+  return basisApproxRep->surrogate_data(d_index);
 }
 
 

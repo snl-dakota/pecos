@@ -128,7 +128,9 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 inline bool InterpPolyApproximation::
 update_active_iterators(const UShortArray& key)
 {
-  origSurrData.active_key(key);
+  size_t i, num_sd = surrData.size();
+  for (i=0; i<num_sd; ++i)
+    surrData[i].active_key(key);
   if (deep_copied_surrogate_data())
     modSurrData.active_key(key);
   return true;

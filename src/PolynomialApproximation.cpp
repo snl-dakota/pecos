@@ -32,7 +32,7 @@ void PolynomialApproximation::compute_coefficients()
     return;
   }
 
-  // update modSurrData from origSurrData
+  // update modSurrData from surrData
   synchronize_surrogate_data();
 
   // For testing of anchor point logic:
@@ -60,8 +60,8 @@ void PolynomialApproximation::synchronize_surrogate_data()
   case DISTINCT_DISCREP:
     response_data_to_discrepancy_data(); break;
   default: // allow use of either SurrogateData, even if no modifications
-    if (modSurrData.is_null())    // only needs to be shared once
-      modSurrData = origSurrData; // shared rep
+    if (modSurrData.is_null())   // only needs to be shared once
+      modSurrData = surrData[0]; // shared rep
     break;
   }
 }
@@ -74,12 +74,13 @@ void PolynomialApproximation::response_data_to_surplus_data()
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
   // No modifications for first level or key not found
+  SurrogateData& surr_data = surrData.front();
   const std::map<UShortArray, SDRArray>& resp_data_map
-    = origSurrData.response_data_map();
+    = surr_data.response_data_map();
   std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
   if (cit == resp_data_map.begin() || // first entry -> no discrepancy/surplus
       cit == resp_data_map.end()) {   // key not found
-    modSurrData = origSurrData; // shared rep
+    modSurrData.copy_active(surr_data, SHALLOW_COPY, SHALLOW_COPY);
     return;
   }
 
@@ -87,16 +88,16 @@ void PolynomialApproximation::response_data_to_surplus_data()
   // and it needs to be initialized here.  We will reuse the variables data and
   // modify the response data to reflect hierarchical surpluses --> initialize
   // modSurrData with shared vars and unique resp instances:
-  modSurrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
+  modSurrData.copy_active(surr_data, SHALLOW_COPY, DEEP_COPY);
   // TO DO: do this more incrementally as data sets evolve across levels
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
-  size_t i, num_pts = origSurrData.points();
-  const SDVArray&      sdv_array =  modSurrData.variables_data();// shallow copy
-  const SDRArray& orig_sdr_array = origSurrData.response_data();
-  SDRArray&        mod_sdr_array =  modSurrData.response_data();
+  size_t i, num_pts = surr_data.points();
+  const SDVArray&   sdv_array =   surr_data.variables_data();
+  const SDRArray&   sdr_array =   surr_data.response_data();
+  SDRArray& surplus_sdr_array = modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
@@ -106,9 +107,9 @@ void PolynomialApproximation::response_data_to_surplus_data()
     std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = sdv_array[i].continuous_variables();
-      delta_val = orig_fn_val = orig_sdr_array[i].response_function();
+      delta_val = orig_fn_val = sdr_array[i].response_function();
       if (expansionCoeffGradFlag)
-	copy_data(orig_sdr_array[i].response_gradient(), orig_fn_grad);
+	copy_data(sdr_array[i].response_gradient(), orig_fn_grad);
       for (cit=resp_data_map.begin(), j=0; cit->first != key; ++cit, ++j) {
 	stored_val = stored_value(c_vars, cit->first);
 	delta_val /= stored_val;
@@ -133,9 +134,9 @@ void PolynomialApproximation::response_data_to_surplus_data()
 	}
       }
       if (expansionCoeffFlag)
-	mod_sdr_array[i].response_function(delta_val);
+	surplus_sdr_array[i].response_function(delta_val);
       if (expansionCoeffGradFlag)
-	mod_sdr_array[i].response_gradient(delta_grad);
+	surplus_sdr_array[i].response_gradient(delta_grad);
     }
     break;
   }
@@ -143,16 +144,16 @@ void PolynomialApproximation::response_data_to_surplus_data()
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = sdv_array[i].continuous_variables();
       if (expansionCoeffFlag) {
-	delta_val = orig_sdr_array[i].response_function();
+	delta_val = sdr_array[i].response_function();
 	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
 	  delta_val -= stored_value(c_vars, cit->first);
-	mod_sdr_array[i].response_function(delta_val);
+	surplus_sdr_array[i].response_function(delta_val);
       }
       if (expansionCoeffGradFlag) {
-	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
+	copy_data(sdr_array[i].response_gradient(), delta_grad);
 	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
 	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, cit->first);
-	mod_sdr_array[i].response_gradient(delta_grad);
+	surplus_sdr_array[i].response_gradient(delta_grad);
       }
     }
     break;
@@ -163,54 +164,55 @@ void PolynomialApproximation::response_data_to_surplus_data()
 void PolynomialApproximation::response_data_to_discrepancy_data()
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  // No modifications for first level or key not found, but keep origSurrData
+  // No modifications for first level or key not found, but keep surrData
   // and modSurrData distinct (don't share reps) since copy() will not restore
   // independence when it is needed.
+  SurrogateData& lf_surr_data = surrData.front();
+  SurrogateData& hf_surr_data = surrData.back();
   const std::map<UShortArray, SDRArray>& resp_data_map
-    = origSurrData.response_data_map();
+    = lf_surr_data.response_data_map();
   std::map<UShortArray, SDRArray>::const_iterator cit
     = resp_data_map.find(data_rep->activeKey);
 
-  if (cit == resp_data_map.begin()) {  // first entry -> no discrepancy/surplus
-    // level 0 mode is BYPASS_SURROGATE: modSurrData (approxData[0] from
-    // Dakota::PecosAproximation) receives level 0 data and origSurrData
-    // (approxData[1] from Dakota::PecosAproximation) receives nothing
-    origSurrData.copy_active(modSurrData, SHALLOW_COPY, SHALLOW_COPY);
+  // level 0 mode is BYPASS_SURROGATE: modSurrData can be a shallow copy
+  if (cit == resp_data_map.begin()) { // first entry -> no discrepancy/surplus
+    modSurrData.copy_active(lf_surr_data, SHALLOW_COPY, SHALLOW_COPY);
     return;
   }
   else if (cit == resp_data_map.end()) // key not found
     return;
 
-  // level 1 -- L mode is AGGREGATED_MODELS: modSurrData (approxData[0] from
-  // Dakota::PecosAproximation) receives level l-1 data and origSurrData
-  // (approxData[1] from Dakota::PecosAproximation) receives level l data.
-  // The remaining task is to modify modSurrData to reflect HF-LF discrepancy.
-  //modSurrData = origSurrData.copy(SHALLOW_COPY, EXISTING_DATA);
+  // level 1 -- L mode is AGGREGATED_MODELS: modSurrData computes discrepancy
+  // between LF data (approxData[0] from Dakota::PecosApproximation receives
+  // level l-1 data) and and HF data (approxData[1] from Dakota::PecosApprox
+  // receives level l data.
+  modSurrData.copy_active(hf_surr_data, SHALLOW_COPY, DEEP_COPY);//size_active()
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
-  size_t i, num_pts = origSurrData.points();
-  const SDVArray&      sdv_array =  modSurrData.variables_data();// shallow copy
-  const SDRArray& orig_sdr_array = origSurrData.response_data();
-  SDRArray&        mod_sdr_array =  modSurrData.response_data();
+  size_t i, num_pts = lf_surr_data.points();
+  const SDVArray&    sdv_array = lf_surr_data.variables_data();
+  const SDRArray& lf_sdr_array = lf_surr_data.response_data();
+  const SDRArray& hf_sdr_array = hf_surr_data.response_data();
+  SDRArray&    delta_sdr_array =  modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
-    size_t num_deriv_vars = origSurrData.num_derivative_variables();
+    size_t num_deriv_vars = lf_surr_data.num_derivative_variables();
     for (i=0; i<num_pts; ++i) {
       // HF data is to be preserved in orig SD; LF is passed as modifiable data
-      Real lf_val =  mod_sdr_array[i].response_function();
-      delta_val   = orig_sdr_array[i].response_function() / lf_val;
+      Real lf_val = lf_sdr_array[i].response_function();
+      delta_val   = hf_sdr_array[i].response_function() / lf_val;
       if (expansionCoeffFlag)
-	mod_sdr_array[i].response_function(delta_val);
+	delta_sdr_array[i].response_function(delta_val);
       if (expansionCoeffGradFlag) {
 	if (delta_grad.empty()) delta_grad.sizeUninitialized(num_deriv_vars);
-	const RealVector& hf_grad = orig_sdr_array[i].response_gradient();
-	const RealVector& lf_grad =  mod_sdr_array[i].response_gradient();
+	const RealVector& hf_grad = hf_sdr_array[i].response_gradient();
+	const RealVector& lf_grad = lf_sdr_array[i].response_gradient();
 	for (size_t j=0; j<num_deriv_vars; ++j)
 	  delta_grad[j] = (hf_grad[j] - lf_grad[j] * delta_val) / lf_val;
-	mod_sdr_array[i].response_gradient(delta_grad);
+	delta_sdr_array[i].response_gradient(delta_grad);
       }
     }
     break;
@@ -218,14 +220,14 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   default: //case ADD_COMBINE: (correction specification not required)
     for (i=0; i<num_pts; ++i) {
       if (expansionCoeffFlag) {
-	delta_val = orig_sdr_array[i].response_function()  // HF
-	          -  mod_sdr_array[i].response_function(); // LF
-	mod_sdr_array[i].response_function(delta_val);
+	delta_val = hf_sdr_array[i].response_function()
+	          - lf_sdr_array[i].response_function();
+	delta_sdr_array[i].response_function(delta_val);
       }
       if (expansionCoeffGradFlag) {
-	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
-	delta_grad -= mod_sdr_array[i].response_gradient();
-	mod_sdr_array[i].response_gradient(delta_grad);
+	copy_data(hf_sdr_array[i].response_gradient(), delta_grad);
+	delta_grad -= lf_sdr_array[i].response_gradient();
+	delta_sdr_array[i].response_gradient(delta_grad);
       }
     }
     break;
@@ -235,7 +237,7 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
 
 void PolynomialApproximation::clear_inactive()
 {
-  // mirror changes to origSurrData for deep copied modSurrData
+  // mirror changes to surrData for deep copied modSurrData
   if (deep_copied_surrogate_data())
     modSurrData.clear_inactive();
 }

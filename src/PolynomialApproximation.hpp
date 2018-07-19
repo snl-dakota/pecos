@@ -202,7 +202,7 @@ public:
   //- Heading: Member functions
   //
 
-  /// returns true if modSurrData is a deep copy of origSurrData
+  /// returns true if modSurrData is a deep copy of surrData
   bool deep_copied_surrogate_data() const;
 
   /// return expansionMoments
@@ -241,9 +241,9 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void original_surrogate_data(const SurrogateData& data);
-  const SurrogateData& original_surrogate_data() const;
-  SurrogateData& original_surrogate_data();
+  void surrogate_data(const SurrogateData& data, size_t d_index);
+  const SurrogateData& surrogate_data(size_t d_index) const;
+  SurrogateData& surrogate_data(size_t d_index);
 
   void modified_surrogate_data(const SurrogateData& data);
   const SurrogateData& modified_surrogate_data() const;
@@ -262,12 +262,12 @@ protected:
   //- Heading: Member functions
   //
 
-  /// update modSurrData from origSurrData based on deep or shallow copy
+  /// update modSurrData from surrData based on deep or shallow copy
   void synchronize_surrogate_data();
-  /// compute hierarchical surpluses from the origSurrData response data
+  /// compute hierarchical surpluses from the surrData response data
   /// and store in modSurrData
   void response_data_to_surplus_data();
-  /// compute discrepancy data using origSurrData (HF) and modSurrData (LF)
+  /// compute discrepancy data using surrData (HF) and modSurrData (LF)
   /// and store in modSurrData (update from LF to discrepancy)
   void response_data_to_discrepancy_data();
 
@@ -289,14 +289,16 @@ protected:
   //- Heading: Data
   //
 
-  /// SurrogateData instance containing the variables (shared) and response
+  /// SurrogateData instances containing the variables (shared) and response
   /// (unique) data arrays for constructing a surrogate of a single response
   /// function; this is the original unmodified data set, prior to any
-  /// potential manipulations by the approximation classes
-  SurrogateData origSurrData;
+  /// potential manipulations by the approximation classes.  More than one
+  /// instance can be created in the case of response aggregation modes.
+  std::vector<SurrogateData> surrData;
   /// SurrogateData instance used in current approximation builds, potentially
-  /// reflecting data modifications (e.g., calculation of hierarchical surplus)
-  /// relative to origSurrData
+  /// reflecting data modifications (e.g., calculation of hierarchical surplus
+  /// of new surrData relative to previous surrogate or model discrepancy
+  /// between two surrData instances)
   SurrogateData modSurrData;
 
   /// flag for calculation of expansion coefficients from response values
@@ -371,17 +373,17 @@ inline PolynomialApproximation::~PolynomialApproximation()
 
 
 inline const SurrogateData& PolynomialApproximation::
-original_surrogate_data() const
-{ return origSurrData; }
+surrogate_data(size_t d_index) const
+{ return surrData[d_index]; }
 
 
-inline SurrogateData& PolynomialApproximation::original_surrogate_data()
-{ return origSurrData; }
+inline SurrogateData& PolynomialApproximation::surrogate_data(size_t d_index)
+{ return surrData[d_index]; }
 
 
 inline void PolynomialApproximation::
-original_surrogate_data(const SurrogateData& data)
-{ origSurrData = data; } // shared representations
+surrogate_data(const SurrogateData& data, size_t d_index)
+{ surrData[d_index] = data; } // shared representations
 
 
 inline const SurrogateData& PolynomialApproximation::
@@ -403,7 +405,7 @@ inline bool PolynomialApproximation::deep_copied_surrogate_data() const
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.discrepancyType) {
   case RECURSIVE_DISCREP:
-    return (modSurrData.data_rep() != origSurrData.data_rep()); break;
+    return (modSurrData.data_rep() != surrData[0].data_rep()); break;
   case DISTINCT_DISCREP: default:
     return false;                                               break;
   }
