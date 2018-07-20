@@ -430,16 +430,10 @@ inline bool PolynomialApproximation::deep_copied_surrogate_data() const
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.discrepancyType) {
-  /*
-  case RECURSIVE_DISCREP: // only one surrData instance for this case
-    return (modSurrData.data_rep() != surrData[0].data_rep()); break;
-  case DISTINCT_DISCREP: default:
-    return false;                                               break;
-  */
   case RECURSIVE_DISCREP: case DISTINCT_DISCREP:
-    return true; // copy_active() now used for separate modSurrData instance
-    break;
+    return true;  break;
   default:
+  //return (modSurrData.data_rep() != surrData[0].data_rep()); break;
     return false; break;
   }
 }
