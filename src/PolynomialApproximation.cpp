@@ -59,9 +59,9 @@ void PolynomialApproximation::synchronize_surrogate_data()
     response_data_to_surplus_data();     break;
   case DISTINCT_DISCREP:
     response_data_to_discrepancy_data(); break;
-  default: // allow use of either SurrogateData, even if no modifications
-    if (modSurrData.is_null())   // only needs to be shared once
-      modSurrData = surrData[0]; // shared rep
+  default: // allow use of approxData or modSurrData, even if no modifications
+    if (modSurrData.is_null())
+      modSurrData = surrData.front();//shared rep (only needs to be linked once)
     break;
   }
 }
@@ -75,6 +75,8 @@ void PolynomialApproximation::response_data_to_surplus_data()
   const UShortArray& key = data_rep->activeKey;
   // No modifications for first level or key not found
   SurrogateData& surr_data = surrData.front();
+  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
+  else modSurrData.active_key(key);
   const std::map<UShortArray, SDRArray>& resp_data_map
     = surr_data.response_data_map();
   std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
@@ -164,17 +166,21 @@ void PolynomialApproximation::response_data_to_surplus_data()
 void PolynomialApproximation::response_data_to_discrepancy_data()
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  // No modifications for first level or key not found, but keep surrData
-  // and modSurrData distinct (don't share reps) since copy() will not restore
-  // independence when it is needed.
+  const UShortArray& key = data_rep->activeKey;
+  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
+  else modSurrData.active_key(key);
+
   SurrogateData& lf_surr_data = surrData.front();
-  SurrogateData& hf_surr_data = surrData.back();
   const std::map<UShortArray, SDRArray>& resp_data_map
     = lf_surr_data.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator cit
-    = resp_data_map.find(data_rep->activeKey);
+  std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
 
-  // level 0 mode is BYPASS_SURROGATE: modSurrData can be a shallow copy
+  // Keep surrData and modSurrData distinct (don't share reps since copy() will
+  // not restore independence when it is needed).  Rather use distinct arrays
+  // with shallow copies of SDV,SDR instances when they will not be modified.
+  // > level 0 mode is BYPASS_SURROGATE: SDVs and SDRs can be a shallow copies
+  // > shallow copies of popped arrays support replicated pops on modSurrData
+  //   (applied to distinct arrays of shared instances)
   if (cit == resp_data_map.begin()) { // first entry -> no discrepancy/surplus
     modSurrData.copy_active(lf_surr_data, SHALLOW_COPY, SHALLOW_COPY);
     return;
@@ -183,10 +189,17 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
     return;
 
   // level 1 -- L mode is AGGREGATED_MODELS: modSurrData computes discrepancy
-  // between LF data (approxData[0] from Dakota::PecosApproximation receives
-  // level l-1 data) and and HF data (approxData[1] from Dakota::PecosApprox
-  // receives level l data.
-  modSurrData.copy_active(hf_surr_data, SHALLOW_COPY, DEEP_COPY);//size_active()
+  // between LF data (approxData[0] from Dakota::PecosApproximation;
+  // receives level l-1 data) and and HF data (approxData[1] from Dakota::
+  // PecosApproximation; receives level l data).
+  // > SDR and popped SDR instances are now distinct; only pop counts should
+  //   be copied
+  SurrogateData& hf_surr_data = surrData.back();
+  modSurrData.active_key(key);
+  modSurrData.copy_active_sdv(hf_surr_data, SHALLOW_COPY);
+  modSurrData.size_active_sdr(hf_surr_data);
+  modSurrData.anchor_index(hf_surr_data.anchor_index());
+  modSurrData.pop_count_stack(hf_surr_data.pop_count_stack());
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
@@ -232,6 +245,8 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
     }
     break;
   }
+
+  modSurrData.data_checks(); // from scratch (aggregate LF,HF failures)
 }
 
 
