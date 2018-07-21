@@ -220,11 +220,6 @@ void RegressOrthogPolyApproximation::increment_coefficients()
 
 void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror operations already performed on surrData for a modSurrData
-  // that is disconnected/deep copied
-  if (deep_copied_surrogate_data())
-    modSurrData.pop(save_data);
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
@@ -261,11 +256,6 @@ void RegressOrthogPolyApproximation::push_coefficients()
   // SharedPolyApproxData::retrieval_index() currently returns 0 for
   // all cases other than generalized sparse grids
   size_t pop_index = data_rep->retrieval_index();
-
-  // mirror operations already performed on surrData for a modSurrData
-  // that is disconnected/deep copied
-  if (deep_copied_surrogate_data())
-    modSurrData.push(pop_index);
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);

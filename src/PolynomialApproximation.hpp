@@ -202,9 +202,6 @@ public:
   //- Heading: Member functions
   //
 
-  /// returns true if modSurrData is a deep copy of surrData
-  bool deep_copied_surrogate_data() const;
-
   /// return expansionMoments
   const RealVector& expansion_moments() const;
   /// return numericalMoments
@@ -248,8 +245,6 @@ protected:
   void modified_surrogate_data(const SurrogateData& data);
   const SurrogateData& modified_surrogate_data() const;
   SurrogateData& modified_surrogate_data();
-
-  void clear_inactive();
 
   void compute_coefficients();
 
@@ -424,25 +419,6 @@ inline SurrogateData& PolynomialApproximation::modified_surrogate_data()
 inline void PolynomialApproximation::
 modified_surrogate_data(const SurrogateData& data)
 { modSurrData = data; } // shared rep
-
-
-inline bool PolynomialApproximation::deep_copied_surrogate_data() const
-{
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  switch (data_rep->expConfigOptions.discrepancyType) {
-  /*
-  case RECURSIVE_DISCREP: // only one surrData instance for this case
-    return (modSurrData.data_rep() != surrData[0].data_rep()); break;
-  case DISTINCT_DISCREP: default:
-    return false;                                               break;
-  */
-  case RECURSIVE_DISCREP: case DISTINCT_DISCREP:
-    return true; // copy_active() now used for separate modSurrData instance
-    break;
-  default:
-    return false; break;
-  }
-}
 
 
 inline void PolynomialApproximation::clear_computed_bits()

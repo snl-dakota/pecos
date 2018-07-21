@@ -224,10 +224,6 @@ void HierarchInterpPolyApproximation::increment_coefficients()
 
 void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data())
-    modSurrData.pop(save_data);
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
@@ -262,10 +258,6 @@ void HierarchInterpPolyApproximation::push_coefficients()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
 
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data())
-    modSurrData.push(data_rep->retrieval_index());
-
   bool updated = update_active_iterators(data_rep->activeKey);
   if (updated) clear_all_computed_bits();
   else         increment_current_from_reference();
@@ -279,14 +271,6 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
-    for (i=0; i<num_popped; ++i)
-      modSurrData.push(data_rep->finalization_index(i), false);
-    modSurrData.clear_active_popped(); // only after process completed
-  }
 
   // synchronize expansionCoeff{s,Grads} and approxData
   bool updated = update_active_iterators(key);
@@ -313,8 +297,6 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
 void HierarchInterpPolyApproximation::clear_inactive()
 {
-  PolynomialApproximation::clear_inactive();
-
   std::map<UShortArray, RealVector2DArray>::iterator e1c_it
     = expansionType1Coeffs.begin();
   std::map<UShortArray, RealMatrix2DArray>::iterator e2c_it
@@ -336,8 +318,6 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (deep_copied_surrogate_data())
-    modSurrData.active_key(data_rep->activeKey);
 
   // Coefficient combination is not dependent on active state
   //bool updated = update_active_iterators(data_rep->activeKey);

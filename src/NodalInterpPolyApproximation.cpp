@@ -102,22 +102,8 @@ void NodalInterpPolyApproximation::compute_coefficients()
 }
 
 
-void NodalInterpPolyApproximation::increment_coefficients()
-{
-  synchronize_surrogate_data(); // TO DO: update_surrogate_data() ?
-
-  update_expansion_coefficients(); // updates iterators, clears computed bits
-
-  allocate_component_sobol();
-}
-
-
 void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data())
-    modSurrData.pop(save_data);
-
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
 
@@ -138,33 +124,6 @@ void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
   }
 
   clear_computed_bits();
-}
-
-
-void NodalInterpPolyApproximation::push_coefficients()
-{
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data()) {
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-    modSurrData.push(data_rep->retrieval_index());
-  }
-
-  update_expansion_coefficients(); // updates iterators, clears computed bits
-}
-
-
-void NodalInterpPolyApproximation::finalize_coefficients()
-{
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-    for (i=0; i<num_popped; ++i)
-      modSurrData.push(data_rep->finalization_index(i), false);
-    modSurrData.clear_active_popped(); // only after process completed
-  }
-
-  update_expansion_coefficients(); // updates iterators, clears computed bits
 }
 
 
@@ -209,8 +168,6 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
 
 void NodalInterpPolyApproximation::clear_inactive()
 {
-  PolynomialApproximation::clear_inactive();
-
   std::map<UShortArray, RealVector>::iterator e1c_it
     = expansionType1Coeffs.begin();
   std::map<UShortArray, RealMatrix>::iterator e2c_it
@@ -236,8 +193,6 @@ void NodalInterpPolyApproximation::combine_coefficients()
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  if (deep_copied_surrogate_data())
-    modSurrData.active_key(key);
 
   // Coefficient combination is not dependent on active state, but active
   // iterators used below to avoid additional key lookups in stored_*()

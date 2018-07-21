@@ -275,11 +275,6 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
 
 void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
 {
-  // mirror operations already performed on surrData for a modSurrData
-  // that is disconnected/deep copied
-  if (deep_copied_surrogate_data())
-    modSurrData.pop(save_data);
-
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
@@ -342,11 +337,6 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-
-  // mirror operations already performed on surrData for a modSurrData
-  // that is disconnected/deep copied
-  if (deep_copied_surrogate_data())
-    modSurrData.push(data_rep->retrieval_index());
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -414,15 +404,6 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-
-  // mirror operations already performed on surrData for a modSurrData
-  // that is disconnected/deep copied
-  if (deep_copied_surrogate_data()) {
-    size_t i, num_popped = modSurrData.popped_sets(); // # of popped trials
-    for (i=0; i<num_popped; ++i)
-      modSurrData.push(data_rep->finalization_index(i), false);
-    modSurrData.clear_active_popped(); // only after process completed
-  }
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);

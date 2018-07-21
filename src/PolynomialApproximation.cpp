@@ -73,24 +73,39 @@ void PolynomialApproximation::response_data_to_surplus_data()
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  // No modifications for first level or key not found
-  SurrogateData& surr_data = surrData.front();
   if (modSurrData.is_null()) modSurrData = SurrogateData(key);
-  else modSurrData.active_key(key);
+  else                       modSurrData.active_key(key);
+
+  SurrogateData& surr_data = surrData.front();
   const std::map<UShortArray, SDRArray>& resp_data_map
     = surr_data.response_data_map();
   std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
+
+  // Keep surrData and modSurrData distinct (don't share reps since copy() will
+  // not restore independence when it is needed).  Rather use distinct arrays
+  // with shallow copies of SDV,SDR instances when they will not be modified.
+  // > level 0: both SDVs and SDRs can be shallow copies
+  // > shallow copies of popped arrays support replicated pops on modSurrData
+  //   (applied to distinct arrays of shared instances)
   if (cit == resp_data_map.begin() || // first entry -> no discrepancy/surplus
       cit == resp_data_map.end()) {   // key not found
     modSurrData.copy_active(surr_data, SHALLOW_COPY, SHALLOW_COPY);
     return;
   }
+  else if (cit == resp_data_map.end()) { // key not found
+    PCerr << "Error: active key not found in PolynomialApproximation::"
+	  << "response_data_to_surplus_data()." << std::endl;
+    abort_handler(-1);
+  }
 
-  // For this case, no vars/response data has yet been provided for modSurrData,
-  // and it needs to be initialized here.  We will reuse the variables data and
-  // modify the response data to reflect hierarchical surpluses --> initialize
-  // modSurrData with shared vars and unique resp instances:
-  modSurrData.copy_active(surr_data, SHALLOW_COPY, DEEP_COPY);
+  // levels 1 -- L: modSurrData computes hierarchical surplus between level l
+  // data (approxData[0] from Dakota::PecosApproximation) and the level l-1
+  // approximation.
+  // > SDR and popped SDR instances are distinct; only pop counts are copied
+  modSurrData.copy_active_sdv(surr_data, SHALLOW_COPY);
+  modSurrData.size_active_sdr(surr_data);
+  modSurrData.anchor_index(surr_data.anchor_index());
+  modSurrData.pop_count_stack(surr_data.pop_count_stack());
   // TO DO: do this more incrementally as data sets evolve across levels
 
   // More efficient to roll up contributions from each level expansion than
@@ -168,7 +183,7 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
   if (modSurrData.is_null()) modSurrData = SurrogateData(key);
-  else modSurrData.active_key(key);
+  else                       modSurrData.active_key(key);
 
   SurrogateData& lf_surr_data = surrData.front();
   const std::map<UShortArray, SDRArray>& resp_data_map
@@ -178,28 +193,30 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   // Keep surrData and modSurrData distinct (don't share reps since copy() will
   // not restore independence when it is needed).  Rather use distinct arrays
   // with shallow copies of SDV,SDR instances when they will not be modified.
-  // > level 0 mode is BYPASS_SURROGATE: SDVs and SDRs can be a shallow copies
+  // > level 0 mode is BYPASS_SURROGATE: both SDVs & SDRs can be shallow copies
   // > shallow copies of popped arrays support replicated pops on modSurrData
   //   (applied to distinct arrays of shared instances)
   if (cit == resp_data_map.begin()) { // first entry -> no discrepancy/surplus
     modSurrData.copy_active(lf_surr_data, SHALLOW_COPY, SHALLOW_COPY);
     return;
   }
-  else if (cit == resp_data_map.end()) // key not found
-    return;
+  else if (cit == resp_data_map.end()) { // key not found
+    PCerr << "Error: active key not found in PolynomialApproximation::"
+	  << "response_data_to_discrepancy_data()." << std::endl;
+    abort_handler(-1);
+  }
 
-  // level 1 -- L mode is AGGREGATED_MODELS: modSurrData computes discrepancy
-  // between LF data (approxData[0] from Dakota::PecosApproximation;
-  // receives level l-1 data) and and HF data (approxData[1] from Dakota::
-  // PecosApproximation; receives level l data).
-  // > SDR and popped SDR instances are now distinct; only pop counts should
-  //   be copied
+  // levels 1 -- L use AGGREGATED_MODELS mode: modSurrData computes discrepancy
+  // between LF data (approxData[0] from Dakota::PecosApproximation; receives
+  // level l-1 data) and HF data (approxData[1] from Dakota::PecosApproximation;
+  // receives level l data).
+  // > SDR and popped SDR instances are distinct; only pop counts are copied
   SurrogateData& hf_surr_data = surrData.back();
-  modSurrData.active_key(key);
   modSurrData.copy_active_sdv(hf_surr_data, SHALLOW_COPY);
   modSurrData.size_active_sdr(hf_surr_data);
   modSurrData.anchor_index(hf_surr_data.anchor_index());
   modSurrData.pop_count_stack(hf_surr_data.pop_count_stack());
+  // TO DO: do this more incrementally as data sets evolve across levels
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
@@ -247,14 +264,6 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   }
 
   modSurrData.data_checks(); // from scratch (aggregate LF,HF failures)
-}
-
-
-void PolynomialApproximation::clear_inactive()
-{
-  // mirror changes to surrData for deep copied modSurrData
-  if (deep_copied_surrogate_data())
-    modSurrData.clear_inactive();
 }
 
 

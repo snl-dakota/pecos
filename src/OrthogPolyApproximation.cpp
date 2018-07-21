@@ -49,8 +49,6 @@ void OrthogPolyApproximation::allocate_arrays()
 
 void OrthogPolyApproximation::clear_inactive()
 {
-  PolynomialApproximation::clear_inactive();
-
   std::map<UShortArray, RealVector>::iterator ec_it = expansionCoeffs.begin();
   std::map<UShortArray, RealMatrix>::iterator eg_it
     = expansionCoeffGrads.begin();
