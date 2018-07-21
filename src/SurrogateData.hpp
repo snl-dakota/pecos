@@ -1030,8 +1030,6 @@ private:
   /// assign sdr within respData[activeKey] at indicated index
   void assign_response(const SurrogateDataResp& sdr, size_t index);
 
-  // set failedAnchorData
-  //void failed_anchor_data(short fail_anchor);
   /// set failedRespData
   void failed_response_data_map(
     const std::map<UShortArray, SizetShortMap>&	fail_resp) const;
@@ -1629,10 +1627,6 @@ inline short SurrogateData::failed_anchor_data() const
     return (cit2 == failed_resp_data.end()) ? 0 : cit2->second;
   }
 }
-
-
-//inline void SurrogateData::failed_anchor_data(short fail_anchor)
-//{ sdRep->failedAnchorData = fail_anchor; }
 
 
 inline void SurrogateData::
