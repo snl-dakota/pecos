@@ -647,8 +647,8 @@ integrate_response_moments(size_t num_moments)
   // combined_to_active() should precede this call -> can use active coeffs/wts,
   // but rely on combinedVarSets instead of modSurrData variables
   // *** TO DO: cleaner logic, unification, etc.
-  if (data_rep->expConfigOptions.combineType &&
-      !data_rep->combinedVarSets.empty())
+  if ( data_rep->expConfigOptions.combineType &&
+      !data_rep->combinedVarSets.empty() )
     integrate_response_moments(num_moments,
       data_rep->combinedVarSets, // not cleared in combined_to_active()
       hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),

@@ -100,7 +100,7 @@ public:
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
-  combineType(NO_COMBINE), discrepancyType(DISTINCT_DISCREP), 
+  combineType(NO_COMBINE), discrepancyType(NO_DISCREP),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refinementType(NO_REFINEMENT),*/ refinementControl(NO_CONTROL),
   maxRefineIterations(100), maxSolverIterations(100),

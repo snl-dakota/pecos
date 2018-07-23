@@ -61,7 +61,7 @@ void PolynomialApproximation::synchronize_surrogate_data()
     response_data_to_discrepancy_data(); break;
   default: // allow use of approxData or modSurrData, even if no modifications
     if (modSurrData.is_null())
-      modSurrData = surrData.front();//shared rep (only needs to be linked once)
+      modSurrData = surrData.front();// shared rep (linking once is sufficient)
     break;
   }
 }

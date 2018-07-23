@@ -221,7 +221,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
     combinedExpT1CoeffGrads.shape(num_t1v, num_pts);
   else combinedExpT1CoeffGrads = 0.;
 
-  switch (data_rep->expConfigOptions.combineType) {
+  switch (combine_type) {
   case MULT_COMBINE: { // multiplication of current and stored expansions
     size_t l, ll, num_lev = expansionType1Coeffs.size();
     RealVector t1c_vals(num_lev, false);  Real t1c_prod;
