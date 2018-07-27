@@ -18,9 +18,16 @@ void PolyApproximation::value(const RealMatrix &samples, RealMatrix &approx_vals
 
 void PolyApproximation::
 generate_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
-  RealMatrix transformed_samples;
-  varTransform_->map_samples_from_user_space(samples,transformed_samples);
-  generate_canonical_basis_matrix(transformed_samples, basis_matrix);
+  // BMA TODO: Wasn't sure if the intent is to have a default no-op
+  // variable transformation, or conditional logic here to avoid the
+  // copy...
+  if (varTransform_) {
+    RealMatrix transformed_samples;
+    varTransform_->map_samples_from_user_space(samples,transformed_samples);
+    generate_canonical_basis_matrix(transformed_samples, basis_matrix);
+  }
+  else
+    generate_canonical_basis_matrix(samples, basis_matrix);
 }
 
 
