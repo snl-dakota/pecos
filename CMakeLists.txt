@@ -61,59 +61,56 @@ else()
   endif()
 endif(Boost_DIR)
 
-# when building inside Trilinos, the path to Teuchos will already be set
 if (NOT BUILD_IN_TRILINOS)
 
-  # first probe for system-installed Trilinos
-  # this will respect Trilinos_DIR if already set
+  # First probe for system-installed Trilinos, respecting Trilinos_DIR if set
   find_package(Trilinos QUIET)
-  
-  if ( NOT Trilinos_DIR )
 
-    # if no one has configured a local src Teuchos, do so
-    # this will respect Teuchos_DIR if already set
-    if( NOT Teuchos_DIR )
-      if( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/packages/teuchos/cmake/tribits )
-	set( Teuchos_DIR
-          ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/packages/teuchos )
-	set( Trilinos_ENABLE_Teuchos ON CACHE BOOL
-          "ENABLE TriBITS build of teuchos" FORCE )
+  if(Trilinos_FOUND)
+    if(Trilinos_DIR)
+      message(STATUS
+	"Pecos using previously specified Trilinos in ${Trilinos_DIR}")
+    else()
+      message(STATUS "Pecos using external Trilinos")
+    endif()
+  else()
 
-	# Map key Dakota variables to TriBITS variables
-	set( TPL_ENABLE_MPI ${DAKOTA_HAVE_MPI} )
-	set( TPL_BLAS_LIBRARIES ${BLAS_LIBS} )
-	set( TPL_LAPACK_LIBRARIES ${LAPACK_LIBS} )
+    # If no parent project configured Teuchos, do so, using Teuchos_DIR if set
+    if(Teuchos_DIR)
+      message(STATUS
+	"Pecos using previously specified Teuchos in ${Teuchos_DIR}")
+    elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/packages/trilinos)
 
-      else()
-	# Use "historical" directory hierarchy, before TriBITS
-	set( Teuchos_DIR ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos )
-      endif() # tribits source directory EXISTS
+      set(Teuchos_DIR
+        ${CMAKE_CURRENT_BINARY_DIR}/packages/trilinos/packages/teuchos)
+      set(Trilinos_ENABLE_Teuchos ON CACHE BOOL
+        "Pecos enabling Trilinos Teuchos" FORCE)
 
-      message( "Setting Teuchos_DIR to ${Teuchos_DIR}" )
+      # Map key Pecos variables to TriBITS variables
+      set( TPL_BLAS_LIBRARIES ${BLAS_LIBS} )
+      set( TPL_LAPACK_LIBRARIES ${LAPACK_LIBS} )
+      # Pecos doesn't use any Teuchos MPI features; may want to force off
+      #set( TPL_ENABLE_MPI ${DAKOTA_HAVE_MPI} )
+      # This doesn't do as name implies; setting OFF doesn't generate Config.cmake
+      # at all; doesn't just control whether installed!  Want Config.cmake in build
+      #        set(Trilinos_ENABLE_INSTALL_CMAKE_CONFIG_FILES OFF CACHE BOOL
+      #	  "Pecos is the top-level package; don't write Trilinos config files")
 
-      # Additional setting to prevent multiple targets with the same name
-      set(Trilinos_TARGETS_IMPORTED 1)
-
-      add_subdirectory(packages/teuchos)
-      #set(Teuchos_LIBRARY_DIRS "")
+      message(STATUS "Pecos setting Teuchos_DIR to ${Teuchos_DIR}")
+      add_subdirectory(packages/trilinos)
 
     else()
-      message( "in ${CMAKE_CURRENT_BINARY_DIR} Teuchos_DIR already set to ${Teuchos_DIR}" )
-    endif() # NOT Teuchos_DIR
+      message(WARNING
+	"Pecos requires teuchos, but could not find local nor parent copy!")
+    endif() # Teuchos_DIR
 
-    if( EXISTS ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake )
-      # Move the "TriBITS" config file to teuchos subdir (not the BuildRoot)
-      file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake
-	${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/TrilinosConfig.cmake)
-    endif()
+    # Additional setting to prevent multiple targets with the same name
+    set(Trilinos_TARGETS_IMPORTED 1)
 
-    #set(Teuchos_LIBRARIES teuchos)
     find_package( Teuchos NO_MODULE REQUIRED )
-    message( STATUS "Teuchos_LIBRARIES for pecos link: ${Teuchos_LIBRARIES}" )
-    
-  else()
-    message( "Using system trilinos in ${Trilinos_DIR}" )
-  endif() # NOT Trilinos_DIR
+
+  endif() # Trilinos_DIR
+
 endif() # NOT BUILD_IN_TRILINOS
 
 link_directories(${Teuchos_LIBRARY_DIRS})

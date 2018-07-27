@@ -78,8 +78,9 @@ protected:
   void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t maximal_index);
   void remove_stored_coefficients(size_t index = _NPOS);
+  void clear_stored();
 
-  void combine_coefficients(short combine_type, size_t swap_index);
+  void combine_coefficients(size_t swap_index);
 
   void print_coefficients(std::ostream& s, bool normalized);
 
@@ -131,9 +132,11 @@ protected:
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
   /// compute expansion moments to order 2
-  void compute_moments();
+  void compute_moments(bool full_stats = true);
   /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x);
+  void compute_moments(const RealVector& x, bool full_stats = true);
+
+  size_t sparsity() const;
 
   //
   //- Heading: Member functions
@@ -227,7 +230,7 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
 
 
-inline void OrthogPolyApproximation::compute_moments()
+inline void OrthogPolyApproximation::compute_moments(bool full_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
@@ -235,7 +238,8 @@ inline void OrthogPolyApproximation::compute_moments()
 }
 
 
-inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
+inline void OrthogPolyApproximation::
+compute_moments(const RealVector& x, bool full_stats)
 {
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]
@@ -324,6 +328,10 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
 }
+
+
+inline size_t OrthogPolyApproximation::sparsity() const
+{ return expansionCoeffs.length(); }
 
 
 inline void OrthogPolyApproximation::size_expansion()

@@ -2,7 +2,7 @@
 #define LINEAR_SOLVERS_PECOS_SRC_HPP
 
 #include "compressed_sensing.hpp"
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace Pecos {
 
@@ -528,7 +528,7 @@ public:
   };
 };
 
-typedef boost::shared_ptr<LinearSolver> LinearSolver_ptr;
+typedef std::shared_ptr<LinearSolver> LinearSolver_ptr;
 
 /**
  * \brief Specify a set of options for using the CompressedSensingTool

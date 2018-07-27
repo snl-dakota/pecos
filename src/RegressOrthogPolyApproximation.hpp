@@ -86,15 +86,16 @@ protected:
   //
 
   int min_coefficients() const;
-  void compute_coefficients();
 
-  void increment_coefficients();
+  void compute_coefficients(size_t index = _NPOS);
+  void increment_coefficients(size_t index = _NPOS);
+
   void store_coefficients(size_t index = _NPOS);
   void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t index);
   void remove_stored_coefficients(size_t index = _NPOS);
 
-  void combine_coefficients(short combine_type, size_t swap_index);
+  void combine_coefficients(size_t swap_index);
 
   void allocate_arrays();
 
@@ -125,7 +126,9 @@ protected:
 
   void compute_component_sobol();
   void compute_total_sobol();
+
   ULongULongMap sparse_sobol_index_map() const;
+  size_t sparsity() const;
 
   RealVector approximation_coefficients(bool normalized) const;
   void approximation_coefficients(const RealVector& approx_coeffs,
@@ -388,6 +391,13 @@ inflate(SizetSet& sparse_ind, size_t num_terms)
 inline ULongULongMap RegressOrthogPolyApproximation::
 sparse_sobol_index_map() const
 { return sparseSobolIndexMap; }
+
+
+inline size_t RegressOrthogPolyApproximation::sparsity() const
+{
+  return (sparseIndices.empty()) ?
+    expansionCoeffs.length() : sparseIndices.size();
+}
 
 
 inline size_t RegressOrthogPolyApproximation::expansion_terms() const

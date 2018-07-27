@@ -578,9 +578,9 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
   else return -1;
 }
 
-boost::shared_ptr<LinearModelCrossValidationIterator> MultipleSolutionLinearModelCrossValidationIterator::copy()
+std::shared_ptr<LinearModelCrossValidationIterator> MultipleSolutionLinearModelCrossValidationIterator::copy()
 {
-  boost::shared_ptr<LinearModelCrossValidationIterator> cv_iterator( new MultipleSolutionLinearModelCrossValidationIterator() );
+  std::shared_ptr<LinearModelCrossValidationIterator> cv_iterator( new MultipleSolutionLinearModelCrossValidationIterator() );
   cv_iterator->CrossValidationIterator::copy((CrossValidationIterator)(*this));
   cv_iterator->copy_solver( solver_ );
     
