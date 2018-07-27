@@ -1,10 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
-
-project("Pecos" C CXX Fortran)
-
-# --- CMake modules ---
-include(FortranCInterface)
-include(CTest)
+cmake_minimum_required(VERSION 3.1)
 
 set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
@@ -13,6 +7,16 @@ set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config_tests
   ${CMAKE_MODULE_PATH}
 )
+
+# Pecos requires C++11
+include(DakotaCxxOptions)
+dakota_cxx_standard()
+
+project("Pecos" C CXX Fortran)
+
+# --- CMake modules ---
+include(FortranCInterface)
+include(CTest)
 
 
 # --- Global options ---
@@ -97,6 +101,22 @@ if (NOT BUILD_IN_TRILINOS)
       #	  "Pecos is the top-level package; don't write Trilinos config files")
 
       message(STATUS "Pecos setting Teuchos_DIR to ${Teuchos_DIR}")
+
+      # This mirrors the Trilinos release process setting, so Pecos
+      # can work with Trilinos master, when needed.  Specifically it
+      # will suppress errors about missing packages.
+      set(Trilinos_ENABLE_DEVELOPMENT_MODE OFF CACHE BOOL
+	"Pecos disabling Trilinos development mode")
+      # This would be lighter weight, but might result in strong warnings
+      ##set(Trilinos_ASSERT_MISSING_PACKAGES OFF CACHE BOOL "Dakota being lazy")
+
+      set(Trilinos_GENERATE_REPO_VERSION_FILE OFF CACHE BOOL
+        "Pecos disabling generation of TrilinosRepoVersion.txt")
+
+      # TODO: Propagate to top-level Dakota configure
+      set(Teuchos_ENABLE_COMPLEX TRUE CACHE BOOL
+	"Pecos requires some complex blas wrappers")
+
       add_subdirectory(packages/trilinos)
 
     else()

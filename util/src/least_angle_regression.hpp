@@ -2,6 +2,7 @@
 #define LEAST_ANGLE_REGRESSION_HPP
 
 #include "linear_algebra.hpp"
+#include <set>
 
 namespace Surrogates {
 
