@@ -238,9 +238,9 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void surrogate_data(const SurrogateData& data, size_t d_index);
-  const SurrogateData& surrogate_data(size_t d_index) const;
-  SurrogateData& surrogate_data(size_t d_index);
+  void surrogate_data(const SurrogateData& data);
+  const SurrogateData& surrogate_data() const;
+  SurrogateData& surrogate_data();
 
   void modified_surrogate_data(const SurrogateData& data);
   const SurrogateData& modified_surrogate_data() const;
@@ -259,11 +259,11 @@ protected:
 
   /// update modSurrData from surrData based on deep or shallow copy
   void synchronize_surrogate_data();
-  /// compute hierarchical surpluses from the surrData response data
-  /// and store in modSurrData
+  /// compute hierarchical surpluses from the surrData active key
+  /// and store in same key within modSurrData
   void response_data_to_surplus_data();
-  /// compute discrepancy data using surrData (HF) and modSurrData (LF)
-  /// and store in modSurrData (update from LF to discrepancy)
+  /// compute discrepancy data using surrData keys (HF and LF pairs)
+  /// and store in modSurrData
   void response_data_to_discrepancy_data();
 
   /// clear bits for current moments (updated from reference)
@@ -284,16 +284,15 @@ protected:
   //- Heading: Data
   //
 
-  /// SurrogateData instances containing the variables (shared) and response
+  /// SurrogateData instance containing the variables (shared) and response
   /// (unique) data arrays for constructing a surrogate of a single response
-  /// function; this is the original unmodified data set, prior to any
-  /// potential manipulations by the approximation classes.  More than one
-  /// instance can be created in the case of response aggregation modes.
-  std::vector<SurrogateData> surrData;
+  /// function; this is the original unmodified data set for one or more level
+  /// keys, prior to any potential manipulations by the approximation classes.
+  SurrogateData surrData;
   /// SurrogateData instance used in current approximation builds, potentially
   /// reflecting data modifications (e.g., calculation of hierarchical surplus
-  /// of new surrData relative to previous surrogate or model discrepancy
-  /// between two surrData instances)
+  /// of surrData level relative to previous surrogate level or model
+  /// discrepancy between two consecutive surrData level keys)
   SurrogateData modSurrData;
 
   /// flag for calculation of expansion coefficients from response values
@@ -367,44 +366,16 @@ inline PolynomialApproximation::~PolynomialApproximation()
 { }
 
 
-inline const SurrogateData& PolynomialApproximation::
-surrogate_data(size_t d_index) const
-{
-  if (d_index >= surrData.size()) {
-    PCerr << "Error: index out of allowable range in PolynomialApproximation::"
-	  << "surrogate_data(size_t)." << std::endl;
-    abort_handler(-1);
-  }
-  return surrData[d_index];
-}
+inline const SurrogateData& PolynomialApproximation::surrogate_data() const
+{ return surrData; }
 
 
-inline SurrogateData& PolynomialApproximation::surrogate_data(size_t d_index)
-{
-  if (d_index >= surrData.size()) {
-    PCerr << "Error: index out of allowable range in PolynomialApproximation::"
-	  << "surrogate_data(size_t)." << std::endl;
-    abort_handler(-1);
-  }
-  return surrData[d_index];
-}
+inline SurrogateData& PolynomialApproximation::surrogate_data()
+{ return surrData; }
 
 
-inline void PolynomialApproximation::
-surrogate_data(const SurrogateData& data, size_t d_index)
-{
-  // surrData is not explicitly sized, so allow single augmentation at end
-  size_t num_sd = surrData.size();
-  if (d_index < num_sd)
-    surrData[d_index] = data; // shared rep
-  else if (d_index == num_sd)
-    surrData.push_back(data); // shared rep
-  else {
-    PCerr << "Error: index out of allowable range in PolynomialApproximation::"
-	  << "surrogate_data(SurrogateData&)." << std::endl;
-    abort_handler(-1);
-  }
-}
+inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
+{ surrData = data; }
 
 
 inline const SurrogateData& PolynomialApproximation::

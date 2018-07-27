@@ -2493,13 +2493,12 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !ref_key.empty();
   // Support original (R) or modified (DeltaR) data for product interpolants
-  const SurrogateData& surr_data
-    = (mod_surr_data) ? modSurrData : surrData.back();
+  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : surrData;
   const SDVArray& sdv_array   = surr_data.variables_data();
   const SDRArray& sdr_array_1 = surr_data.response_data();
   const SDRArray& sdr_array_2 = (mod_surr_data) ?
     hip_approx_2->modSurrData.response_data() :
-    hip_approx_2->surrData.back().response_data();
+    hip_approx_2->surrData.response_data();
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
   r1r2_t1_coeffs.resize(num_levels); r1r2_t1_coeffs[0].resize(1);
@@ -2735,7 +2734,7 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   const std::map<UShortArray, Sizet3DArray>&  colloc_index_map
     = hsg_driver->collocation_indices_map();
   const std::map<UShortArray, SDVArray>& sdv_array_map
-    = surrData.back().variables_data_map();
+    = surrData.variables_data_map();
   const std::map<UShortArray, Sizet3DArray>& c_index_map
     = hsg_driver->collocation_indices_map();
   size_t mod, lev, set, pt, num_levels, num_sets, num_tp_pts, v,
@@ -2830,13 +2829,12 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !ref_key.empty();
   // Support original (R) or modified (DeltaR) data for product interpolants
-  const SurrogateData& surr_data
-    = (mod_surr_data) ? modSurrData : surrData.back();
+  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : surrData;
   const SDVArray& sdv_array   = surr_data.variables_data();
   const SDRArray& sdr_array_1 = surr_data.response_data();
   const SDRArray& sdr_array_2 = (mod_surr_data) ?
     hip_approx_2->modSurrData.response_data() :
-    hip_approx_2->surrData.back().response_data();
+    hip_approx_2->surrData.response_data();
 
   cov_t1_coeffs.resize(num_levels); cov_t1_coeffs[0].resize(1);
   cov_t2_coeffs.resize(num_levels); cov_t2_coeffs[0].resize(1);
@@ -3065,13 +3063,12 @@ central_product_gradient_interpolant(
     num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !ref_key.empty();
   // Support original (R) or modified (DeltaR) data for product interpolants
-  const SurrogateData& surr_data
-    = (mod_surr_data) ? modSurrData : surrData.back();
+  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : surrData;
   const SDVArray& sdv_array   = surr_data.variables_data();
   const SDRArray& sdr_array_1 = surr_data.response_data();
   const SDRArray& sdr_array_2 = (mod_surr_data) ?
     hip_approx_2->modSurrData.response_data() :
-    hip_approx_2->surrData.back().response_data();
+    hip_approx_2->surrData.response_data();
 
   // level 0 (assume this is always contained in a partial ref_key)
   cov_t1_coeff_grads.resize(num_levels); cov_t1_coeff_grads[0].resize(1);
@@ -3726,7 +3723,7 @@ central_product_member_coefficients(const BitArray& m_bits,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
-  const SDVArray& sdv_array = surrData.back().variables_data();
+  const SDVArray& sdv_array = surrData.variables_data();
 
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
     num_levels = m_t1_coeffs.size(), num_sets, num_tp_pts, c_index,
