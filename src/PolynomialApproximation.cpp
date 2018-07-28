@@ -220,8 +220,14 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   size_t i, num_pts = surrData.points();
   const SDVArray&    sdv_array = surrData.variables_data();
   const SDRArray& hf_sdr_array = surrData.response_data();
+
+  // ***************************************************************************
+  // TO DO: improve encapsulation by passing surrogate key (currently replicates
+  // logic in Dakota::ApproximationInterface::{truth,surrogate}_model_key())
   UShortArray lf_key(key);  --lf_key.back();
   lf_key.insert(lf_key.end(), key.begin(), key.end());
+  // ***************************************************************************
+
   r_cit = resp_data_map.find(lf_key);
   const SDRArray& lf_sdr_array = r_cit->second;
   SDRArray&    delta_sdr_array = modSurrData.response_data();
