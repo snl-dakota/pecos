@@ -12,23 +12,11 @@ from distutils.sysconfig import get_python_inc
 
 include_pecos=True
 
-# TODO:
-#  * Use Boost and Trilinos information from cache to permit using
-#    external vs. built with Pecos
-
 pecos_src = "@Pecos_SOURCE_DIR@"
 pecos_build = "@Pecos_BINARY_DIR@"
 cpp_src = join("@CMAKE_CURRENT_SOURCE_DIR@", "cpp_src")
-
-# Get location of boost include from Pecos CMakeCache.txt generated when Pecos
-# libraries was built
-cmakecache_filename = os.path.join(pecos_build,'CMakeCache.txt')
-with open(cmakecache_filename, 'r') as f:
-    file_string = f.read()
-    index1=file_string.find('Boost_INCLUDE_DIR:PATH=')
-    index2=file_string.find('=',index1)+1
-    index3=file_string.find('\n',index2)
-    boost_include=file_string[index2:index3]
+# semicolon-separated list of directories
+cmake_boost_inc_dirs = "@Boost_INCLUDE_DIRS@"
 
 package_name="PyDakota"
 
@@ -41,13 +29,12 @@ except AttributeError:
 # Generate swigpyrun.h which defines WIG_TypeQuery, SWIG_NewPointerObj, etc.
 subprocess.call(['swig','-python','-external-runtime','swigpyrun.h'])
 
-base_include_dirs = [
-    numpy_include,
-    boost_include,
-    cpp_src,
-    os.getcwd(),   #include swigpyrun.h generated above
-    get_python_inc(), #include Python.h
-]
+base_include_dirs = [ numpy_include ] + \
+    cmake_boost_inc_dirs.split(';') + \
+    [ cpp_src,
+      os.getcwd(),      #include swigpyrun.h generated above
+      get_python_inc()  #include Python.h
+  ]
 
 surrogates_include_dirs=[
     join(pecos_src,'util','src'),
@@ -59,9 +46,10 @@ pecos_include_dirs=[
 ]
 
 
+# NOTE: This assumes teuchos is built as part of Pecos
+# TODO: Use Teuchos_INCLUDE_DIRS, Teuchos_LIBRARIES
 teuchos_src_dir = join(pecos_src,'packages','trilinos','packages','teuchos')
-teuchos_build_dir = join(
-    pecos_build,'packages','trilinos','packages','teuchos')
+teuchos_build_dir = join(pecos_build,'packages','trilinos','packages','teuchos')
 
 teuchos_include_dirs = [
     join(teuchos_src_dir,'core','src'),
