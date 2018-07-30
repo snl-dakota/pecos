@@ -15,6 +15,15 @@ include_pecos=True
 from os.path import expanduser
 home = expanduser("~")
 
+
+# BMA: This assumes there's a pecos checkout in pecos_root and
+# build dir pecos_root/build. This script is run from pecos_root/python.
+#
+# TODO:
+#  * Configure based on Pecos_SOURCE_DIR and Pecos_BINARY_DIR
+#  * Use Boost and Trilinos information from cache to permit using
+#    external vs. built with Pecos
+
 pecos_root = os.path.join(os.path.split(os.path.abspath(__file__))[0],'..')
 #pecos_root = os.path.join(home,'software','pecos')
 
@@ -59,13 +68,17 @@ pecos_include_dirs=[
     join(pecos_root,'src')
 ]
 
-teuchos_root = join(pecos_root,'packages','teuchos','packages','teuchos')
-# Include following dir to include Teuchos_DLLExportMacro.h
+
+teuchos_src_dir = join(pecos_root,'packages','trilinos','packages','teuchos')
 teuchos_build_dir = join(
-    pecos_build_dir,'packages','teuchos','packages','teuchos','src')
+    pecos_build_dir,'packages','trilinos','packages','teuchos')
+
 teuchos_include_dirs = [
-    join(teuchos_root,'src'),
-    teuchos_build_dir]
+    join(teuchos_src_dir,'core','src'),
+    join(teuchos_src_dir,'numerics','src'),
+    join(teuchos_build_dir,'core','src')     ## For TeuchosCore_config.h
+    ]
+teuchos_numerics_lib_dir = join(teuchos_build_dir,'numerics','src')
 
 pydakota_srcs = [join('cpp_src','python_helpers.cpp')]
 
@@ -93,9 +106,8 @@ package_swig_opts = base_swig_opts+[
     '%s'%join(distutils_build_dir,package_name)]
 
 options_list_include_dirs = base_include_dirs+[join(pecos_root,'util','src')]+surrogates_include_dirs + teuchos_include_dirs
-options_list_library_dirs = [
-    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')]
-options_list_libraries = ['teuchos']
+options_list_library_dirs = [teuchos_numerics_lib_dir]
+options_list_libraries = ['teuchosnumerics']
 options_list = Extension(
     '_options_list',
     [join('cpp_src','OptionsList.i')]+pydakota_srcs,
@@ -104,6 +116,7 @@ options_list = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = options_list_library_dirs,
+    ##runtime_library_dirs = options_list_library_dirs,
     libraries = options_list_libraries,
     extra_compile_args = ['-std=c++11'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in options_list_include_dirs]
@@ -114,8 +127,8 @@ math_tools_include_dirs=base_include_dirs+[join(pecos_root,'util','src')]+surrog
 math_tools_library_dirs=[
     join(pecos_build_dir,'util','src'),
    # join(pecos_build_dir,'surrogates','models','src'),
-    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')]
-math_tools_libraries=['pecos_util','teuchos','lapack','blas']
+    teuchos_numerics_lib_dir]
+math_tools_libraries=['pecos_util','teuchosnumerics','lapack','blas']
 math_tools = Extension(
     '_math_tools',
     [join('cpp_src','math_tools.i')],#+pydakota_srcs,
@@ -124,6 +137,7 @@ math_tools = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = math_tools_library_dirs,
+    ##runtime_library_dirs = math_tools_library_dirs,
     libraries = math_tools_libraries,
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in math_tools_include_dirs])
@@ -132,7 +146,7 @@ regression_include_dirs = base_include_dirs+surrogates_include_dirs+\
   teuchos_include_dirs
 regression_library_dirs = [
     join(pecos_build_dir,'util','src'),
-    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src'),
+    teuchos_numerics_lib_dir,
     join(pecos_build_dir,'surrogates','models','src')]
 regression = Extension(
     '_regression',
@@ -142,16 +156,17 @@ regression = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = regression_library_dirs,
-    libraries = ['models','pecos_util','teuchos','blas','lapack'],
+    ##runtime_library_dirs = regression_library_dirs,
+    libraries = ['models','pecos_util','teuchosnumerics','blas','lapack'],
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in regression_include_dirs])
 
 approximation_include_dirs=base_include_dirs+surrogates_include_dirs+\
   teuchos_include_dirs
 approximation_library_dirs = regression_library_dirs
-approximation_libraries = ['models','pecos_util','teuchos','blas','lapack']
+approximation_libraries = ['models','pecos_util','teuchosnumerics','blas','lapack']
 if include_pecos:
-    approximation_include_dirs+=[join(pecos_root,'surrogates','pecos_wrapper','src')]+pecos_include_dirs+[join(pecos_root,'packages','teuchos','packages','teuchos','src'),join(pecos_root,'packages','VPISparseGrid','src')]
+    approximation_include_dirs+=[join(pecos_root,'surrogates','pecos_wrapper','src')]+pecos_include_dirs+[join(teuchos_src_dir,'numerics','src'),join(pecos_root,'packages','VPISparseGrid','src')]
     approximation_library_dirs += [
         join(pecos_build_dir,'src'),
         join(pecos_build_dir,'packages','VPISparseGrid','src'),
@@ -167,6 +182,7 @@ approximation = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = approximation_library_dirs,
+    ##runtime_library_dirs = approximation_library_dirs,
     libraries = approximation_libraries,
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in approximation_include_dirs])
@@ -174,7 +190,7 @@ approximation = Extension(
 univariate_polynomials_include_dirs=base_include_dirs+pecos_include_dirs+teuchos_include_dirs+surrogates_include_dirs
 univariate_polynomials_library_dirs=[
     join(pecos_build_dir,'src'),
-    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src'),
+    teuchos_numerics_lib_dir,
     join(pecos_build_dir,'packages','VPISparseGrid','src')]
 univariate_polynomials = Extension(
     '_univariate_polynomials',
@@ -184,7 +200,8 @@ univariate_polynomials = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = univariate_polynomials_library_dirs,
-    libraries = ['pecos_src','sparsegrid','teuchos','lapack','blas'],
+    ##runtime_library_dirs = univariate_polynomials_library_dirs,
+    libraries = ['pecos_src','sparsegrid','teuchosnumerics','lapack','blas'],
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in univariate_polynomials_include_dirs])
 
@@ -222,9 +239,9 @@ options_list_interface = Extension(
     define_macros =[('COMPILE_WITH_PYTHON',None)],
     undef_macros = [],
     language='c++',
-    library_dirs = [
-        join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')],
-    libraries = ['teuchos'],
+    library_dirs = [teuchos_numerics_lib_dir],
+    ##runtime_library_dirs = [teuchos_numerics_lib_dir],
+    libraries = ['teuchosnumerics'],
     extra_compile_args = ['-std=c++11'],
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in options_list_interface_include_dirs])
 
@@ -283,14 +300,14 @@ setup(
     ext_package=package_name,
     ext_modules=[
         options_list,
-        # math_tools,
-        # regression,
-        # approximation,
-        # univariate_polynomials
-        #std_vector_example,
-        options_list_interface
-        #enum_example,
-        #dot#,
+        math_tools,
+        regression,
+        approximation,
+        univariate_polynomials,
+        std_vector_example,
+        options_list_interface,
+        enum_example,
+        dot
     ],
     package_data={package_name:[join('unit','data/*.gz')]},
     test_suite='setup.PyDakota_test_suite')
