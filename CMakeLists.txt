@@ -213,12 +213,11 @@ set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
 # TODO: optionally depences on Pecos core (need tests with and without)
 add_subdirectory(surrogates)
 
-# Python wrappers are optional. Must add subdirectory after all other core
-# libraries
-# TODO: document SWIG_EXECUTABLE to help find
+# Python wrappers are optional; this approach is having CMake invoke
+# distutils setup.py. Must add this subdirectory after all other core
+# libraries. TODO: check for required dependencies.
 option(DAKOTA_API_PYTHON "Enable Python API (requires SWIG)" OFF)
 if(DAKOTA_API_PYTHON)
-  #dakota_api_python()
-  # Python/SWIG wrapper tests
-  #add_subdirectory(python)
+  find_package(PythonInterp REQUIRED)
+  add_subdirectory(python)
 endif()
