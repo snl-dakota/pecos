@@ -1737,8 +1737,9 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   */
   
   // Short cut: change in R^2 interpolant can be restricted to active expansion
-  // --> use original modSurrData (containing Q^l) to compute hierarchical
-  // differences in product interpolant
+  // since shifted reference point cancels out when interpolating R^2 via
+  // hierarchical differences --> use original surrData (containing Q^l) to
+  // compute hierarchical differences in product interpolant
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(hip_approx_2, false, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
@@ -1792,7 +1793,7 @@ delta_combined_covariance(const RealVector& x,
   
   // Short cut: change in R^2 interpolant can be restricted to active expansion
   // since shifted reference point cancels out when interpolating R^2 via
-  // hierarchical differences --> use original modSurrData (containing Q^l) to
+  // hierarchical differences --> use original surrData (containing Q^l) to
   // compute these hierarchical differences in the product interpolant for the
   // active model key.
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
