@@ -996,6 +996,8 @@ public:
   void active_key(const UShortArray& key) const;
   /// return activeKey
   const UShortArray& active_key() const;
+  /// searches for key and updates {vars,resp}DataIter only if found
+  bool contains_key(const UShortArray& key);
   /// reset initial state by clearing all model keys (empties all maps)
   void clear_keys();
 
@@ -1127,6 +1129,17 @@ inline void SurrogateData::active_key(const UShortArray& key) const
 
 inline const UShortArray& SurrogateData::active_key() const
 { return sdRep->activeKey; }
+
+
+inline bool SurrogateData::contains_key(const UShortArray& key)
+{
+  std::map<UShortArray, SDVArray>::iterator v_it = sdRep->varsData.find(key);
+  std::map<UShortArray, SDRArray>::iterator r_it = sdRep->respData.find(key);
+  if (v_it == sdRep->varsData.end() || r_it == sdRep->respData.end())
+    return false;
+  else
+    { sdRep->varsDataIter = v_it; sdRep->respDataIter = r_it; return true; }
+}
 
 
 inline void SurrogateData::
@@ -1353,22 +1366,24 @@ inline void SurrogateData::pop(bool save_data)
     if (num_ref_pts == 0)
       return; // assume inactive SurrogateData -> ignore pop request
     else {
-      PCerr << "\nError: active count stack not found in SurrogateData::pop()."
-	    << std::endl;
+      PCerr << "\nError: active count stack not found in SurrogateData::pop() "
+	    << "for key:\n" << key << std::flush;
       abort_handler(-1);
     }
   }
 
   SizetArray& pop_count_stack = it->second;
   if (pop_count_stack.empty()) {
-    PCerr << "\nError: empty count stack in SurrogateData::pop()." << std::endl;
+    PCerr << "\nError: empty count stack in SurrogateData::pop() for key:\n"
+	  << key << std::flush;
     abort_handler(-1);
   }
   size_t num_pop_pts = pop_count_stack.back();
   if (num_pop_pts) {
     if (num_ref_pts < num_pop_pts) {
       PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
-	    << num_ref_pts << ") in SurrogateData::pop(size_t)." << std::endl;
+	    << num_ref_pts << ") in SurrogateData::pop(size_t) for key:\n"
+	    << key << std::flush;
       abort_handler(-1);
     }
     SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
@@ -1399,14 +1414,21 @@ inline void SurrogateData::pop(bool save_data)
 inline void SurrogateData::push(size_t index, bool erase_popped)
 {
   const UShortArray& key = sdRep->activeKey;
-  SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
-  SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
+  
+  std::map<UShortArray, SDVArrayDeque>::iterator pvd_it
+    = sdRep->poppedVarsData.find(key);
+  std::map<UShortArray, SDRArrayDeque>::iterator prd_it
+    = sdRep->poppedRespData.find(key);
   size_t num_popped
-    = std::min(popped_sdv_arrays.size(), popped_sdr_arrays.size());
+    = (pvd_it != sdRep->poppedVarsData.end() &&
+       prd_it != sdRep->poppedRespData.end()) ?
+    std::min(pvd_it->second.size(), prd_it->second.size()) : 0;
 
   // harden logic for case of an empty SurrogateData (e.g.,
   // distinct discrepancy at level 0)
   if (num_popped > index) {
+    SDVArrayDeque& popped_sdv_arrays = pvd_it->second;
+    SDRArrayDeque& popped_sdr_arrays = prd_it->second;
     SDVArrayDeque::iterator vit = popped_sdv_arrays.begin();
     SDRArrayDeque::iterator rit = popped_sdr_arrays.begin();
     std::advance(vit, index); std::advance(rit, index);
