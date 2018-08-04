@@ -42,6 +42,12 @@ private:
   /// alternate constructor (data sizing only)
   SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars,
 		       size_t num_dr_vars);
+
+  /// lightweight constructor (common use case: continuous variables)
+  SurrogateDataVarsRep(const RealVector& c_vars, short mode);
+  /// alternate lightweight constructor (data sizing only)
+  SurrogateDataVarsRep(size_t num_c_vars);
+
   /// destructor
   ~SurrogateDataVarsRep();
 
@@ -64,25 +70,25 @@ SurrogateDataVarsRep(const RealVector& c_vars, const IntVector& di_vars,
   // Note: provided a way to query DataAccess mode for c_vars, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
   if (mode == DEEP_COPY) {         // enforce deep vector copy
-    if (c_vars.length())  copy_data( c_vars, continuousVars);
-    if (di_vars.length()) copy_data(di_vars, discreteIntVars);
-    if (dr_vars.length()) copy_data(dr_vars, discreteRealVars);
+    if (!c_vars.empty())  copy_data( c_vars, continuousVars);
+    if (!di_vars.empty()) copy_data(di_vars, discreteIntVars);
+    if (!dr_vars.empty()) copy_data(dr_vars, discreteRealVars);
   }
   else if (mode == SHALLOW_COPY) { // enforce shallow vector copy
-    if (c_vars.length())
+    if (!c_vars.empty())
       continuousVars
 	= RealVector(Teuchos::View,  c_vars.values(),  c_vars.length());
-    if (di_vars.length())
+    if (!di_vars.empty())
       discreteIntVars
 	= IntVector(Teuchos::View,  di_vars.values(), di_vars.length());
-    if (dr_vars.length())
+    if (!dr_vars.empty())
       discreteRealVars
 	= RealVector(Teuchos::View, dr_vars.values(), dr_vars.length());
   }
   else {                           // default: assume existing Copy/View state
-    if (c_vars.length())    continuousVars = c_vars;
-    if (di_vars.length())  discreteIntVars = di_vars;
-    if (dr_vars.length()) discreteRealVars = dr_vars;
+    if (!c_vars.empty())    continuousVars = c_vars;
+    if (!di_vars.empty())  discreteIntVars = di_vars;
+    if (!dr_vars.empty()) discreteRealVars = dr_vars;
   }
 }
 
@@ -95,6 +101,30 @@ SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars):
   discreteIntVars.sizeUninitialized(num_di_vars);
   discreteRealVars.sizeUninitialized(num_dr_vars);
 }
+
+
+inline SurrogateDataVarsRep::
+SurrogateDataVarsRep(const RealVector& c_vars, short mode): referenceCount(1)
+{
+  // Note: provided a way to query DataAccess mode for c_vars, could make
+  // greater use of operator= for {DEEP,SHALLOW}_COPY modes
+  if (!c_vars.empty())
+    switch (mode) {
+    case DEEP_COPY:
+      copy_data(c_vars, continuousVars); break;
+    case SHALLOW_COPY:
+      continuousVars
+	= RealVector(Teuchos::View, c_vars.values(), c_vars.length());
+      break;
+    default: // assume existing Copy/View state
+      continuousVars = c_vars; break;
+    }
+}
+
+
+inline SurrogateDataVarsRep::
+SurrogateDataVarsRep(size_t num_c_vars): referenceCount(1)
+{ continuousVars.sizeUninitialized(num_c_vars); }
 
 
 inline SurrogateDataVarsRep::~SurrogateDataVarsRep()
@@ -118,11 +148,18 @@ public:
 
   /// default constructor
   SurrogateDataVars();
+
   /// standard constructor
   SurrogateDataVars(const RealVector& c_vars, const IntVector& di_vars,
 		    const RealVector& dr_vars, short mode = DEFAULT_COPY);
   /// alternate constructor (data sizing only)
   SurrogateDataVars(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars);
+
+  /// lightweight constructor
+  SurrogateDataVars(const RealVector& c_vars, short mode = DEFAULT_COPY);
+  /// alternate lightweight constructor (data sizing only)
+  SurrogateDataVars(size_t num_c_vars);
+
   /// copy constructor
   SurrogateDataVars(const SurrogateDataVars& sdv);
   /// destructor
@@ -205,6 +242,17 @@ SurrogateDataVars(const RealVector& c_vars, const IntVector& di_vars,
 inline SurrogateDataVars::
 SurrogateDataVars(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars):
   sdvRep(new SurrogateDataVarsRep(num_c_vars, num_di_vars, num_dr_vars))
+{ }
+
+
+inline SurrogateDataVars::
+SurrogateDataVars(const RealVector& c_vars, short mode):
+  sdvRep(new SurrogateDataVarsRep(c_vars, mode))
+{ }
+
+
+inline SurrogateDataVars::SurrogateDataVars(size_t num_c_vars):
+  sdvRep(new SurrogateDataVarsRep(num_c_vars))
 { }
 
 
@@ -388,6 +436,8 @@ private:
   /// constructor
   SurrogateDataRespRep(Real fn_val, const RealVector& fn_grad,
 		       const RealSymMatrix& fn_hess, short bits, short mode);
+  /// lightweight constructor (common use case)
+  SurrogateDataRespRep(Real fn_val);
   /// alternate constructor (data sizing only)
   SurrogateDataRespRep(short bits, size_t num_vars);
   /// destructor
@@ -431,6 +481,12 @@ SurrogateDataRespRep(Real fn_val, const RealVector& fn_grad,
 }
 
 
+inline SurrogateDataRespRep::SurrogateDataRespRep(Real fn_val):
+  responseFn(fn_val), // always deep copy for scalars
+  activeBits(1), referenceCount(1)
+{ }
+
+
 inline SurrogateDataRespRep::
 SurrogateDataRespRep(short bits, size_t num_vars):
   activeBits(bits), referenceCount(1)
@@ -468,6 +524,8 @@ public:
   SurrogateDataResp(Real fn_val, const RealVector& fn_grad,
 		    const RealSymMatrix& fn_hess, short bits,
 		    short mode = DEFAULT_COPY);
+  /// lightweight constructor
+  SurrogateDataResp(Real fn_val);
   /// alternate constructor (data sizing only)
   SurrogateDataResp(short bits, size_t num_vars);
   /// copy constructor
@@ -546,6 +604,11 @@ inline SurrogateDataResp::
 SurrogateDataResp(Real fn_val, const RealVector& fn_grad,
 		  const RealSymMatrix& fn_hess, short bits, short mode):
   sdrRep(new SurrogateDataRespRep(fn_val, fn_grad, fn_hess, bits, mode))
+{ }
+
+
+inline SurrogateDataResp::SurrogateDataResp(Real fn_val):
+  sdrRep(new SurrogateDataRespRep(fn_val))
 { }
 
 
@@ -981,10 +1044,10 @@ public:
   size_t num_derivative_variables() const;
 
   /// convenience function used by data_checks() for anchorResp and respData
-  void response_check(const SurrogateDataResp& sdr, short& failed_data);
+  void response_check(const SurrogateDataResp& sdr, short& failed_data) const;
   /// screen data sets for samples with Inf/Nan that should be excluded;
   /// defines failedRespData
-  void data_checks();
+  void data_checks() const;
   /// return failedRespData corresponding to active anchorIndex
   short failed_anchor_data() const;
   /// assign active failedRespData
@@ -997,7 +1060,7 @@ public:
   /// return activeKey
   const UShortArray& active_key() const;
   /// searches for key and updates {vars,resp}DataIter only if found
-  bool contains_key(const UShortArray& key);
+  bool contains(const UShortArray& key);
   /// reset initial state by clearing all model keys (empties all maps)
   void clear_keys();
 
@@ -1131,14 +1194,10 @@ inline const UShortArray& SurrogateData::active_key() const
 { return sdRep->activeKey; }
 
 
-inline bool SurrogateData::contains_key(const UShortArray& key)
+inline bool SurrogateData::contains(const UShortArray& key)
 {
-  std::map<UShortArray, SDVArray>::iterator v_it = sdRep->varsData.find(key);
-  std::map<UShortArray, SDRArray>::iterator r_it = sdRep->respData.find(key);
-  if (v_it == sdRep->varsData.end() || r_it == sdRep->respData.end())
-    return false;
-  else
-    { sdRep->varsDataIter = v_it; sdRep->respDataIter = r_it; return true; }
+  return (sdRep->varsData.find(key) == sdRep->varsData.end() ||
+	  sdRep->respData.find(key) == sdRep->respData.end()) ? false : true;
 }
 
 
@@ -1585,7 +1644,7 @@ inline size_t SurrogateData::num_derivative_variables() const
 
 
 inline void SurrogateData::
-response_check(const SurrogateDataResp& sdr, short& failed_data)
+response_check(const SurrogateDataResp& sdr, short& failed_data) const
 {
   // We take a conservative approach of rejecting all data of derivative
   // order greater than or equal to a detected failure:
@@ -1614,7 +1673,7 @@ response_check(const SurrogateDataResp& sdr, short& failed_data)
 }
 
 
-inline void SurrogateData::data_checks()
+inline void SurrogateData::data_checks() const
 {
   SizetShortMap failed_resp;
   const SDRArray& resp_data = sdRep->respDataIter->second;
