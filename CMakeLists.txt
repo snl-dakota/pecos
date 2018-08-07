@@ -136,6 +136,14 @@ endif() # NOT BUILD_IN_TRILINOS
 link_directories(${Teuchos_LIBRARY_DIRS})
 
 
+
+# --- Options for Pecos components
+##option(PECOS_ENABLE_SAMPLING "Enable sampling module" ON)
+option(PECOS_ENABLE_ORTHOGPOLY "Enable core pecos module" ON)
+option(PECOS_ENABLE_SURROGATES "Enable surrogates module" ON)
+option(PECOS_ENABLE_PYTHONAPI "Enable Python wrappers" OFF)
+option(PECOS_ENABLE_TESTS "Enable Pecos-specific tests?" ON)
+
 # --- Potential locally included packages ---
 
 option(HAVE_FFT "Use either the fftw or dfftpack packages" ON)
@@ -153,7 +161,11 @@ add_subdirectory(packages)
 # --- Dependency configuration based on previously defined packages ---
 
 # Keep track of what libraries should be included in libpecos
-set(SUBLIBS pecos_src)
+set(SUBLIBS)
+
+if(PECOS_ENABLE_ORTHOGPOLY)
+  list(APPEND SUBLIBS pecos_src)
+endif()
 
 function(CheckPackage package)
   if(HAVE_${package})
@@ -185,14 +197,17 @@ if(HAVE_SPARSE_GRID)
   set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
 
+
+
 # Foundational utilities
 add_subdirectory(util)
 
 # Core Pecos
-add_subdirectory(src)
+if(PECOS_ENABLE_ORTHOGPOLY)
+  add_subdirectory(src)
+endif()
 
-option(PECOS_ENABLE_TESTS "Enable Pecos-specific tests?" ON)
-if(BUILD_TESTING AND PECOS_ENABLE_TESTS)
+if(BUILD_TESTING AND PECOS_ENABLE_TESTS AND PECOS_ENABLE_ORTHOGPOLY)
   add_subdirectory(test)
 endif()
 
@@ -211,13 +226,14 @@ set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
 
 # Modular surrogate model library
 # TODO: optionally depences on Pecos core (need tests with and without)
-add_subdirectory(surrogates)
+if(PECOS_ENABLE_SURROGATES)
+  add_subdirectory(surrogates)
+endif()
 
 # Python wrappers are optional; this approach is having CMake invoke
 # distutils setup.py. Must add this subdirectory after all other core
 # libraries. TODO: check for required dependencies.
-option(DAKOTA_API_PYTHON "Enable Python API (requires SWIG)" OFF)
-if(DAKOTA_API_PYTHON)
+if(PECOS_ENABLE_PYTHONAPI)
   find_package(PythonInterp REQUIRED)
   add_subdirectory(python)
 endif()
