@@ -320,6 +320,7 @@ void qr_factorization( const RealMatrix &A, RealMatrix &Qfactor,
 
   substitution_solve( qr_data, QtB, result, Teuchos::NO_TRANS, 
 		      Teuchos::UPPER_TRI, Teuchos::NON_UNIT_DIAG );
+  delete [] work;
 		      }*/
 
 void qr_solve( const RealMatrix &A, const RealMatrix &B, RealMatrix &result, 
@@ -543,10 +544,11 @@ int conjugate_gradients_solve( const RealMatrix &A, const RealVector &b, RealVec
     // Initialize to zero
     x.size( N );
 
-  RealVector current_x( x );
+  RealVector current_x(Teuchos::Copy, x.values(), x.length());
+
 
   Real b_norm = b.normFrobenius();
-  RealVector residual( b );
+  RealVector residual(Teuchos::Copy, b.values(), b.length());
   residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
 		     -1.0, A, current_x, 1.0 );
 
@@ -719,6 +721,7 @@ void equality_constrained_least_squares_solve( const RealMatrix &A,
   la.GGLSE( M, N, num_cons, A_copy.values(), lda, C_copy.values(),
 	    ldc, b_copy.values(), d_copy.values(), x.values(), 
 	    work, lwork, &info );
+  delete [] work;
 
   if ( info < 0 )
     {

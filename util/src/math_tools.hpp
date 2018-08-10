@@ -294,7 +294,7 @@ enum lp_norm
   {
     l1_norm,
     l2_norm,
-    linf_norm,
+    linf_norm
   };
 
 /**

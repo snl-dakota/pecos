@@ -203,6 +203,15 @@ run_single_rhs(const RealMatrix &A, const RealVector &b,
     linearSystemSolver_->get_residuals_for_all_regularization_params(residuals,0);
     int num_path_steps=coeff.numCols();
 
+    // FIXME (BMA/JDJ): The following num_validation_primary_eqs
+    // is incorrect in the case of mixed function and gradient
+    // data with failures.  Want to compute cross validation
+    // differences w.r.t. function values only, but that set may
+    // be empty.  The number of valid function vs. gradient rows
+    // needs to be tracked from remove_faulty_data.
+
+    // TODO: Add test for above case
+
     // only keep values associated with primary equations.
     // assumes if faulty data exists then all data associated with 
     // the primary equation is removed. E.g. If the primary data

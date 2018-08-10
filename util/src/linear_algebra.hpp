@@ -312,7 +312,7 @@ void permute_matrix_rows( Teuchos::SerialDenseMatrix<O,T> &A,
   // this is a poor implementation fix or combine with 
   //permute_matrix_rows( Teuchos::SerialDenseMatrix<O,T> &A, IntVector &P,
   //Teuchos::SerialDenseMatrix<O,T> &work )
-  Teuchos::SerialDenseMatrix<O,T> tmp( A );
+  Teuchos::SerialDenseMatrix<O,T> tmp(Teuchos::Copy, A, A.numRows(), A.numCols());
   for ( int j = 0; j < A.numCols(); j++ )
     {
       for ( int i = 0; i < P.length(); i++ )
@@ -406,7 +406,7 @@ void permute_matrix_columns( Teuchos::SerialDenseMatrix<O,T> &A,
   if ( A.numCols() != P.length() )
     throw( std::runtime_error("permute columns: A and P are inconsistent.") );
   #endif
-  Teuchos::SerialDenseMatrix<O,T> tmp( A );
+  Teuchos::SerialDenseMatrix<O,T> tmp(Teuchos::Copy, A, A.numRows(), A.numCols());
   for ( int j = 0; j < P.length(); j++ )
     {
       for ( int i = 0; i < A.numRows(); i++ )
