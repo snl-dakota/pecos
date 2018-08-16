@@ -96,9 +96,6 @@ private:
   unsigned short integrandOrder;
   /// the current number of unique points in the grid
   int numPts;
-  /// flag indicating when numPts needs to be recomputed due to an
-  /// update to the cubature settings
-  bool updateGridSize;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the {TPQ,SSG,Cub} grid
@@ -110,13 +107,13 @@ private:
 
 
 inline CubatureDriver::CubatureDriver(): IntegrationDriver(BaseConstructor()),
-  integrandOrder(0), numPts(0), updateGridSize(true)
+  integrandOrder(0), numPts(0)
 { }
 
 
 inline CubatureDriver::CubatureDriver(unsigned short integrand_order):
   IntegrationDriver(BaseConstructor()), integrandOrder(integrand_order),
-  numPts(0), updateGridSize(true)
+  numPts(0)
 { }
 
 
@@ -126,8 +123,10 @@ inline CubatureDriver::~CubatureDriver()
 
 inline void CubatureDriver::integrand_order(unsigned short order)
 {
-  if (integrandOrder != order)
-    { integrandOrder = order; updateGridSize = true; }
+  if (integrandOrder != order) {
+    integrandOrder = order;
+    numPts = 0; // special value indicates update required
+  }
 }
 
 

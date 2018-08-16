@@ -28,7 +28,7 @@ initialize_grid(size_t num_v, unsigned short ssg_level)
   numVars             = num_v;
   ssgLevel[activeKey] = ssg_level;
   // leave trackUniqueProdWeights as false
-  // leave dimIsotropic as true
+  // leave active anisoLevelWts as empty (isotropic)
 
   UShortArray levels(numVars, ssg_level);
   SharedPolyApproxData::total_order_multi_index(levels, smolyakMultiIndex);
@@ -49,9 +49,10 @@ void LightweightSparseGridDriver::initialize_sets()
   activeMultiIndex[activeKey].clear();
   UShortArraySet::const_iterator cit;
   unsigned short ssg_lev = ssgLevIter->second;
+  //bool dim_iso = isotropic();
   for (cit=old_mi.begin(); cit!=old_mi.end(); ++cit)
-    if ( /*!dimIsotropic ||*/ l1_norm(*cit) == ssg_lev )
-      add_active_neighbors(*cit, true);//dimIsotropic);
+    if ( /*!dim_iso ||*/ l1_norm(*cit) == ssg_lev )
+      add_active_neighbors(*cit, true);//, dim_iso);
 }
 
 

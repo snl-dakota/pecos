@@ -230,7 +230,8 @@ assign_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 
   size_t i;
   unsigned short ssg_lev = ssgLevIter->second;
-  if (dimIsotropic) { // initialize multi_index
+  const RealVector& aniso_wts = anisoWtsIter->second;
+  if (aniso_wts.empty()) { // initialize multi_index
     UShortArray levels(numVars, ssg_lev);
     SharedPolyApproxData::total_order_multi_index(levels, sm_mi, numVars-1);
     size_t num_terms = sm_mi.size();
@@ -252,9 +253,9 @@ assign_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
     // w-N+1 <= |j| <= w.
     IntArray x(numVars), x_max(numVars); //x_max = ssg_lev;
     UShortArray index_set(numVars);
-    Real wt_sum = 0., q_max = ssg_lev;
+    Real wt_i, wt_sum = 0., q_max = ssg_lev;
     for (i=0; i<numVars; ++i) {
-      const Real& wt_i = anisoLevelWts[i];
+      wt_i = aniso_wts[i];
       wt_sum += wt_i;
       // minimum nonzero weight is scaled to 1, so just catch special case of 0
       x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
@@ -265,20 +266,21 @@ assign_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 #endif // DEBUG
 
     bool more = false;
-    Real *aniso_wts = anisoLevelWts.values();
+    Real *aniso_wt_vals = aniso_wts.values();
     int  *x0 = &x[0], *xm0 = &x_max[0], coeff;
-    webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wts, xm0, x0,
+    webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wt_vals, xm0, x0,
 				     q_min, q_max, &more);
     while (more) {
-      coeff = (int)webbur::sandia_sgmga_vcn_coef(numVars, aniso_wts, x0, q_max);
+      coeff
+	= (int)webbur::sandia_sgmga_vcn_coef(numVars, aniso_wt_vals, x0, q_max);
       if (coeff) {
 	sm_coeffs.push_back(coeff);
 	for (i=0; i<numVars; ++i)
 	  index_set[i] = (unsigned short)x[i];
 	sm_mi.push_back(index_set);
       }
-      webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wts, xm0, x0,
-				       q_min, q_max, &more);
+      webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wt_vals, xm0, x0, q_min,
+				       q_max, &more);
     }
   }
 
@@ -294,9 +296,9 @@ assign_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 
 void CombinedSparseGridDriver::assign_collocation_key()
 {
-  // define mapping from 1:numCollocPts to set of 1d interpolation indices
-  const UShort2DArray& sm_mi = smolMIIter->second;
-  UShort3DArray& colloc_key = collocKeyIter->second;
+  // define mapping from collocation pts to set of 1d interpolation indices
+  const UShort2DArray&    sm_mi =    smolMIIter->second;
+  UShort3DArray&     colloc_key = collocKeyIter->second;
   size_t i, num_smolyak_indices = sm_mi.size();
   colloc_key.resize(num_smolyak_indices);
   UShortArray quad_order(numVars); //, collocation_indices(numVars);
@@ -311,7 +313,7 @@ void CombinedSparseGridDriver::assign_collocation_key()
 void CombinedSparseGridDriver::
 assign_collocation_indices(const IntArray& unique_index_map, size_t start_index)
 {
-  // define mapping from 1:numCollocPts to set of 1d interpolation indices
+  // define mapping from collocation pts to set of 1d interpolation indices
   const UShort3DArray& colloc_key = collocKeyIter->second;
   Sizet2DArray&        colloc_ind = collocIndIter->second;
   size_t i, j, num_tp_pts, cntr = 0, num_sm_indices = colloc_key.size();
@@ -337,17 +339,18 @@ assign_collocation_indices(const IntArray& unique_index_map, size_t start_index)
 
 int CombinedSparseGridDriver::grid_size()
 {
-  if (updateGridSize) {
+  int& num_colloc_pts = numPtsIter->second;
+  if (num_colloc_pts == 0) { // special value indicated update required
     sgdInstance = this; // sgdInstance required within compute1DPoints below
-    unsigned short ssg_lev = ssgLevIter->second;
-    numCollocPts = (dimIsotropic) ?
+    unsigned short ssg_lev =   ssgLevIter->second;
+    RealVector&  aniso_wts = anisoWtsIter->second;
+    num_colloc_pts = (aniso_wts.empty()) ?
       webbur::sgmg_size(numVars, ssg_lev, &compute1DPoints[0], duplicateTol,
 	growthRate, &levelGrowthToOrder[0]) :
-      webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssg_lev,
+      webbur::sandia_sgmga_size(numVars, aniso_wts.values(), ssg_lev,
 	&compute1DPoints[0], duplicateTol, growthRate, &levelGrowthToOrder[0]);
-    updateGridSize = false;
   }
-  return numCollocPts;
+  return num_colloc_pts;
 }
 
 
@@ -414,48 +417,50 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // ------------------------------------
   // Compute number of collocation points
   // ------------------------------------
-  grid_size(); // ensure numCollocPts is up to date
+  grid_size(); // ensure active numCollocPts is up to date
+  int& num_colloc_pts = numPtsIter->second;
 
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  var_sets.shapeUninitialized(numVars, numCollocPts);
+  var_sets.shapeUninitialized(numVars, num_colloc_pts);
   RealVector& t1_wts = type1WeightSets[activeKey];
   RealMatrix& t2_wts = type2WeightSets[activeKey];
   if (trackUniqueProdWeights) {
-    t1_wts.sizeUninitialized(numCollocPts);
+    t1_wts.sizeUninitialized(num_colloc_pts);
     if (computeType2Weights)
-      t2_wts.shapeUninitialized(numVars, numCollocPts);
+      t2_wts.shapeUninitialized(numVars, num_colloc_pts);
   }
   IntArray unique_index_map;
-  int* sparse_order = new int [numCollocPts*numVars];
-  int* sparse_index = new int [numCollocPts*numVars];
+  int* sparse_order = new int [num_colloc_pts*numVars];
+  int* sparse_index = new int [num_colloc_pts*numVars];
   sgdInstance = this; // sgdInstance required within compute1D fn pointers
   unsigned short ssg_lev = ssgLevIter->second;
-  if (dimIsotropic) {
+  RealVector& aniso_wts = anisoWtsIter->second;
+  if (aniso_wts.empty()) { // isotropic sparse grid
     int num_total_pts = webbur::sgmg_size_total(numVars, ssg_lev,
       growthRate, &levelGrowthToOrder[0]);
     unique_index_map.resize(num_total_pts);
     webbur::sgmg_unique_index(numVars, ssg_lev, &compute1DPoints[0],
-      duplicateTol, numCollocPts, num_total_pts, growthRate,
+      duplicateTol, num_colloc_pts, num_total_pts, growthRate,
       &levelGrowthToOrder[0], &unique_index_map[0]);
-    webbur::sgmg_index(numVars, ssg_lev, numCollocPts, num_total_pts,
+    webbur::sgmg_index(numVars, ssg_lev, num_colloc_pts, num_total_pts,
       &unique_index_map[0], growthRate, &levelGrowthToOrder[0],
       sparse_order, sparse_index);
-    webbur::sgmg_point(numVars, ssg_lev, &compute1DPoints[0], numCollocPts,
+    webbur::sgmg_point(numVars, ssg_lev, &compute1DPoints[0], num_colloc_pts,
       sparse_order, sparse_index, growthRate, &levelGrowthToOrder[0],
       var_sets.values());
     if (trackUniqueProdWeights) {
       webbur::sgmg_weight(numVars, ssg_lev, &compute1DType1Weights[0],
-	numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
+	num_colloc_pts, num_total_pts, &unique_index_map[0], growthRate,
 	&levelGrowthToOrder[0], t1_wts.values());
       if (computeType2Weights) {
 	std::vector<CollocFnPtr> comp_1d_t2_wts = compute1DType1Weights;//copy
-	RealVector t2_wt_set(numCollocPts);
+	RealVector t2_wt_set(num_colloc_pts);
 	for (int i=0; i<numVars; ++i) {
 	  comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
 	  webbur::sgmg_weight(numVars, ssg_lev, &comp_1d_t2_wts[0],
-	    numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
+	    num_colloc_pts, num_total_pts, &unique_index_map[0], growthRate,
 	    &levelGrowthToOrder[0], t2_wt_set.values());
 	  copy_row(t2_wt_set, t2_wts, i);
 	  comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore ptr
@@ -465,29 +470,29 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
   }
   else {
     int num_total_pts = webbur::sandia_sgmga_size_total(numVars,
-      anisoLevelWts.values(), ssg_lev, growthRate, &levelGrowthToOrder[0]);
+      aniso_wts.values(), ssg_lev, growthRate, &levelGrowthToOrder[0]);
     unique_index_map.resize(num_total_pts);
-    webbur::sandia_sgmga_unique_index(numVars, anisoLevelWts.values(),
-      ssg_lev, &compute1DPoints[0], duplicateTol, numCollocPts,num_total_pts,
+    webbur::sandia_sgmga_unique_index(numVars, aniso_wts.values(), ssg_lev,
+      &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
       growthRate, &levelGrowthToOrder[0], &unique_index_map[0]);
-    webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssg_lev,
-      numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
+    webbur::sandia_sgmga_index(numVars, aniso_wts.values(), ssg_lev,
+      num_colloc_pts, num_total_pts, &unique_index_map[0], growthRate,
       &levelGrowthToOrder[0], sparse_order, sparse_index);
-    webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssg_lev,
-      &compute1DPoints[0], numCollocPts, sparse_order, sparse_index,
+    webbur::sandia_sgmga_point(numVars, aniso_wts.values(), ssg_lev,
+      &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
       growthRate, &levelGrowthToOrder[0], var_sets.values());
     if (trackUniqueProdWeights) {
-      webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssg_lev,
-        &compute1DType1Weights[0], numCollocPts, num_total_pts,
+      webbur::sandia_sgmga_weight(numVars, aniso_wts.values(), ssg_lev,
+        &compute1DType1Weights[0], num_colloc_pts, num_total_pts,
 	&unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	t1_wts.values());
       if (computeType2Weights) {
 	std::vector<CollocFnPtr> comp_1d_t2_wts = compute1DType1Weights;//copy
-	RealVector t2_wt_set(numCollocPts);
+	RealVector t2_wt_set(num_colloc_pts);
 	for (int i=0; i<numVars; ++i) {
 	  comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
-	  webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(),
-	    ssg_lev, &comp_1d_t2_wts[0], numCollocPts, num_total_pts,
+	  webbur::sandia_sgmga_weight(numVars, aniso_wts.values(), ssg_lev,
+	    &comp_1d_t2_wts[0], num_colloc_pts, num_total_pts,
 	    &unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	    t2_wt_set.values());
 	  copy_row(t2_wt_set, t2_wts, i);

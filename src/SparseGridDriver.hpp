@@ -141,13 +141,13 @@ public:
   /// return active ssgLevel
   unsigned short level() const;
 
-  /// set anisoLevelWts
+  /// convert dimension preference and set anisoLevelWts
   void dimension_preference(const RealVector& dim_pref);
   /// set anisoLevelWts
   void anisotropic_weights(const RealVector& aniso_wts);
   /// return anisoLevelWts
   const RealVector& anisotropic_weights() const;
-  /// return dimIsotropic
+  /// indicates isotropic (empty) weights on sparse grid dimension levels
   bool isotropic() const;
 
   /// set growthRate
@@ -187,17 +187,15 @@ protected:
   //- Heading: Data
   //
 
-  /// the Smolyak sparse grid level
+  /// Smolyak sparse grid levels for each active key
   std::map<UShortArray, unsigned short> ssgLevel;
-  /// the Smolyak sparse grid level
+  /// iterator to the active Smolyak sparse grid level
   std::map<UShortArray, unsigned short>::iterator ssgLevIter;
 
-  /// flag indicating a dimension isotropic grid
-  bool dimIsotropic;
-  // vector of dimension preference levels for dimension anisotropic grids
-  //RealVector dimPref;
   /// weighting vector for dimension anisotropic grids
-  RealVector anisoLevelWts;
+  std::map<UShortArray, RealVector> anisoLevelWts;
+  /// weighting vector for dimension anisotropic grids
+  std::map<UShortArray, RealVector>::iterator anisoWtsIter;
 
   /// enumeration for rate of exponential growth in nested rules
   short growthRate;
@@ -207,11 +205,10 @@ protected:
   /// algorithm control governing expansion refinement
   short refineControl;
 
-  /// the current number of unique points in the grid
-  int numCollocPts;
-  /// flag indicating when numCollocPts needs to be recomputed due to an
-  /// update to the sparse grid settings
-  bool updateGridSize;
+  /// the number of unique points in each grid
+  std::map<UShortArray, int> numCollocPts;
+  /// iterator to the number of unique points in the active grid
+  std::map<UShortArray, int>::iterator numPtsIter;
 
   /// old reference index sets for generalized sparse grids
   std::map<UShortArray, UShortArraySet> oldMultiIndex; // or UShort2DArray
@@ -239,33 +236,39 @@ private:
 
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
-  RealVector axisLowerBounds;
+  std::map<UShortArray, RealVector> axisLowerBounds;
+  /// iterator to the active set of axis lower bounds
+  std::map<UShortArray, RealVector>::iterator axisLBndsIter;
 };
 
 
 inline SparseGridDriver::SparseGridDriver():
-  IntegrationDriver(BaseConstructor()), /* ssgLevel(0), */ dimIsotropic(true),
-  growthRate(MODERATE_RESTRICTED_GROWTH), numCollocPts(0), updateGridSize(true),
-  refineControl(NO_CONTROL)//refineType(NO_REFINEMENT)
+  IntegrationDriver(BaseConstructor()), growthRate(MODERATE_RESTRICTED_GROWTH),
+  //ssgLevel(0), numCollocPts(0),
+  refineControl(NO_CONTROL)//, refineType(NO_REFINEMENT)
 {
   std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
   ssgLevIter = ssgLevel.insert(us_pair).first;
+
+  std::pair<UShortArray, int> ui_pair(activeKey, 0);
+  numPtsIter = numCollocPts.insert(ui_pair).first;
 }
 
 
 inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 		 short growth_rate, short refine_control):
-  IntegrationDriver(BaseConstructor()), /* ssgLevel(ssg_level), */
-  growthRate(growth_rate), numCollocPts(0), updateGridSize(true),
+  IntegrationDriver(BaseConstructor()), growthRate(growth_rate),
+  //ssgLevel(ssg_level), numCollocPts(0),
   refineControl(refine_control) //refineType(NO_REFINEMENT)
 {
   std::pair<UShortArray, unsigned short> us_pair(activeKey, ssg_level);
   ssgLevIter = ssgLevel.insert(us_pair).first;
 
-  if (dim_pref.empty())
-    dimIsotropic = true;
-  else {
+  std::pair<UShortArray, int> ui_pair(activeKey, 0);
+  numPtsIter = numCollocPts.insert(ui_pair).first; // count to be updated
+
+  if (!dim_pref.empty()) {
     numVars = dim_pref.length(); // unit length option not supported
     dimension_preference(dim_pref);
   }
@@ -279,11 +282,8 @@ inline SparseGridDriver::~SparseGridDriver()
 inline void SparseGridDriver::active_key(const UShortArray& key)
 {
   if (activeKey != key) {
-    //unsigned short prev_lev = ssgLevIter->second;
     activeKey = key;
     update_active_iterators();
-    //if (ssgLevIter->second != prev_lev) // insufficient for adapted SSG
-      updateGridSize = true;
   }
 }
 
@@ -292,9 +292,23 @@ inline void SparseGridDriver::update_active_iterators()
 {
   ssgLevIter = ssgLevel.find(activeKey);
   if (ssgLevIter == ssgLevel.end()) {
-    unsigned short lev = 0;
-    std::pair<UShortArray, unsigned short> us_pair(activeKey, lev);
+    std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
     ssgLevIter = ssgLevel.insert(us_pair).first;
+  }
+  numPtsIter = numCollocPts.find(activeKey);
+  if (numPtsIter == numCollocPts.end()) {
+    std::pair<UShortArray, int> ui_pair(activeKey, 0);
+    numPtsIter = numCollocPts.insert(ui_pair).first;
+  }
+  anisoWtsIter = anisoLevelWts.find(activeKey);
+  if (anisoWtsIter == anisoLevelWts.end()) {
+    std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
+    anisoWtsIter = anisoLevelWts.insert(urv_pair).first;
+  }
+  axisLBndsIter = axisLowerBounds.find(activeKey);
+  if (axisLBndsIter == axisLowerBounds.end()) {
+    std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
+    axisLBndsIter = axisLowerBounds.insert(urv_pair).first;
   }
 }
 
@@ -302,7 +316,12 @@ inline void SparseGridDriver::update_active_iterators()
 inline void SparseGridDriver::clear_keys()
 {
   activeKey.clear();
-  ssgLevel.clear(); ssgLevIter = ssgLevel.end();
+
+  ssgLevel.clear();        ssgLevIter    =        ssgLevel.end();
+  numCollocPts.clear();    numPtsIter    =    numCollocPts.end();
+  anisoLevelWts.clear();   anisoWtsIter  =   anisoLevelWts.end();
+  axisLowerBounds.clear(); axisLBndsIter = axisLowerBounds.end();
+
   oldMultiIndex.clear(); activeMultiIndex.clear(); computedTrialSets.clear();
 }
 
@@ -313,17 +332,19 @@ inline unsigned short SparseGridDriver::level() const
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
 {
-  if (ssgLevIter->second != ssg_level)
-    { ssgLevIter->second  = ssg_level; updateGridSize = true; }
+  if (ssgLevIter->second != ssg_level) {
+    ssgLevIter->second = ssg_level;
+    numPtsIter->second = 0; // special value indicates update required
+  }
 }
 
 
 inline const RealVector& SparseGridDriver::anisotropic_weights() const
-{ return anisoLevelWts; }
+{ return anisoWtsIter->second; }
 
 
 inline bool SparseGridDriver::isotropic() const
-{ return dimIsotropic; }
+{ return anisoWtsIter->second.empty(); }
 
 
 //inline short SparseGridDriver::refinement_type() const

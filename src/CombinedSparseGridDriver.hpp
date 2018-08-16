@@ -62,9 +62,10 @@ public:
   void update_active_iterators();
 
   void compute_grid(RealMatrix& variable_sets);
-  /// compute (if updateGridSize) and return number of collocation
-  /// points with duplicates removed
+  /// compute (if update required) and return number of unique
+  /// collocation points
   int grid_size();
+
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
 

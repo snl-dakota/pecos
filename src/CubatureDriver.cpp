@@ -149,7 +149,7 @@ initialize_grid_parameters(const ShortArray& u_types,
 
 int CubatureDriver::grid_size()
 {
-  if (updateGridSize) {
+  if (numPts == 0) { // intial / special value indicates update required
     bool err_flag = false;
     switch(collocRules[0]) {
     case GAUSS_HERMITE:
@@ -220,8 +220,6 @@ int CubatureDriver::grid_size()
 	    << std::endl;
       abort_handler(-1);
     }
-    else
-      updateGridSize = false;
   }
   return numPts;
 }

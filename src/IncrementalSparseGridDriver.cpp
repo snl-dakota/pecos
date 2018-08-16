@@ -62,8 +62,9 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 void IncrementalSparseGridDriver::
 update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 {
-  if (!updateGridSize)
-    return; // Smolyak arrays already updated in grid_size()
+  // if update indicator is off, Smolyak arrays already updated in grid_size()
+  if (numPtsIter->second)
+    return;
 
   // compute new Smolyak multi-index and coefficients, but don't overwrite old
   // (must avoid shifts due to index lower bound)
@@ -132,7 +133,6 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   // Strong(est) assumptions to further accelerate:
   // valid for both increment & decrement
 
-  //
   // > no interior differences (due to anisotropic refinement)
   //   --> only need to manage differences at front and end
   UShort2DArray::iterator sm_it = sm_mi.begin();  size_t old_index = 0;
@@ -151,7 +151,7 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   /* Another efficient option: unroll and tailor assign_smolyak_arrays():
   unsigned short ssg_lev = ssgLevIter->second;
   UShortArray levels;
-  if (dimIsotropic)
+  if (isotropic())
     levels.assign(numVars, ssg_lev);
   else
     ;
@@ -215,7 +215,8 @@ void IncrementalSparseGridDriver::update_collocation_key()
 
 int IncrementalSparseGridDriver::grid_size()
 {
-  if (updateGridSize) {
+  int& num_colloc_pts = numPtsIter->second;
+  if (num_colloc_pts == 0) { // special value indicated update required
     update_smolyak_arrays();
     update_collocation_key();
 
@@ -229,12 +230,10 @@ int IncrementalSparseGridDriver::grid_size()
     // Use _count_inc1 whereas reference_unique uses _index_inc1
     webbur::point_radial_tol_unique_count_inc1(m, n1, a1_pts.values(),
       duplicateTol, &seed, zv.values(), r1v.values(), &sind1[0], is_unique1,
-      &numCollocPts);
+      &num_colloc_pts);
     delete [] is_unique1;
-
-    updateGridSize = false;
   }
-  return numCollocPts;
+  return num_colloc_pts;
 }
 
 
@@ -328,7 +327,7 @@ void IncrementalSparseGridDriver::pop_increment()
   smolCoeffsIter->second = sm_coeffs_ref;
   collocKeyIter->second.resize(ref_size);
   collocIndIter->second.resize(ref_size);
-  numCollocPts = numUniq1Iter->second;                   // unique ref points
+  numPtsIter->second = numUniq1Iter->second;             // unique ref points
   // pruning of uniqueIndexMapping is not strictly required (it is updated on
   // demand prior to updating collocation indices), but good for completeness
   uniqIndMapIter->second.resize(a1PIter->second.numCols()); // all ref points
@@ -361,10 +360,11 @@ void IncrementalSparseGridDriver::initialize_sets()
   // on index set frontier, requiring an additional logic test within
   // add_active_neighbors().  For anisotropic, the weighted norm of the index
   // set may differ from the level --> need to compute Pareto set.
+  bool dim_iso = isotropic();
   for (i=0; i<num_old_sets; ++i)
-    if ( sm_coeffs[i] == 1 && ( !dimIsotropic || // imperfect for aniso
-	 ( dimIsotropic && l1_norm(sm_mi[i]) == ssg_lev ) ) )
-      add_active_neighbors(sm_mi[i], dimIsotropic);
+    if ( sm_coeffs[i] == 1 && ( !dim_iso || // imperfect for aniso
+	 ( dim_iso && l1_norm(sm_mi[i]) == ssg_lev ) ) )
+      add_active_neighbors(sm_mi[i], dim_iso);
 
 #ifdef DEBUG
   PCout << "IncrementalSparseGridDriver::initialize_sets():\n  active key:\n"
@@ -409,7 +409,7 @@ void IncrementalSparseGridDriver::pop_trial_set()
   collocKeyIter->second.pop_back();
   collocIndIter->second.pop_back();
   smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
-  numCollocPts = numUniq1Iter->second;                   // unique ref points
+  numPtsIter->second = numUniq1Iter->second;             // unique ref points
   // pruning of uniqueIndexMapping is not strictly required (it is updated on
   // demand prior to updating collocation indices), but good for completeness
   uniqIndMapIter->second.resize(a1PIter->second.numCols()); // all ref points
@@ -506,7 +506,7 @@ void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
   PCout << std::endl;
 #endif // DEBUG
 
-  numCollocPts = num_u1;
+  numPtsIter->second = num_u1;
   assign_collocation_indices();
   update_sparse_points(0, isu1, 0, a1_pts, var_sets);
   if (trackUniqueProdWeights)
@@ -580,7 +580,7 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
   copy_data(is_unique2, n2, isu2);
   delete [] is_unique1; delete [] is_unique2;
 
-  numCollocPts = num_u1 + num_u2;
+  numPtsIter->second = num_u1 + num_u2;
   update_collocation_indices(start_index);
   if (trackUniqueProdWeights)
     update_sparse_weights(start_index);
@@ -635,7 +635,7 @@ void IncrementalSparseGridDriver::merge_unique()
 
   // Need to increment again as pop operations need to restore previous state
   // after a non-permanent increment
-  numCollocPts = num_u3;
+  numPtsIter->second = num_u3;
   size_t start_index = smolyakCoeffsRef[activeKey].size();
   update_collocation_indices(start_index);
   if (trackUniqueProdWeights)
@@ -892,9 +892,10 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
   size_t i, j, k, cntr, num_sm_mi = smolMIIter->second.size(), num_tp_pts;
 
   // update sizes
-  unique_t1_wts.resize(numCollocPts); // new entries initialized to 0
+  int num_colloc_pts = numPtsIter->second;
+  unique_t1_wts.resize(num_colloc_pts); // new entries initialized to 0
   if (computeType2Weights)
-    unique_t2_wts.reshape(numVars, numCollocPts); // new entries init to 0
+    unique_t2_wts.reshape(numVars, num_colloc_pts); // new entries init to 0
 
   RealVector& a1_t1_wts = a1T1WIter->second;
   RealMatrix& a1_t2_wts = a1T2WIter->second;
