@@ -120,6 +120,9 @@ public:
   void update_collocation_indices(const UShort4DArray& colloc_key,
 				  Sizet3DArray& colloc_indices);
 
+  /// update numCollocPts from active collocKey (contains unique points)
+  void update_collocation_points();
+
   /// return incrementSets
   const UShortArray& increment_sets() const;
 
@@ -310,35 +313,43 @@ inline void HierarchSparseGridDriver::update_active_iterators()
   if (smolMIIter != smolyakMultiIndex.end() && smolMIIter->first == activeKey)
     return;
 
+  // do first since ssgLevIter needed for update_collocation_points()
+  SparseGridDriver::update_active_iterators();
+
   smolMIIter = smolyakMultiIndex.find(activeKey);
   if (smolMIIter == smolyakMultiIndex.end()) {
     std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
     smolMIIter = smolyakMultiIndex.insert(u3a_pair).first;
   }
+
   collocKeyIter = collocKey.find(activeKey);
   if (collocKeyIter == collocKey.end()) {
     std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
     collocKeyIter = collocKey.insert(u4a_pair).first;
+    numCollocPts  = 0;
   }
+  else
+    update_collocation_points();
+
   collocIndIter = collocIndices.find(activeKey);
   if (collocIndIter == collocIndices.end()) {
     std::pair<UShortArray, Sizet3DArray> s3a_pair(activeKey, Sizet3DArray());
     collocIndIter = collocIndices.insert(s3a_pair).first;
   }
+
   t1WtIter = type1WeightSets.find(activeKey);
   if (t1WtIter == type1WeightSets.end()) {
     std::pair<UShortArray, RealVector2DArray>
       rv2_pair(activeKey, RealVector2DArray());
     t1WtIter = type1WeightSets.insert(rv2_pair).first;
   }
+
   t2WtIter = type2WeightSets.find(activeKey);
   if (t2WtIter == type2WeightSets.end()) {
     std::pair<UShortArray, RealMatrix2DArray>
       rm2_pair(activeKey, RealMatrix2DArray());
     t2WtIter = type2WeightSets.insert(rm2_pair).first;
   }
-
-  SparseGridDriver::update_active_iterators();
 }
 
 

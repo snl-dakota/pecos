@@ -89,22 +89,15 @@ const UShortArray& HierarchSparseGridDriver::maximal_grid() const
 int HierarchSparseGridDriver::grid_size()
 {
   if (updateGridSize) {
-    numCollocPts = 0;
-    const UShort4DArray& colloc_key = collocKeyIter->second;
     unsigned short ssg_lev = ssgLevIter->second;
-    if (colloc_key.size() == ssg_lev + 1) { // collocKey already up to date
-      for (unsigned short i=0; i<=ssg_lev; ++i) {
-	const UShort3DArray& key_i = colloc_key[i];
-	size_t j, num_sets = key_i.size();
-	for (j=0; j<num_sets; ++j)
-	  numCollocPts += key_i[j].size(); // hierarchical point increments
-      }
-    }
+    if (collocKeyIter->second.size() == ssg_lev + 1) // collocKey up to date
+      update_collocation_points();
     else {
       update_smolyak_multi_index();
       // rather than full collocKey update, just sum grid sizes:
       UShortArray delta_sizes(numVars);
       unsigned short lev, set, num_sets;
+      numCollocPts = 0;
       const UShort3DArray& sm_mi = smolMIIter->second;
       for (lev=0; lev<=ssg_lev; ++lev) {
 	const UShort2DArray& sm_mi_l = sm_mi[lev];
@@ -408,6 +401,20 @@ update_collocation_indices(const UShort4DArray& colloc_key,
 	      << colloc_indices[lev][set];
     }
 #endif // DEBUG
+  }
+}
+
+
+void HierarchSparseGridDriver::update_collocation_points()
+{
+  unsigned short i, ssg_lev = ssgLevIter->second;
+  const UShort4DArray& colloc_key = collocKeyIter->second;
+  numCollocPts = 0;
+  for (i=0; i<=ssg_lev; ++i) {
+    const UShort3DArray& key_i = colloc_key[i];
+    size_t j, num_sets = key_i.size();
+    for (j=0; j<num_sets; ++j)
+      numCollocPts += key_i[j].size(); // hierarchical point increments
   }
 }
 
