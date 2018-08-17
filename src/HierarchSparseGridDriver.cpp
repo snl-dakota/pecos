@@ -410,13 +410,12 @@ update_collocation_indices(const UShort4DArray& colloc_key,
 }
 
 
-void HierarchSparseGridDriver::update_collocation_points()
+void HierarchSparseGridDriver::
+update_collocation_points(const UShort4DArray& colloc_key, int& num_colloc_pts)
 {
-  unsigned short i,       ssg_lev =    ssgLevIter->second;
-  const UShort4DArray& colloc_key = collocKeyIter->second;
-  int&             num_colloc_pts =    numPtsIter->second;
+  size_t i, num_lev = colloc_key.size();
   num_colloc_pts = 0;
-  for (i=0; i<=ssg_lev; ++i) {
+  for (i=0; i<num_lev; ++i) {
     const UShort3DArray& key_i = colloc_key[i];
     size_t j, num_sets = key_i.size();
     for (j=0; j<num_sets; ++j)
@@ -645,7 +644,7 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
     if (t1_wts.size() < num_lev || t2_wts.size() < num_lev)
       { t1_wts.resize(num_lev); t2_wts.resize(num_lev); }
     // compute total increment evaluations and size var_sets
-    size_t num_incr_pts = 0, start_set, cntr = 0, num_tp_pts;
+    size_t num_incr_pts = 0, start_set;
     const UShort4DArray& colloc_key = collocKeyIter->second;
     const UShort3DArray&      sm_mi =    smolMIIter->second;
     for (lev=0; lev<num_lev; ++lev) {
@@ -657,6 +656,7 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
     if (var_sets.numCols() != num_incr_pts)
       var_sets.shapeUninitialized(numVars, num_incr_pts);
     // update type1/2 weights and subset view of points
+    size_t cntr = 0, num_tp_pts;
     for (lev=0; lev<num_lev; ++lev) {
       const UShort2DArray& sm_mi_l = sm_mi[lev];
       const UShort3DArray&   key_l = colloc_key[lev];
@@ -777,24 +777,18 @@ compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
 {
   const UShort4DArray& colloc_key = collocKeyIter->second;
   const UShort3DArray&      sm_mi =    smolMIIter->second;
-  size_t i, j, cntr = 0, num_colloc_pts = 0, num_tp_pts,
-    num_lev = colloc_key.size(), num_sets;
+  //update_collocation_points(); // should be up to date
+  int              num_colloc_pts =    numPtsIter->second;
+  size_t i, j, cntr = 0, num_tp_pts, num_lev = colloc_key.size(), num_sets;
+
+  // define points and type 1/2 weights; weights are products of 1D weights
+  if (pts.numCols() != num_colloc_pts)
+    pts.shapeUninitialized(numVars, num_colloc_pts);
   t1_wts.resize(num_lev);  t2_wts.resize(num_lev);
-  // define num_colloc_pts
   for (i=0; i<num_lev; ++i) {
     const UShort3DArray& key_i = colloc_key[i];
     num_sets = key_i.size();
     t1_wts[i].resize(num_sets);  t2_wts[i].resize(num_sets);
-    for (j=0; j<num_sets; ++j)
-      num_colloc_pts += key_i[j].size();
-  }
-  if (pts.numCols() != num_colloc_pts)
-    pts.shapeUninitialized(numVars, num_colloc_pts);
-
-  // define points and type 1/2 weights; weights are products of 1D weights
-  for (i=0; i<num_lev; ++i) {
-    const UShort3DArray& key_i = colloc_key[i];
-    num_sets = key_i.size();
     for (j=0; j<num_sets; ++j) {
       const UShort2DArray& key_ij = key_i[j];
       num_tp_pts = key_ij.size();

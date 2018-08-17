@@ -123,6 +123,9 @@ public:
 
   /// update active numCollocPts from active collocKey (contains unique points)
   void update_collocation_points();
+  /// update num_colloc_pts from colloc_key (contains unique points)
+  void update_collocation_points(const UShort4DArray& colloc_key,
+				 int& num_colloc_pts);
 
   /// return incrementSets
   const UShortArray& increment_sets() const;
@@ -366,6 +369,10 @@ inline void HierarchSparseGridDriver::update_collocation_indices()
   update_collocation_indices(collocKeyIter->second, collocIndIter->second,
 			     numPtsIter->second);
 }
+
+
+inline void HierarchSparseGridDriver::update_collocation_points()
+{ update_collocation_points(collocKeyIter->second, numPtsIter->second); }
 
 
 inline void HierarchSparseGridDriver::clear_keys()
