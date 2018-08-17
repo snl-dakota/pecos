@@ -1741,7 +1741,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   // hierarchical differences --> use original surrData (containing Q^l) to
   // compute hierarchical differences in product interpolant
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hip_approx_2, false, r1r2_t1_coeffs, r1r2_t2_coeffs);
+  product_interpolant(hip_approx_2, true/*false*/, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   return delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
 			  hip_approx_2->expansionType1Coeffs,
@@ -1797,7 +1797,7 @@ delta_combined_covariance(const RealVector& x,
   // compute these hierarchical differences in the product interpolant for the
   // active model key.
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hip_approx_2, false, r1r2_t1_coeffs, r1r2_t2_coeffs);
+  product_interpolant(hip_approx_2, true/*false*/, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   return delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
 			  hip_approx_2->expansionType1Coeffs,
@@ -2513,6 +2513,10 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   Real data_fn1 = sdr0_1.response_function(),
        data_fn2 = sdr0_2.response_function();
   r1r2_t1_coeffs[0][0][0] = data_fn1 * data_fn2;
+#ifdef DEBUG
+  PCout << "Surplus components l0 s0 p0: r1r2 = " << r1r2_t1_coeffs[0][0][0]
+	<< std::endl;
+#endif // DEBUG
   ++cntr;
 
   if (data_rep->basisConfigOptions.useDerivs) {
@@ -2574,10 +2578,23 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	// type1 hierarchical interpolation of R1 R2
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+#ifdef DEBUG
+	  Real r1 = sdr_array_1[c_index].response_function(),
+	       r2 = sdr_array_2[c_index].response_function(), r1r2 = r1*r2,
+	       r1r2_lm1 =
+	         value(sdv_array[c_index].continuous_variables(), sm_mi,
+		   colloc_key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1, ref_key),
+	        surplus = r1r2 - r1r2_lm1;
+	  PCout << "Surplus components l" << lev << " s" << set << " p" << pt
+		<< ": r1r2 = " << r1r2 << " r1r2_lm1 = " << r1r2_lm1
+		<< " surplus = " << surplus << std::endl;
+	  r1r2_t1_coeffs_ls[pt] = surplus;
+#else
 	  r1r2_t1_coeffs_ls[pt] = sdr_array_1[c_index].response_function()
 	    * sdr_array_2[c_index].response_function()
 	    - value(sdv_array[c_index].continuous_variables(), sm_mi,
 		    colloc_key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1, ref_key);
+#endif // DEBUG
 	}
       }
     }
