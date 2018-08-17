@@ -9,18 +9,18 @@ namespace Surrogates {
 
   enum {MONOMIAL, PCE};
 
-boost::shared_ptr<PolyApproximation> polynomial_approximation_factory(
-	  const boost::shared_ptr<VariableTransformation> &var_transform,
+std::shared_ptr<PolyApproximation> polynomial_approximation_factory(
+	  const std::shared_ptr<VariableTransformation> &var_transform,
 	  const OptionsList& opts) {
   int poly_type = opts.get<int>("poly_type");
   switch (poly_type){
   case MONOMIAL : {
-    boost::shared_ptr<Monomial> poly(new Monomial);
+    std::shared_ptr<Monomial> poly(new Monomial);
     poly->set_variable_transformation(var_transform);
     return poly;
   }
   case PCE : {
-    boost::shared_ptr<PolynomialChaosExpansion> poly(new PolynomialChaosExpansion);
+    std::shared_ptr<PolynomialChaosExpansion> poly(new PolynomialChaosExpansion);
     IntVector basis_types;
     basis_types = opts.get("basis_types", basis_types);
     if (basis_types.length()>0){

@@ -10,7 +10,7 @@
 #include "Teuchos_SerialDenseVector.hpp"
 
 #include "OptionsList.hpp"
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace Surrogates{
 

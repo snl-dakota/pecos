@@ -9,7 +9,7 @@
 %}
 
 
-%include <boost_shared_ptr.i>
+%include <std_shared_ptr.i>
 %shared_ptr(OptionsList)
 
 
@@ -40,7 +40,7 @@ options to functions."
 %define %pydict_overrides(CONST, CLASS...)
 // Input a plain reference
 %typemap(in) CONST CLASS &
-(void *argp=0, int res=0, bool cleanup=false, boost::shared_ptr< CONST CLASS > tempshared)
+(void *argp=0, int res=0, bool cleanup=false, std::shared_ptr< CONST CLASS > tempshared)
 {
   if (PyDict_Check($input))
   {
@@ -51,7 +51,7 @@ options to functions."
   else
   {
     int newmem = 0;
-    res = SWIG_ConvertPtrAndOwn($input, &argp, $descriptor(boost::shared_ptr< CLASS > *),
+    res = SWIG_ConvertPtrAndOwn($input, &argp, $descriptor(std::shared_ptr< CLASS > *),
 				%convertptr_flags, &newmem);
     if (!SWIG_IsOK(res))
     {
@@ -63,13 +63,13 @@ options to functions."
     }
     if (newmem & SWIG_CAST_NEW_MEMORY)
     {
-      tempshared = *%reinterpret_cast(argp, boost::shared_ptr< CONST CLASS > *);
-      delete %reinterpret_cast(argp, boost::shared_ptr< CONST CLASS > *);
+      tempshared = *%reinterpret_cast(argp, std::shared_ptr< CONST CLASS > *);
+      delete %reinterpret_cast(argp, std::shared_ptr< CONST CLASS > *);
       $1 = %const_cast(tempshared.get(), $1_ltype);
     }
     else
     {
-      $1 = %const_cast(%reinterpret_cast(argp, boost::shared_ptr< CONST CLASS > *)->get(), $1_ltype);
+      $1 = %const_cast(%reinterpret_cast(argp, std::shared_ptr< CONST CLASS > *)->get(), $1_ltype);
     }
   }
 }
@@ -79,16 +79,16 @@ options to functions."
   CONST CLASS &,
   CONST CLASS *,
   CONST CLASS *&,
-  boost::shared_ptr< CONST CLASS >,
-  boost::shared_ptr< CONST CLASS > &,
-  boost::shared_ptr< CONST CLASS > *,
-  boost::shared_ptr< CONST CLASS > *&
+  std::shared_ptr< CONST CLASS >,
+  std::shared_ptr< CONST CLASS > &,
+  std::shared_ptr< CONST CLASS > *,
+  std::shared_ptr< CONST CLASS > *&
 {
   // Accept PyDicts or CLASS instances
   $1 = PyDict_Check($input);
   if (!$1)
   {
-    int res = SWIG_ConvertPtr($input, 0, $descriptor(boost::shared_ptr< CLASS > *), 0);
+    int res = SWIG_ConvertPtr($input, 0, $descriptor(std::shared_ptr< CLASS > *), 0);
     $1 = SWIG_CheckState(res);
   }
 }
@@ -99,13 +99,13 @@ options to functions."
   if (cleanup$argnum && $1) delete $1;
 }
 
-// Input a boost::shared_ptr by reference
-%typemap(in) boost::shared_ptr< CONST CLASS > &
+// Input a std::shared_ptr by reference
+%typemap(in) std::shared_ptr< CONST CLASS > &
 (void *argp, int res = 0, $*1_ltype tempshared)
 {
   if (PyDict_Check($input))
   {
-    tempshared = boost::shared_ptr<OptionsList>(Surrogates::pyDictToNewOptionsList($input));
+    tempshared = std::shared_ptr<OptionsList>(Surrogates::pyDictToNewOptionsList($input));
     if (!tempshared) SWIG_fail;
     $1 = &tempshared;
   }
@@ -113,7 +113,7 @@ options to functions."
   {
     int newmem = 0;
     res = SWIG_ConvertPtrAndOwn($input, &argp,
-				$descriptor(boost::shared_ptr< CLASS > *),
+				$descriptor(std::shared_ptr< CLASS > *),
 				%convertptr_flags, &newmem);
     if (!SWIG_IsOK(res))
     {

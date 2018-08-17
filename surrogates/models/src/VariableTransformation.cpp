@@ -7,7 +7,7 @@ VariableTransformation::VariableTransformation(){}
 VariableTransformation::~VariableTransformation(){}
 
 void VariableTransformation::
-set_variables(const boost::shared_ptr<Surrogates::Variables> &vars){
+set_variables(const std::shared_ptr<Surrogates::Variables> &vars){
   vars_ = vars;
 }
 

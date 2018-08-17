@@ -38,7 +38,7 @@ void regression_driver(Function &target_function, PolyApproximation &approx, Opt
   // uniform mc sampler
   RealMatrix samples;
   int seed = 1337;
-  boost::shared_ptr<VariableTransformation> var_transform=
+  std::shared_ptr<VariableTransformation> var_transform=
     approx.get_variable_transformation();
   generate_uniform_samples(approx.num_vars(), num_samples, seed,
 			   *var_transform, samples);

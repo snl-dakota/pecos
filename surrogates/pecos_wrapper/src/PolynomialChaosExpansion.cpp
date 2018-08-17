@@ -20,7 +20,7 @@ initialize_polynomial_basis_from_basis_types(const Pecos::ShortArray &basis_type
 }
 
 void PolynomialChaosExpansion::
-set_variable_transformation(const boost::shared_ptr<Surrogates::VariableTransformation>var_transform){
+set_variable_transformation(const std::shared_ptr<Surrogates::VariableTransformation>var_transform){
   PolyApproximation::set_variable_transformation(var_transform);
   // Need the above line but also below eventually
   // aleatoryVarTransform_ =
@@ -36,7 +36,7 @@ set_variable_transformation(const boost::shared_ptr<Surrogates::VariableTransfor
 //   if (aleatoryVarTransform_.is_null())
 //     throw(std::runtime_error("Aleatory Variable transform has not been set"));
 
-//   boost::shared_ptr<Surrogates::AleatoryVariables> transformed_vars;
+//   std::shared_ptr<Surrogates::AleatoryVariables> transformed_vars;
 //   aleatoryVariableTransform_.get_transformed_varables(transformed_vars)
 //   orthogPolyBasis_.initialize_polynomial_basis(transformed_vars);
 // }

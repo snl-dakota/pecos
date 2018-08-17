@@ -83,7 +83,7 @@ public:
 
 typedef std::vector< std::vector<CompressedSensingOptions> > CompressedSensingOptionsList;
 
-typedef boost::shared_ptr<LinearSolver> LinearSolver_ptr;
+typedef std::shared_ptr<LinearSolver> LinearSolver_ptr;
 
 
 /**

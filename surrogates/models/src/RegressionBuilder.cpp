@@ -47,7 +47,7 @@ void solve_regression(const RealMatrix &samples,
   poly_approx.generate_basis_matrix(samples,basis_matrix);
     
   // Solve regression problem to get coefficients
-  boost::shared_ptr<LinearSystemSolver> solver = regression_solver_factory(opts);
+  std::shared_ptr<LinearSystemSolver> solver = regression_solver_factory(opts);
   RealMatrix coeffs;
   solver->solve(basis_matrix, values, opts);
 
@@ -66,7 +66,7 @@ build(OptionsList &opts, Approximation &approx, OptionsList &result){
   // For now hack support for uniform mc sampler
   RealMatrix samples;
   int seed = 1337;
-  boost::shared_ptr<VariableTransformation> var_transform =
+  std::shared_ptr<VariableTransformation> var_transform =
     approx.get_variable_transformation();
   generate_uniform_samples(approx.num_vars(), num_samples, seed,
                            *var_transform, samples);

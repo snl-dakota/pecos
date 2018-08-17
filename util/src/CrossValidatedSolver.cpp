@@ -77,12 +77,12 @@ void CrossValidatedSolver::get_final_residuals(RealVector &result_0) const{
   result_0 = residualNorms_;
 }
 
-boost::shared_ptr<LinearSystemCrossValidationIteratorBase> CrossValidatedSolver::
+std::shared_ptr<LinearSystemCrossValidationIteratorBase> CrossValidatedSolver::
 get_cross_validation_iterator(){
   return cvIterator_;
 }
   
-boost::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_validation_iterator_factory(OptionsList &opts){
+std::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_validation_iterator_factory(OptionsList &opts){
   std::string name = "regression_type";
   RegressionType regression_type =
     get_enum_enforce_existance<RegressionType>(opts, name);
@@ -90,9 +90,9 @@ boost::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_v
   switch (regression_type){
   case ORTHOG_MATCH_PURSUIT : case LEAST_ANGLE_REGRESSION :
   case LASSO_REGRESSION : case EQ_CONS_LEAST_SQ_REGRESSION : {
-    boost::shared_ptr<LinearSystemSolver> solver =
+    std::shared_ptr<LinearSystemSolver> solver =
       regression_solver_factory(opts);
-    boost::shared_ptr<LinearSystemCrossValidationIterator>
+    std::shared_ptr<LinearSystemCrossValidationIterator>
       cv_iterator(new LinearSystemCrossValidationIterator);
     cv_iterator->set_linear_system_solver(solver);
     return cv_iterator;
@@ -102,7 +102,7 @@ boost::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_v
   /// of normal equations, regardless of type of factorization specified.
   case SVD_LEAST_SQ_REGRESSION : case LU_LEAST_SQ_REGRESSION :
   case QR_LEAST_SQ_REGRESSION :{
-    boost::shared_ptr<LSQCrossValidationIterator>
+    std::shared_ptr<LSQCrossValidationIterator>
       cv_iterator(new LSQCrossValidationIterator);
     return cv_iterator;
     break;
@@ -113,9 +113,9 @@ boost::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_v
   }
 }
 
-boost::shared_ptr<CrossValidatedSolver> cast_to_cross_validated_solver(boost::shared_ptr<LinearSystemSolver> &solver){
-  boost::shared_ptr<CrossValidatedSolver> solver_cast =
-    boost::dynamic_pointer_cast<CrossValidatedSolver>(solver);
+std::shared_ptr<CrossValidatedSolver> cast_to_cross_validated_solver(std::shared_ptr<LinearSystemSolver> &solver){
+  std::shared_ptr<CrossValidatedSolver> solver_cast =
+    std::dynamic_pointer_cast<CrossValidatedSolver>(solver);
   if (!solver_cast)
     throw(std::runtime_error("Could not cast to CrossValidatedSolver shared_ptr"));
   return solver_cast;

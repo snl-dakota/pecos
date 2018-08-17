@@ -90,7 +90,7 @@ classes and training methods.
 %template() std::vector<short>;
 %include "typedefs_for_python_wrapper.hpp"
 
-%include <boost_shared_ptr.i>
+%include <std_shared_ptr.i>
 %shared_ptr(std::basic_ostream)
 %shared_ptr(std::ostream)
 

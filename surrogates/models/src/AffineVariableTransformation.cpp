@@ -7,10 +7,10 @@ AffineVariableTransformation::AffineVariableTransformation(){}
 AffineVariableTransformation::~AffineVariableTransformation(){}
 
 void AffineVariableTransformation::
-set_variables(const boost::shared_ptr<Surrogates::Variables> &vars){
+set_variables(const std::shared_ptr<Surrogates::Variables> &vars){
   Surrogates::VariableTransformation::set_variables(vars);
-  //boundedVars_ = boost::dynamic_pointer_cast<Surrogates::BoundedVariables>(vars_);
-  boundedVars_ = boost::dynamic_pointer_cast<Surrogates::BoundedVariables>(vars_);
+  //boundedVars_ = std::dynamic_pointer_cast<Surrogates::BoundedVariables>(vars_);
+  boundedVars_ = std::dynamic_pointer_cast<Surrogates::BoundedVariables>(vars_);
   if (!boundedVars_)
     throw(std::runtime_error("vars is not an object of BoundedVariables"));
 }

@@ -131,7 +131,7 @@ LinearSystemCrossValidationIterator::~LinearSystemCrossValidationIterator(){};
 
   
 void LinearSystemCrossValidationIterator::
-set_linear_system_solver(const boost::shared_ptr<LinearSystemSolver> &solver){
+set_linear_system_solver(const std::shared_ptr<LinearSystemSolver> &solver){
   linearSystemSolver_ = solver;
 }
 
@@ -326,7 +326,7 @@ get_best_residual_tolerances(RealMatrix & residual_tols) const{
   }
 }
 
-boost::shared_ptr<LinearSystemSolver> LinearSystemCrossValidationIterator::
+std::shared_ptr<LinearSystemSolver> LinearSystemCrossValidationIterator::
 get_linear_system_solver(){
   return linearSystemSolver_;
 }
@@ -353,9 +353,9 @@ get_adjusted_best_residual_tolerances(RealMatrix &result) const{
   result *= (Real)num_folds()/((Real)num_folds()-1.0);
 }
 
-boost::shared_ptr<LinearSystemCrossValidationIterator> cast_to_linear_system_cross_validation_iterator(boost::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver){
-  boost::shared_ptr<LinearSystemCrossValidationIterator> solver_cast =
-    boost::dynamic_pointer_cast<LinearSystemCrossValidationIterator>(solver);
+std::shared_ptr<LinearSystemCrossValidationIterator> cast_to_linear_system_cross_validation_iterator(std::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver){
+  std::shared_ptr<LinearSystemCrossValidationIterator> solver_cast =
+    std::dynamic_pointer_cast<LinearSystemCrossValidationIterator>(solver);
   if (!solver_cast)
     throw(std::runtime_error("Could not cast to LinearSystemCrossValidationIterator shared_ptr"));
   return solver_cast;

@@ -236,7 +236,7 @@ void run(const RealMatrix &points, const RealVector &values,
     extract_points(points, validation_indices, pts_valid);
     extract_values(b, validation_indices, b_valid);
     OptionsList result;
-    boost::shared_ptr<Approximation> approx =
+    std::shared_ptr<Approximation> approx =
       builder->build(pts_train, b_train, build_opts, result);
     approx.value(pts_valid,approx_values);
     for (int i=0; i<values_valid.length(); i++){

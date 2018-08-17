@@ -95,7 +95,7 @@ public:
 			       OptionsList & opts);
 };
 
-boost::shared_ptr<LSQCrossValidationIterator> cast_to_least_squares_cross_validation_iterator(boost::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver);
+std::shared_ptr<LSQCrossValidationIterator> cast_to_least_squares_cross_validation_iterator(std::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver);
 
 } // namespace Surrogates
   

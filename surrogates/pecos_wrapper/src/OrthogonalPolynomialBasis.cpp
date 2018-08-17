@@ -121,9 +121,9 @@ value(const RealMatrix& samples, const IntMatrix& indices, RealMatrix &values){
 
 #ifdef DEPENDENCIES_NOT_IMPLEMENTED
 void OrthogonalPolynomialBasis::
-initialize_polynomial_basis(const boost::shared_ptr<Surrogates::AleatoryVariables> vars){
+initialize_polynomial_basis(const std::shared_ptr<Surrogates::AleatoryVariables> vars){
 
-  boost::shared_ptr<Surrogates::AleatoryVariables> aleatory_vars = Teuchos::rcp_dynamic_cast<Surrogates::AleatoryVariables>(vars,true);
+  std::shared_ptr<Surrogates::AleatoryVariables> aleatory_vars = Teuchos::rcp_dynamic_cast<Surrogates::AleatoryVariables>(vars,true);
   if (aleatory_vars.is_null())
     throw(std::runtime_error("vars is not an object of type AleatoryVariables"));
   size_t = aleatory_vars.num_vars();

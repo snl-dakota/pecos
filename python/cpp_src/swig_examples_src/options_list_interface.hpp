@@ -2,7 +2,6 @@
 #define TEST_OPTIONS_LIST_HPP
 
 #include "OptionsList.hpp"
-#include <boost/shared_ptr.hpp>
 
 #define TEST_FUNC_PROTOS(TYPE, SNAME)				  \
 								  \

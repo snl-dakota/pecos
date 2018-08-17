@@ -19,7 +19,7 @@ namespace Surrogates {
 
   class AffineVariableTransformation : public VariableTransformation{
   protected:
-    boost::shared_ptr<Surrogates::BoundedVariables> boundedVars_;
+    std::shared_ptr<Surrogates::BoundedVariables> boundedVars_;
 
   public:
     AffineVariableTransformation();
@@ -27,7 +27,7 @@ namespace Surrogates {
     virtual ~AffineVariableTransformation();
 
     /** \copydoc VariableTransformation::set_variables() */
-    void set_variables(const boost::shared_ptr<Surrogates::Variables> &vars);
+    void set_variables(const std::shared_ptr<Surrogates::Variables> &vars);
 
     /** \copydoc VariableTransformation::map_samples_to_user_space() */
     virtual void map_samples_to_user_space(const RealMatrix &samples,

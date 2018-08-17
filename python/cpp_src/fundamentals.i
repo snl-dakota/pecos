@@ -64,7 +64,7 @@ using std::string;
 %include "std_complex.i"
 %include "std_vector.i"
 
-%include <boost_shared_ptr.i>
+%include <std_shared_ptr.i>
 %shared_ptr(std::basic_ostream)
 %shared_ptr(std::ostream)
 

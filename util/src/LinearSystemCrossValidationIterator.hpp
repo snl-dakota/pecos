@@ -3,7 +3,7 @@
 
 #include "CrossValidationIterator.hpp"
 #include "LinearSystemSolver.hpp"
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace Surrogates {
   
@@ -172,7 +172,7 @@ protected:
 
   
   /// Pointer to the solver for solving the linear system
-  boost::shared_ptr<LinearSystemSolver> linearSystemSolver_;
+  std::shared_ptr<LinearSystemSolver> linearSystemSolver_;
 
   
   /**
@@ -233,7 +233,7 @@ public:
    * The solver must have a member function with the API
    * solve_single_rhs(A,b,x,metrics,opts);
    */
-  void set_linear_system_solver(const boost::shared_ptr<LinearSystemSolver> &solver);
+  void set_linear_system_solver(const std::shared_ptr<LinearSystemSolver> &solver);
   
   /**
    * \brief Run the cross validation.
@@ -255,7 +255,7 @@ public:
   /**\brief Get a shared pointer to the linear system solver being used 
    * by the cross validation
    */
-  boost::shared_ptr<LinearSystemSolver> get_linear_system_solver();
+  std::shared_ptr<LinearSystemSolver> get_linear_system_solver();
 
   /**\copydoc LinearSystemCrossValidationIteratorBase::generate_best_solutions()*/
   void generate_best_solutions(const RealMatrix &A, const RealMatrix &B,
@@ -280,7 +280,7 @@ public:
  
 };
 
-boost::shared_ptr<LinearSystemCrossValidationIterator> cast_to_linear_system_cross_validation_iterator(boost::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver);
+std::shared_ptr<LinearSystemCrossValidationIterator> cast_to_linear_system_cross_validation_iterator(std::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver);
 
 }// namespace Surrogates
 

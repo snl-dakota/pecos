@@ -31,15 +31,15 @@ namespace Surrogates {
  *     If true return a CrossValidatedSolver which wraps a standard linear 
  *     solver of "regression_type"
  */
-boost::shared_ptr<LinearSystemSolver> regression_solver_factory(OptionsList &opts);
+std::shared_ptr<LinearSystemSolver> regression_solver_factory(OptionsList &opts);
 
-boost::shared_ptr<OMPSolver> cast_linear_system_solver_to_ompsolver(boost::shared_ptr<LinearSystemSolver> &solver);
+std::shared_ptr<OMPSolver> cast_linear_system_solver_to_ompsolver(std::shared_ptr<LinearSystemSolver> &solver);
 
-boost::shared_ptr<LARSolver> cast_linear_system_solver_to_larssolver(boost::shared_ptr<LinearSystemSolver> &solver);
+std::shared_ptr<LARSolver> cast_linear_system_solver_to_larssolver(std::shared_ptr<LinearSystemSolver> &solver);
 
-boost::shared_ptr<LSQSolver> cast_linear_system_solver_to_lsqsolver(boost::shared_ptr<LinearSystemSolver> &solver);
+std::shared_ptr<LSQSolver> cast_linear_system_solver_to_lsqsolver(std::shared_ptr<LinearSystemSolver> &solver);
 
-boost::shared_ptr<EqConstrainedLSQSolver> cast_linear_system_solver_to_eqconstrainedlsqsolver(boost::shared_ptr<LinearSystemSolver> &solver);
+std::shared_ptr<EqConstrainedLSQSolver> cast_linear_system_solver_to_eqconstrainedlsqsolver(std::shared_ptr<LinearSystemSolver> &solver);
   
 } // namespace Surrogates
 

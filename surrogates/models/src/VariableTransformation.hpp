@@ -2,7 +2,7 @@
 #define VARIABLE_TRANSFORMATION_HPP
 
 #include <Variables.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <teuchos_data_types.hpp>
 namespace Surrogates {
 
@@ -27,7 +27,7 @@ namespace Surrogates {
   protected:
     /// Variable meta data describing user-defined x-space
     /// where evaluations are performed
-    boost::shared_ptr<Surrogates::Variables> vars_;
+    std::shared_ptr<Surrogates::Variables> vars_;
 
   public:
     VariableTransformation();
@@ -133,7 +133,7 @@ namespace Surrogates {
 
     /**\brief Set the variables defining the user x-space
      */
-    virtual void set_variables(const boost::shared_ptr<Surrogates::Variables> &vars);
+    virtual void set_variables(const std::shared_ptr<Surrogates::Variables> &vars);
 
     /**\copydoc Variables::num_vars() */
     int num_vars();

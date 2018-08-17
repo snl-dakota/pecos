@@ -23,7 +23,7 @@ static short get_quadrature_rule(short basis_type, bool nested_rule);
 static void get_basis_types(const Pecos::ShortArray& var_types, Pecos::ShortArray& basis_types);
 
 public:
-//boost::shared_ptr<Surrogates::AleatoryVariableTransform> varTransform_;
+//std::shared_ptr<Surrogates::AleatoryVariableTransform> varTransform_;
 std::vector<Pecos::BasisPolynomial> polynomialBasis_;
 bool nestedRules_;
 
@@ -42,7 +42,7 @@ void initialize_polynomial_basis_from_variable_types(const Pecos::ShortArray& va
 /**\brief Initialize the polynomials to be orthogonal to the aleatory
    variables
 */
-static void initialize_polynomial_basis(const boost::shared_ptr<Surrogates::AleatoryVariables> vars);
+static void initialize_polynomial_basis(const std::shared_ptr<Surrogates::AleatoryVariables> vars);
 #endif
 
 /**\brief Evaluate a multivariate polynomial with a given index

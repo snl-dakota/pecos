@@ -7,7 +7,7 @@ AleatoryVariableTransformation::AleatoryVariableTransformation(){}
 AleatoryVariableTransformation::~AleatoryVariableTransformation(){}
 
 void AleatoryVariableTransformation::
-set_variables(const boost::shared_ptr<Surrogates::Variables> vars){
+set_variables(const std::shared_ptr<Surrogates::Variables> vars){
   Surrogates::VariableTransformation::set_variables(vars);
   aleatoryVars_ = Teuchos::rcp_dynamic_cast<Surrogates::AleatoryVariables>(vars_,true);
   if (aleatoryVars_.is_null())

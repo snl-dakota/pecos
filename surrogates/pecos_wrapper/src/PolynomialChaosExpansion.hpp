@@ -16,7 +16,7 @@ private:
   OrthogonalPolynomialBasis orthogPolyBasis_;
 public:
 
-  //boost::shared_ptr<Surrogates::AleatoryVariableTransformation> aleatoryVarTransform_;
+  //std::shared_ptr<Surrogates::AleatoryVariableTransformation> aleatoryVarTransform_;
 
   PolynomialChaosExpansion();
 
@@ -28,7 +28,7 @@ public:
   void generate_canonical_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
 
   /** \copydoc PolyApproximation::set_variable_transformation() */
-  void set_variable_transformation(const boost::shared_ptr<Surrogates::VariableTransformation> var_transform);
+  void set_variable_transformation(const std::shared_ptr<Surrogates::VariableTransformation> var_transform);
 
   void initialize_polynomial_basis_from_basis_types(const Pecos::ShortArray &basis_types);
 

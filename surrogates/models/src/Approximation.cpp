@@ -3,11 +3,11 @@
 namespace Surrogates {
 
 void Approximation::
-set_variable_transformation(const boost::shared_ptr<VariableTransformation> &var_transform){
+set_variable_transformation(const std::shared_ptr<VariableTransformation> &var_transform){
   varTransform_ = var_transform;
 }
 
-boost::shared_ptr<VariableTransformation> Approximation::
+std::shared_ptr<VariableTransformation> Approximation::
 get_variable_transformation(){
   return varTransform_;
 }

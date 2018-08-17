@@ -3,7 +3,7 @@
 
 #include "LinearSystemSolver.hpp"
 #include "LinearSystemCrossValidationIterator.hpp"
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 
 namespace Surrogates{
@@ -21,7 +21,7 @@ protected:
   RealVector residualNorms_;
   
   /// The cross validation iterator
-  boost::shared_ptr<LinearSystemCrossValidationIteratorBase> cvIterator_;
+  std::shared_ptr<LinearSystemCrossValidationIteratorBase> cvIterator_;
 
   /**\brief Generate the solutions corresponding to the best residual
    * tolerances.
@@ -111,13 +111,13 @@ public:
   void get_best_scores(RealVector &result) const;
 
   /// Return a shared pointer to the cross validation iterator
-  boost::shared_ptr<LinearSystemCrossValidationIteratorBase> get_cross_validation_iterator();
+  std::shared_ptr<LinearSystemCrossValidationIteratorBase> get_cross_validation_iterator();
 };
 
-boost::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_validation_iterator_factory(OptionsList &opts);
+std::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_validation_iterator_factory(OptionsList &opts);
   
 /// Cast from LinearSystemSolver to a CrossValidatedSolver
-boost::shared_ptr<CrossValidatedSolver> cast_to_cross_validated_solver(boost::shared_ptr<LinearSystemSolver> &solver);
+std::shared_ptr<CrossValidatedSolver> cast_to_cross_validated_solver(std::shared_ptr<LinearSystemSolver> &solver);
  
 } // namespaces Surrogates
 #endif //CROSS_VALIDATED_SOLVER_HPP

@@ -15,7 +15,7 @@ namespace Surrogates {
  */
 class Approximation : public Function {
 protected:
-  boost::shared_ptr<VariableTransformation> varTransform_;
+  std::shared_ptr<VariableTransformation> varTransform_;
 
 public:
 
@@ -38,7 +38,7 @@ public:
   transformation types. Then the transformation can be constructed
   internally.
    */
-  void set_variable_transformation(const boost::shared_ptr<VariableTransformation> &var_transform);
+  void set_variable_transformation(const std::shared_ptr<VariableTransformation> &var_transform);
 
 
   /**
@@ -47,7 +47,7 @@ public:
       The definition of the function variables x of the approximation
       and how to map them to a standardized space.
    */
-  boost::shared_ptr<VariableTransformation> get_variable_transformation();
+  std::shared_ptr<VariableTransformation> get_variable_transformation();
 
 }; // class Approximation
 

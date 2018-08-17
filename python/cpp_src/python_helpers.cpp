@@ -43,7 +43,7 @@ void print_PyType(PyObject *value){
 bool PyListOfOptionsList_check(PyObject* pylist){
   void * argp;
   static swig_type_info * swig_TPL_ptr =
-    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+    SWIG_TypeQuery("std::shared_ptr< OptionsList >*");
   Py_ssize_t len = PyList_Size(pylist);
   for(Py_ssize_t i=0; i<len; ++i){
     PyObject *value = PyList_GetItem(pylist, i);
@@ -135,7 +135,7 @@ bool setPythonParameter(OptionsList & opts_list,
 			PyObject               * value)
 { 
   static swig_type_info * swig_TPL_ptr =
-    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+    SWIG_TypeQuery("std::shared_ptr< OptionsList >*");
   void * argp;
   int newmem = 0;
 
@@ -196,15 +196,15 @@ bool setPythonParameter(OptionsList & opts_list,
   {
     if (newmem & SWIG_CAST_NEW_MEMORY)
     { 
-      boost::shared_ptr< OptionsList > tempshared =
-	*reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
-      delete reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+      std::shared_ptr< OptionsList > tempshared =
+	*reinterpret_cast< std::shared_ptr< OptionsList > * >(argp);
+      delete reinterpret_cast< std::shared_ptr< OptionsList > * >(argp);
       opts_list.set(name, *(tempshared.get()));
     }
     else
     {
-      boost::shared_ptr< OptionsList > * smartarg =
-	reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+      std::shared_ptr< OptionsList > * smartarg =
+	reinterpret_cast< std::shared_ptr< OptionsList > * >(argp);
       if (smartarg) opts_list.set(name, *(smartarg->get()));
     }
   }
@@ -433,7 +433,7 @@ PyObject * getPythonParameter(const OptionsList & opts_list,
   // used if returning optionslist wrapper and not python dict
   // which is the case now
   //static swig_type_info * swig_TPL_ptr =
-  //      SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+  //      SWIG_TypeQuery("std::shared_ptr< OptionsList >*");
   
   // If parameter does not exist, return None
   if (!opts_list.exists(name)) return Py_BuildValue("");
@@ -477,8 +477,8 @@ PyObject * getPythonParameter(const OptionsList & opts_list,
   else if (entry->type()==typeid(OptionsList))
   {
     // OptionsList value = boost::any_cast< OptionsList >(*entry);
-    // boost::shared_ptr< OptionsList > * valuercp =
-    //   new boost::shared_ptr< OptionsList >(&value);
+    // std::shared_ptr< OptionsList > * valuercp =
+    //   new std::shared_ptr< OptionsList >(&value);
     // return SWIG_NewPointerObj((void*)valuercp, swig_TPL_ptr, SWIG_POINTER_NOSHADOW);
     // // Bill uses this but I get a segfault unless I used above. Why?
     // //return SWIG_NewPointerObj((void*)valuercp, swig_TPL_ptr, SWIG_POINTER_OWN);
@@ -544,7 +544,7 @@ void pyListToNewStdVector(PyObject *pylist,
   void * argp;
   int newmem = 0;
   static swig_type_info * swig_TPL_ptr =
-    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+    SWIG_TypeQuery("std::shared_ptr< OptionsList >*");
   //std::printf("pyListToNewStdVector\n");
   //print_pyobject_string_rep(pylist);
   if (PyList_Check(pylist)) {
@@ -559,13 +559,13 @@ void pyListToNewStdVector(PyObject *pylist,
 						       0,
 						       &newmem))){
 	if (newmem & SWIG_CAST_NEW_MEMORY){ 
-	  boost::shared_ptr< OptionsList > tempshared =
-	    *reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
-	  delete reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+	  std::shared_ptr< OptionsList > tempshared =
+	    *reinterpret_cast< std::shared_ptr< OptionsList > * >(argp);
+	  delete reinterpret_cast< std::shared_ptr< OptionsList > * >(argp);
 	  list.push_back(*(tempshared.get()));
 	}else{
-	  boost::shared_ptr< OptionsList > * smartarg =
-	    reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+	  std::shared_ptr< OptionsList > * smartarg =
+	    reinterpret_cast< std::shared_ptr< OptionsList > * >(argp);
 	  if (smartarg) list.push_back(*(smartarg->get()));
 	}
       }else if (PyDict_Check(value)){

@@ -25,7 +25,7 @@ namespace Surrogates {
 #ifdef DEPENDENCIES_NOT_IMPLEMENTED
   class AleatoryVariableTransformation : public VariableTransformation{
   protected:
-    boost::shared_ptr<Surrogates::AleatoryVariables> aleatoryVars_;
+    std::shared_ptr<Surrogates::AleatoryVariables> aleatoryVars_;
 
   public:
     AleatoryVariableTransformation();
@@ -33,7 +33,7 @@ namespace Surrogates {
     virtual ~AleatoryVariableTransformation();
 
     /** \copydoc VariableTransformation::set_variables() */
-    void set_variables(const boost::shared_ptr<Surrogates::Variables> vars);
+    void set_variables(const std::shared_ptr<Surrogates::Variables> vars);
 
     /** \copydoc VariableTransformation::map_samples_to_user_space() */
     virtual void map_samples_to_user_space(const RealMatrix &samples,

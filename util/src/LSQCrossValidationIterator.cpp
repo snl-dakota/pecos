@@ -153,9 +153,9 @@ generate_best_solutions(const RealMatrix &A, const RealMatrix &B,
   residuals = residualNorms_;
 }
 
-boost::shared_ptr<LSQCrossValidationIterator> cast_to_least_squares_cross_validation_iterator(boost::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver){
-  boost::shared_ptr<LSQCrossValidationIterator> solver_cast =
-  boost::dynamic_pointer_cast<LSQCrossValidationIterator>(solver);
+std::shared_ptr<LSQCrossValidationIterator> cast_to_least_squares_cross_validation_iterator(std::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver){
+  std::shared_ptr<LSQCrossValidationIterator> solver_cast =
+  std::dynamic_pointer_cast<LSQCrossValidationIterator>(solver);
   if (!solver_cast)
     throw(std::runtime_error("Could not cast to LSQCrossValidationIterator shared_ptr"));
   return solver_cast;

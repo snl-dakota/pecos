@@ -46,8 +46,8 @@ int test_polynomial_regression_builder(RegressionType regression_type, Real atol
   // Define the function variables
   RealVector ranges;
   define_homogeneous_ranges(num_vars, 0., 1., ranges);
-  boost::shared_ptr<Variables> variables(new BoundedVariables);
-  boost::dynamic_pointer_cast<BoundedVariables>(variables)->set_ranges(ranges);
+  std::shared_ptr<Variables> variables(new BoundedVariables);
+  std::dynamic_pointer_cast<BoundedVariables>(variables)->set_ranges(ranges);
 
   // Define the variable transformation. Need to decide if a seperate
   // transformation should exist for approximation and for mapping samples
@@ -55,7 +55,7 @@ int test_polynomial_regression_builder(RegressionType regression_type, Real atol
   // but operates in a standardized u-space. But sample generator produces
   // samples in (possibly another standardized space) and must map these to
   // x-space, or even to approximation u-space.
-  boost::shared_ptr<VariableTransformation>
+  std::shared_ptr<VariableTransformation>
     var_transform(new AffineVariableTransformation);
   var_transform->set_variables(variables);
 
