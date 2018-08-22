@@ -294,9 +294,13 @@ private:
 
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
-    bool mod_surr_data, RealVector2DArray& r1r2_t1_coeffs,
-    RealMatrix2DArray& r1r2_t2_coeffs,
+    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
     const UShort2DArray& ref_key = UShort2DArray());
+  /// form type 1/2 coefficients for interpolation of R_1 R_2
+  void product_difference_interpolant(
+    HierarchInterpPolyApproximation* hip_approx_2,
+    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
+    const UShortArray& lf_key, const UShort2DArray& ref_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,

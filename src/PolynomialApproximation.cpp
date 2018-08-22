@@ -224,13 +224,12 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   // ***************************************************************************
   // TO DO: improve encapsulation by passing surrogate key (currently replicates
   // logic in Dakota::ApproximationInterface::{truth,surrogate}_model_key())
-  UShortArray lf_key(key);  --lf_key.back();
-  lf_key.insert(lf_key.end(), key.begin(), key.end());
-  // ***************************************************************************
-
+  UShortArray lf_key;  paired_lf_key(key, lf_key);
   r_cit = resp_data_map.find(lf_key);
   const SDRArray& lf_sdr_array = r_cit->second;
-  SDRArray&    delta_sdr_array = modSurrData.response_data();
+  // ***************************************************************************
+
+  SDRArray& delta_sdr_array = modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {

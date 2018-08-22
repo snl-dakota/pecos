@@ -266,6 +266,9 @@ protected:
   /// and store in modSurrData
   void response_data_to_discrepancy_data();
 
+  /// define a LF key corresponding to incoming HF key
+  void paired_lf_key(const UShortArray& hf_key, UShortArray& lf_key) const;
+
   /// clear bits for current moments (updated from reference)
   void clear_computed_bits();
 
@@ -390,6 +393,16 @@ inline SurrogateData& PolynomialApproximation::modified_surrogate_data()
 inline void PolynomialApproximation::
 modified_surrogate_data(const SurrogateData& data)
 { modSurrData = data; } // shared rep
+
+
+inline void PolynomialApproximation::
+paired_lf_key(const UShortArray& hf_key, UShortArray& lf_key) const
+{
+  // decrement trailing index
+  lf_key = hf_key; --lf_key.back();
+  // append the HF key in order to tag a particular (discrepancy) pairing
+  lf_key.insert(lf_key.end(), hf_key.begin(), hf_key.end());
+}
 
 
 inline void PolynomialApproximation::clear_computed_bits()
