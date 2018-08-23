@@ -1745,9 +1745,10 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   product_difference_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs,
 				 lf_key);
 
-  // *** if original surrData is used, then expansion t1,2 coeffs must also
-  // *** be based on Q_H rather than Delta_HL --> expansionType{1,2}Coeffs 
-  // *** are full set including ref + incr, not just active
+  // For combined statistics, we utilize the full coefficient maps
+  // (expansionType{1,2}Coeffs) for the expected values using ref_key_map,
+  // but only require the active coefficients (r1r2_t{1,2}_coeffs and active
+  // expansionType{1,2}Coeffs) for the deltas using the active incr_key.
   return delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
 			  hip_approx_2->expansionType1Coeffs,
 			  hip_approx_2->expansionType2Coeffs, same,
@@ -1853,6 +1854,13 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
   //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
   //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
   //     - \DeltaE[Ri] \DeltaE[Rj]
+#ifdef DEBUG
+  PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
+	<< "\n  ref_mean_r1 = " << ref_mean_r1
+	<< "  delta_mean_r1 = " << delta_mean_r1
+	<< "\n  ref_mean_r2 = " << ref_mean_r2
+	<< "  delta_mean_r2 = " << delta_mean_r2 << std::endl;
+#endif // DEBUG
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
     - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
 }
@@ -1925,6 +1933,13 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
   //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
   //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
   //     - \DeltaE[Ri] \DeltaE[Rj]
+#ifdef DEBUG
+  PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
+	<< "\n  ref_mean_r1 = " << ref_mean_r1
+	<< "  delta_mean_r1 = " << delta_mean_r1
+	<< "\n  ref_mean_r2 = " << ref_mean_r2
+	<< "  delta_mean_r2 = " << delta_mean_r2 << std::endl;
+#endif // DEBUG
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
     - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
 }
@@ -1953,6 +1968,13 @@ delta_covariance(const RealVector& x, const RealVector2DArray& r1_t1_coeffs,
     expectation(x, r1r2_t1_coeffs, r1r2_t2_coeffs, sm_mi, colloc_key, incr_key);
 
   // same expression as standard expansion mode case above
+#ifdef DEBUG
+  PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
+	<< "\n  ref_mean_r1 = " << ref_mean_r1
+	<< "  delta_mean_r1 = " << delta_mean_r1
+	<< "\n  ref_mean_r2 = " << ref_mean_r2
+	<< "  delta_mean_r2 = " << delta_mean_r2 << std::endl;
+#endif // DEBUG
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
     - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
 }
@@ -2033,6 +2055,13 @@ delta_covariance(const RealVector& x,
   //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
   //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
   //     - \DeltaE[Ri] \DeltaE[Rj]
+#ifdef DEBUG
+  PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
+	<< "\n  ref_mean_r1 = " << ref_mean_r1
+	<< "  delta_mean_r1 = " << delta_mean_r1
+	<< "\n  ref_mean_r2 = " << ref_mean_r2
+	<< "  delta_mean_r2 = " << delta_mean_r2 << std::endl;
+#endif // DEBUG
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
     - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
 }

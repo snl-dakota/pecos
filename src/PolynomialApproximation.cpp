@@ -222,8 +222,8 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   const SDRArray& hf_sdr_array = surrData.response_data();
 
   // ***************************************************************************
-  // TO DO: improve encapsulation by passing surrogate key (currently replicates
-  // logic in Dakota::ApproximationInterface::{truth,surrogate}_model_key())
+  // TO DO: improve encapsulation by passing surrogate key
+  // (currently replicates logic in NonDExpansion::configure_indices())
   UShortArray lf_key;  paired_lf_key(key, lf_key);
   r_cit = resp_data_map.find(lf_key);
   const SDRArray& lf_sdr_array = r_cit->second;

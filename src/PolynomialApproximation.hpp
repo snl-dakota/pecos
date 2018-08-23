@@ -398,10 +398,14 @@ modified_surrogate_data(const SurrogateData& data)
 inline void PolynomialApproximation::
 paired_lf_key(const UShortArray& hf_key, UShortArray& lf_key) const
 {
-  // decrement trailing index
-  lf_key = hf_key; --lf_key.back();
-  // append the HF key in order to tag a particular (discrepancy) pairing
-  lf_key.insert(lf_key.end(), hf_key.begin(), hf_key.end());
+  if (hf_key.back() > 0) {
+    // decrement trailing index
+    lf_key = hf_key; --lf_key.back();
+    // append the HF key in order to tag a particular (discrepancy) pairing
+    lf_key.insert(lf_key.end(), hf_key.begin(), hf_key.end());
+  }
+  else
+    lf_key.clear();
 }
 
 
