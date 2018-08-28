@@ -1848,12 +1848,15 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
 
   // Hierarchical increment to covariance:
   // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
-  //   = ( E[Ri Rj]^1 - E[Ri]^1 E[Rj]^1 ) - ( E[Ri Rj]^0 - E[Ri]^0 E[Rj]^0 )
-  //   = E[Ri Rj]^0 + \DeltaE[Ri Rj]
-  //     - (E[Ri]^0 + \DeltaE[Ri]) (E[Rj]^0 + \DeltaE[Rj])
-  //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
-  //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
-  //     - \DeltaE[Ri] \DeltaE[Rj]
+  //   = ( E[Ri Rj]^1 - \mu_i^1 \mu_j^1 ) - ( E[Ri Rj]^0 - \mu_i^0 \mu_j^0 )
+  //   = E[Ri Rj]^0 + \DeltaE[Ri Rj] - E[Ri Rj]^0 
+  //     - (\mu_i^0 + \Delta\mu_i) (\mu_j^0 + \Delta\mu_j) + \mu_i^0 \mu_j^0
+  //   = \DeltaE[Ri Rj] - \Delta\mu_i \mu_j^0 - \mu_i^0 \Delta\mu_j
+  //     - \Delta\mu_i \Delta\mu_j
+  // Note: \DeltaE[Ri Rj] can be expanded to E[\DeltaR_i R_j^0]
+  //       + E[\DeltaR_j R_i^0] + E[\DeltaR_i \DeltaR_j].  While this could
+  //       reduce subtractive cancellation from (dominant) term E[R_i^0 R_j^0],
+  //       it would incur additional product bookkeeping.
 #ifdef DEBUG
   PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
 	<< "\n  ref_mean_r1 = " << ref_mean_r1
@@ -1871,9 +1874,8 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
 		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
-		 bool same,
-		 const RealVector2DArray& r1r2_t1c, // *** Verify sufficient
-		 const RealMatrix2DArray& r1r2_t2c, // *** Verify sufficient
+		 bool same, const RealVector2DArray& r1r2_t1c,
+		 const RealMatrix2DArray& r1r2_t2c,
 		 const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
 		 const UShortArray& active_key,
@@ -1885,23 +1887,27 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
     = r1_t1c_map.find(active_key), t1w_cit = t1_wts_map.find(active_key);
   std::map<UShortArray, RealMatrix2DArray>::const_iterator r1t2_cit
     = r1_t2c_map.find(active_key), t2w_cit = t2_wts_map.find(active_key);
-  std::map<UShortArray, UShort2DArray>::const_iterator incr_cit
-    = incr_key_map.find(active_key);
+  std::map<UShortArray, UShort2DArray>::const_iterator
+    //ref_cit = ref_key_map.find(active_key),
+    incr_cit = incr_key_map.find(active_key);
   if (r1t1_cit == r1_t1c_map.end() || t1w_cit == t1_wts_map.end() ||
       r1t2_cit == r1_t2c_map.end() || t2w_cit == t2_wts_map.end() ||
-      incr_cit == incr_key_map.end()) {
+      incr_cit == incr_key_map.end()) { //|| ref_cit == ref_key_map.end()) {
     PCerr << "Error: failure in key lookup in HierarchInterpPolyApproximation"
 	  << "::delta_covariance()" << std::endl;
     abort_handler(-1);
   }
-  const RealVector2DArray& active_t1_wts =  t1w_cit->second;
-  const RealMatrix2DArray& active_t2_wts =  t2w_cit->second;
-  const UShort2DArray&   active_incr_key = incr_cit->second;
+  const RealVector2DArray& active_t1_wts   =  t1w_cit->second;
+  const RealMatrix2DArray& active_t2_wts   =  t2w_cit->second;
+  const UShort2DArray&     active_incr_key = incr_cit->second;
+  //const UShort2DArray&   active_ref_key  =  ref_cit->second;
 
   // increments could in general be defined by incr_key_map, but currently
   // are limited to the active incr_key (enabling short cuts below)
   Real  ref_mean_r1 =
     expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, ref_key_map),
+    //expectation(r1t1_cit->second, r1t2_cit->second, active_t1_wts,
+    //            active_t2_wts, active_ref_key),
       delta_mean_r1 =
   //expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
     expectation(r1t1_cit->second, r1t2_cit->second, active_t1_wts,
@@ -1916,6 +1922,8 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
       = r2_t2c_map.find(active_key);
     ref_mean_r2 =
       expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, ref_key_map);
+    //expectation(r2t1_cit->second, r2t2_cit->second, active_t1_wts,
+    //		  active_t2_wts, active_ref_key);
     delta_mean_r2 =
     //expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
       expectation(r2t1_cit->second, r2t2_cit->second, active_t1_wts,
@@ -1925,14 +1933,7 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
     expectation(r1r2_t1c, r1r2_t2c, active_t1_wts, active_t2_wts,
 		active_incr_key); // shortcut
 
-  // Hierarchical increment to covariance:
-  // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
-  //   = ( E[Ri Rj]^1 - E[Ri]^1 E[Rj]^1 ) - ( E[Ri Rj]^0 - E[Ri]^0 E[Rj]^0 )
-  //   = E[Ri Rj]^0 + \DeltaE[Ri Rj]
-  //     - (E[Ri]^0 + \DeltaE[Ri]) (E[Rj]^0 + \DeltaE[Rj])
-  //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
-  //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
-  //     - \DeltaE[Ri] \DeltaE[Rj]
+  // same expression as standard expansion mode case above
 #ifdef DEBUG
   PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
 	<< "\n  ref_mean_r1 = " << ref_mean_r1
@@ -2047,14 +2048,7 @@ delta_covariance(const RealVector& x,
     expectation(x, r1r2_t1c, r1r2_t2c, active_sm_mi, active_colloc_key,
 		active_incr_key); // shortcut  *** Verify!
 
-  // Hierarchical increment to covariance:
-  // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
-  //   = ( E[Ri Rj]^1 - E[Ri]^1 E[Rj]^1 ) - ( E[Ri Rj]^0 - E[Ri]^0 E[Rj]^0 )
-  //   = E[Ri Rj]^0 + \DeltaE[Ri Rj]
-  //     - (E[Ri]^0 + \DeltaE[Ri]) (E[Rj]^0 + \DeltaE[Rj])
-  //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
-  //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
-  //     - \DeltaE[Ri] \DeltaE[Rj]
+  // same expression as standard expansion mode case above
 #ifdef DEBUG
   PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
 	<< "\n  ref_mean_r1 = " << ref_mean_r1
