@@ -13,7 +13,7 @@ class OptionsListTestCase(unittest.TestCase):
         opts = OptionsList()
         opts.set("key1",2.)
         assert opts.get("key1")==2.
-        assert opts.get("key2")==None
+        self.assertRaises(KeyError, opts.get,"key2")
 
         opts.set("key1",2)
         assert opts.get("key1")==2

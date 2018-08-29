@@ -93,6 +93,8 @@ needed for mainpulating operatring on matrices and vectors
 %ignore equality_constrained_least_squares_solve( RealMatrix &A, RealVector &b, RealMatrix &C, RealVector &d, RealMatrix &result);
 %rename(complete_pivoted_lu_factorization_cpp) complete_pivoted_lu_factorization;
 %rename (truncated_pivoted_lu_factorization_cpp) truncated_pivoted_lu_factorization;
+%rename (ind2sub_cpp) ind2sub;
+%rename (sub2ind_cpp) sub2ind;
 
 
 // typemaps are applied to special instances of SerialDenseVecor/Matrix and
@@ -222,4 +224,25 @@ def truncated_pivoted_lu_factorization(A, max_iters=None, num_initial_rows=None)
       if num_initial_rows is None: num_initial_rows = 0
       return truncated_pivoted_lu_factorization_cpp(
           A, max_iters, num_initial_rows)
+
+def ind2sub(sizes, index, num_elems):
+    # TODO: discuss with wfspotz how to flexibly support various integer arrays
+    assert sizes.dtype==numpy.int32 or sizes.dtype==numpy.int64
+    sizes = numpy.asarray(sizes, dtype=numpy.int32)
+    if isinstance(index,(int,numpy.integer)):
+        index = numpy.int(index)
+    else:
+        raise Exception('index is not an integer')
+    if isinstance(num_elems,(int,numpy.integer)):
+        num_elems = numpy.int(num_elems)
+    else:
+        raise Exception('num_elems is not an integer')
+    return ind2sub_cpp(sizes,index,num_elems)
+
+def sub2ind(sizes, multi_index):
+    # TODO: discuss with wfspotz how to flexibly support various integer arrays
+    assert sizes.dtype==numpy.int32 or sizes.dtype==numpy.int64
+    sizes = numpy.asarray(sizes, dtype=numpy.int32)
+    return sub2ind_cpp(sizes, multi_index)
+
    %}

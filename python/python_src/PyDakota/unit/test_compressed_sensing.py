@@ -41,11 +41,6 @@ class TestLASSO(unittest.TestCase):
         matrix = self.diabetes_matrix
         rhs = self.diabetes_rhs
 
-        base_dir = os.path.join(os.path.dirname(__file__), 'data')
-        matrix = numpy.loadtxt(os.path.join(base_dir, 'basis_matrix.csv'))
-        rhs = numpy.loadtxt(os.path.join(base_dir, 'function_vals.csv'))
-
-        
         coef_lasso = []; residuals=[]
         for store_history in [False,True]:
             regression_opts = {'regression_type':LEAST_ANGLE_REGRESSION,
@@ -53,8 +48,6 @@ class TestLASSO(unittest.TestCase):
             solver.solve(matrix, rhs, regression_opts)
             coef_lasso.append(solver.get_solutions_for_all_regularization_params(0))
             residuals.append(solver.get_residuals_for_all_regularization_params(0))
-        #print residuals[0].shape, residuals[1].shape
-        #print coef_lasso[0]-coef_lasso[1][:,-1]
         assert numpy.allclose(coef_lasso[0][:,0],coef_lasso[1][:,-1],atol=1e-15)
         assert numpy.allclose(residuals[0][0],residuals[1][-1],atol=1e-12)
         

@@ -83,7 +83,7 @@ class TestMathTools(unittest.TestCase):
 
     def test_multi_dimensional_matrix_indexing( self ):
 
-        sizes = numpy.array( [2,3], numpy.int32 )
+        sizes = numpy.array( [2,3] )
         num_indices = numpy.prod( sizes )
         for i in range( sizes[0] ):
             for j in range( sizes[1] ):
@@ -91,7 +91,7 @@ class TestMathTools(unittest.TestCase):
                 assert numpy.array_equal(
                     ind2sub( sizes,  sizes[0]*j + i, num_indices), [i,j] )
 
-        sizes = numpy.array( [2,3,2], numpy.int32 )
+        sizes = numpy.array( [2,3,2] )
         num_indices = numpy.prod( sizes )
         for i in range( sizes[0] ):
             for j in range( sizes[1] ):

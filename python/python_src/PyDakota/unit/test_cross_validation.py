@@ -532,8 +532,8 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
         Test that error is thrown when cross validation applied to 
         equality constrained regression induces an underdetermined system
         """
-        num_pts = 101; num_eq_per_pt = 1 
-        num_nonzeros = 3; num_cols = 10; num_rhs=1; noise_std=0.1
+        num_pts = 10; num_eq_per_pt = 1 
+        num_nonzeros = 3; num_cols = 10; num_rhs=1; noise_std=0.001
         num_folds = num_pts; num_primary_eq = 10
         regression_type = EQ_CONS_LEAST_SQ_REGRESSION
         opts_dict = {'regression_type':regression_type,
@@ -548,7 +548,7 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
         x = solver.get_solutions_for_all_regularization_params(0)
         # todo make my own allclose function that calls squeeze before
         # comparison, like i do here
-        assert numpy.allclose(x.squeeze(),x_truth)
+        assert numpy.allclose(x,x_truth,atol=noise_std*10)
         self.assertRaises(RuntimeError,self.linear_system_cross_validation_test,
                           A, rhs, num_folds, num_eq_per_pt, solver,
                           regression_opts)
@@ -677,6 +677,8 @@ class TestCrossValidatedSolver(unittest.TestCase):
     on the entier data set corresponding to the best parameters.
     """
 
+    # TODO: this test will break with older NumPy, e.g., RHEL7's NumPy 1.7.1
+    # Should work with NumPy 1.8 or newer
     def cross_validated_solver_wrappers_of_lscv_iterator_helper(
             self, regression_type, regression_opts, A, rhs):
         

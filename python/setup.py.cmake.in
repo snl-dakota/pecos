@@ -94,7 +94,7 @@ options_list = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = options_list_library_dirs,
-    ##runtime_library_dirs = options_list_library_dirs,
+    runtime_library_dirs = options_list_library_dirs,
     libraries = options_list_libraries,
     extra_compile_args = ['-std=c++11'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in options_list_include_dirs]
@@ -115,7 +115,7 @@ math_tools = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = math_tools_library_dirs,
-    ##runtime_library_dirs = math_tools_library_dirs,
+    runtime_library_dirs = math_tools_library_dirs,
     libraries = math_tools_libraries,
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in math_tools_include_dirs])
@@ -134,7 +134,7 @@ regression = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = regression_library_dirs,
-    ##runtime_library_dirs = regression_library_dirs,
+    runtime_library_dirs = regression_library_dirs,
     libraries = ['models','pecos_util','teuchosnumerics','blas','lapack'],
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in regression_include_dirs])
@@ -160,7 +160,7 @@ approximation = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = approximation_library_dirs,
-    ##runtime_library_dirs = approximation_library_dirs,
+    runtime_library_dirs = approximation_library_dirs,
     libraries = approximation_libraries,
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in approximation_include_dirs])
@@ -178,7 +178,7 @@ univariate_polynomials = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = univariate_polynomials_library_dirs,
-    ##runtime_library_dirs = univariate_polynomials_library_dirs,
+    runtime_library_dirs = univariate_polynomials_library_dirs,
     libraries = ['pecos_src','sparsegrid','teuchosnumerics','lapack','blas'],
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in univariate_polynomials_include_dirs])
@@ -218,7 +218,7 @@ options_list_interface = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = [teuchos_numerics_lib_dir],
-    ##runtime_library_dirs = [teuchos_numerics_lib_dir],
+    runtime_library_dirs = [teuchos_numerics_lib_dir],
     libraries = ['teuchosnumerics'],
     extra_compile_args = ['-std=c++11'],
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in options_list_interface_include_dirs])
