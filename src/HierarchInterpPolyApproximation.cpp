@@ -1906,10 +1906,12 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
   // are limited to the active incr_key (enabling short cuts below)
   Real  ref_mean_r1 =
     expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, ref_key_map),
+    //  ref_mean_r1_active =
     //expectation(r1t1_cit->second, r1t2_cit->second, active_t1_wts,
     //            active_t2_wts, active_ref_key),
+    //  delta_mean_r1_all =
+    //expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
       delta_mean_r1 =
-  //expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
     expectation(r1t1_cit->second, r1t2_cit->second, active_t1_wts,
 		active_t2_wts, active_incr_key); // shortcut
   Real ref_mean_r2, delta_mean_r2;
@@ -1935,11 +1937,13 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
 
   // same expression as standard expansion mode case above
 #ifdef DEBUG
-  PCout << "\n  delta_mean_r1r2 = " << delta_mean_r1r2
-	<< "\n  ref_mean_r1 = " << ref_mean_r1
-	<< "  delta_mean_r1 = " << delta_mean_r1
-	<< "\n  ref_mean_r2 = " << ref_mean_r2
-	<< "  delta_mean_r2 = " << delta_mean_r2 << std::endl;
+  PCout << "\n  delta_mean_r1r2 (active) = " << delta_mean_r1r2
+        << "\n  ref_mean_r1 (all) = "        << ref_mean_r1
+      //<<   "  ref_mean_r1 (active) = "     << ref_mean_r1_active
+      //<< "  delta_mean_r1 (all) = "        << delta_mean_r1_all
+	<< "  delta_mean_r1 (active) = "     << delta_mean_r1
+	<< "\n  ref_mean_r2 (all) = "        << ref_mean_r2
+	<< "  delta_mean_r2 (active) = "     << delta_mean_r2 << std::endl;
 #endif // DEBUG
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
     - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
