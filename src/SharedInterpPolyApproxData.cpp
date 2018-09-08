@@ -235,7 +235,6 @@ void SharedInterpPolyApproxData::decrement_data()
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
     break;
@@ -255,7 +254,6 @@ void SharedInterpPolyApproxData::post_push_data()
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
     std::deque<UShortArray>::iterator sit
@@ -280,7 +278,6 @@ void SharedInterpPolyApproxData::post_finalize_data()
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
-    // move previous expansion data to current expansion
     poppedLevMultiIndex[activeKey].clear();
     break;
   default:

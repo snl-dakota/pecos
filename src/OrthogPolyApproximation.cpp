@@ -148,6 +148,19 @@ void OrthogPolyApproximation::combine_coefficients()
     break;
   }
   }
+
+  if (data_rep->expConfigOptions.outputLevel >= DEBUG_OUTPUT) {
+    const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
+    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
+    for (ec_it=expansionCoeffs.begin(); ec_it!=expansionCoeffs.end();
+	 ++ec_it, ++mi_cit) {
+      PCout << "\nLevel coefficients (unnormalized):";
+      print_coefficients(PCout, mi_cit->second, ec_it->second, false);
+    }
+    PCout << "\nCombined coefficients (unnormalized):";
+    print_coefficients(PCout, data_rep->combinedMultiIndex, combinedExpCoeffs,
+		       false);
+  }
 }
 
 
@@ -1172,14 +1185,13 @@ solve_decay_rates(RealVectorArray& A_vectors, RealVectorArray& b_vectors,
 
 
 void OrthogPolyApproximation::
-print_coefficients(std::ostream& s, bool normalized)
+print_coefficients(std::ostream& s, const UShort2DArray& mi,
+		   const RealVector& exp_coeffs, bool normalized)
 {
   // terms and term identifiers
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
-  const RealVector& exp_coeffs = expCoeffsIter->second;
   char tag[10];
   for (i=0; i<num_exp_terms; ++i) {
     const UShortArray& mi_i = mi[i];

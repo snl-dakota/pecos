@@ -85,6 +85,8 @@ protected:
   void combined_to_active();
 
   void print_coefficients(std::ostream& s, bool normalized);
+  void print_coefficients(std::ostream& s, const UShort2DArray& mi,
+			  const RealVector& exp_coeffs, bool normalized);
 
   /// retrieve or form a set of dense coefficients that correspond to
   /// SharedOrthogPolyApproxData::multiIndex
@@ -508,6 +510,16 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   allocate_component_sobol();
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
+}
+
+
+inline void OrthogPolyApproximation::
+print_coefficients(std::ostream& s, bool normalized)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  print_coefficients(s, data_rep->multi_index(), expCoeffsIter->second,
+		     normalized);
 }
 
 

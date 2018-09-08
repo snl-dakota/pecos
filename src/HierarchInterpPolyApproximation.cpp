@@ -1854,7 +1854,7 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
   //   = \DeltaE[Ri Rj] - \Delta\mu_i \mu_j^0 - \mu_i^0 \Delta\mu_j
   //     - \Delta\mu_i \Delta\mu_j
   // Note: \DeltaE[Ri Rj] can be expanded to E[\DeltaR_i R_j^0]
-  //       + E[\DeltaR_j R_i^0] + E[\DeltaR_i \DeltaR_j].  While this could
+  //       + E[\DeltaR_j R_i^0] + E[\DeltaR_i \DeltaR_j].  While this would
   //       reduce subtractive cancellation from (dominant) term E[R_i^0 R_j^0],
   //       it would incur additional product bookkeeping.
 #ifdef DEBUG
@@ -1991,9 +1991,8 @@ delta_covariance(const RealVector& x,
 		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
 		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
-		 bool same,
-		 const RealVector2DArray& r1r2_t1c, // *** Verify sufficient
-		 const RealMatrix2DArray& r1r2_t2c, // *** Verify sufficient
+		 bool same, const RealVector2DArray& r1r2_t1c,
+		 const RealMatrix2DArray& r1r2_t2c,
 		 const std::map<UShortArray, UShort3DArray>& sm_mi_map,
 		 const std::map<UShortArray, UShort4DArray>& colloc_key_map,
 		 const UShortArray& active_key,
@@ -2050,7 +2049,7 @@ delta_covariance(const RealVector& x,
   }
   Real delta_mean_r1r2 =
     expectation(x, r1r2_t1c, r1r2_t2c, active_sm_mi, active_colloc_key,
-		active_incr_key); // shortcut  *** Verify!
+		active_incr_key);
 
   // same expression as standard expansion mode case above
 #ifdef DEBUG
@@ -2544,32 +2543,37 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, num_levels = colloc_key.size(), num_sets, num_tp_pts,
     cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
-  bool partial = !ref_key.empty();
+  bool partial = !ref_key.empty(), same = (hip_approx_2 == this);
 
   // Support original (R) data for computing increments in R^2
   const SDVArray& sdv_array      = surrData.variables_data();
   const SDRArray& hf_sdr_array_1 = surrData.response_data();
-  const SDRArray& hf_sdr_array_2 = hip_approx_2->surrData.response_data();
-
+  const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
+    hip_approx_2->surrData.response_data();
   std::map<UShortArray, SDRArray>::const_iterator
     r_cit_1 = surrData.response_data_map().find(lf_key),
-    r_cit_2 = hip_approx_2->surrData.response_data_map().find(lf_key);
+    r_cit_2 = (same) ? r_cit_1 :
+    hip_approx_2->surrData.response_data_map().find(lf_key);
   const SDRArray& lf_sdr_array_1 = r_cit_1->second;
   const SDRArray& lf_sdr_array_2 = r_cit_2->second;
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
+
+  // level 0 (assume this is always contained in a partial ref_key)
   r1r2_t1_coeffs.resize(num_levels); r1r2_t1_coeffs[0].resize(1);
   r1r2_t2_coeffs.resize(num_levels); r1r2_t2_coeffs[0].resize(1);
   r1r2_t1_coeffs[0][0].sizeUninitialized(1);
-
-  // level 0 (assume this is always contained in a partial ref_key)
-  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-  Real hf_fn1 = hf_sdr_array_1[c_index].response_function(),
-       hf_fn2 = hf_sdr_array_2[c_index].response_function(),
-       lf_fn1 = lf_sdr_array_1[c_index].response_function(),
-       lf_fn2 = lf_sdr_array_2[c_index].response_function(), r1r2_l;
   // delta [ R_1 * R_2 ], not deltaR_1 * deltaR_2
-  r1r2_t1_coeffs[0][0][0] = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
+  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+  Real hf_fn1 = hf_sdr_array_1[c_index].response_function(), hf_fn2,
+       lf_fn1 = lf_sdr_array_1[c_index].response_function(), lf_fn2, r1r2_l;
+  if (same)
+    r1r2_t1_coeffs[0][0][0] = hf_fn1 * hf_fn1 - lf_fn1 * lf_fn1;
+  else {
+    hf_fn2 = hf_sdr_array_2[c_index].response_function();
+    lf_fn2 = lf_sdr_array_2[c_index].response_function();
+    r1r2_t1_coeffs[0][0][0] = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
+  }
 #ifdef DEBUG
   PCout << "Surplus components l0 s0 p0: r1r2 = " << r1r2_t1_coeffs[0][0][0]
 	<< std::endl;
@@ -2581,12 +2585,18 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     r1r2_t2_coeffs[0][0].shapeUninitialized(num_v, 1);
     Real *r1r2_t2_coeffs_000 = r1r2_t2_coeffs[0][0][0];
     const RealVector& hf_grad1 = hf_sdr_array_1[c_index].response_gradient();
-    const RealVector& hf_grad2 = hf_sdr_array_2[c_index].response_gradient();
     const RealVector& lf_grad1 = lf_sdr_array_1[c_index].response_gradient();
-    const RealVector& lf_grad2 = lf_sdr_array_2[c_index].response_gradient();
-    for (v=0; v<num_v; ++v)
-      r1r2_t2_coeffs_000[v] = hf_fn1 * hf_grad2[v] + hf_fn2 * hf_grad1[v]
-                            - lf_fn1 * lf_grad2[v] - lf_fn2 * lf_grad1[v];
+    if (same)
+      for (v=0; v<num_v; ++v)
+	r1r2_t2_coeffs_000[v]
+	  = 2. * (hf_fn1 * hf_grad1[v] - lf_fn1 * lf_grad1[v]);
+    else {
+      const RealVector& hf_grad2 = hf_sdr_array_2[c_index].response_gradient();
+      const RealVector& lf_grad2 = lf_sdr_array_2[c_index].response_gradient();
+      for (v=0; v<num_v; ++v)
+	r1r2_t2_coeffs_000[v] = hf_fn1 * hf_grad2[v] + hf_fn2 * hf_grad1[v]
+	                      - lf_fn1 * lf_grad2[v] - lf_fn2 * lf_grad1[v];
+    }
 
     // levels 1:w
     for (lev=1; lev<num_levels; ++lev) {
@@ -2602,32 +2612,42 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
 	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
-	  const SurrogateDataResp& hf_sdr_1 = hf_sdr_array_1[c_index];
-	  const SurrogateDataResp& hf_sdr_2 = hf_sdr_array_2[c_index];
-	  const SurrogateDataResp& lf_sdr_1 = lf_sdr_array_1[c_index];
-	  const SurrogateDataResp& lf_sdr_2 = lf_sdr_array_2[c_index];
 	  // type1 hierarchical interpolation of R1 R2
-	  hf_fn1 = hf_sdr_1.response_function();
-	  hf_fn2 = hf_sdr_2.response_function();
-	  lf_fn1 = lf_sdr_1.response_function();
-	  lf_fn2 = lf_sdr_2.response_function();
-	  r1r2_l = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
+	  hf_fn1 = hf_sdr_array_1[c_index].response_function();
+	  lf_fn1 = lf_sdr_array_1[c_index].response_function();
+	  if (same)
+	    r1r2_l = hf_fn1 * hf_fn1 - lf_fn1 * lf_fn1;
+	  else {
+	    hf_fn2 = hf_sdr_array_2[c_index].response_function();
+	    lf_fn2 = lf_sdr_array_2[c_index].response_function();
+	    r1r2_l = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
+	  }
 	  r1r2_t1_coeffs_ls[pt] = r1r2_l
 	    - value(c_vars, sm_mi, colloc_key, r1r2_t1_coeffs,
 		    r1r2_t2_coeffs, lev-1, ref_key);
 	  // type2 hierarchical interpolation of R1 R2
 	  // --> interpolated grads are R1 * R2' + R2 * R1'
 	  Real* r1r2_t2_coeffs_lsp = r1r2_t2_coeffs_ls[pt];
-	  const RealVector& hf_grad1 = hf_sdr_1.response_gradient();
-	  const RealVector& hf_grad2 = hf_sdr_2.response_gradient();
-	  const RealVector& lf_grad1 = lf_sdr_1.response_gradient();
-	  const RealVector& lf_grad2 = lf_sdr_2.response_gradient();
+	  const RealVector& hf_grad1
+	    = hf_sdr_array_1[c_index].response_gradient();
+	  const RealVector& lf_grad1
+	    = lf_sdr_array_1[c_index].response_gradient();
 	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
 	    sm_mi, colloc_key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1, ref_key);
-	  for (v=0; v<num_v; ++v)
-	    r1r2_t2_coeffs_lsp[v]
-	      = hf_fn1 * hf_grad2[v] + hf_fn2 * hf_grad1[v]
-	      - lf_fn1 * lf_grad2[v] - lf_fn2 * lf_grad1[v] - prev_grad[v];
+	  if (same)
+	    for (v=0; v<num_v; ++v)
+	      r1r2_t2_coeffs_lsp[v] = 2. *
+		(hf_fn1 * hf_grad1[v] - lf_fn1 * lf_grad1[v]) - prev_grad[v];
+	  else {
+	    const RealVector& hf_grad2
+	      = hf_sdr_array_2[c_index].response_gradient();
+	    const RealVector& lf_grad2
+	      = lf_sdr_array_2[c_index].response_gradient();
+	    for (v=0; v<num_v; ++v)
+	      r1r2_t2_coeffs_lsp[v]
+		= hf_fn1 * hf_grad2[v] + hf_fn2 * hf_grad1[v]
+		- lf_fn1 * lf_grad2[v] - lf_fn2 * lf_grad1[v] - prev_grad[v];
+	  }
 	}
       }
     }
@@ -2645,10 +2665,15 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	// type1 hierarchical interpolation of R1 R2
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  r1r2_l = hf_sdr_array_1[c_index].response_function()
-	         * hf_sdr_array_2[c_index].response_function()
-	         - lf_sdr_array_1[c_index].response_function()
-	         * lf_sdr_array_2[c_index].response_function();
+	  hf_fn1 = hf_sdr_array_1[c_index].response_function();
+	  lf_fn1 = lf_sdr_array_1[c_index].response_function();
+	  if (same)
+	    r1r2_l = hf_fn1 * hf_fn1 - lf_fn1 * lf_fn1;
+	  else {
+	    hf_fn2 = hf_sdr_array_2[c_index].response_function();
+	    lf_fn2 = lf_sdr_array_2[c_index].response_function();
+	    r1r2_l = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
+	  }
 #ifdef DEBUG
 	  Real r1r2_lm1 =
 	         value(sdv_array[c_index].continuous_variables(), sm_mi,
