@@ -1168,8 +1168,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
   Real mean_1 =
-    expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs, comb_sm_mi,
-		comb_key),
+    expectation(x,combinedExpT1Coeffs,combinedExpT2Coeffs,comb_sm_mi,comb_key),
        mean_2 = (same) ? mean_1 :
     expectation(x, comb_t1c_2, comb_t2c_2, comb_sm_mi, comb_key);
 
@@ -1412,8 +1411,8 @@ delta_mean(const RealVector& x, const UShort2DArray& incr_key)
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean))
     return deltaMoments[0];
 
-  Real delta_mean = expectation(x, expT1CoeffsIter->second,
-				expT2CoeffsIter->second, incr_key);
+  Real delta_mean =
+    expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
   if (all_mode) {
     deltaMoments[0] = delta_mean;
     computedDeltaMean |= 1; xPrevDeltaMean = x;
@@ -1720,21 +1719,6 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
-
-  /*
-  // delta_combined_covariance() cannot leverage modSurrData for r1r2 and must
-  // form an interpolant for r1 * r2 using the combined coefficients:
-  const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
-  const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(data_rep->combinedVarSets,
-		      data_rep->combinedSmolyakMultiIndex,
-		      data_rep->combinedCollocKey, combinedExpT1Coeffs,
-		      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
-		      r1r2_t1_coeffs, r1r2_t2_coeffs);//, incr_key);
-  // only need expectation of R1R2 on incr_key, but product interpolant is
-  // nonlinear and we form hierarchical evaluations based on deltaR1R2
-  */
   
   // Short cut: change in R^2 interpolant can be restricted to active expansion
   // since shifted reference point cancels out when interpolating R^2 via
@@ -1756,12 +1740,6 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(),
 			  data_rep->activeKey, ref_key_map, incr_key_map);
-  /*
-  return delta_covariance(combinedExpT1Coeffs, combinedExpT2Coeffs,
-			  comb_t1c_2, comb_t2c_2, same, r1r2_t1_coeffs,
-			  r1r2_t2_coeffs, data_rep->combinedT1WeightSets,
-			  data_rep->combinedT2WeightSets, ref_key, incr_key);
-  */
 }
 
 
@@ -1780,22 +1758,6 @@ delta_combined_covariance(const RealVector& x,
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
-
-  /*
-  // delta_combined_covariance() cannot leverage modSurrData for r1r2 and must
-  // form interpolants for r1 and r2 using the combined coefficients:
-  const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
-  const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  const UShort3DArray& comb_sm_mi = data_rep->combinedSmolyakMultiIndex;
-  const UShort4DArray& comb_key   = data_rep->combinedCollocKey;
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(data_rep->combinedVarSets, comb_sm_mi, comb_key,
-		      combinedExpT1Coeffs, combinedExpT2Coeffs, comb_t1c_2,
-		      comb_t2c_2, same, r1r2_t1_coeffs, r1r2_t2_coeffs);
-                      //, incr_key);
-  // only need expectation of R1R2 on incr_key, but product interpolant is
-  // nonlinear and we form hierarchical evaluations based on deltaR1R2
-  */
   
   // Short cut: change in R^2 interpolant can be restricted to active expansion
   // since shifted reference point cancels out when interpolating R^2 via
@@ -1814,12 +1776,6 @@ delta_combined_covariance(const RealVector& x,
 			  hsg_driver->smolyak_multi_index_map(),
 			  hsg_driver->collocation_key_map(),
 			  data_rep->activeKey, ref_key_map, incr_key_map);
-  /*
-  return delta_covariance(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-			  comb_t1c_2, comb_t2c_2, same,
-			  r1r2_t1_coeffs, r1r2_t2_coeffs,// only active contribs
-			  comb_sm_mi, comb_key, ref_key, incr_key);
-  */
 }
 
 
@@ -2524,7 +2480,7 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   // **********************************************************************
   // > TO DO: carrying delta(R_1 R_2) and delta((R-1-mu_1)(R_2-mu_2))
   //          within additional modSurrData keys could eliminate need to
-  //          recompute, but unlike R, all unique 1,2 pairs must be tracked.
+  //          recompute, but unlike R, all covariance pairs must be tracked.
   // **********************************************************************
   // > only need to integrate terms in incr_key, but need to build up to them
   //   by evaluating all underlying contribs to the hierarchical interpolant
@@ -2724,13 +2680,9 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !ref_key.empty();
 
-  // ***************************************************************************
-  // This version for product interpolant of each model level independent from
-  // the others (e.g., for individual adaptation of LF and discrepancies)
-  // --> mod_surr_data switch can be eliminated
-  // ***************************************************************************
-
-  // Support original (R) or modified (DeltaR) data for product interpolants
+  // This version computes product interpolant of each model level independent
+  // from the others (e.g., for individual adaptation of LF and discrepancies)
+  // --> modSurrData is used
   const SDVArray& sdv_array   = modSurrData.variables_data();
   const SDRArray& sdr_array_1 = modSurrData.response_data();
   const SDRArray& sdr_array_2 = hip_approx_2->modSurrData.response_data();
@@ -2848,9 +2800,10 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     reference or increment key (passed as generic set_partition), functions
     forming hierarchical product interpolants only support a reference key
     due to nonlinearity (only end point can be controlled).  Note: consider 
-    computing deltaR1R2 = R1 deltaR2 + R2 deltaR1 + deltaR1 deltaR2. */
-// *** For use with a single set of combined coefficients; this would be a
-//     model discrepancy for key > first ***
+    computing deltaR1R2 = R1 deltaR2 + R2 deltaR1 + deltaR1 deltaR2.
+
+    No current need to form product interpolants using combined coefficients
+
 void HierarchInterpPolyApproximation::
 product_interpolant(const RealMatrix2DArray& var_sets,
 		    const UShort3DArray&     sm_mi,
@@ -2966,92 +2919,6 @@ product_interpolant(const RealMatrix2DArray& var_sets,
   if (data_rep->basisConfigOptions.useDerivs)
     PCout << "Product interpolant type2 coeffs:\n" << r1r2_t2_coeffs;
 #endif // DEBUG
-}
-
-
-/*
-void HierarchInterpPolyApproximation::
-product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
-  std::map<UShortArray, RealVector2DArray>& r1r2_t1c_map,
-  std::map<UShortArray, RealMatrix2DArray>& r1r2_t2c_map,
-  const std::map<UShortArray, UShort2DArray>& ref_key)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const std::map<UShortArray, UShort3DArray>& sm_mi_map
-    = hsg_driver->smolyak_multi_index_map();
-  const std::map<UShortArray, UShort4DArray>& colloc_key_map
-    = hsg_driver->collocation_key_map();
-  const std::map<UShortArray, Sizet3DArray>&  colloc_index_map
-    = hsg_driver->collocation_indices_map();
-  const std::map<UShortArray, SDVArray>& sdv_array_map
-    = surrData.variables_data_map();
-  const std::map<UShortArray, Sizet3DArray>& c_index_map
-    = hsg_driver->collocation_indices_map();
-  size_t mod, lev, set, pt, num_levels, num_sets, num_tp_pts, v,
-    num_v = sharedDataRep->numVars;
-  bool same = (hip_approx_2 == this), partial = !ref_key.empty();
-
-  // form hierarchical t1/t2 coeffs for raw moment R1 R2
-  RealVector2DArray r1r2_t1c(num_levels); r1r2_t1c[0].resize(1);
-  RealMatrix2DArray r1r2_t2c(num_levels); r1r2_t2c[0].resize(1);
-  r1r2_t1c[0][0].sizeUninitialized(1);
-
-  std::map<UShortArray, RealVector2DArray>::iterator r1_t1_it, r2_t1_it;
-  std::map<UShortArray, RealMatrix2DArray>::iterator r1_t2_it, r2_t2_it;
-  std::map<UShortArray, UShort4DArray>::iterator        ck_it;
-  std::map<UShortArray, Sizet3DArray>::iterator         ci_it;
-  std::map<UShortArray, SDVArray>::iterator           sdva_it;
-  for (r1_t1_it  =               expansionType1Coeffs.begin(),
-       r1_t2_it  =               expansionType2Coeffs.begin(),
-       r2_t1_it  = hip_approx_2->expansionType1Coeffs.begin(),
-       r2_t2_it  = hip_approx_2->expansionType2Coeffs.begin(),
-       ck_it     = colloc_key_map.begin(), ci_it = c_index_map.begin(),
-       sdva_it = sdv_array_map.begin(), mod=0;
-       r1_t1_it !=               expansionType1Coeffs.end();
-       ++r1_t1_it, ++r1_t2_it, ++r2_t1_it, ++r2_t2_it,
-       ++ci_it, ++ck_it, ++sdva_it, ++mod) {
-    const UShortArray&           key = r1_t1_it->first;
-    const RealVector2DArray&  r1_t1c = r1_t1_it->second;
-    const SDVArray&        sdv_array =  sdva_it->second;
-    const Sizet3DArray& colloc_index =    ci_it->second;
-    const UShort4DArray&  colloc_key =    ck_it->second;
-    // level 0, model 0 could use surrogate data directly for R ...
-    // *** TO DO ?
-
-    // levels 1:L and models 1:M need to aggregate discrpenacies to predict R
-    // --> use value() to reliably aggregate
-    num_lev = r1_t1c.size();
-    for (lev=0, cntr=0; lev<num_lev; ++lev) {
-      const RealVectorArray& r1_t1c_l = r1_t1c[lev];
-      const RealMatrixArray& r1_t2c_l = r1_t2_it->second[lev];
-      const RealVectorArray& r2_t1c_l = r2_t1_it->second[lev];
-      const RealMatrixArray& r2_t2c_l = r2_t2_it->second[lev];
-      num_sets = r1_t1c_l.size();
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = colloc_key[lev][set].size();
-	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
-	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of R1 R2
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  c_index = (c_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
-	  // type1 hierarchical interpolation of R1 R2
-	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1_coeffs,
-	    r1_t2_coeffs, mod, lev, ref_key);
-	  r2_val = (same) ? r1_val : value(c_vars, sm_mi, colloc_key,
-	    r2_t1_coeffs, r2_t2_coeffs, mod, lev, ref_key);
-	  r1r2_t1_coeffs_ls[pt] = r1_val * r2_val - value(c_vars, sm_mi,
-	    colloc_key, r1r2_t1_coeffs, r1r2_t2_coeffs, mod, lev-1, ref_key);
-	}
-      }
-
-      }
-    }
-    r1r2_t1c_map[key] = r1r2_t1c;
-    r1r2_t2c_map[key] = r1r2_t2c;
-  }
 }
 */
   
