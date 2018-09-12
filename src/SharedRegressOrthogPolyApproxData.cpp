@@ -186,7 +186,7 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
 
   // SharedPolyApproxData::retrieval_index() currently returns 0 for
   // all cases other than generalized sparse grids
-  size_t pop_index = retrieval_index();
+  size_t pop_index = retrieval_index(activeKey);
 
   // for decrement
   prevMultiIndex = multiIndexIter->second;

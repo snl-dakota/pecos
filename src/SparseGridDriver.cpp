@@ -254,7 +254,7 @@ void SparseGridDriver::pop_trial_set()
 
 
 void SparseGridDriver::
-finalize_sets(bool output_sets, bool converged_within_tol)
+finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"
 	<< "finalize_sets()." << std::endl;
@@ -318,13 +318,17 @@ void SparseGridDriver::merge_increment()
 }
 
 
-const UShortArray& SparseGridDriver::trial_set() const
+const UShortArray& SparseGridDriver::trial_set(const UShortArray& key) const
 {
   PCerr << "Error: no default implementation for SparseGridDriver::trial_set()."
 	<< std::endl;
   abort_handler(-1);
-  return activeKey; // dummy UShortArray
+  return key; // dummy UShortArray
 }
+
+
+const UShortArray& SparseGridDriver::trial_set() const
+{ return trial_set(activeKey); } // default implementation
 
 
 int SparseGridDriver::unique_trial_points() const

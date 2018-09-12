@@ -52,6 +52,7 @@ public:
   void push_trial_set(const UShortArray& set);
   void pop_trial_set();
   const UShortArray& trial_set() const;
+  const UShortArray& trial_set(const UShortArray& key) const;
   void print_smolyak_multi_index() const;
 
   //
@@ -112,6 +113,11 @@ inline void LightweightSparseGridDriver::pop_trial_set()
 
 inline const UShortArray& LightweightSparseGridDriver::trial_set() const
 { return smolyakMultiIndex.back(); }
+
+
+inline const UShortArray& LightweightSparseGridDriver::
+trial_set(const UShortArray& key) const
+{ return smolyakMultiIndex.back(); } // key ignored in this case
 
 
 inline void LightweightSparseGridDriver::print_smolyak_multi_index() const

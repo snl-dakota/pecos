@@ -64,7 +64,8 @@ public:
   virtual void pop_trial_set();
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
-  virtual void finalize_sets(bool output_sets, bool converged_within_tol);
+  virtual void finalize_sets(bool output_sets, bool converged_within_tol,
+			     bool reverted);
 
   /// computes the tensor grid for the index set from push_trial_set()
   virtual void compute_trial_grid(RealMatrix& var_sets);
@@ -82,7 +83,10 @@ public:
   virtual void update_reference();
 
   /// return the trial index set from push_trial_set()
+  virtual const UShortArray& trial_set(const UShortArray& key) const;
+  /// return the trial index set from push_trial_set()
   virtual const UShortArray& trial_set() const;
+
   /// return the number of unique collocation points in the trial index set
   virtual int unique_trial_points() const;
 
@@ -162,9 +166,13 @@ public:
   /// get refineControl
   short refinement_control() const;
 
-  /// return activeMultiIndex
+  /// return entry from activeMultiIndex corresponding to key
+  const UShortArraySet& active_multi_index(const UShortArray& key) const;
+  /// return entry from activeMultiIndex corresponding to activeKey
   const UShortArraySet& active_multi_index() const;
-  /// return computedTrialSets
+  /// return entry from computedTrialSets corresponding to key
+  const UShortArraySet& computed_trial_sets(const UShortArray& key) const;
+  /// return entry from computedTrialSets corresponding to activeKey
   const UShortArraySet& computed_trial_sets() const;
 
 protected:
@@ -367,10 +375,11 @@ inline short SparseGridDriver::growth_rate() const
 { return growthRate; }
 
 
-inline const UShortArraySet& SparseGridDriver::active_multi_index() const
+inline const UShortArraySet& SparseGridDriver::
+active_multi_index(const UShortArray& key) const
 {
   std::map<UShortArray, UShortArraySet>::const_iterator cit
-    = activeMultiIndex.find(activeKey);
+    = activeMultiIndex.find(key);
   if (cit == activeMultiIndex.end()) {
     PCerr << "Error: active key not found in SparseGridDriver::"
 	  << "active_multi_index()." << std::endl;
@@ -380,10 +389,15 @@ inline const UShortArraySet& SparseGridDriver::active_multi_index() const
 }
 
 
-inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
+inline const UShortArraySet& SparseGridDriver::active_multi_index() const
+{ return active_multi_index(activeKey); }
+
+
+inline const UShortArraySet& SparseGridDriver::
+computed_trial_sets(const UShortArray& key) const
 {
   std::map<UShortArray, UShortArraySet>::const_iterator cit
-    = computedTrialSets.find(activeKey);
+    = computedTrialSets.find(key);
   if (cit == computedTrialSets.end()) {
     PCerr << "Error: active key not found in SparseGridDriver::"
 	  << "computed_trial_sets()." << std::endl;
@@ -391,6 +405,10 @@ inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
   }
   return cit->second;
 }
+
+
+inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
+{ return computed_trial_sets(activeKey); }
 
 
 inline void SparseGridDriver::

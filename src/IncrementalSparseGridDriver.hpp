@@ -71,7 +71,8 @@ public:
   void restore_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
-  void finalize_sets(bool output_sets, bool converged_within_tol);
+  void finalize_sets(bool output_sets, bool converged_within_tol,
+		     bool reverted);
 
   void compute_increment(RealMatrix& var_sets);
   void push_increment();
@@ -84,8 +85,12 @@ public:
   /// adaptive grid refinement procedures
   void update_reference();
 
-  /// return trialSet
+  /// return active trial set under evaluation as a candidate for
+  /// adaptive refinement
   const UShortArray& trial_set() const;
+  /// return trial set corresponding to key
+  const UShortArray& trial_set(const UShortArray& key) const;
+
   /// return num_unique2
   int unique_trial_points() const;
 
@@ -170,9 +175,6 @@ private:
   //
   //- Heading: Data
   //
-
-  /// trial evaluation set from push_trial_set()
-  UShortArray trialSet;
 
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
@@ -398,8 +400,22 @@ inline void IncrementalSparseGridDriver::clear_keys()
 }
 
 
+inline const UShortArray& IncrementalSparseGridDriver::
+trial_set(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort2DArray>::const_iterator cit
+    = smolyakMultiIndex.find(key);
+  if (cit == smolyakMultiIndex.end()) {
+    PCerr << "Error: key not found in IncrementalSparseGridDriver::trial_set()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second.back();
+}
+
+
 inline const UShortArray& IncrementalSparseGridDriver::trial_set() const
-{ return trialSet; }
+{ return smolMIIter->second.back(); } // last set appended to active smol MI
 
 
 inline void IncrementalSparseGridDriver::update_reference()

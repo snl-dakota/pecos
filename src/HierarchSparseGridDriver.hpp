@@ -64,8 +64,10 @@ public:
   void restore_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
-  void finalize_sets(bool output_sets, bool converged_within_tol);
+  void finalize_sets(bool output_sets, bool converged_within_tol,
+		     bool reverted);
 
+  const UShortArray& trial_set(const UShortArray& key) const;
   const UShortArray& trial_set() const;
   int unique_trial_points() const;
 
@@ -108,18 +110,29 @@ public:
   void assign_collocation_key();
   void assign_collocation_key(const UShort3DArray& sm_mi,
 			      UShort4DArray& colloc_key, bool ordered = true);
-  void update_collocation_key();
-  void update_collocation_key(const UShort3DArray& sm_mi,
-			      UShort4DArray& colloc_key);
+  void update_collocation_key_from_trial(const UShortArray& trial_set);
+  void update_collocation_key_from_trial(const UShortArray& trial_set,
+					 const UShort3DArray& sm_mi,
+					 UShort4DArray& colloc_key);
+  void update_collocation_key_from_increment(UShortArray& incr_sets);
+  void update_collocation_key_from_increment(UShortArray& incr_sets,
+					     const UShort3DArray& sm_mi,
+					     UShort4DArray& colloc_key);
 
   void assign_collocation_indices();
   void assign_collocation_indices(const UShort4DArray& colloc_key,
 				  Sizet3DArray& colloc_indices,
 				  int& num_colloc_pts, bool ordered = true);
-  void update_collocation_indices();
-  void update_collocation_indices(const UShort4DArray& colloc_key,
-				  Sizet3DArray& colloc_indices,
-				  int& num_colloc_pts);
+  void update_collocation_indices_from_trial(const UShortArray& trial_set);
+  void update_collocation_indices_from_trial(const UShortArray& trial_set,
+					     const UShort4DArray& colloc_key,
+					     Sizet3DArray& colloc_indices,
+					     int& num_colloc_pts);
+  void update_collocation_indices_from_increment(const UShortArray& incr_sets);
+  void update_collocation_indices_from_increment(const UShortArray& incr_sets,
+					     const UShort4DArray& colloc_key,
+					     Sizet3DArray& colloc_indices,
+					     int& num_colloc_pts);
 
   /// update active numCollocPts from active collocKey (contains unique points)
   void update_collocation_points();
@@ -247,9 +260,10 @@ private:
   /// iterator for active entry within smolyakMultiIndex
   std::map<UShortArray, UShort3DArray>::iterator smolMIIter;
 
-  /// level of trial evaluation set from push_trial_set(); trial set
-  /// corresponds to smolyakMultiIndex[trialLevel].back()
-  unsigned short trialLevel;
+  /// level of trial evaluation set from push_trial_set()
+  std::map<UShortArray, unsigned short> trialLevel;
+  /// iterator for active entry within trialLevel
+  std::map<UShortArray, unsigned short>::iterator trialLevIter;
   /// identifies the trailing index set increments within smolyakMultiIndex
   /// due to an isotropic/anistropic grid refinement
   UShortArray incrementSets;
@@ -322,6 +336,11 @@ inline void HierarchSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
     smolMIIter = smolyakMultiIndex.insert(u3a_pair).first;
   }
+  trialLevIter = trialLevel.find(activeKey);
+  if (trialLevIter == trialLevel.end()) {
+    std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+    trialLevIter = trialLevel.insert(us_pair).first;
+  }
   collocKeyIter = collocKey.find(activeKey);
   if (collocKeyIter == collocKey.end()) {
     std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
@@ -353,8 +372,20 @@ inline void HierarchSparseGridDriver::assign_collocation_key()
 { assign_collocation_key(smolMIIter->second, collocKeyIter->second); }
 
 
-inline void HierarchSparseGridDriver::update_collocation_key()
-{ update_collocation_key(smolMIIter->second, collocKeyIter->second); }
+inline void HierarchSparseGridDriver::
+update_collocation_key_from_trial(const UShortArray& trial_set)
+{
+  update_collocation_key_from_trial(trial_set, smolMIIter->second,
+				    collocKeyIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::
+update_collocation_key_from_increment(UShortArray& incr_sets)
+{
+  update_collocation_key_from_increment(incr_sets, smolMIIter->second,
+					collocKeyIter->second);
+}
 
 
 inline void HierarchSparseGridDriver::assign_collocation_indices()
@@ -364,10 +395,21 @@ inline void HierarchSparseGridDriver::assign_collocation_indices()
 }
 
 
-inline void HierarchSparseGridDriver::update_collocation_indices()
+inline void HierarchSparseGridDriver::
+update_collocation_indices_from_trial(const UShortArray& trial_set)
 {
-  update_collocation_indices(collocKeyIter->second, collocIndIter->second,
-			     numPtsIter->second);
+  update_collocation_indices_from_trial(trial_set, collocKeyIter->second,
+					collocIndIter->second,
+					numPtsIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::
+update_collocation_indices_from_increment(const UShortArray& incr_sets)
+{
+  update_collocation_indices_from_increment(incr_sets, collocKeyIter->second,
+					    collocIndIter->second,
+					    numPtsIter->second);
 }
 
 
@@ -380,6 +422,7 @@ inline void HierarchSparseGridDriver::clear_keys()
   SparseGridDriver::clear_keys();
 
   smolyakMultiIndex.clear();  smolMIIter    = smolyakMultiIndex.end();
+  trialLevel.clear();         trialLevIter  = trialLevel.end();
   collocKey.clear();          collocKeyIter = collocKey.end();
   collocIndices.clear();      collocIndIter = collocIndices.end();
   type1WeightSets.clear();    t1WtIter      = type1WeightSets.end();
@@ -389,12 +432,28 @@ inline void HierarchSparseGridDriver::clear_keys()
 }
 
 
+inline const UShortArray& HierarchSparseGridDriver::
+trial_set(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit
+    = smolyakMultiIndex.find(key);
+  std::map<UShortArray, unsigned short>::const_iterator tl_cit
+    = trialLevel.find(key);
+  if (sm_cit == smolyakMultiIndex.end() || tl_cit == trialLevel.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::trial_set()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return sm_cit->second[tl_cit->second].back();
+}
+
+
 inline const UShortArray& HierarchSparseGridDriver::trial_set() const
-{ return smolMIIter->second[trialLevel].back(); }
+{ return smolMIIter->second[trialLevIter->second].back(); }
 
 
 inline int HierarchSparseGridDriver::unique_trial_points() const
-{ return collocKeyIter->second[trialLevel].back().size(); }
+{ return collocKeyIter->second[trialLevIter->second].back().size(); }
 
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const

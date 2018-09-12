@@ -1033,6 +1033,10 @@ public:
   size_t active_response_size() const;
 
   /// return number of 1D arrays within popped{Vars,Resp}Data 2D arrays
+  /// identified by key
+  size_t popped_sets(const UShortArray& key) const;
+  /// return number of 1D arrays within popped{Vars,Resp}Data 2D arrays
+  /// identified by activeKey
   size_t popped_sets() const;
 
   /// return number of gradient variables from size of gradient arrays
@@ -1473,7 +1477,7 @@ inline void SurrogateData::pop(bool save_data)
 inline void SurrogateData::push(size_t index, bool erase_popped)
 {
   const UShortArray& key = sdRep->activeKey;
-  
+
   std::map<UShortArray, SDVArrayDeque>::iterator pvd_it
     = sdRep->poppedVarsData.find(key);
   std::map<UShortArray, SDRArrayDeque>::iterator prd_it
@@ -1613,12 +1617,15 @@ inline size_t SurrogateData::active_response_size() const
 { return response_size() - failed_response_size(); }
 
 
-inline size_t SurrogateData::popped_sets() const
+inline size_t SurrogateData::popped_sets(const UShortArray& key) const
 {
-  const UShortArray& key = sdRep->activeKey;
   return std::min(sdRep->poppedVarsData[key].size(),
 		  sdRep->poppedRespData[key].size());
 }
+
+
+inline size_t SurrogateData::popped_sets() const
+{ return popped_sets(sdRep->activeKey); }
 
 
 inline size_t SurrogateData::num_gradient_variables() const

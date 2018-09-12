@@ -269,15 +269,16 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // compute trial variable/weight sets and update collocKey
   UShortArray quad_order(numVars);
-  level_to_order(trialSet, quad_order);
+  const UShortArray& tr_set = trial_set();
+  level_to_order(tr_set, quad_order);
   UShort2DArray new_key;
   UShort3DArray& colloc_key = collocKeyIter->second;
   colloc_key.push_back(new_key); // empty array updated in place
-  compute_tensor_grid(quad_order, trialSet, a2PIter->second,
-		      a2T1WIter->second, a2T2WIter->second, colloc_key.back());
+  compute_tensor_grid(quad_order, tr_set, a2PIter->second, a2T1WIter->second,
+                      a2T2WIter->second, colloc_key.back());
   */
 
-  // trialSet already appended, update collocation key
+  // trial set already appended, update collocation key
   size_t last_index = collocKeyIter->second.size();
   update_collocation_key(); // needed for compute_tensor_points_weights()
   // compute a2 pts/wts; update collocIndices, uniqueIndexMapping
@@ -292,7 +293,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
-  computedTrialSets[activeKey].insert(trialSet);
+  computedTrialSets[activeKey].insert(trial_set());
 }
 
 
@@ -377,7 +378,6 @@ void IncrementalSparseGridDriver::initialize_sets()
 
 void IncrementalSparseGridDriver::push_trial_set(const UShortArray& set)
 {
-  trialSet = set;
   UShort2DArray& sm_mi = smolMIIter->second;
   size_t last_index = sm_mi.size();
   sm_mi.push_back(set);
@@ -417,7 +417,7 @@ void IncrementalSparseGridDriver::pop_trial_set()
 
 
 void IncrementalSparseGridDriver::
-finalize_sets(bool output_sets, bool converged_within_tol)
+finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 {
   // For final answer, push all evaluated sets into old and clear active.
   // Multiple trial insertion approach must be compatible with bookkeeping
@@ -445,12 +445,13 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   if (output_sets) {
     size_t i, j, num_sm_mi = sm_mi.size();
     if (converged_within_tol) {
+      // if not reverted, trial set was below tolerance at convergence
+      size_t start_below = (reverted) ? start_index : start_index - 1;
       PCout << "Above tolerance index sets:\n";
-      size_t last = start_index - 1;
-      for (i=0; i<last; ++i)
+      for (i=0; i<start_below; ++i)
 	print_index_set(PCout, sm_mi[i]);
       PCout << "Below tolerance index sets:\n";
-      for (i=last; i<num_sm_mi; ++i)
+      for (i=start_below; i<num_sm_mi; ++i)
 	print_index_set(PCout, sm_mi[i]);
     }
     else {

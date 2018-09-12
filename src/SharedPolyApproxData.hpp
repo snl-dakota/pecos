@@ -325,10 +325,17 @@ public:
     const AleatoryDistParams& dp, std::vector<BasisPolynomial>& poly_basis);
 
   /// returns index of the data set to be restored from within popped
-  /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
+  /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
+  size_t retrieval_index(const UShortArray& key);
+  /// returns index of the data set to be restored from within popped
+  /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   size_t retrieval_index();
   /// returns index of the i-th data set to be restored from within popped
-  /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
+  /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
+  /// during finalization
+  size_t finalization_index(size_t i, const UShortArray& key);
+  /// returns index of the i-th data set to be restored from within popped
+  /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   /// during finalization
   size_t finalization_index(size_t i);
 
@@ -737,12 +744,12 @@ inline bool SharedPolyApproxData::push_available()
 }
 
 
-inline size_t SharedPolyApproxData::retrieval_index()
+inline size_t SharedPolyApproxData::retrieval_index(const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return find_index(poppedLevMultiIndex[activeKey], sg_driver->trial_set());
+    return find_index(poppedLevMultiIndex[key], sg_driver->trial_set(key));
     break;
   }
   default: // other refinement types support a single candidate with index 0
@@ -751,19 +758,24 @@ inline size_t SharedPolyApproxData::retrieval_index()
 }
 
 
-inline size_t SharedPolyApproxData::finalization_index(size_t i)
+inline size_t SharedPolyApproxData::retrieval_index()
+{ return retrieval_index(activeKey); }
+
+
+inline size_t SharedPolyApproxData::
+finalization_index(size_t i, const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    const UShortArraySet& trial_sets = sg_driver->computed_trial_sets();
+    const UShortArraySet& trial_sets = sg_driver->computed_trial_sets(key);
     // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid
     // data with remaining computed trial sets (in sorted order from
     // SparseGridDriver::computedTrialSets).  Below, we determine the order
     // with which these appended trial sets appear in poppedLevMultiIndex.
     UShortArraySet::const_iterator cit = trial_sets.begin();
     std::advance(cit, i);
-    return find_index(poppedLevMultiIndex[activeKey], *cit);
+    return find_index(poppedLevMultiIndex[key], *cit);
     break;
   }
   default:
@@ -773,6 +785,10 @@ inline size_t SharedPolyApproxData::finalization_index(size_t i)
     return 0;
   }
 }
+
+
+inline size_t SharedPolyApproxData::finalization_index(size_t i)
+{ return finalization_index(i, activeKey); }
 
 
 inline bool SharedPolyApproxData::

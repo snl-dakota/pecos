@@ -255,7 +255,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
 
   // SharedPolyApproxData::retrieval_index() currently returns 0 for
   // all cases other than generalized sparse grids
-  size_t pop_index = data_rep->retrieval_index();
+  size_t pop_index = data_rep->retrieval_index(key);
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
