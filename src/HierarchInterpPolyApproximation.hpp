@@ -302,6 +302,7 @@ private:
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
     const UShortArray& lf_key, const UShort2DArray& ref_key = UShort2DArray());
   /* No current need to form product interpolants using combined coefficients
+
   // form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,

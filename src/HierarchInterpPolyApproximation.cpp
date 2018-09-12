@@ -15,7 +15,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "pecos_stat_util.hpp"
 
-#define DEBUG
+//#define DEBUG
 //#define VBD_DEBUG
 //#define INTERPOLATION_TEST
 
