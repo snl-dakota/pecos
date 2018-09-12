@@ -140,7 +140,7 @@ public:
   void update_collocation_points(const UShort4DArray& colloc_key,
 				 int& num_colloc_pts);
 
-  /// return incrementSets
+  /// return active entry in incrementSets
   const UShortArray& increment_sets() const;
 
   /// return active entry in smolyakMultiIndex
@@ -260,13 +260,16 @@ private:
   /// iterator for active entry within smolyakMultiIndex
   std::map<UShortArray, UShort3DArray>::iterator smolMIIter;
 
-  /// level of trial evaluation set from push_trial_set()
+  /// level of trial evaluation set from push_trial_set() during an
+  /// index set-based refinement
   std::map<UShortArray, unsigned short> trialLevel;
   /// iterator for active entry within trialLevel
   std::map<UShortArray, unsigned short>::iterator trialLevIter;
   /// identifies the trailing index set increments within smolyakMultiIndex
   /// due to an isotropic/anistropic grid refinement
-  UShortArray incrementSets;
+  std::map<UShortArray, UShortArray> incrementSets;
+  /// iterator for active entry within incrementSets
+  std::map<UShortArray, UShortArray>::iterator incrSetsIter;
 
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
@@ -340,6 +343,11 @@ inline void HierarchSparseGridDriver::update_active_iterators()
   if (trialLevIter == trialLevel.end()) {
     std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
     trialLevIter = trialLevel.insert(us_pair).first;
+  }
+  incrSetsIter = incrementSets.find(activeKey);
+  if (incrSetsIter == incrementSets.end()) {
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
+    incrSetsIter = incrementSets.insert(ua_pair).first;
   }
   collocKeyIter = collocKey.find(activeKey);
   if (collocKeyIter == collocKey.end()) {
@@ -423,6 +431,7 @@ inline void HierarchSparseGridDriver::clear_keys()
 
   smolyakMultiIndex.clear();  smolMIIter    = smolyakMultiIndex.end();
   trialLevel.clear();         trialLevIter  = trialLevel.end();
+  incrementSets.clear();      incrSetsIter  = incrementSets.end();
   collocKey.clear();          collocKeyIter = collocKey.end();
   collocIndices.clear();      collocIndIter = collocIndices.end();
   type1WeightSets.clear();    t1WtIter      = type1WeightSets.end();
@@ -457,7 +466,7 @@ inline int HierarchSparseGridDriver::unique_trial_points() const
 
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
-{ return incrementSets; }
+{ return incrSetsIter->second; }
 
 
 inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
