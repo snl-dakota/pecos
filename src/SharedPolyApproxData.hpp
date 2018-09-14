@@ -298,7 +298,7 @@ public:
   /// cleans up stored approximation data following combination
   virtual void post_combine_data();
   /// promotes combined approximation data into active data
-  virtual void combined_to_active();
+  virtual void combined_to_active(bool clear_combined = true);
 
   //
   //- Heading: Member functions

@@ -463,10 +463,10 @@ void BasisApproximation::combine_coefficients()
 }
 
 
-void BasisApproximation::combined_to_active()
+void BasisApproximation::combined_to_active(bool clear_combined)
 {
   if (basisApproxRep)
-    basisApproxRep->combined_to_active();
+    basisApproxRep->combined_to_active(clear_combined);
   else {
     PCerr << "Error: combined_to_active() not available for this basis "
 	  << "approximation type." << std::endl;

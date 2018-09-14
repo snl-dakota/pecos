@@ -69,9 +69,10 @@ protected:
   Real stored_value(const RealVector& x, const UShortArray& key);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
-  void compute_moments(bool full_stats = true);
+  void compute_moments(bool full_stats = true, bool combined_stats = false);
   /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x, bool full_stats = true);
+  void compute_moments(const RealVector& x, bool full_stats = true,
+		       bool combined_stats = false);
 
 private:
 
@@ -144,7 +145,8 @@ inline ProjectOrthogPolyApproximation::~ProjectOrthogPolyApproximation()
 { }
 
 
-inline void ProjectOrthogPolyApproximation::compute_moments(bool full_stats)
+inline void ProjectOrthogPolyApproximation::
+compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
@@ -159,7 +161,7 @@ inline void ProjectOrthogPolyApproximation::compute_moments(bool full_stats)
 
 
 inline void ProjectOrthogPolyApproximation::
-compute_moments(const RealVector& x, bool full_stats)
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]

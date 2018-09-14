@@ -72,10 +72,11 @@ protected:
   void combine_coefficients();
 
   bool update_active_iterators(const UShortArray& key);
-  void combined_to_active();
+  void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
   void integrate_response_moments(size_t num_moments);
+  void integrate_combined_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
 
   Real value(const RealVector& x);
@@ -648,24 +649,29 @@ integrate_response_moments(size_t num_moments)
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  // colloc_index is valid -> can pull from modSurrData variables/responses
+  integrate_response_moments(num_moments, hsg_driver->smolyak_multi_index(),
+    hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
+    modSurrData.variables_data(), modSurrData.response_data());
+}
 
+
+inline void HierarchInterpPolyApproximation::
+integrate_combined_response_moments(size_t num_moments)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   // if expansions have been combined, there is no consolidated colloc_index
   // --> modSurrData access is replaced with value()/gradient_bases_variables()
   // combined_to_active() should precede this call -> can use active coeffs/wts,
   // but rely on combinedVarSets instead of modSurrData variables
-  // *** TO DO: cleaner logic, unification, etc.
-  if ( data_rep->expConfigOptions.combineType &&
-      !data_rep->combinedVarSets.empty() )
-    integrate_response_moments(num_moments,
-      data_rep->combinedVarSets, // not cleared in combined_to_active()
-      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
-      expT1CoeffsIter->second, expT2CoeffsIter->second,
-      hsg_driver->type1_hierarchical_weight_sets(),
-      hsg_driver->type2_hierarchical_weight_sets());
-  else // colloc_index is valid -> can pull from modSurrData variables/responses
-    integrate_response_moments(num_moments, hsg_driver->smolyak_multi_index(),
-      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
-      modSurrData.variables_data(), modSurrData.response_data());
+  integrate_response_moments(num_moments,
+    data_rep->combinedVarSets, // not cleared in combined_to_active()
+    hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
+    expT1CoeffsIter->second, expT2CoeffsIter->second,
+    hsg_driver->type1_hierarchical_weight_sets(),
+    hsg_driver->type2_hierarchical_weight_sets());
 }
 
 

@@ -408,10 +408,10 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 }
 
 
-void RegressOrthogPolyApproximation::combined_to_active()
+void RegressOrthogPolyApproximation::combined_to_active(bool clear_combined)
 {
   // swap coefficients, reset keys and computed flags
-  OrthogPolyApproximation::combined_to_active();
+  OrthogPolyApproximation::combined_to_active(clear_combined);
 
   // update sparseIndices and sparseSobolIndexMap
   if (!combinedSparseIndices.empty()) {
@@ -422,12 +422,13 @@ void RegressOrthogPolyApproximation::combined_to_active()
     //   will need to track combinedSparseSobolIndexMap and promote here.
     //   For now, regenerate sparseSobolIndexMap after roll ups are complete. 
     // Note 2: SharedOrthogPolyApproxData::combined_to_active() has promoted
-    //   combinedMultiIndex to active amd updated sobolIndexMap.
+    //   combinedMultiIndex to active and updated sobolIndexMap.
     SharedRegressOrthogPolyApproxData* data_rep
       = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     update_sparse_sobol(combinedSparseIndices, data_rep->multi_index(),
 			data_rep->sobolIndexMap);
-    combinedSparseIndices.clear();
+    if (clear_combined)
+      combinedSparseIndices.clear();
   }
 }
 

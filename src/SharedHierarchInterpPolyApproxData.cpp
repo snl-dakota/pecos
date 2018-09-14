@@ -139,15 +139,13 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
 }
 
 
-void SharedHierarchInterpPolyApproxData::combined_to_active()
+void SharedHierarchInterpPolyApproxData::combined_to_active(bool clear_combined)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
 
   hsg_driver->smolyak_multi_index(combinedSmolyakMultiIndex);
-  combinedSmolyakMultiIndex.clear();
-
   hsg_driver->collocation_key(combinedCollocKey);
-  combinedCollocKey.clear();
+  // combinedSmolyakMultiIndexMap not used by hsg_driver
 
   //hsg_driver->combine_weight_sets(combinedSmolyakMultiIndexMap);
   //hsg_driver->combined_to_active();
@@ -156,9 +154,13 @@ void SharedHierarchInterpPolyApproxData::combined_to_active()
   // Note: inactive weight sets to be removed by clear_inactive()
   hsg_driver->type1_hierarchical_weight_sets(combinedT1WeightSets);
   hsg_driver->type2_hierarchical_weight_sets(combinedT2WeightSets);
-  combinedT1WeightSets.clear();  combinedT2WeightSets.clear();
 
-  combinedSmolyakMultiIndexMap.clear(); // not used by hsg_driver
+  if (clear_combined) {
+    combinedCollocKey.clear();
+    combinedSmolyakMultiIndex.clear();  combinedSmolyakMultiIndexMap.clear();
+    //combinedVarSets.clear();
+    combinedT1WeightSets.clear();       combinedT2WeightSets.clear();
+  }
 }
 
 

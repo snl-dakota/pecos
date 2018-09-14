@@ -212,7 +212,7 @@ void SharedNodalInterpPolyApproxData::post_combine_data()
 }
 
 
-void SharedNodalInterpPolyApproxData::combined_to_active()
+void SharedNodalInterpPolyApproxData::combined_to_active(bool clear_combined)
 {
   // Activate the most refined grid corresponding to the combined exp coeffs
   // Note: SharedInterpPolyApproxData::active_key() updates driverRep's key

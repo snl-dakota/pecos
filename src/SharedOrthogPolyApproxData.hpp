@@ -138,7 +138,7 @@ protected:
   void allocate_data();
   void pre_combine_data();
   //void post_combine_data();
-  void combined_to_active();
+  void combined_to_active(bool clear_combined = true);
 
   void clear_inactive_data();
 

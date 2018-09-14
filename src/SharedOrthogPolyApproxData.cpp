@@ -430,7 +430,7 @@ product_multi_index(const UShort2DArray& multi_index_a,
 }
 
 
-void SharedOrthogPolyApproxData::combined_to_active()
+void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
 {
   allocate_component_sobol(combinedMultiIndex);
 
@@ -440,9 +440,13 @@ void SharedOrthogPolyApproxData::combined_to_active()
 
   // Leave combinedMultiIndex as separate book-keeping to support repeated
   // combinations within adaptive refinement.
-  std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
-  combinedMultiIndex.clear();
-  combinedMultiIndexMap.clear(); combinedMultiIndexSeq.clear();
+  if (clear_combined) {
+    std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
+    combinedMultiIndex.clear();
+    combinedMultiIndexMap.clear(); combinedMultiIndexSeq.clear();
+  }
+  else
+    multiIndexIter->second = combinedMultiIndex; // copy
 }
 
 

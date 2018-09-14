@@ -102,7 +102,7 @@ protected:
   */
 
   void combine_coefficients();
-  void combined_to_active();
+  void combined_to_active(bool clear_combined = true);
 
   void allocate_arrays();
 

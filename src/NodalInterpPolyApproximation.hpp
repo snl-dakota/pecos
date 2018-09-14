@@ -70,10 +70,11 @@ protected:
   void combine_coefficients();
 
   bool update_active_iterators(const UShortArray& key);
-  void combined_to_active();
+  void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
   void integrate_response_moments(size_t num_moments);
+  void integrate_combined_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
 
   Real value(const RealVector& x);

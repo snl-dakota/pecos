@@ -82,7 +82,7 @@ protected:
   void clear_inactive();
 
   void combine_coefficients();
-  void combined_to_active();
+  void combined_to_active(bool clear_combined = true);
 
   void print_coefficients(std::ostream& s, bool normalized);
   void print_coefficients(std::ostream& s, const UShort2DArray& mi,
@@ -144,9 +144,10 @@ protected:
 			   PolynomialApproximation* poly_approx_2);
 
   /// compute expansion moments to order 2
-  void compute_moments(bool full_stats = true);
+  void compute_moments(bool full_stats = true, bool combined_stats = false);
   /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x, bool full_stats = true);
+  void compute_moments(const RealVector& x, bool full_stats = true,
+		       bool combined_stats = false);
 
   //
   //- Heading: New virtual functions
@@ -315,7 +316,8 @@ update_active_iterators(const UShortArray& key)
 }
 
 
-inline void OrthogPolyApproximation::compute_moments(bool full_stats)
+inline void OrthogPolyApproximation::
+compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
@@ -324,7 +326,7 @@ inline void OrthogPolyApproximation::compute_moments(bool full_stats)
 
 
 inline void OrthogPolyApproximation::
-compute_moments(const RealVector& x, bool full_stats)
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]

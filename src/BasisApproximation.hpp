@@ -102,7 +102,7 @@ public:
   /// combine all level coefficients into a multilevel approximation
   virtual void combine_coefficients();
   /// promote the combined coefficients into the active coefficient set
-  virtual void combined_to_active();
+  virtual void combined_to_active(bool clear_combined = true);
 
   /// clear inactive levels of approximation data
   virtual void clear_inactive();

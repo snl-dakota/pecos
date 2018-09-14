@@ -164,7 +164,7 @@ void OrthogPolyApproximation::combine_coefficients()
 }
 
 
-void OrthogPolyApproximation::combined_to_active()
+void OrthogPolyApproximation::combined_to_active(bool clear_combined)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
@@ -173,11 +173,11 @@ void OrthogPolyApproximation::combined_to_active()
 
   if (expansionCoeffFlag) {
     expCoeffsIter->second = combinedExpCoeffs;
-    combinedExpCoeffs.resize(0);
+    if (clear_combined) combinedExpCoeffs.resize(0);
   }
   if (expansionCoeffGradFlag) {
     expCoeffGradsIter->second = combinedExpCoeffGrads;
-    combinedExpCoeffGrads.reshape(0, 0);
+    if (clear_combined) combinedExpCoeffGrads.reshape(0, 0);
   }
 
   clear_computed_bits();

@@ -65,9 +65,10 @@ protected:
   void compute_total_sobol();
 
   /// compute numerical moments to order 4
-  void compute_moments(bool full_stats = true);
+  void compute_moments(bool full_stats = true, bool combined_stats = false);
   /// compute numerical moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x, bool full_stats = true);
+  void compute_moments(const RealVector& x, bool full_stats = true,
+		       bool combined_stats = false);
 
   //
   //- Heading: New virtual functions
@@ -79,6 +80,8 @@ protected:
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;
+  /// compute moments of response using numerical integration
+  virtual void integrate_combined_response_moments(size_t num_moments) = 0;
   /// compute moments of expansion using numerical integration
   virtual void integrate_expansion_moments(size_t num_moments) = 0;
 
@@ -135,25 +138,32 @@ update_active_iterators(const UShortArray& key)
 }
 
 
-inline void InterpPolyApproximation::compute_moments(bool full_stats)
+inline void InterpPolyApproximation::
+compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports four moments using the collocation rules
   // as integration rules
-  integrate_response_moments(4);
+  if (combined_stats) integrate_combined_response_moments(4);
+  else                integrate_response_moments(4);
 
   // do this second so that clearing any existing rules does not cause rework
-  if (full_stats) //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
-    integrate_expansion_moments(4);
+  if (full_stats) { //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
+    //if (combined_stats) integrate_combined_expansion_moments(4);
+    /*else*/ integrate_expansion_moments(4);
+  }
   else
     expansionMoments.resize(0);
 }
 
 
 inline void InterpPolyApproximation::
-compute_moments(const RealVector& x, bool full_stats)
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode only supports first two moments
-  mean(x); variance(x);
+  if (combined_stats) // *** TO DO
+    { PCerr << "Error: unsupported compute_moments()\n"; abort_handler(-1); }
+  else
+    { mean(x); variance(x); }
   //standardize_moments(numericalMoments);
 
   //if (full_stats) integrate_expansion_moments(4, x);

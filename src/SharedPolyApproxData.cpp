@@ -345,7 +345,7 @@ void SharedPolyApproxData::post_combine_data()
 { } // default implementation is no op
 
 
-void SharedPolyApproxData::combined_to_active()
+void SharedPolyApproxData::combined_to_active(bool clear_combined)
 { } // default implementation is no op
 
 

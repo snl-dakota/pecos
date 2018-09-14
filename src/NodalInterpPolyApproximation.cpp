@@ -325,7 +325,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
 }
 
 
-void NodalInterpPolyApproximation::combined_to_active()
+void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
 {
   // replace active expansions with combined expansion arrays
   // Note: clear_inactive() takes care of the auxilliary inactive expansions
@@ -333,17 +333,17 @@ void NodalInterpPolyApproximation::combined_to_active()
 
   if (expansionCoeffFlag) {
     expT1CoeffsIter->second = combinedExpT1Coeffs;
-    combinedExpT1Coeffs.resize(0);
+    if (clear_combined) combinedExpT1Coeffs.resize(0);
     SharedNodalInterpPolyApproxData* data_rep
       = (SharedNodalInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
       expT2CoeffsIter->second = combinedExpT2Coeffs;
-      combinedExpT2Coeffs.reshape(0, 0);
+      if (clear_combined) combinedExpT2Coeffs.reshape(0, 0);
     }
   }
   if (expansionCoeffGradFlag) {
     expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;
-    combinedExpT1CoeffGrads.reshape(0, 0);
+    if (clear_combined) combinedExpT1CoeffGrads.reshape(0, 0);
   }
 
   // resize sobolIndices to sync with resize of sobolIndexMap
@@ -3403,6 +3403,30 @@ integrate_response_moments(size_t num_moments)
 		      driver_rep->type2_weight_sets(), numericalMoments);
   else
     integrate_moments(expT1CoeffsIter->second, driver_rep->type1_weight_sets(),
+		      numericalMoments);
+}
+
+
+void NodalInterpPolyApproximation::
+integrate_combined_response_moments(size_t num_moments)
+{
+  // Notes:
+  // > use of combinedExpT{1,2}Coeffs needs to be synchronized with
+  //   active_key(driverRep->maximal_grid()) in SharedNodalInterpPolyApproxData
+  //   ::pre_combine_data() so that typ1{1,2} weight sets are correct
+  // > use of combined_to_active() generally makes this moot / unused for NIPA
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  IntegrationDriver* driver_rep = data_rep->driverRep;
+  if (numericalMoments.length() != num_moments)
+    numericalMoments.sizeUninitialized(num_moments);
+  if (data_rep->basisConfigOptions.useDerivs)
+    integrate_moments(combinedExpT1Coeffs, combinedExpT2Coeffs,
+		      driver_rep->type1_weight_sets(),
+		      driver_rep->type2_weight_sets(), numericalMoments);
+  else
+    integrate_moments(combinedExpT1Coeffs, driver_rep->type1_weight_sets(),
 		      numericalMoments);
 }
 

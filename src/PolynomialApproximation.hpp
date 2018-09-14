@@ -193,10 +193,12 @@ public:
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration
-  virtual void compute_moments(bool full_stats = true) = 0;
+  virtual void compute_moments(bool full_stats = true,
+			       bool combined_stats = false) = 0;
   /// compute central response moments in all-variables mode using some
   /// combination of expansion post-processing and numerical integration
-  virtual void compute_moments(const RealVector& x, bool full_stats = true) = 0;
+  virtual void compute_moments(const RealVector& x, bool full_stats = true,
+			       bool combined_stats = false) = 0;
 
   //
   //- Heading: Member functions

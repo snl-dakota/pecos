@@ -425,25 +425,37 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 }
 
 
-void HierarchInterpPolyApproximation::combined_to_active()
+void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
 {
   // replace active expansions with combined expansion arrays
   // Note: clear_inactive() takes care of the auxilliary inactive expansions
   //       that are now assimilated within the active expansion
 
   if (expansionCoeffFlag) {
-    std::swap(expT1CoeffsIter->second, combinedExpT1Coeffs);
-    combinedExpT1Coeffs.clear();
+    if (clear_combined) {
+      std::swap(expT1CoeffsIter->second, combinedExpT1Coeffs);
+      combinedExpT1Coeffs.clear();
+    }
+    else
+      expT1CoeffsIter->second = combinedExpT1Coeffs; // copy
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
-      std::swap(expT2CoeffsIter->second, combinedExpT2Coeffs);
-      combinedExpT2Coeffs.clear();
+      if (clear_combined) {
+	std::swap(expT2CoeffsIter->second, combinedExpT2Coeffs);
+	combinedExpT2Coeffs.clear();
+      }
+      else
+	expT2CoeffsIter->second = combinedExpT2Coeffs; // copy
     }
   }
   if (expansionCoeffGradFlag) {
-    std::swap(expT1CoeffGradsIter->second, combinedExpT1CoeffGrads);
-    combinedExpT1CoeffGrads.clear();
+    if (clear_combined) {
+      std::swap(expT1CoeffGradsIter->second, combinedExpT1CoeffGrads);
+      combinedExpT1CoeffGrads.clear();
+    }
+    else
+      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads; // copy
   }
 
   clear_all_computed_bits();
