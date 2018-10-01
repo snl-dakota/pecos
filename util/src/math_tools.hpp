@@ -850,7 +850,7 @@ void convert(T a[], int m, int n, std::set< Teuchos::SerialDenseVector<O,T> > &s
  * Each element of the std::vector becomes a column of the matrix
  */
 template <typename O, typename T>
-void convert( std::vector< Teuchos::SerialDenseVector<O,T> > &V,
+void convert( const std::vector< Teuchos::SerialDenseVector<O,T> > &V,
 	      Teuchos::SerialDenseMatrix<O,T> &M )
 {
   M.shapeUninitialized( V[0].length(), (int)V.size() );

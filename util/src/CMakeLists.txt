@@ -33,3 +33,4 @@ set(UTIL_HEADERS
 add_library(pecos_util ${UTIL_SOURCES} ${UTIL_HEADERS})
 #SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 #target_link_libraries(pecos_util ${Teuchos_LIBRARIES})
+install(TARGETS pecos_util EXPORT ${ExportTarget} DESTINATION lib)

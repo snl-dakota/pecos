@@ -1,4 +1,5 @@
 #include "FaultTolerance.hpp"
+#include "math_tools.hpp"
 
 namespace Pecos {
 
@@ -36,7 +37,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	msg += "inconsistent";
 	throw( std::runtime_error( msg ) );
       }
-      range(index_mapping,0,(int)fault_info.num_surr_data_pts);  
+      Surrogates::range(index_mapping,0,(int)fault_info.num_surr_data_pts);
     }
   // compute the number of rows in a that are function values. The remainder
   // are gradient values
@@ -58,7 +59,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 
   // sorted indices are needed to use fail_booleans
   // I is needed to access the correct row in A.
-  argsort( index_map, sorted_indices, I );
+  Surrogates::argsort( index_map, sorted_indices, I );
   
   SizetShortMap::const_iterator fit;
 

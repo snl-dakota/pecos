@@ -161,7 +161,7 @@ add_subdirectory(packages)
 # --- Dependency configuration based on previously defined packages ---
 
 # Keep track of what libraries should be included in libpecos
-set(SUBLIBS)
+set(SUBLIBS pecos_util)
 
 if(PECOS_ENABLE_ORTHOGPOLY)
   list(APPEND SUBLIBS pecos_src)

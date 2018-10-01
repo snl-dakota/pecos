@@ -17,7 +17,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 // headers necessary for cross validation
-#include "MathTools.hpp"
+#include "math_tools.hpp"
 #include "CrossValidation.hpp"
 
 //#define DEBUG
@@ -1984,7 +1984,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
     {
       if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
 	PCout << "Testing PCE order " << order << std::endl;
-      int num_basis_terms = nchoosek( num_dims + order, order );
+      int num_basis_terms = Surrogates::nchoosek( num_dims + order, order );
       RealMatrix vandermonde_submatrix( Teuchos::View, 
 					A,
 					A.numRows(),
@@ -2042,8 +2042,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
       i++;
     }
 
-  int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
-				  bestApproxOrder[0] );
+  int num_basis_terms = Surrogates::nchoosek( num_dims + bestApproxOrder[0],
+					      bestApproxOrder[0] );
   if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
     PCout << "Best approximation order: " << bestApproxOrder[0]
 	  << "\nBest cross validation error: " << best_score << "\n";
@@ -2221,7 +2221,7 @@ transform_least_interpolant( RealMatrix &L, RealMatrix &U, RealMatrix &H,
   V_inv.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, H, LU_inv, 0.0 );
 
   IntVector p_col;
-  argsort( p, p_col );
+  Surrogates::argsort( p, p_col );
   permute_matrix_columns( V_inv, p_col );
 
   RealMatrix coefficients;
@@ -2246,7 +2246,7 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
   eye( num_pts, l );
   eye( num_pts, u );
 
-  range( p, 0, num_pts, 1 );
+  Surrogates::range( p, 0, num_pts, 1 );
 
   //This is just a guess: this vector could be much larger, or much smaller
   RealVector v( 1000 );
@@ -2797,7 +2797,7 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[8] = num_function_samples;
       
   // Form the multi-dimensional grid
-  cartesian_product( opts1D, opts, 1 );
+  Surrogates::cartesian_product( opts1D, opts, 1 );
 };
 
 void RegressOrthogPolyApproximation::

@@ -1,8 +1,6 @@
 #ifndef CROSS_VALIDATION_HPP
 #define CROSS_VALIDATION_HPP
 
-#include "MathTools.hpp"
-#include "RandomNumberGenerator.hpp"
 #include "LinearSolverPecosSrc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "FaultTolerance.hpp"
@@ -27,8 +25,6 @@ protected:
 
   int numEquationsPerPoint_;
 
-  RandomNumberGenerator RNG_;
-  
   // Dakota specific member variables
   bool faultInfoActive_;
   FaultInfo faultInfo_;

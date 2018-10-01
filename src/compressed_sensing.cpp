@@ -1,5 +1,5 @@
 #include "compressed_sensing.hpp"
-#include "MathTools.hpp"
+#include "math_tools.hpp"
 
 //#define PRECOMPUTE_GRAMMIAN
 
@@ -156,7 +156,7 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
   if ( verbosity > 1 )
     {
       std::cout << "At Initialisation:\n";
-      std::cout << "\tObjective: " << sum( u ) << "\n";
+      std::cout << "\tObjective: " << Surrogates::sum( u ) << "\n";
       std::cout << "\tPrimal-dual gap: " << sdg << "\n";
       std::cout << "\tPrimal residual: ";
       std::cout << r.normFrobenius() << "\n";
@@ -397,7 +397,7 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
       if ( verbosity > 1 )
 	{
 	  std::cout << "Newton iteration: " << primal_dual_iter << "\n";
-	  std::cout << "\tObjective: " << sum( u ) << "\n";
+	  std::cout << "\tObjective: " << Surrogates::sum( u ) << "\n";
 	  std::cout << "\tPrimal-dual gap: " << sdg << "\n";
 	  std::cout << "\tPrimal residual: ";
 	  std::cout << r.normFrobenius() << "\n";
@@ -748,7 +748,7 @@ void BPDN_log_barrier_interior_point_method( RealMatrix &A, RealVector &b,
   if ( verbosity > 1 )
     {
       std::cout << "\nInitial l1 norm: " << x.normOne() << "\n";
-      std::cout << "Initial objective: " << sum( u ) << "\n";
+      std::cout << "Initial objective: " << Surrogates::sum( u ) << "\n";
       std::cout << "Number of log-barrier iterations: ";
       std::cout << num_log_barrier_iter << "\n";
     }
@@ -1551,7 +1551,7 @@ void least_angle_regression( RealMatrix &A,
       for ( int active_index = 0; active_index < num_covariates; active_index++ )
 	{
 	  s_sparse(active_index,0) = 
-	    sgn( correlation(active_indices[active_index],0) );
+	    Surrogates::sgn( correlation(active_indices[active_index],0) );
 	}
 
       // normalisation_factor = 1 / sqrt( s'*inv(A'*A)*s )
@@ -1883,7 +1883,7 @@ int loo_step_lsq_cross_validation( RealMatrix &A, RealVector &b,
 void prune( RealVector &v, int n, IntVector & indices )
 {
   Real eps = 2. * std::numeric_limits<double>::epsilon();
-  magnitude_argsort( v, indices );
+  Surrogates::magnitude_argsort( v, indices );
   int k;
   for ( k = 0; k < n; k++ )
     {

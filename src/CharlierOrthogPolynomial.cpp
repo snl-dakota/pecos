@@ -1,5 +1,4 @@
 #include "CharlierOrthogPolynomial.hpp"
-#include "MathTools.hpp"
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/gamma.hpp>

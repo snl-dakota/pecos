@@ -3,6 +3,10 @@
 include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
   ${Teuchos_INCLUDE_DIRS})
 
+# TODO: when configuring each package, do we want to add to
+# include_directories, or be explicit in each package?
+include_directories(${Pecos_SOURCE_DIR}/util/src)
+
 remove_definitions("-DHAVE_CONFIG_H")
 
 option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
@@ -49,7 +53,7 @@ file(GLOB Pecos_src *.cpp)
 file(GLOB Pecos_hdr *.hpp)
 
 add_library(pecos_src ${Pecos_src})
-target_link_libraries(pecos_src ${Pecos_libs})
+target_link_libraries(pecos_src pecos_util ${Pecos_libs})
 if (HAVE_FFTW)
   add_dependencies(pecos_src fftw)
 endif()
