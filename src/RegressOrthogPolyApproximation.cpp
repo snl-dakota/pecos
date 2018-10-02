@@ -2215,14 +2215,14 @@ transform_least_interpolant( RealMatrix &L, RealMatrix &U, RealMatrix &H,
   
   RealMatrix LU_inv;
   IntVector dummy;
-  lu_inverse( L, U, dummy, LU_inv );
+  Surrogates::lu_inverse( L, U, dummy, LU_inv );
 
   RealMatrix V_inv( H.numCols(), num_pts );
   V_inv.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, H, LU_inv, 0.0 );
 
   IntVector p_col;
   Surrogates::argsort( p, p_col );
-  permute_matrix_columns( V_inv, p_col );
+  Surrogates::permute_matrix_columns( V_inv, p_col );
 
   RealMatrix coefficients;
   coefficients.shapeUninitialized( V_inv.numRows(), num_qoi );
@@ -2243,8 +2243,8 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 {
   int num_vars = pts.numRows(), num_pts = pts.numCols();
 
-  eye( num_pts, l );
-  eye( num_pts, u );
+  Surrogates::eye( num_pts, l );
+  Surrogates::eye( num_pts, u );
 
   Surrogates::range( p, 0, num_pts, 1 );
 
@@ -2319,7 +2319,7 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 		}
 	    }
 
-	  permute_matrix_rows( W, p );
+	  Surrogates::permute_matrix_rows( W, p );
       
 	  // Row-reduce W according to previous elimination steps
 	  int m = W.numRows(), n = W.numCols();
@@ -2344,7 +2344,7 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 	    }
 	  RealMatrix Q, R;
 	  IntVector evec;
-	  pivoted_qr_factorization( wm, Q, R, evec );
+	  Surrogates::pivoted_qr_factorization( wm, Q, R, evec );
       
 	  // Compute rank
 	  int rnk = 0;
@@ -2357,13 +2357,13 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 	  // Now first we must permute the rows by e
 	  IntMatrix p_sub( Teuchos::View, &p[lu_row], num_pts - lu_row, 
 			   num_pts - lu_row, 1 );
-	  permute_matrix_rows( p_sub, evec );
+	  Surrogates::permute_matrix_rows( p_sub, evec );
       
 	  // And correct by permuting l as well
  
 	  RealMatrix l_sub( Teuchos::View, l, num_pts - lu_row, lu_row,lu_row,0);
 	  if ( ( l_sub.numRows() > 0 ) && ( l_sub.numCols() > 0 ) )
-	    permute_matrix_rows( l_sub, evec );
+	    Surrogates::permute_matrix_rows( l_sub, evec );
 
 	  // The matrix r gives us inner product information for all rows below 
 	  // these in W

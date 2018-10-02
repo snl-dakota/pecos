@@ -1,7 +1,7 @@
 #ifndef COMPRESSED_SENSING_HPP
 #define COMPRESSED_SENSING_HPP
 
-#include "LinearAlgebra.hpp"
+#include "pecos_data_types.hpp"
 #include "pecos_global_defs.hpp"
 
 namespace Pecos {

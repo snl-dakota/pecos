@@ -2,6 +2,8 @@
 #define LINEAR_SOLVERS_PECOS_SRC_HPP
 
 #include "compressed_sensing.hpp"
+#include "linear_algebra.hpp"
+#include "Teuchos_SerialDenseHelpers.hpp"
 #include <memory>
 
 namespace Pecos {
@@ -444,9 +446,8 @@ public:
 
     RealVector singular_values;
     int rank(0);
-    svd_solve( A_copy, b, result_0, singular_values, rank, 
-	       solverTol_ );
-    
+    Surrogates::svd_solve(A_copy, b, result_0, singular_values, rank, solverTol_);
+
     result_1.shapeUninitialized( 2, 1 );
     RealVector residual( b );
     residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
@@ -506,9 +507,11 @@ public:
     RealVector b_eq( Teuchos::View, 
 		     B.values() + numPrimaryEqs_, 
 		     B.numRows() - numPrimaryEqs_ );
-    equality_constrained_least_squares_solve( A_eq, b_eq, C_eq, d_eq,
-					      result_0 );
-    
+    RealVector result_0_rv;
+    Surrogates::equality_constrained_least_squares_solve(A_eq, b_eq, C_eq, d_eq,
+							 result_0_rv);
+    result_0.shapeUninitialized(result_0_rv.length(), 1);
+    Teuchos::setCol(result_0_rv, 0, result_0);
     
     result_1.shapeUninitialized( 2, 1 );
     RealVector residual( b_eq );

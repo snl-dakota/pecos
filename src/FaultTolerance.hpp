@@ -1,7 +1,6 @@
 #ifndef FAULT_TOLERANCE_HPP
 #define FAULT_TOLERANCE_HPP
 
-#include "LinearAlgebra.hpp"
 #include "pecos_data_types.hpp"
 
 namespace Pecos {

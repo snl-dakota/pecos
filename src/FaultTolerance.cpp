@@ -1,4 +1,5 @@
 #include "FaultTolerance.hpp"
+#include "linear_algebra.hpp"
 #include "math_tools.hpp"
 
 namespace Pecos {
@@ -157,7 +158,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	{
 	  RealMatrix A_grad_tmp( Teuchos::View, A_grad, a_grad_cntr, 
 				 num_cols_A );
-	  row_append( A_grad_tmp, A_new );
+	  Surrogates::row_append( A_grad_tmp, A_new );
 	}
       size_t b_fn_cntr = 0, b_grad_cntr = 0;
       RealMatrix B_fn( fault_info.num_data_pts_fn, num_rhs, true );
@@ -191,7 +192,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	{
 	  RealMatrix B_grad_tmp( Teuchos::View, B_grad, b_grad_cntr, 
 				 num_rhs );
-	  row_append( B_grad_tmp, B_new );
+	  Surrogates::row_append( B_grad_tmp, B_new );
 	}
     }
 

@@ -1,5 +1,5 @@
 /**
- * \file LinearAlgebra.hpp
+ * \file linear_algebra.hpp
  * \author John D. Jakeman
  * \date 2 January 2012
  * \brief Functions used to solve systems of linear equations.

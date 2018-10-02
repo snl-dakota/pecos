@@ -33,11 +33,10 @@ void normalise_columns( RealMatrix &A, RealVector &result )
       RealMatrix single_solution;
       RealVector singular_values;
       int rank(0);
-      svd_solve( A, B, single_solution, singular_values, rank, 
-		 -1 );
+      Surrogates::svd_solve(A, B, single_solution, singular_values, rank, -1);
       for ( int k = 0; k < num_rhs; k++ )
 	{
-	  reshape( solutions[k], N, 1 );
+	  Surrogates::reshape( solutions[k], N, 1 );
 	  RealMatrix solution( Teuchos::View, single_solution, N, 1, 0, k );
 	  solutions[k].assign( solution );
 

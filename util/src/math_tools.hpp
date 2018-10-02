@@ -1,5 +1,5 @@
 /**
- * @file MathTools.hpp
+ * @file math_tools.hpp
  * @author John D. Jakeman
  * @date 31 October 2011
  * @brief Miscelaneous math functions.
