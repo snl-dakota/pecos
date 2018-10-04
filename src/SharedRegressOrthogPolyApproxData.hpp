@@ -251,12 +251,6 @@ private:
   /// container for regression configuration options
   RegressionConfigOptions regressConfigOptions;
 
-  /// previous value of active multiIndex for restoration in decrement_data()
-  UShort2DArray prevMultiIndex;
-  /// previously incremented version of active multiIndex for restoration in
-  /// pre_push_data()
-  std::map<UShortArray, std::deque<UShort2DArray> > poppedMultiIndex;
-
   /// Wrapper class that is used to solve regression problems
   CompressedSensingTool CSTool;
 
@@ -312,9 +306,9 @@ inline void SharedRegressOrthogPolyApproxData::clear_adapted()
   case ADAPTED_BASIS_GENERALIZED:
     // reset tensor-product bookkeeping and save restorable data
     poppedLevMultiIndex[activeKey].clear();
-    poppedTPMultiIndex[activeKey].clear();
-    poppedTPMultiIndexMap[activeKey].clear();
-    poppedTPMultiIndexMapRef[activeKey].clear();
+    poppedMultiIndex[activeKey].clear();
+    poppedMultiIndexMap[activeKey].clear();
+    poppedMultiIndexMapRef[activeKey].clear();
 
     tpMultiIndex[activeKey].clear();       // will be rebuilt in allocate_data()
     tpMultiIndexMap[activeKey].clear();    // will be rebuilt in allocate_data()

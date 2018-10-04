@@ -125,6 +125,8 @@ private:
   //- Heading: Data
   //
 
+  /// popped instances of approxOrder that were computed but not selected
+  std::map<UShortArray, std::deque<UShortArray> > poppedApproxOrder;
 };
 
 

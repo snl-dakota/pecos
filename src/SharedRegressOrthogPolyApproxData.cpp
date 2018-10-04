@@ -44,7 +44,7 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
 
   // detect changes since previous construction
   bool update_exp_form
-    = (approx_order != approxOrderPrev || activeKey != activeKeyPrev);
+    = (approx_order != prevApproxOrder || activeKey != prevActiveKey);
   //bool restore_exp_form = (multi_index.size() != t*_*_terms(approx_order));
 
   if (update_exp_form) { //|| restore_exp_form) {
@@ -90,8 +90,8 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
     }
     allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
-    approxOrderPrev = approx_order;
-    activeKeyPrev   = activeKey;
+    prevApproxOrder = approx_order;
+    prevActiveKey   = activeKey;
   }
 
   // output (candidate) expansion form
@@ -144,8 +144,8 @@ void SharedRegressOrthogPolyApproxData::increment_data()
   //         (e.g., see NonDQUESOBayesCalibration::update_model())
   approx_order_to_multi_index();
   allocate_component_sobol(multiIndexIter->second);
-  //approxOrderPrev = approx_order;
-  //activeKeyPrev   = activeKey;
+  //prevApproxOrder = approx_order;
+  //prevActiveKey   = activeKey;
 }
 
 
@@ -159,8 +159,8 @@ void SharedRegressOrthogPolyApproxData::decrement_data()
   multiIndexIter->second = prevMultiIndex;
 
   //allocate_component_sobol(multiIndexIter->second);
-  //approxOrderPrev = approx_order;
-  //activeKeyPrev   = activeKey;
+  //prevApproxOrder = approx_order;
+  //prevActiveKey   = activeKey;
 }
 
 
@@ -191,22 +191,22 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
   // for decrement
   prevMultiIndex = multiIndexIter->second;
 
-  std::map<UShortArray, std::deque<UShort2DArray> >::iterator pu2a_it
+  std::map<UShortArray, std::deque<UShort2DArray> >::iterator pop_it
     = poppedMultiIndex.find(activeKey);
   std::deque<UShort2DArray>::iterator u2a_it;
-  if (pu2a_it == poppedMultiIndex.end()) {
+  if (pop_it == poppedMultiIndex.end() || pop_it->second.size() <= pop_index) {
     PCerr << "Error: lookup failure in SharedRegressOrthogPolyApproxData::"
 	  << "pre_push_data()." << std::endl;
     abort_handler(-1);
   }
   else {
-    u2a_it = pu2a_it->second.begin();  std::advance(u2a_it, pop_index);
-    multiIndexIter->second = *u2a_it;  pu2a_it->second.erase(u2a_it);
+    u2a_it = pop_it->second.begin();   std::advance(u2a_it, pop_index);
+    multiIndexIter->second = *u2a_it;  pop_it->second.erase(u2a_it);
   }
   //approx_order_to_multi_index();
   allocate_component_sobol(multiIndexIter->second);
-  //approxOrderPrev = approx_order;
-  //activeKeyPrev   = activeKey;
+  //prevApproxOrder = approx_order;
+  //prevActiveKey   = activeKey;
 }
 
 

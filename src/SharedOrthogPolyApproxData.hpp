@@ -324,10 +324,12 @@ protected:
   UShortArray approxOrderSpec;
   /// previous value of active approxOrder; used for detecting when an
   /// expansion update is needed in allocate_arrays()
-  UShortArray approxOrderPrev;
+  UShortArray prevApproxOrder;
+  /// previous value of active multiIndex for restoration in decrement_data()
+  UShort2DArray prevMultiIndex;
   /// previous value of activeKey; used for detecting when an
   /// expansion update is needed in allocate_arrays()
-  UShortArray activeKeyPrev;
+  UShortArray prevActiveKey;
 
   /// number of exp terms-by-number of vars array for identifying the orders
   /// of the one-dimensional orthogonal polynomials contributing to each
@@ -360,12 +362,13 @@ protected:
   /// sparse grid bookkeeping: reference points for tpMultiIndexMap
   std::map<UShortArray, SizetArray> tpMultiIndexMapRef;
 
-  /// popped instances of tpMultiIndex that were computed but not selected
-  std::map<UShortArray, std::deque<UShort2DArray> > poppedTPMultiIndex;
+  /// popped instances of either multiIndex or tpMultiIndex (depending
+  /// on exp soln approach) that were computed but not selected
+  std::map<UShortArray, std::deque<UShort2DArray> > poppedMultiIndex;
   /// popped instances of tpMultiIndexMap that were computed but not selected
-  std::map<UShortArray, std::deque<SizetArray> > poppedTPMultiIndexMap;
+  std::map<UShortArray, std::deque<SizetArray> > poppedMultiIndexMap;
   /// popped instances of tpMultiIndexMapRef that were computed but not selected
-  std::map<UShortArray, std::deque<size_t> > poppedTPMultiIndexMapRef;
+  std::map<UShortArray, std::deque<size_t> > poppedMultiIndexMapRef;
 
   /// index into popped sets of data to be restored (stored in this
   /// class for used by each ProjectOrthogPolyApproximation)

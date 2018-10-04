@@ -33,7 +33,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
     bool update_exp_form
-      = (quad_order != quadOrderPrev || activeKey != activeKeyPrev);
+      = (quad_order != quadOrderPrev || activeKey != prevActiveKey);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
@@ -49,7 +49,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
       allocate_component_sobol(mi);
       quadOrderPrev = quad_order;
-      activeKeyPrev = activeKey;
+      prevActiveKey = activeKey;
     }
 
 #ifdef DEBUG
@@ -71,7 +71,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     CubatureDriver* cub_driver = (CubatureDriver*)driverRep;
     //unsigned short cub_int_order = cub_driver->integrand_order();
     //bool update_exp_form
-    //  = (cub_int_order != cubIntOrderPrev || activeKey != activeKeyPrev);
+    //  = (cub_int_order != cubIntOrderPrev || activeKey != prevActiveKey);
 
     //if (update_exp_form) {
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
@@ -85,7 +85,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
       allocate_component_sobol(mi);
       //cubIntOrderPrev = cub_int_order; // update reference point
-      //activeKeyPrev = activeKey;
+      //prevActiveKey = activeKey;
     //}
 
     PCout << "Orthogonal polynomial approximation order = { ";
@@ -100,7 +100,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form
       = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev ||
-	 activeKey != activeKeyPrev || expConfigOptions.refinementControl ==
+	 activeKey != prevActiveKey || expConfigOptions.refinementControl ==
 	 DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
@@ -113,7 +113,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
       allocate_component_sobol(mi);
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
-      activeKeyPrev = activeKey;
+      prevActiveKey = activeKey;
     }
     PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	  << " using tensor integration and tensor sum expansion of "
@@ -130,12 +130,26 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 void SharedProjectOrthogPolyApproxData::increment_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
+  case QUADRATURE: case CUBATURE: { // overwrite previous data
+    // for decrement
+    prevMultiIndex = multiIndexIter->second;
+    prevApproxOrder = approxOrdIter->second;
+
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    const UShortArray& quad_order = tpq_driver->quadrature_order();
+    UShortArray int_order(numVars);
+    quadrature_order_to_integrand_order(driverRep, quad_order, int_order);
+    UShortArray& ao = approxOrdIter->second;
+    integrand_order_to_expansion_order(int_order, ao);
+    UShort2DArray& mi = multiIndexIter->second;
+    if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE)
+      tensor_product_multi_index(ao, mi); // include upper bound
+    else // CUBATURE
+      total_order_multi_index(ao, mi);
+    allocate_component_sobol(mi);
     break;
   }
-   case INCREMENTAL_SPARSE_GRID: {
+   case INCREMENTAL_SPARSE_GRID: { // augment previous data
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
     switch (expConfigOptions.refinementControl) {
@@ -148,11 +162,11 @@ void SharedProjectOrthogPolyApproxData::increment_data()
       increment_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
+    // update Sobol' array sizes to pick up new interaction terms
+    increment_component_sobol();
     break;
   }
   }
-  // update Sobol' array sizes to pick up new interaction terms
-  increment_component_sobol();
 }
 
 
@@ -170,8 +184,10 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
+    poppedMultiIndex[activeKey].push_back(multiIndexIter->second);
+    poppedApproxOrder[activeKey].push_back(approxOrdIter->second);
+    approxOrdIter->second  = prevApproxOrder;
+    multiIndexIter->second = prevMultiIndex;
     break;
   }
   case INCREMENTAL_SPARSE_GRID: {
@@ -201,7 +217,7 @@ bool SharedProjectOrthogPolyApproxData::push_available()
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
   //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
   default:
-    return !poppedTPMultiIndex[activeKey].empty(); break;
+    return !poppedMultiIndex[activeKey].empty(); break;
   }
 }
 
@@ -210,8 +226,25 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
+    UShort2DArray& mi = multiIndexIter->second;
+    UShortArray&   ao =  approxOrdIter->second;
+    // for decrement
+    prevMultiIndex = mi;  prevApproxOrder = ao;
+
+    std::map<UShortArray, std::deque<UShort2DArray> >::iterator pop1_it
+      = poppedMultiIndex.find(activeKey);
+    std::map<UShortArray, std::deque<UShortArray> >::iterator pop2_it
+      = poppedApproxOrder.find(activeKey);
+    if (pop1_it == poppedMultiIndex.end()  || pop1_it->second.empty() ||
+	pop2_it == poppedApproxOrder.end() || pop2_it->second.empty() ) {
+      PCerr << "Error: lookup failure in SharedProjectOrthogPolyApproxData::"
+	    << "pre_push_data()." << std::endl;
+      abort_handler(-1);
+    }
+    std::deque<UShort2DArray>& pop_mi = pop1_it->second;
+    std::deque<UShortArray>&   pop_ao = pop2_it->second;
+    mi = pop_mi.back();  pop_mi.pop_back();
+    ao = pop_ao.back();  pop_ao.pop_back();
     break;
   }
   case INCREMENTAL_SPARSE_GRID: {
@@ -233,11 +266,7 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
 void SharedProjectOrthogPolyApproxData::post_push_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
-    break;
-  }
+  //case QUADRATURE: case CUBATURE: // no-op
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
@@ -255,20 +284,33 @@ void SharedProjectOrthogPolyApproxData::post_push_data()
 void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
+  case QUADRATURE: case CUBATURE: { // if push available, replace
+    std::map<UShortArray, std::deque<UShort2DArray> >::iterator pop1_it
+      = poppedMultiIndex.find(activeKey);
+    std::map<UShortArray, std::deque<UShortArray> >::iterator pop2_it
+      = poppedApproxOrder.find(activeKey);
+    if (pop1_it == poppedMultiIndex.end() ||
+	pop2_it == poppedApproxOrder.end()) {
+      PCerr << "Error: lookup failure in SharedProjectOrthogPolyApproxData::"
+	    << "pre_finalize_data()." << std::endl;
+      abort_handler(-1);
+    }
+    std::deque<UShort2DArray>& pop_mi = pop1_it->second;
+    std::deque<UShortArray>&   pop_ao = pop2_it->second;
+    if (!pop_mi.empty() && !pop_ao.empty()) {
+      multiIndexIter->second = pop_mi.back();
+      approxOrdIter->second  = pop_ao.back();
+    }
     break;
   }
-  case INCREMENTAL_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: { // augment with remaining popped sets
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // update multiIndex
-      std::deque<UShort2DArray>& popped_tp_mi = poppedTPMultiIndex[activeKey];
-      std::deque<SizetArray>& popped_tp_mi_map
-	= poppedTPMultiIndexMap[activeKey];
+      std::deque<UShort2DArray>& popped_tp_mi = poppedMultiIndex[activeKey];
+      std::deque<SizetArray>& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
       std::deque<size_t>& popped_tp_mi_map_ref
-	= poppedTPMultiIndexMapRef[activeKey];
+	= poppedMultiIndexMapRef[activeKey];
 
       std::deque<UShort2DArray>::iterator iit = popped_tp_mi.begin();
       std::deque<SizetArray>::iterator    mit = popped_tp_mi_map.begin();
@@ -300,17 +342,17 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
+    poppedMultiIndex[activeKey].clear();
+    poppedApproxOrder[activeKey].clear();
     break;
   }
   case INCREMENTAL_SPARSE_GRID:
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
-      poppedTPMultiIndex[activeKey].clear();//.erase(activeKey);
-      poppedTPMultiIndexMap[activeKey].clear();//.erase(activeKey);
-      poppedTPMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
+      poppedMultiIndex[activeKey].clear();//.erase(activeKey);
+      poppedMultiIndexMap[activeKey].clear();//.erase(activeKey);
+      poppedMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
       break;
     case UNIFORM_CONTROL:
       // *** TO DO ***
@@ -597,9 +639,9 @@ decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
   const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_mi.size();
-  std::deque<UShort2DArray>&  pop_tp_mi = poppedTPMultiIndex[activeKey];
-  std::deque<SizetArray>& pop_tp_mi_map = poppedTPMultiIndexMap[activeKey];
-  std::deque<size_t>& pop_tp_mi_map_ref = poppedTPMultiIndexMapRef[activeKey];
+  std::deque<UShort2DArray>&  pop_tp_mi = poppedMultiIndex[activeKey];
+  std::deque<SizetArray>& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
+  std::deque<size_t>& pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
   for (i=num_smolyak_indices; i<num_tp_mi; ++i) {
     pop_tp_mi.push_back(tp_mi[i]);
     pop_tp_mi_map.push_back(tp_mi_map[i]);
@@ -625,9 +667,9 @@ push_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
-  std::deque<UShort2DArray>&  pop_tp_mi = poppedTPMultiIndex[activeKey];
-  std::deque<SizetArray>& pop_tp_mi_map = poppedTPMultiIndexMap[activeKey];
-  std::deque<size_t>& pop_tp_mi_map_ref = poppedTPMultiIndexMapRef[activeKey];
+  std::deque<UShort2DArray>&  pop_tp_mi = poppedMultiIndex[activeKey];
+  std::deque<SizetArray>& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
+  std::deque<size_t>& pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
   size_t i, num_pop = pop_tp_mi.size();
   for (i=0; i<num_pop; ++i) {
     tp_mi.push_back(pop_tp_mi[i]);
