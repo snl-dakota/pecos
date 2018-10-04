@@ -273,6 +273,7 @@ int main(int argc, char* argv[])
   // start refinement
   csg_driver->initialize_sets();
   UShortArraySet a;
+  bool conv_within_tol = false;
   for ( size_t iter = 0; iter < nIter; iter++) {
 
     /* Compute base variance */
@@ -431,11 +432,13 @@ int main(int argc, char* argv[])
       csg_driver->update_reference();
     }
 
-    if ( deltaVar < varEps ) break ;
+    if ( deltaVar < varEps )
+      { conv_within_tol = true; break; }
 
   } /* end iteration loop */
 
-  csg_driver->finalize_sets(true, false); // use embedded output option
+  // output sets; implementation above applies best refinement (no revert)
+  csg_driver->finalize_sets(true, conv_within_tol, false);
 
   // sequence from ApproximationInterface::finalize_approximation():
 
