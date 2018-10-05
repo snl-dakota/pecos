@@ -6,14 +6,15 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef POLY_APPROXIMATION_HPP
-#define POLY_APPROXIMATION_HPP
+#ifndef PECOS_SURROGATES_POLY_APPROXIMATION_HPP
+#define PECOS_SURROGATES_POLY_APPROXIMATION_HPP
 
 #include "Approximation.hpp"
 #include "OptionsList.hpp"
 #include "teuchos_data_types.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 /**
 \class PolyApproximation
@@ -126,6 +127,7 @@ public:
 
 }; // class PolyApproximation
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // POLY_APPROXIMATION_HPP
+#endif  // include guard

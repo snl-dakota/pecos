@@ -6,15 +6,17 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef CROSS_VALIDATED_SOLVER_HPP
-#define CROSS_VALIDATED_SOLVER_HPP
+#ifndef PECOS_UTIL_CROSS_VALIDATED_SOLVER_HPP
+#define PECOS_UTIL_CROSS_VALIDATED_SOLVER_HPP
 
 #include "LinearSystemSolver.hpp"
 #include "LinearSystemCrossValidationIterator.hpp"
 #include <memory>
 
+namespace Pecos {
+namespace util {
 
-namespace Surrogates{
+
 /**
  * \class CrossValidatedSolver
  * \brief A wrapper for generating cross validated solutions to lineaer 
@@ -127,5 +129,7 @@ std::shared_ptr<LinearSystemCrossValidationIteratorBase> linear_system_cross_val
 /// Cast from LinearSystemSolver to a CrossValidatedSolver
 std::shared_ptr<CrossValidatedSolver> cast_to_cross_validated_solver(std::shared_ptr<LinearSystemSolver> &solver);
  
-} // namespaces Surrogates
-#endif //CROSS_VALIDATED_SOLVER_HPP
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

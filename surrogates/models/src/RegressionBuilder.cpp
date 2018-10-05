@@ -9,7 +9,8 @@
 #include "RegressionBuilder.hpp"
 #include "PolyApproximation.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 void get_canonical_uniform_samples(int M, int N, int seed, RealMatrix &samples){ 
   const Real range_min = -1.; 
@@ -43,7 +44,7 @@ void generate_uniform_samples(int num_vars, int num_samples, int seed, const Var
 
 void solve_regression(const RealMatrix &samples,
 		      const RealMatrix &values,
-		      OptionsList &opts,
+		      util::OptionsList &opts,
 		      Approximation &approx){
 
   PolyApproximation& poly_approx = 
@@ -55,7 +56,7 @@ void solve_regression(const RealMatrix &samples,
   poly_approx.generate_basis_matrix(samples,basis_matrix);
     
   // Solve regression problem to get coefficients
-  std::shared_ptr<LinearSystemSolver> solver = regression_solver_factory(opts);
+  std::shared_ptr<util::LinearSystemSolver> solver = regression_solver_factory(opts);
   RealMatrix coeffs;
   solver->solve(basis_matrix, values, opts);
 
@@ -65,7 +66,7 @@ void solve_regression(const RealMatrix &samples,
 }
 
 void RegressionBuilder::
-build(OptionsList &opts, Approximation &approx, OptionsList &result){
+build(util::OptionsList &opts, Approximation &approx, util::OptionsList &result){
   // Generate samples to build approximation
   int num_samples = opts.get<int>("num_samples");
   std::string sample_type = opts.get<std::string>("sample_type");
@@ -92,4 +93,5 @@ build(OptionsList &opts, Approximation &approx, OptionsList &result){
   result.set("training_values",values);
 }
 
-} //namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

@@ -11,7 +11,9 @@
 #include "PolynomialChaosExpansion.hpp"
 #include "RegressionBuilder.hpp"
 
-using namespace Surrogates;
+using namespace Pecos;
+using namespace Pecos::util;
+using namespace Pecos::surrogates;
 
 namespace {
 

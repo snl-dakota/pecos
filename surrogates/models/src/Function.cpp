@@ -8,7 +8,10 @@
 
 #include <Function.hpp>
 
-namespace Surrogates {
+using Pecos::util::OptionsList;
+
+namespace Pecos {
+namespace surrogates {
 
 Function::Function() : numQOI_(0) {}
 
@@ -35,4 +38,5 @@ void Function::hessian(const RealMatrix &samples, int qoi, RealMatrixList &hessi
   throw(std::string("This Function type does not provide gradients"));
 }
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

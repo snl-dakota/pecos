@@ -8,17 +8,18 @@
 
 #include <AffineVariableTransformation.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 AffineVariableTransformation::AffineVariableTransformation(){}
 
 AffineVariableTransformation::~AffineVariableTransformation(){}
 
 void AffineVariableTransformation::
-set_variables(const std::shared_ptr<Surrogates::Variables> &vars){
-  Surrogates::VariableTransformation::set_variables(vars);
-  //boundedVars_ = std::dynamic_pointer_cast<Surrogates::BoundedVariables>(vars_);
-  boundedVars_ = std::dynamic_pointer_cast<Surrogates::BoundedVariables>(vars_);
+set_variables(const std::shared_ptr<Variables> &vars){
+  VariableTransformation::set_variables(vars);
+  //boundedVars_ = std::dynamic_pointer_cast<BoundedVariables>(vars_);
+  boundedVars_ = std::dynamic_pointer_cast<BoundedVariables>(vars_);
   if (!boundedVars_)
     throw(std::runtime_error("vars is not an object of BoundedVariables"));
 }
@@ -78,4 +79,5 @@ map_derivatives_from_user_space(const RealVector &derivatives,
   transformed_derivatives *= scaling_factor;
 }
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

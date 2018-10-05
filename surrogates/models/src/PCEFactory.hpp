@@ -6,14 +6,15 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef PCE_FACTORY_HPP
-#define PCE_FACTORY_HPP
+#ifndef PECOS_SURROGATES_PCE_FACTORY_HPP
+#define PECOS_SURROGATES_PCE_FACTORY_HPP
 
 //#include "Function.hpp"
 #include "Monomial.hpp"
 #include "PolynomialChaosExpansion.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
   enum {MONOMIAL, PCE};
 
@@ -49,8 +50,9 @@ std::shared_ptr<PolyApproximation> polynomial_approximation_factory(
   }
   }
 }
-}// namespace surrogates
-
-#endif //PCE_FACTORY_HPP
 
   
+}  // namespace surrogates
+}  // namespace Pecos
+
+#endif  // include guard

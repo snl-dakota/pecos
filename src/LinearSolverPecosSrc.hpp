@@ -454,7 +454,7 @@ public:
 
     RealVector singular_values;
     int rank(0);
-    Surrogates::svd_solve(A_copy, b, result_0, singular_values, rank, solverTol_);
+    util::svd_solve(A_copy, b, result_0, singular_values, rank, solverTol_);
 
     result_1.shapeUninitialized( 2, 1 );
     RealVector residual( b );
@@ -516,7 +516,7 @@ public:
 		     B.values() + numPrimaryEqs_, 
 		     B.numRows() - numPrimaryEqs_ );
     RealVector result_0_rv;
-    Surrogates::equality_constrained_least_squares_solve(A_eq, b_eq, C_eq, d_eq,
+    util::equality_constrained_least_squares_solve(A_eq, b_eq, C_eq, d_eq,
 							 result_0_rv);
     result_0.shapeUninitialized(result_0_rv.length(), 1);
     Teuchos::setCol(result_0_rv, 0, result_0);

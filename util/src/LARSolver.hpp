@@ -6,13 +6,14 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LARSOLVER_HPP
-#define LARSOLVER_HPP
+#ifndef PECOS_UTIL_LAR_SOLVER_HPP
+#define PECOS_UTIL_LAR_SOLVER_HPP
 
 #include "LinearSystemSolver.hpp"
 #include "least_angle_regression.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 /**
  *\class LARSolver
@@ -197,6 +198,7 @@ public:
   };
 };
 
-} // namespace Surrogates
+}  // namespace util
+}  // namespace Pecos
 
-#endif // include guard
+#endif  // include guard

@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LINEARSYSTEMSOLVER_HPP
-#define LINEARSYSTEMSOLVER_HPP
+#ifndef PECOS_UTIL_LINEAR_SYSTEM_SOLVER_HPP
+#define PECOS_UTIL_LINEAR_SYSTEM_SOLVER_HPP
 
 #include "teuchos_data_types.hpp"
 #include "OptionsList.hpp"
@@ -16,7 +16,8 @@
 
 #include <boost/numeric/conversion/cast.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
   enum RegressionType{
     SVD_LEAST_SQ_REGRESSION, EQ_CONS_LEAST_SQ_REGRESSION,
@@ -452,6 +453,7 @@ namespace Surrogates {
   };
   };*/
 
-} // namespace Surrogates
+}  // namespace util
+}  // namespace Pecos
 
-#endif //LINEARSYSTEMSOLVER_HPP
+#endif  // include guard

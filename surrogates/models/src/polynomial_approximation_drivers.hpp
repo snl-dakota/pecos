@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
-#define POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
+#ifndef PECOS_SURROGATES_POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
+#define PECOS_SURROGATES_POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
 
 #include "PolyApproximation.hpp"
 #include "RegressionBuilder.hpp"
@@ -16,7 +16,8 @@
 #include <boost/random.hpp>
 #include <boost/random/uniform_real.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
   enum SolverTypes{QR_LSQ,SVD_LSQ};
   
@@ -72,6 +73,7 @@ void regression_driver(Function &target_function, PolyApproximation &approx, Opt
   // Then consider returning a status OptionsList
 }
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif //POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
+#endif  // include guard

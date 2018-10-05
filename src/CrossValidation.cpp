@@ -58,13 +58,13 @@ void CrossValidationIterator::set_num_points( int num_points )
     }
 
   if ( seed_ < 0 )
-    Surrogates::range( indices_, 0, numPts_, 1 );
+    util::range( indices_, 0, numPts_, 1 );
   else if ( seed_ == 0 )
-    Surrogates::random_permutation(numPts_, 1, (unsigned int)std::time(0),
+    util::random_permutation(numPts_, 1, (unsigned int)std::time(0),
 				   indices_);
   else
     //get_permutations( indices_, numPts_, 1, (unsigned int)seed_ );
-    Surrogates::random_permutation(numPts_, 1, (unsigned int)seed_, indices_);
+    util::random_permutation(numPts_, 1, (unsigned int)seed_, indices_);
 }
 
 void CrossValidationIterator::set_num_equations_per_point( int num_eq )
@@ -389,9 +389,9 @@ void MultipleSolutionLinearModelCrossValidationIterator::compute_scores()
 	  // uniqueTols_ is in ascending order
 	  // but foldTols_[iter] and foldErrors_[iter] are in descending order
 	  // so we must reverse their order
-	  Surrogates::reverse( foldTols_[iter] );
-	  Surrogates::reverse( foldErrors_[iter] );
-	  Surrogates::LinearInterpolant1D interp(foldTols_[iter],
+	  util::reverse( foldTols_[iter] );
+	  util::reverse( foldErrors_[iter] );
+	  util::LinearInterpolant1D interp(foldTols_[iter],
 						 foldErrors_[iter]);
 	  RealVector unique_cv_errors_col( Teuchos::View, 
 					   unique_cv_errors[iter],
@@ -552,7 +552,7 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
   if ( is_master() )
     {
       int argmin_index = 0;
-      argmin_index = Surrogates::argmin( scores_.length(), scores_.values()  );
+      argmin_index = util::argmin( scores_.length(), scores_.values()  );
       bestResidualTol_ = uniqueTols_[argmin_index];
       int training_size, validation_size;
       get_fold_size( 0, training_size, validation_size );

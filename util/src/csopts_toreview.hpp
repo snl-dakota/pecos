@@ -6,6 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
+#error "csopts_toreview.hpp is an inactive header"
+
 #ifndef COMPRESSED_SENSING_HPP
 #define COMPRESSED_SENSING_HPP
 

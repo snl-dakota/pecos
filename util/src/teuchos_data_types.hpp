@@ -6,11 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef PECOS_TEUCHOS_DATA_TYPES_HPP
-#define PECOS_TEUCHOS_DATA_TYPES_HPP
+#ifndef PECOS_UTIL_TEUCHOS_DATA_TYPES_HPP
+#define PECOS_UTIL_TEUCHOS_DATA_TYPES_HPP
 
 #include <complex>
 #include "Teuchos_SerialDenseVector.hpp"
+
+namespace Pecos {
 
 typedef double Real;
 typedef std::complex<double> Complex;
@@ -32,4 +34,6 @@ typedef Teuchos::SerialSymDenseMatrix<int, int> IntSymMatrix;
 typedef Teuchos::SerialSymDenseMatrix<int, Real> RealSymMatrix;
 typedef Teuchos::SerialSymDenseMatrix<int, Complex> ComplexSymMatrix;
 
-#endif // include guard
+}  // namespace Pecos
+
+#endif  // include guard

@@ -6,10 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef SPARSE_MATRIX_HPP
-#define SPARSE_MATRIX_HPP
+#ifndef PECOS_UTIL_SPARSE_MATRICES_HPP
+#define PECOS_UTIL_SPARSE_MATRICES_HPP
 
 #include "linear_algebra.hpp"
+
+namespace Pecos {
+namespace util {
 
 class BlockDiagonalMatrix
 {
@@ -146,4 +149,7 @@ class BlockDiagonalMatrix
 			    RealMatrix & result ) const;
 };
 
-#endif //SPARSE_MATRIX_HPP
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

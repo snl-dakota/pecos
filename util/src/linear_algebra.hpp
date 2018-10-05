@@ -13,8 +13,8 @@
  * \brief Functions used to solve systems of linear equations.
  */
 
-#ifndef LINEAR_ALGEBRA_HPP
-#define LINEAR_ALGEBRA_HPP
+#ifndef PECOS_UTIL_LINEAR_ALGEBRA_HPP
+#define PECOS_UTIL_LINEAR_ALGEBRA_HPP
 
 #include "teuchos_data_types.hpp"
 #include "Teuchos_BLAS.hpp"
@@ -22,9 +22,11 @@
 #include "Teuchos_LAPACK.hpp"
 #include <vector>
 
-#define ROUND_DOWN(x, s) ((x) & ~((s)-1)) // for loop unrolling
+// TODO: Consider replacing this macro
+#define PECOS_UTIL_ROUND_DOWN(x, s) ((x) & ~((s)-1)) // for loop unrolling
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 template<typename OrdinalType,typename ScalarType>
 void GEMV(Teuchos::ETransp trans, bool conjugate_trans, ScalarType alpha,
@@ -384,7 +386,7 @@ void permute_matrix_rows( Teuchos::SerialDenseMatrix<O,T> &A, IntVector &P,
   for ( int j = 0; j < n; j++ )
     {
       int js = j*s, jws = j*w_s;
-      for ( i = 0; i < ROUND_DOWN(m,2); i+=2 )
+      for ( i = 0; i < PECOS_UTIL_ROUND_DOWN(m,2); i+=2 )
 	{
 	  //work(i,j) = A(P[i],j);
 	  work_ptr[jws+i] = A_ptr[js+P[i]];
@@ -396,7 +398,7 @@ void permute_matrix_rows( Teuchos::SerialDenseMatrix<O,T> &A, IntVector &P,
   // copy permuted matrix back into A
   for ( int j = 0; j < n; j++ )
     {
-      for ( i = 0; i < ROUND_DOWN(m,2); i+=2 )
+      for ( i = 0; i < PECOS_UTIL_ROUND_DOWN(m,2); i+=2 )
 	{
 	  A(i,j) = work(i,j);
 	  A(i+1,j) = work(i+1,j);
@@ -1054,5 +1056,7 @@ void qr_factorization( const RealMatrix &A, RealMatrix &Qfactor,
 //void qr_solve( const RealMatrix &B, const RealMatrix &qr_data, 
 //	       const RealVector &tau, RealMatrix &result );
 
-}; // namespace Surrogates
-#endif
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LINEAR_SOLVERS_HPP
-#define LINEAR_SOLVERS_HPP
+#ifndef PECOS_UTIL_LINEAR_SOLVERS_HPP
+#define PECOS_UTIL_LINEAR_SOLVERS_HPP
 
 #include "LinearSystemSolver.hpp"
 #include "OMPSolver.hpp"
@@ -16,8 +16,9 @@
 #include "EqConstrainedLSQSolver.hpp"
 #include "CrossValidatedSolver.hpp"
 
-namespace Surrogates {
-  
+namespace Pecos {
+namespace util {
+
 /**\
  * \brief Initialize a linear system solver from a list of options and return 
  * a shared pointer to the base class.
@@ -49,6 +50,8 @@ std::shared_ptr<LSQSolver> cast_linear_system_solver_to_lsqsolver(std::shared_pt
 
 std::shared_ptr<EqConstrainedLSQSolver> cast_linear_system_solver_to_eqconstrainedlsqsolver(std::shared_ptr<LinearSystemSolver> &solver);
   
-} // namespace Surrogates
 
-#endif // include guard
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

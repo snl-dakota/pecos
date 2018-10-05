@@ -6,11 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef VARIABLES_HPP
-#define VARIABLES_HPP
+#ifndef PECOS_SURROGATES_VARIABLES_HPP
+#define PECOS_SURROGATES_VARIABLES_HPP
 
 #include <OptionsList.hpp>
-namespace Surrogates {
+
+namespace Pecos {
+namespace surrogates {
 
   /**
      \class Variables
@@ -24,11 +26,11 @@ namespace Surrogates {
 
     /**\brief Set options specific to the model
      */
-    virtual void set_options(const OptionsList &opts);
+    virtual void set_options(const util::OptionsList &opts);
 
     /**\brief Get the model specific options
      */
-    virtual void get_options(OptionsList &opts);
+    virtual void get_options(util::OptionsList &opts);
 
     /**\brief Set the number of variables
      */
@@ -46,6 +48,7 @@ namespace Surrogates {
   }; // class Variables
 
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // VARIABLES_HPP
+#endif  // include guard

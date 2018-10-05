@@ -10,7 +10,9 @@
 #include "pecos_global_defs.hpp"
 #include "teuchos_data_types.hpp"
 #include "math_tools.hpp"
-namespace Surrogates {
+
+namespace Pecos {
+namespace surrogates {
 
 OrthogonalPolynomialBasis::OrthogonalPolynomialBasis() :nestedRules_(true){};
 OrthogonalPolynomialBasis::~OrthogonalPolynomialBasis(){};
@@ -114,7 +116,7 @@ value(const RealMatrix& samples, const IntMatrix& indices, RealMatrix &values){
     throw(std::runtime_error("polynomialBasis_ has not been initialized"));
   unsigned short order_1d; int num_vars = samples.numRows();
   int i,j,d, num_exp_terms = indices.numCols(), num_samples=samples.numCols();
-  resize_if_needed(values, num_samples, num_exp_terms);
+  util::resize_if_needed(values, num_samples, num_exp_terms);
   for (j=0; j<num_exp_terms; ++j){
     for (i=0; i<num_samples; ++i){
       values(i,j) = 1.;
@@ -142,4 +144,5 @@ initialize_polynomial_basis(const std::shared_ptr<Surrogates::AleatoryVariables>
 }
 #endif
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

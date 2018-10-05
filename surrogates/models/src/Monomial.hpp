@@ -6,11 +6,14 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef MONOMIAL_HPP
-#define MONOMIAL_HPP
+#ifndef PECOS_SURROGATES_MONOMIAL_HPP
+#define PECOS_SURROGATES_MONOMIAL_HPP
+
 #include "PolyApproximation.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
+
 /**
 \class Monomial
 \brief A multivariate monomial approximation.
@@ -25,12 +28,14 @@ public:
 
   ~Monomial();
 
-  void set_options(const OptionsList &opts);
+  void set_options(const util::OptionsList &opts);
 
   /** \copydoc PolyApproximation::generate_canonical_basis_matrix() */
   void generate_canonical_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
 
 }; // class Monomial
 
-} // namespace Surrogates
-#endif // MONOMIAL_HPP
+}  // namespace surrogates
+}  // namespace Pecos
+
+#endif  // include guard

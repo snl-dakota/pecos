@@ -9,7 +9,8 @@
 #include "LinearSystemCrossValidationIterator.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 LinearSystemCrossValidationIteratorBase::
 LinearSystemCrossValidationIteratorBase(){};
@@ -369,4 +370,5 @@ std::shared_ptr<LinearSystemCrossValidationIterator> cast_to_linear_system_cross
   return solver_cast;
 }
 
-}//namespace surrogates
+}  // namespace util
+}  // namespace Pecos

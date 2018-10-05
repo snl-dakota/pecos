@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef OPTIONS_LIST_HPP
-#define OPTIONS_LIST_HPP
+#ifndef PECOS_UTIL_OPTIONS_LIST_HPP
+#define PECOS_UTIL_OPTIONS_LIST_HPP
 
 #include <string>
 #include <iostream>
@@ -15,6 +15,9 @@
 #include <boost/any.hpp>
 #include <vector>
 #include "Teuchos_SerialDenseVector.hpp"
+
+namespace Pecos {
+namespace util {
 
 typedef std::map<std::string, boost::any> opts_map;
 
@@ -250,4 +253,8 @@ std::ostream& operator<<(std::ostream& os, const boost::any& item){
   return os;
 }
 
-#endif // OPTIONS_LIST_HPP
+
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

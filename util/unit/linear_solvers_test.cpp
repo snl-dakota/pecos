@@ -12,7 +12,8 @@
 #include <ctype.h>
 #include <string>
 
-using namespace Surrogates;
+using namespace Pecos;
+using namespace Pecos::util;
 
 namespace {
 

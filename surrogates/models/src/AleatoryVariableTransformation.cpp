@@ -8,7 +8,8 @@
 
 #include <AleatoryVariableTransformation.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 AleatoryVariableTransformation::AleatoryVariableTransformation(){}
 
@@ -75,4 +76,5 @@ map_derivatives_from_user_space(const RealVector &derivatives,
   transformed_derivatives *= scaling_factor;
 }
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

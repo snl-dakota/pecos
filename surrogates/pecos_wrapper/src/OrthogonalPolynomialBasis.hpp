@@ -6,13 +6,16 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef ORTHOG_POLY_BASIS_HPP
-#define ORTHOG_POLY_BASIS_HPP
+#ifndef PECOS_SURROGATES_ORTHOGONAL_POLY_BASIS_HPP
+#define PECOS_SURROGATES_ORTHOGONAL_POLY_BASIS_HPP
+
 //#include "AleatoryVariableTransformation.hpp"
 #include "BasisPolynomial.hpp"
 #include "teuchos_data_types.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
+
 /**
    \class OrthogonalPolynomialBasis()
    \brief A multivariate orthogonal polynomial basis
@@ -66,5 +69,7 @@ void value(const RealMatrix& sample, const IntMatrix& indices,
 
 }; // class OrthogonalPolynomialBasis
 
-} // namespace Surrogates
-#endif // ORTHOG_POLY_BASIS_HPP
+}  // namespace surrogates
+}  // namespace Pecos
+
+#endif  // include guard

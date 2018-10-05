@@ -10,6 +10,8 @@
 #define BOOST_TEST_MODULE options
 #include <boost/test/included/unit_test.hpp>
 
+using Pecos::util::OptionsList;
+
 void test_set(){
   // test basic set and get
   

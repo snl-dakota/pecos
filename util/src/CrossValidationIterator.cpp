@@ -8,7 +8,8 @@
 
 #include "CrossValidationIterator.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 CrossValidationIterator::CrossValidationIterator() : 
   numFolds_(0), numPts_(0), seed_(0), numEquationsPerPoint_(1) {}
@@ -253,4 +254,5 @@ void run(const RealMatrix &points, const RealVector &values,
   }
   }*/
 
-} //namespace Surrogates
+}  // namespace util
+}  // namespace Pecos

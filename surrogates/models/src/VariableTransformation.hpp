@@ -6,13 +6,15 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef VARIABLE_TRANSFORMATION_HPP
-#define VARIABLE_TRANSFORMATION_HPP
+#ifndef PECOS_SURROGATES_VARIABLE_TRANSFORMATION_HPP
+#define PECOS_SURROGATES_VARIABLE_TRANSFORMATION_HPP
 
 #include <Variables.hpp>
 #include <memory>
 #include <teuchos_data_types.hpp>
-namespace Surrogates {
+
+namespace Pecos {
+namespace surrogates {
 
   /**
      \class VariableTransformation
@@ -35,7 +37,7 @@ namespace Surrogates {
   protected:
     /// Variable meta data describing user-defined x-space
     /// where evaluations are performed
-    std::shared_ptr<Surrogates::Variables> vars_;
+    std::shared_ptr<Variables> vars_;
 
   public:
     VariableTransformation();
@@ -137,17 +139,18 @@ namespace Surrogates {
 	For example (in pecos language) set transformation is from x to u space
 	of x to z space or u to z etc.
     */
-    virtual void set_options(OptionsList &opts){}
+    virtual void set_options(util::OptionsList &opts){}
 
     /**\brief Set the variables defining the user x-space
      */
-    virtual void set_variables(const std::shared_ptr<Surrogates::Variables> &vars);
+    virtual void set_variables(const std::shared_ptr<Variables> &vars);
 
     /**\copydoc Variables::num_vars() */
     int num_vars();
 
   };
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // VARIABLE_TRANSFORMATION_HPP
+#endif  // include guard

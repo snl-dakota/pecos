@@ -6,12 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LSQ_CROSS_VALIDATION_ITERATOR_HPP
-#define LSQ_CROSS_VALIDATION_ITERATOR_HPP
+#ifndef PECOS_UTIL_LSQ_CROSS_VALIDATION_ITERATOR_HPP
+#define PECOS_UTIL_LSQ_CROSS_VALIDATION_ITERATOR_HPP
 
 #include "LinearSystemCrossValidationIterator.hpp" 
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
  /**
   * \class LSQCrossValidationIterator
@@ -105,7 +106,8 @@ public:
 
 std::shared_ptr<LSQCrossValidationIterator> cast_to_least_squares_cross_validation_iterator(std::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver);
 
-} // namespace Surrogates
-  
-#endif //LSQ_CROSS_VALIDATION_ITERATOR_HPP
 
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

@@ -8,7 +8,8 @@
 
 #include "Approximation.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 void Approximation::
 set_variable_transformation(const std::shared_ptr<VariableTransformation> &var_transform){
@@ -26,4 +27,5 @@ int Approximation::num_vars(){
   return varTransform_->num_vars();
 }
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

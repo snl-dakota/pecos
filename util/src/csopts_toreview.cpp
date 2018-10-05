@@ -6,6 +6,9 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
+
+#error "csopts_to_review.cpp is an inactive implementation file."
+
 #include "compressed_sensing.hpp"
 #include "math_tools.hpp"
 

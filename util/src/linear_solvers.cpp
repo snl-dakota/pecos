@@ -8,7 +8,8 @@
 
 #include "linear_solvers.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 std::shared_ptr<LinearSystemSolver> regression_solver_factory(OptionsList &opts){
   std::string name = "regression_type";
@@ -88,5 +89,5 @@ std::shared_ptr<EqConstrainedLSQSolver> cast_linear_system_solver_to_eqconstrain
   return solver_cast;
 }
 
-
-} // namespace surrogates
+}  // namespace util
+}  // namespace Pecos

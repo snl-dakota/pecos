@@ -14,6 +14,9 @@
 
 #include "linear_algebra.hpp"
 
+using namespace Pecos;
+using namespace Pecos::util;
+
 namespace {
 
   const int NUMROWS = 5;
@@ -128,9 +131,9 @@ TEUCHOS_UNIT_TEST(linear_algebra, cholesky)
   RealMatrix L, result;
   
   // Colesky to get L then solve using the L
-  int info = Surrogates::cholesky( A, L, Teuchos::LOWER_TRI, false );
+  int info = Pecos::util::cholesky( A, L, Teuchos::LOWER_TRI, false );
   TEST_EQUALITY( 0, info )
-  info =  Surrogates::solve_using_cholesky_factor( L, B, result, Teuchos::LOWER_TRI);
+  info =  Pecos::util::solve_using_cholesky_factor( L, B, result, Teuchos::LOWER_TRI);
   TEST_EQUALITY( 0, info )
 
   // Test correctness
@@ -143,14 +146,14 @@ TEUCHOS_UNIT_TEST(linear_algebra, cholesky)
   // *** Test Cholesky with a not positive definite matrix ***
   A = get_nspd_test_matrix();
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
-  info = Surrogates::cholesky( A, L, Teuchos::LOWER_TRI, false );
+  info = Pecos::util::cholesky( A, L, Teuchos::LOWER_TRI, false );
   TEST_INEQUALITY( 0, info ) //-- info=2
 
   // *********************************************************
   // *** Test Cholesky with a singular matrix ***
   A = get_singular_test_matrix();
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
-  info = Surrogates::cholesky( A, L, Teuchos::LOWER_TRI, false );
+  info = Pecos::util::cholesky( A, L, Teuchos::LOWER_TRI, false );
   TEST_INEQUALITY( 0, info )  //-- info=1
   
   // DEBUG
@@ -177,7 +180,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, teuchos_cholesky)
 
   RealMatrix result;
   Real rcond = 1.0;
-  int info = Surrogates::teuchos_cholesky_solve( A, B, result, rcond );
+  int info = Pecos::util::teuchos_cholesky_solve( A, B, result, rcond );
   TEST_EQUALITY( 0, info )
 
   // Test correctness
@@ -203,7 +206,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, qr_solve)
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
 
   RealMatrix result;
-  Surrogates::qr_solve(A, B, result);
+  Pecos::util::qr_solve(A, B, result);
 
   // Test correctness
   gold_soln -= result;
@@ -217,7 +220,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, qr_solve)
   // LAPACK's DGELS would attempt to find the minimum norm solution
   A = get_overd_test_matrix();
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
-  Surrogates::qr_solve(A, B, result); 
+  Pecos::util::qr_solve(A, B, result);
   gold_soln -= result;
   shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
   TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
@@ -241,7 +244,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, svd)
   int rank;
   RealMatrix result0;
   RealVector result1;
-  Surrogates::svd_solve(A, B, result0, result1, rank);
+  Pecos::util::svd_solve(A, B, result0, result1, rank);
 
   // Could add check of singular values
   //A.print(std::cout);
@@ -260,7 +263,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, svd)
   // Not really a corner case, every real matrix has an SVD with real entries
   A = get_overd_test_matrix();
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
-  Surrogates::svd_solve(A, B, result0, result1, rank);
+  Pecos::util::svd_solve(A, B, result0, result1, rank);
   gold_soln -= result0;
   shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
   TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
@@ -284,7 +287,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, conj_grad_solv)
   int iters;
   Real r_norm;
   RealVector result;
-  Surrogates::conjugate_gradients_solve(A, b, result, r_norm, iters /* use defaults for tol, max_iter, verbosity */);
+  Pecos::util::conjugate_gradients_solve(A, b, result, r_norm, iters /* use defaults for tol, max_iter, verbosity */);
 
   // Test correctness
   TEST_EQUALITY( 5, iters )
@@ -312,8 +315,8 @@ TEUCHOS_UNIT_TEST(linear_algebra, lu_solv)
 
   RealVector result1;
   RealVector result2;
-  Surrogates::lu_solve(A, B, result1, true /* copy A */, Teuchos::NO_TRANS);
-  Surrogates::lu_solve(A, B, result2, false, Teuchos::NO_TRANS);
+  Pecos::util::lu_solve(A, B, result1, true /* copy A */, Teuchos::NO_TRANS);
+  Pecos::util::lu_solve(A, B, result2, false, Teuchos::NO_TRANS);
 
   // Test correctness
   Real tol = 1.0e-14;
@@ -343,7 +346,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, substitution_solve)
   }
 
   RealMatrix result;
-  Surrogates::substitution_solve( A, B, result, Teuchos::NO_TRANS, Teuchos::LOWER_TRI, Teuchos::UNIT_DIAG );
+  Pecos::util::substitution_solve( A, B, result, Teuchos::NO_TRANS, Teuchos::LOWER_TRI, Teuchos::UNIT_DIAG );
 
   // Test correctness
   RealMatrix test_gold(gold_soln);
@@ -363,7 +366,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, substitution_solve)
       B(i,0) += A(i,j)*gold_soln(j,0);
   }
 
-  Surrogates::substitution_solve( A, B, result, Teuchos::NO_TRANS, Teuchos::LOWER_TRI, Teuchos::NON_UNIT_DIAG );
+  Pecos::util::substitution_solve( A, B, result, Teuchos::NO_TRANS, Teuchos::LOWER_TRI, Teuchos::NON_UNIT_DIAG );
 
   // Test correctness
   gold_soln -= result;
@@ -421,7 +424,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, piv_lu_factor)
   int max_iters = A.numRows();
   int num_initial_rows = 0;
 
-  Surrogates::pivoted_lu_factorization( A, L, U, pivots);
+  Pecos::util::pivoted_lu_factorization( A, L, U, pivots);
 
   // Test correctness
   RealMatrix gold_L;
@@ -456,7 +459,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, trunc_lu_piv_factor)
   int max_iters = A.numRows();
   int num_initial_rows = 0;
 
-  Surrogates::truncated_pivoted_lu_factorization( A, L, U, pivots, max_iters, num_initial_rows);
+  Pecos::util::truncated_pivoted_lu_factorization( A, L, U, pivots, max_iters, num_initial_rows);
 
   // Test correctness
   RealMatrix gold_L;
@@ -491,14 +494,14 @@ TEUCHOS_UNIT_TEST(linear_algebra, compl_piv_lu_factor)
   IntVector col_pivots;
   int max_iters = A.numRows();
 
-  Surrogates::complete_pivoted_lu_factorization( A, L, U, row_pivots, col_pivots, max_iters);
+  Pecos::util::complete_pivoted_lu_factorization( A, L, U, row_pivots, col_pivots, max_iters);
 
   RealMatrix chkA(L);
   chkA.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, L, U, 0.0);
 
   RealMatrix permutedA = get_lu_test_matrix();
-  Surrogates::permute_matrix_rows( permutedA, row_pivots);
-  Surrogates::permute_matrix_columns( permutedA, col_pivots);
+  Pecos::util::permute_matrix_rows( permutedA, row_pivots);
+  Pecos::util::permute_matrix_columns( permutedA, col_pivots);
 
   const Real tol = 2.e-16; // This tolerance was determined empirically via comparison with Matlab results
                            // Is this sufficient? - RWH
@@ -544,7 +547,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, qr_factor)
   RealMatrix Q;
   RealMatrix R;
 
-  Surrogates::qr_factorization( A, Q, R );
+  Pecos::util::qr_factorization( A, Q, R );
 
   // Test correctness
   RealMatrix gold_Q;
@@ -575,7 +578,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, permute_rows)
   chkA.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, L, U, 0.0);
 
   RealMatrix permutedA = get_lu_test_matrix();
-  Surrogates::permute_matrix_rows( permutedA, pivots);
+  Pecos::util::permute_matrix_rows( permutedA, pivots);
 
   const Real tol = 2.e-6; // This tolerance was determined empirically via comparison with Matlab results
                            // Is this sufficient? - RWH

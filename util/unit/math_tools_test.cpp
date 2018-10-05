@@ -13,6 +13,9 @@
 
 #include "math_tools.hpp"
 
+using namespace Pecos;
+using namespace Pecos::util;
+
 namespace {
   const int MAX_DEGREE = 10;
   const int MAX_DIM = 10;
@@ -32,11 +35,11 @@ TEUCHOS_UNIT_TEST(math_tools, multi_index)
     {
       // What we are testing
       // ----------------------------
-      Surrogates::get_multi_dimensional_polynomial_indices( dim, degree, indices );
+      Pecos::util::get_multi_dimensional_polynomial_indices( dim, degree, indices );
       // ----------------------------
 
       // Test structure of multi-index array
-      int num_indices = Surrogates::nchoosek((dim+degree-1),(dim-1));
+      int num_indices = Pecos::util::nchoosek((dim+degree-1),(dim-1));
       TEST_EQUALITY( dim, indices.numRows() );
       TEST_EQUALITY( num_indices, indices.numCols() );
 

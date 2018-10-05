@@ -6,15 +6,16 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef ORTHOGONAL_MATCHING_PURSUIT_HPP
-#define ORTHOGONAL_MATCHING_PURSUIT_HPP
+#ifndef PECOS_UTIL_ORTHOGONAL_MATCHING_PURSUIT_HPP
+#define PECOS_UTIL_ORTHOGONAL_MATCHING_PURSUIT_HPP
 
 #include "linear_algebra.hpp"
 #include "math_tools.hpp"
 
 // BMA TODO: Move this implementation to a .cpp file
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
   template<typename ScalarType>
   class MatrixVectorMultiplicationOperator{
@@ -340,5 +341,9 @@ namespace Surrogates {
       result_1.reshape( 2, num_active_indices );
     }
   }
-} //namespace Surrogates
-#endif // ORTHOGONAL_MATCHING_PURSUIT_HPP
+
+
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

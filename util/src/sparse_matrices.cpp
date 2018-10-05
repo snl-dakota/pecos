@@ -8,6 +8,9 @@
 
 #include "sparse_matrices.hpp"
 
+namespace Pecos {
+namespace util {
+
 void BlockDiagonalMatrix::get_row( int row_num, RealMatrix &row ) const {
   int num_total_rows = 0;
   int num_total_rows_prev = 0;
@@ -171,3 +174,6 @@ void BlockDiagonalMatrix::post_multiply_block( int block_num,
     result.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
 		     1.0, matrix, blocks_[block_num], 0.0 );
   };
+
+}  // namespace util
+}  // namespace Pecos

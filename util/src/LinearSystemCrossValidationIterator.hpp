@@ -6,15 +6,16 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LINEAR_SYSTEM_CROSS_VALIDATION_HPP
-#define LINEAR_SYSTEM_CROSS_VALIDATION_HPP
+#ifndef PECOS_UTIL_LINEAR_SYSTEM_CROSS_VALIDATION_ITERATOR_HPP
+#define PECOS_UTIL_LINEAR_SYSTEM_CROSS_VALIDATION_ITERATOR_HPP
 
 #include "CrossValidationIterator.hpp"
 #include "LinearSystemSolver.hpp"
 #include <memory>
 
-namespace Surrogates {
-  
+namespace Pecos {
+namespace util {
+
 /**
  * \class LinearSystemCrossValidationIteratorBase
  * \brief Base class for classes peforming k-folds cross validation of
@@ -290,6 +291,7 @@ public:
 
 std::shared_ptr<LinearSystemCrossValidationIterator> cast_to_linear_system_cross_validation_iterator(std::shared_ptr<LinearSystemCrossValidationIteratorBase> &solver);
 
-}// namespace Surrogates
+}  // namespace util
+}  // namespace Pecos
 
-#endif //LINEAR_SYSTEM_CROSS_VALIDATION_HPP
+#endif  // include guard

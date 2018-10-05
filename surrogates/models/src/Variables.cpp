@@ -8,16 +8,17 @@
 
 #include <Variables.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 Variables::Variables() : numVars_(0){}
 
 Variables::~Variables(){}
 
-void Variables::set_options(const OptionsList &opts){
+void Variables::set_options(const util::OptionsList &opts){
 }
 
-void Variables::get_options(OptionsList &opts){
+void Variables::get_options(util::OptionsList &opts){
 }
 
 void Variables::set_num_vars(int num_vars){
@@ -26,4 +27,5 @@ void Variables::set_num_vars(int num_vars){
 
 int Variables::num_vars(){return numVars_;}
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

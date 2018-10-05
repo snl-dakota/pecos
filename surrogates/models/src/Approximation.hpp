@@ -6,15 +6,16 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef APPROXIMATION_HPP
-#define APPROXIMATION_HPP
+#ifndef PECOS_SURROGATES_APPROXIMATION_HPP
+#define PECOS_SURROGATES_APPROXIMATION_HPP
 
 #include "Function.hpp"
 #include "VariableTransformation.hpp"
 #include "OptionsList.hpp"
 #include "teuchos_data_types.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 /**
 \class Approximation
@@ -59,6 +60,7 @@ public:
 
 }; // class Approximation
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // APPROXIMATION_HPP
+#endif  // include guard

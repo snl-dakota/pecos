@@ -6,12 +6,14 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef BOUNDED_VARIABLES_HPP
-#define BOUNDED_VARIABLES_HPP
+#ifndef PECOS_SURROGATES_BOUNDED_VARIABLES_HPP
+#define PECOS_SURROGATES_BOUNDED_VARIABLES_HPP
 
 #include <Variables.hpp>
 #include <teuchos_data_types.hpp>
-namespace Surrogates {
+
+namespace Pecos {
+namespace surrogates {
 
   /**
      \class BoundedVariables
@@ -44,7 +46,7 @@ namespace Surrogates {
      */
     void set_ranges(const RealVector &ranges);
 
-    void set_options(const OptionsList &opts);
+    void set_options(const util::OptionsList &opts);
 
   private:
 
@@ -57,6 +59,7 @@ namespace Surrogates {
 void define_homogeneous_ranges(int num_vars, Real lb, Real ub,
 			       RealVector &result); 
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // BOUNDED_VARIABLES_HPP
+#endif  // include guard

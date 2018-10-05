@@ -6,12 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LSQ_SOLVER_HPP
-#define LSQ_SOLVER_HPP
+#ifndef PECOS_UTIL_LSQ_SOLVER_HPP
+#define PECOS_UTIL_LSQ_SOLVER_HPP
 
 #include "LinearSystemSolver.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 //----------------------------------------------------------------
 /**
@@ -130,6 +131,8 @@ public:
   };
 };
 
-} // namespace Surrogates
 
-#endif // include guard
+}  // namespace util
+}  // namespace Pecos
+
+#endif  // include guard

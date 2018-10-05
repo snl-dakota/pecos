@@ -11,7 +11,14 @@
 #include "teuchos_data_types.hpp"
 #define disp( a ) std::cout << #a << ": " << ( a ) << std::endl
 
-namespace Surrogates {
+#define DLASWP_F77  F77_BLAS_MANGLE(dlaswp,DLASWP)
+extern "C" {
+  void DLASWP_F77( const int *N, double *A, const int *LDA, const int *K1, const int *K2, const int *IPIV, int * INCX );
+}
+
+
+namespace Pecos {
+namespace util {
 
 template<> void GEMV<int,double>(
       Teuchos::ETransp trans, bool conjugate_trans, double alpha,
@@ -1321,7 +1328,6 @@ void complete_pivoted_lu_factorization( const RealMatrix &A,
     }
 };
 
-} //namespace Surrogates
 
 /*
 Does not seem to work
@@ -1386,12 +1392,6 @@ void complete_pivoted_lu_factorization_lapack( RealMatrix &A,
     }
 }
 */
-#define DLASWP_F77  F77_BLAS_MANGLE(dlaswp,DLASWP)
-extern "C" {
-  void DLASWP_F77( const int *N, double *A, const int *LDA, const int *K1, const int *K2, const int *IPIV, int * INCX );
-}
-
-namespace Surrogates {
 
 void pivot_matrix_rows( const RealMatrix &A, const IntVector &pivots, int dir, 
 			bool fortran_indexing, RealMatrix &result )
@@ -1507,4 +1507,5 @@ void truncated_pivoted_lu_factorization( const RealMatrix &A,
   pivots.resize( iter+1 );
 }
 
-} //namespace Surrogates
+}  // namespace util
+}  // namespace Pecos

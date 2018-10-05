@@ -11,7 +11,8 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 void ind2sub( const IntVector &sizes, int index, int num_elems,
 	      IntVector &result )
@@ -136,7 +137,7 @@ void mesh_grid( const IntVector &num_pts_1d,
     {
       linspace( pointSets1D[d], domain[2*d], domain[2*d+1], num_pts_1d[d] );
     }
-  Surrogates::cartesian_product( pointSets1D, result, 1 );
+  cartesian_product( pointSets1D, result, 1 );
 };
 
 void get_multi_dimensional_polynomial_subspace_indices( IntMatrix &B,
@@ -235,7 +236,7 @@ void get_multi_dimensional_polynomial_indices( int num_dims, int degree,
 };
 
 void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
-	      std::vector<Surrogates::lp_norm> error_norms, RealMatrix &error,
+	      std::vector<lp_norm> error_norms, RealMatrix &error,
 	      IntVector &activeColumns, bool normalise )
 {
   Teuchos::BLAS<int, Real> blas;
@@ -244,7 +245,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
     throw( std::runtime_error( "lp_error() Matrix sizes do not match." ) );
 
   if ( activeColumns.length() == 0 )
-    Surrogates::range( activeColumns, 0, approximateValues.numCols(), 1 );
+    range( activeColumns, 0, approximateValues.numCols(), 1 );
 
   RealMatrix diff( referenceValues );
   diff -= approximateValues;
@@ -257,7 +258,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
     {
       switch ( error_norms[j] )
 	{
-          case Surrogates::linf_norm:
+          case linf_norm:
 	  {
 	    // Infinity norm
 	    for ( int i = 0; i < activeColumns.length(); i++ )
@@ -275,14 +276,14 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 		    // col
 		    Real minima, maxima;
 		    Real *refCol = referenceValues[colNumber];
-		    minima = refCol[Surrogates::argmin( M, refCol )];
-		    maxima = refCol[Surrogates::argmax( M, refCol )];
+		    minima = refCol[argmin( M, refCol )];
+		    maxima = refCol[argmax( M, refCol )];
 		    error(i,j) /= ( 0.5 * ( maxima - minima ) );
 		  }
 	      }
 	    break;
 	  }
-          case Surrogates::l1_norm:
+          case l1_norm:
 	  {
 	    // L1 norm
 	    for ( int i = 0; i < activeColumns.length(); i++ )
@@ -295,7 +296,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 	      }
 	    break;
 	  }
-          case Surrogates::l2_norm:
+          case l2_norm:
 	  {
 	    // L2 norm
 	    for ( int i = 0; i < activeColumns.length(); i++ )
@@ -310,7 +311,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 		    // Normalise by the standard deviation of the data in
 		    // col
 		    Real *refCol = referenceValues[colNumber];
-		    Real stddev = std::sqrt( Surrogates::variance( M, refCol ) );
+		    Real stddev = std::sqrt( variance( M, refCol ) );
 		    error(i,j) /= stddev;
 		  }
 	      }
@@ -322,7 +323,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 
   Real mean( int n, Real *x )
 {
-  return Surrogates::sum( n, x ) / (Real)n;
+  return sum( n, x ) / (Real)n;
 };
 
 Real variance( int n, Real *x, int dof )
@@ -438,9 +439,9 @@ void compute_hyperbolic_level_subdim_indices( int num_dims, int level,
       for ( int i = 0; i < level_data.numCols(); i++ )
 	{
 	  IntVector index( Teuchos::View, level_data[i], num_active_dims );
-	  if ( Surrogates::num_nonzeros( index ) == num_active_dims )
+	  if ( num_nonzeros( index ) == num_active_dims )
 	    {
-	      Real p_norm = Surrogates::pnorm( index, p );
+	      Real p_norm = pnorm( index, p );
 	      if ( ( p_norm > level-1 + eps ) &&( p_norm < level + eps ) )
 		{
 		  if ( num_indices >= indices.numCols() )
@@ -495,7 +496,7 @@ void compute_hyperbolic_level_indices( int num_dims, int level, Real p,
 	  for ( int i = 0; i < dims_comb.numCols(); i++ )
 	    {
 	      IntVector index( Teuchos::View, dims_comb[i], num_dims );
-	      if ( Surrogates::num_nonzeros( index ) == d )
+	      if ( num_nonzeros( index ) == d )
 		{
 		  IntVector col( Teuchos::View, dim_indices[num_dim_indices],
 				 num_dims );
@@ -513,7 +514,7 @@ void compute_hyperbolic_level_indices( int num_dims, int level, Real p,
 	    {
 	      IntVector dim_index( Teuchos::View, dim_indices[i], num_dims );
 	      IntVector I;
-	      Surrogates::nonzero( dim_index, I );
+	      nonzero( dim_index, I );
 	      for ( int j = 0; j < level_indices.numCols(); j++ )
 		{
 		  IntVector index( Teuchos::View, new_indices[num_new_indices],
@@ -618,7 +619,9 @@ void tensor_product_indices(const IntVector levels, IntMatrix &indices){
   std::vector< IntVector > index_sets_1d;
   index_sets_1d.resize(num_dims);
   for (int d=0; d<num_dims; ++d)
-    Surrogates::range( index_sets_1d[d], 0, levels[d]+1, 1 );
-  Surrogates::cartesian_product( index_sets_1d, indices, 1 );
+    range( index_sets_1d[d], 0, levels[d]+1, 1 );
+  cartesian_product( index_sets_1d, indices, 1 );
 }
-} //namespace Surrogates
+
+}  // namespace util
+}  // namespace Pecos

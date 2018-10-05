@@ -8,13 +8,14 @@
 
 #include<BoundedVariables.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 BoundedVariables::BoundedVariables(){}
 
 BoundedVariables::~BoundedVariables(){}
 
-void BoundedVariables::set_options(const OptionsList &opts){
+void BoundedVariables::set_options(const util::OptionsList &opts){
 
   //set_ranges(ranges);
 }
@@ -42,4 +43,5 @@ void define_homogeneous_ranges(int num_vars, Real lb, Real ub,
   }
 }
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

@@ -10,7 +10,8 @@
 #include "linear_solvers.hpp"
 #include "LSQCrossValidationIterator.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 void CrossValidatedSolver::unnormalize_coefficients(const RealVector &column_norms){
  throw(std::runtime_error("We never need to do this because this is handled internally by call to the linear solver we are wrapping."));
@@ -129,4 +130,6 @@ std::shared_ptr<CrossValidatedSolver> cast_to_cross_validated_solver(std::shared
   return solver_cast;
 }
 
-} // namespaces Surrogates
+
+}  // namespace util
+}  // namespace Pecos

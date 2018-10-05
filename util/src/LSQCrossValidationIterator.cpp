@@ -8,7 +8,8 @@
 
 #include "LSQCrossValidationIterator.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 void LSQCrossValidationIterator::
 lsq_lko_cross_validation(const RealMatrix &A, const RealMatrix &AtA_inv,
@@ -169,4 +170,6 @@ std::shared_ptr<LSQCrossValidationIterator> cast_to_least_squares_cross_validati
   return solver_cast;
 }
   
-} // namespace surrogates
+
+}  // namespace util
+}  // namespace Pecos

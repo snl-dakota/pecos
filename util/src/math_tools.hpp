@@ -13,8 +13,8 @@
  * @brief Miscelaneous math functions.
  */
 
-#ifndef MATH_TOOLS_HPP
-#define MATH_TOOLS_HPP
+#ifndef PECOS_UTIL_MATH_TOOLS_HPP
+#define PECOS_UTIL_MATH_TOOLS_HPP
 
 #include "linear_algebra.hpp"
 #include "teuchos_data_types.hpp"
@@ -26,7 +26,9 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "OptionsList.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
+
 /**
  * \brief Map a scalar index of a flat 1D array to the equivalent
  *        d-dimensional index
@@ -1106,7 +1108,8 @@ T get_enum_enforce_existance(const OptionsList &opts,
 void tensor_product_indices(const IntVector levels,
 			    IntMatrix &result);
 
-} // namespace Surrogates
 
+}  // namespace util
+}  // namespace Pecos
 
-#endif
+#endif  // include guard

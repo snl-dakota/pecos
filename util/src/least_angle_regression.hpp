@@ -6,13 +6,14 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef LEAST_ANGLE_REGRESSION_HPP
-#define LEAST_ANGLE_REGRESSION_HPP
+#ifndef PECOS_UTIL_LEAST_ANGLE_REGRESSION_HPP
+#define PECOS_UTIL_LEAST_ANGLE_REGRESSION_HPP
 
-#include "linear_algebra.hpp"
+#include "teuchos_data_types.hpp"
 #include <set>
 
-namespace Surrogates {
+namespace Pecos {
+namespace util {
 
 Real find_max_correlation( const RealMatrix &correlation,
 			   const std::set<int> &inactive_indices,
@@ -141,6 +142,7 @@ void least_angle_regression( const RealMatrix &A,
 			     bool store_history,
 			     int memory_chunk_size);
 
-} // namespace Surrogates
+}  // namespace util
+}  // namespace Pecos
 
-#endif //LEAST_ANGLE_REGRESSION_HPP
+#endif  // include guard

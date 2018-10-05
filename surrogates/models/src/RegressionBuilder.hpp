@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef REGRESSION_BUILDER_HPP
-#define REGRESSION_BUILDER_HPP
+#ifndef PECOS_SURROGATES_REGRESSION_BUILDER_HPP
+#define PECOS_SURROGATES_REGRESSION_BUILDER_HPP
 
 #include "SurrogateBuilder.hpp"
 #include "math_tools.hpp"
@@ -19,14 +19,16 @@
 #include <boost/random/uniform_real.hpp>
 #include <VariableTransformation.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
+
 /** \brief Solve a regression problem for a given set of
     samples and values and set the coefficients of the
     approximation.
  */
 void solve_regression(const RealMatrix &samples,
 		      const RealMatrix &values,
-		      OptionsList &opts,
+		      util::OptionsList &opts,
 		      Approximation &approx);
 
 /** \brief helper function for gen_uniform_samples. \odo remove when gen_uniform_samples is removed*/
@@ -57,10 +59,11 @@ public:
    * \param[in] opts Spefications used to build the surrogate
    *
    */
-  virtual void build(OptionsList &opts, Approximation &approx,
-                     OptionsList &result);
+  virtual void build(util::OptionsList &opts, Approximation &approx,
+                     util::OptionsList &result);
 };
 
-}; // namespace surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif //REGRESSION_BUILDER_HPP
+#endif  // include guard

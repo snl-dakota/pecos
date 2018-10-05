@@ -6,11 +6,11 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef SURROGATE_FACTORY_HPP
-#define SURROGATE_FACTORY_HPP
+#ifndef PECOS_SURROGATES_SURROGATE_FACTORY_HPP
+#define PECOS_SURROGATES_SURROGATE_FACTORY_HPP
 
-
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
   
 enum ApproxType {PCE,GP};
 
@@ -50,8 +50,7 @@ class SurrogateFactory {
   virtual ~SurrogateFactory(){};
 }
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif //SURROGATE_FACTORY_HPP
-
-  
+#endif  // include guard

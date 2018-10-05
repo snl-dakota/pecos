@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
-#define POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
+#ifndef PECOS_SURROGATES_POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
+#define PECOS_SURROGATES_POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
 
 #include "PolyApproximation.hpp"
 #include "BasisApproximation.hpp"
@@ -16,7 +16,8 @@
 #include "pecos_data_types.hpp"
 #include "SharedBasisApproxData.hpp"
 
-namespace Surrogates{
+namespace Pecos {
+namespace surrogates {
 
 /**
 \class PolynomialChaosExpansionWrap
@@ -32,7 +33,7 @@ Pecos::SharedBasisApproxData sharedData_;
 Pecos::BasisApproximation poly_;
 
 /// Model specific options
-OptionsList opts_;
+util::OptionsList opts_;
 
 /// The number of QoI (outputs) of the vector-valued function
 int numQOI_;
@@ -50,6 +51,7 @@ public:
 
 }; // class PolynomialChaosExpansionWrap
 
-} // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
+#endif  // include guard

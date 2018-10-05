@@ -6,13 +6,15 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef AFFINE_VARIABLE_TRANSFORMATION_HPP
-#define AFFINE_VARIABLE_TRANSFORMATION_HPP
+#ifndef PECOS_SURROGATES_AFFINE_VARIABLE_TRANSFORMATION_HPP
+#define PECOS_SURROGATES_AFFINE_VARIABLE_TRANSFORMATION_HPP
 
 #include <BoundedVariables.hpp>
 #include <teuchos_data_types.hpp>
 #include <VariableTransformation.hpp>
-namespace Surrogates {
+
+namespace Pecos {
+namespace surrogates {
 
   /**
      \class AffineVariableTransformation
@@ -27,7 +29,7 @@ namespace Surrogates {
 
   class AffineVariableTransformation : public VariableTransformation{
   protected:
-    std::shared_ptr<Surrogates::BoundedVariables> boundedVars_;
+    std::shared_ptr<BoundedVariables> boundedVars_;
 
   public:
     AffineVariableTransformation();
@@ -35,7 +37,7 @@ namespace Surrogates {
     virtual ~AffineVariableTransformation();
 
     /** \copydoc VariableTransformation::set_variables() */
-    void set_variables(const std::shared_ptr<Surrogates::Variables> &vars);
+    void set_variables(const std::shared_ptr<Variables> &vars);
 
     /** \copydoc VariableTransformation::map_samples_to_user_space() */
     virtual void map_samples_to_user_space(const RealMatrix &samples,
@@ -61,10 +63,11 @@ namespace Surrogates {
 					   RealMatrix &transformed_hessian) const{throw( std::runtime_error("Not yet implemented") );};
 
     /** \copydoc VariableTransformation::set_options() */
-    virtual void set_options(OptionsList &opts){};
+    virtual void set_options(util::OptionsList &opts){};
 
   };
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // AFFINE_VARIABLE_TRANSFORMATION_HPP
+#endif  // include guard

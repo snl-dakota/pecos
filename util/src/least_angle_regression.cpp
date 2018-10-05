@@ -9,7 +9,9 @@
 #include "least_angle_regression.hpp"
 #include "math_tools.hpp"
 #include "LinearSystemSolver.hpp" // include regressiontype enums
-namespace Surrogates {
+
+namespace Pecos {
+namespace util {
 
   Real find_max_correlation( const RealMatrix &correlation,
                              const std::set<int> &inactive_indices,
@@ -614,4 +616,5 @@ namespace Surrogates {
     }
   };
 
-} // namespase Surrogates
+}  // namespace util
+}  // namespace Pecos

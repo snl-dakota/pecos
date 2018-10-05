@@ -6,13 +6,15 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef CROSS_VALIDATION_ITERATOR_HPP
-#define CROSS_VALIDATION_ITERATOR_HPP
+#ifndef PECOS_UTIL_CROSS_VALIDATION_ITERATOR_HPP
+#define PECOS_UTIL_CROSS_VALIDATION_ITERATOR_HPP
 
 #include "math_tools.hpp"
 #include "OptionsList.hpp"
 #include "teuchos_data_types.hpp"
-namespace Surrogates {
+
+namespace Pecos {
+namespace util {
 
   /**
    * \class CrossValidationIterator
@@ -209,6 +211,7 @@ public:
 
 };
 
-} //namespace Surrogates
+}  // namespace util
+}  // namespace Pecos
 
-#endif //CROSS_VALIDATION_ITERATOR_HPP
+#endif  // include guard

@@ -6,13 +6,15 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef ALEATORY_VARIABLE_TRANSFORMATION_HPP
-#define ALEATORY_VARIABLE_TRANSFORMATION_HPP
+#ifndef PECOS_SURROGATES_ALEATORY_VARIABLE_TRANSFORMATION_HPP
+#define PECOS_SURROGATES_ALEATORY_VARIABLE_TRANSFORMATION_HPP
 
 #include "BoundedVariables.hpp"
 #include "teuchos_data_types.hpp"
 #include "VariableTransformation.hpp"
-namespace Surrogates {
+
+namespace Pecos {
+namespace surrogates {
 
   /**
      \class AleatoryVariableTransformation
@@ -71,6 +73,8 @@ namespace Surrogates {
 
   };
 #endif // DEPENDENCIES_NOT_IMPLEMENTED
-} // namespace Surrogates
 
-#endif // ALEATORY_VARIABLE_TRANSFORMATION_HPP
+}  // namespace surrogates
+}  // namespace Pecos
+
+#endif  // include guard

@@ -9,7 +9,8 @@
 #include "PolynomialChaosExpansionWrap.hpp"
 #include "RegressOrthogPolyApproximation.hpp"
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 PolynomialChaosExpansionWrap::PolynomialChaosExpansionWrap(){
   size_t num_vars=2, degree=2;
@@ -29,4 +30,5 @@ generate_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
   poly_rep->build_linear_system(basis_matrix);
 }
 
-}// namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos

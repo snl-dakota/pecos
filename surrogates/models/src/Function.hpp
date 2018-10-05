@@ -6,8 +6,8 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef FUNCTION_HPP
-#define FUNCTION_HPP
+#ifndef PECOS_SURROGATES_FUNCTION_HPP
+#define PECOS_SURROGATES_FUNCTION_HPP
 
 #include <string>
 #include <vector>
@@ -16,7 +16,8 @@
 #include <teuchos_data_types.hpp>
 #include <math_tools.hpp>
 
-namespace Surrogates{
+namespace Pecos {
+namespace surrogates {
 
 /**
 \class Function
@@ -38,7 +39,7 @@ class)
 class Function{
 protected:
   /// Model specific options
-  OptionsList opts_;
+  util::OptionsList opts_;
 
   /// The number of QoI (outputs) of the vector-valued function
   int numQOI_;
@@ -106,17 +107,18 @@ public:
 
   /**\brief set options specific to the model
    */
-  virtual void set_options(const OptionsList &opts);
+  virtual void set_options(const util::OptionsList &opts);
 
   /**\brief get the model specific options
    */
-  virtual void get_options(OptionsList &opts);
+  virtual void get_options(util::OptionsList &opts);
 
 }; // class Function
 
-}; // namespace Surrogates
-
-#endif // FUNCTION_HPP
-
 // Note see http://www.cplusplus.com/doc/tutorial/typecasting/
 // for information on type casting and typeid
+
+}  // namespace surrogates
+}  // namespace Pecos
+
+#endif  // include guard

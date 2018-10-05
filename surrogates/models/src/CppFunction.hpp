@@ -6,11 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#ifndef CPPFUNCTION_HPP
-#define CPPFUNCTION_HPP
+#ifndef PECOS_SURROGATES_CPP_FUNCTION_HPP
+#define PECOS_SURROGATES_CPP_FUNCTION_HPP
+
 #include <Function.hpp>
 
-namespace Surrogates {
+namespace Pecos {
+namespace surrogates {
 
 /**
 \class CppFunction
@@ -28,7 +30,7 @@ public:
 
   void set_function(
      void (*function)(const Real* sample, Real* func_vals,
-		      const OptionsList &opts));
+		      const util::OptionsList &opts));
 
   /** \copydoc Function::value() */
   void value(const RealMatrix &samples, RealMatrix &values_out);
@@ -46,10 +48,11 @@ public:
 protected:
   /// The function \f$f(x)\f$
   void (*targetFunction_)(const Real*, Real*,
-		       const OptionsList &opts);
+		       const util::OptionsList &opts);
 
 }; // class CppFunction
 
-}; // namespace Surrogates
+}  // namespace surrogates
+}  // namespace Pecos
 
-#endif // CPPFUNCTION_HPP
+#endif  // include guard
