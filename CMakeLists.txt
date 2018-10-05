@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.1)
 
 set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_arch
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config_tests
   ${CMAKE_MODULE_PATH}
 )
 

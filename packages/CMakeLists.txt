@@ -1,9 +1,9 @@
 include(ManageRelocatablePackage)
-include(FftwExternalProject)
+#include(FftwExternalProject)
 
 if(HAVE_FFT)
   ManageRelocatablePackage(DFFTPACK dfftpack)
-  FftwExternalProject()
+  #FftwExternalProject()
 endif(HAVE_FFT)
 
 ManageRelocatablePackage(LHS LHS)
