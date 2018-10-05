@@ -1,3 +1,11 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 import matplotlib.pyplot as plt, numpy
 def cross_validated_degree_bar_plot(cv_score_per_degree, poly_degrees):
     num_rhs = cv_score_per_degree.shape[1]

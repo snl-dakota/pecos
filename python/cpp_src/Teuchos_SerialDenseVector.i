@@ -1,3 +1,11 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 // Teuchos_SerialDenseVector.i is a SWIG interface file that provides SWIG
 // directives to handle Teuchos SerialDenseVector types.  This class is not
 // wrapped, but instead typemaps are defined so that the python user
