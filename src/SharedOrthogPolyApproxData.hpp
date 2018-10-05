@@ -55,6 +55,12 @@ public:
   ~SharedOrthogPolyApproxData();
 
   //
+  //- Heading: Virtual function redefinitions
+  //
+
+  bool push_available();
+
+  //
   //- Heading: Member functions
   //
 
@@ -78,6 +84,8 @@ public:
   const UShortArray& keyed_expansion_order(const UShortArray& key) const;
   /// set active approxOrder
   void expansion_order(const UShortArray& order);
+  /// set active approxOrder
+  void expansion_order(unsigned short new_order, bool one_sided = false);
 
   /// uniformly increment active approxOrder
   void increment_order();
@@ -136,6 +144,7 @@ protected:
   void clear_keys();
 
   void allocate_data();
+
   void pre_combine_data();
   //void post_combine_data();
   void combined_to_active(bool clear_combined = true);
@@ -363,7 +372,7 @@ protected:
   std::map<UShortArray, SizetArray> tpMultiIndexMapRef;
 
   /// popped instances of either multiIndex or tpMultiIndex (depending
-  /// on exp soln approach) that were computed but not selected
+  /// on expansion solution approach) that were computed but not selected
   std::map<UShortArray, std::deque<UShort2DArray> > poppedMultiIndex;
   /// popped instances of tpMultiIndexMap that were computed but not selected
   std::map<UShortArray, std::deque<SizetArray> > poppedMultiIndexMap;
@@ -481,9 +490,25 @@ keyed_expansion_order(const UShortArray& key) const
 inline void SharedOrthogPolyApproxData::
 expansion_order(const UShortArray& order)
 {
-  if (approxOrdIter->second != order) {
-    approxOrdIter->second = order;
+  UShortArray& approx_order = approxOrdIter->second;
+  if (approx_order != order) {
+    approx_order = order;
     //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
+  }
+}
+
+
+inline void SharedOrthogPolyApproxData::
+expansion_order(unsigned short new_order, bool one_sided)
+{
+  UShortArray& approx_order = approxOrdIter->second;
+  if (approx_order.empty() || !one_sided)
+    approx_order.assign(numVars, new_order);
+  else {
+    size_t i, num_ao = approx_order.size();
+    for (i=0; i<num_ao; ++i)
+      if (new_order > approx_order[i])
+	approx_order[i] = new_order;
   }
 }
 

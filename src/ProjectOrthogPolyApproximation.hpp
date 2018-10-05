@@ -128,10 +128,12 @@ private:
   /// the set of tensor-product contributions to expansionCoeffGrads
   std::map<UShortArray, RealMatrixArray> tpExpansionCoeffGrads;
 
-  /// popped instances of tpExpansionCoeffs that were computed but not selected
-  std::map<UShortArray, RealVectorDeque> poppedTPExpCoeffs;
-  /// popped tpExpansionCoeffGrads instances that were computed but not selected
-  std::map<UShortArray, RealMatrixDeque> poppedTPExpCoeffGrads;
+  /// popped instances of either expansionCoeffs or tpExpansionCoeffs,
+  /// depending on exp soln approach, that were computed but not selected
+  std::map<UShortArray, RealVectorDeque> poppedExpCoeffs;
+  /// popped instances of either expansionCoeffGrads or tpExpansionCoeffGrads,
+  /// depending on exp soln approach, that were computed but not selected
+  std::map<UShortArray, RealMatrixDeque> poppedExpCoeffGrads;
 };
 
 

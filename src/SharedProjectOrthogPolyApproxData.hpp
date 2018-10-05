@@ -67,8 +67,6 @@ public:
   void increment_data();
   void decrement_data();
 
-  bool push_available();
-
   void pre_push_data();
   void post_push_data();
 

@@ -164,22 +164,6 @@ void SharedRegressOrthogPolyApproxData::decrement_data()
 }
 
 
-bool SharedRegressOrthogPolyApproxData::push_available()
-{
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_trial_available(sg_driver->trial_set());
-    break;
-  }
-  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
-  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
-  default:
-    return !poppedMultiIndex[activeKey].empty(); break;
-  }
-}
-
-
 void SharedRegressOrthogPolyApproxData::pre_push_data()
 {
   // TO DO: ADAPTED_BASIS_GENERALIZED case ???

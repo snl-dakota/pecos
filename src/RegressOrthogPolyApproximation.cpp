@@ -2267,7 +2267,7 @@ least_interpolation( RealMatrix &pts, RealMatrix &vals )
 			 data_rep->pivotVect, k );
     // update approxOrder (for use in, e.g., combine_coefficients())
     int last_index = k.length() - 1, new_order = k[last_index];
-    data_rep->update_approx_order(new_order);
+    data_rep->expansion_order(new_order, true);
     // update sparseIndices and shared multiIndex from local_multi_index
     // Note: sparseIndices definition does not involve exp coeffs in this case
     size_t local_mi_ref;

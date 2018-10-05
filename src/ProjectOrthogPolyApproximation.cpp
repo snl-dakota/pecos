@@ -63,7 +63,7 @@ void ProjectOrthogPolyApproximation::integration_checks()
     abort_handler(-1);
   }
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  IntegrationDriver*  driver_rep = data_rep->driverRep;
 
   if (!driver_rep) {
     PCerr << "Error: pointer to integration driver required in "
@@ -88,60 +88,26 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
-  // Array sizing can be divided into two parts:
-  // > data used in all cases (size in allocate_arrays())
-  // > data not used in expansion import case (size here)
-  allocate_arrays();
-
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
 #ifdef DEBUG
   data_rep->gradient_check();
 #endif // DEBUG
 
-  // calculate polynomial chaos coefficients
-  size_t i, num_v = sharedDataRep->numVars,
-    num_data_pts = modSurrData.points();
-  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    // verify quad_order stencil matches num_data_pts
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
-    if (quad_order.size() != num_v) {
-      PCerr << "Error: quadrature order array is not consistent with number of "
-	    << "variables (" << num_v << ")\n       in ProjectOrthogPoly"
-	    << "Approximation::compute_coefficients()." << std::endl;
-      abort_handler(-1);
-    }
-    size_t num_colloc_pts = 1;
-    for (i=0; i<num_v; ++i)
-      num_colloc_pts *= quad_order[i];
-    if (num_data_pts != num_colloc_pts) {
-      PCerr << "Error: number of current points (" << num_data_pts
-	    << ") is not consistent with\n       quadrature data in Project"
-	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
-      abort_handler(-1);
-    }
+  // Size coefficient and Sobol arrays
+  allocate_arrays();
 
-    // single expansion integration
+  // calculate expansion coefficients
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: // single expansion integration
     integration_checks();
     integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
 			modSurrData.response_data(),
-			tpq_driver->type1_weight_sets(),
+			data_rep->driver()->type1_weight_sets(),
 			expCoeffsIter->second, expCoeffGradsIter->second);
     break;
-  }
-  case CUBATURE: {
-    // single expansion integration
-    integration_checks();
-    CubatureDriver* cub_driver = (CubatureDriver*)data_rep->driver();
-    integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
-			modSurrData.response_data(),
-			cub_driver->type1_weight_sets(),
-			expCoeffsIter->second, expCoeffGradsIter->second);
-    break;
-  }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
+    integration_checks();
     RealVector& exp_coeffs      =     expCoeffsIter->second;
     RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
     // multiple tensor expansion integrations
@@ -149,7 +115,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     if (expansionCoeffGradFlag) exp_coeff_grads = 0.;
     CombinedSparseGridDriver* csg_driver
       = (CombinedSparseGridDriver*)data_rep->driver();
-    const IntArray& sm_coeffs = csg_driver->smolyak_coefficients();
+    const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
     const UShortArray&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
     const Sizet2DArray&  tp_mi_map = data_rep->tpMultiIndexMap[key];
@@ -185,7 +151,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     break;
   }
   case SAMPLING:
-    modSurrData.data_checks();
+    modSurrData.data_checks(); // defines failed resp map
     expectation();
     break;
   default:
@@ -211,21 +177,21 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
   // resize component Sobol' array sizes to pick up new interaction terms
+  // (based on size of data_rep->sobolIndexMap)
   allocate_component_sobol();
 
+  // for use in decrement_coefficients()
+  prevExpCoeffs     = expCoeffsIter->second;     // copy
+  prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
-    break;
-  }
   case INCREMENTAL_SPARSE_GRID: {
     // tpMultiIndex{,Map,MapRef} already updated in
     // SharedProjectOrthogPolyApproxData::increment_data()
     const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
-    size_t last_tp_index = tp_exp_coeffs.size(); // before append(s)
+    size_t start_append = tp_exp_coeffs.size();
     SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
 
     switch (data_rep->expConfigOptions.refinementControl) {
@@ -234,21 +200,18 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
       RealMatrix rm; tp_exp_coeff_grads.push_back(rm);
 
       // form tp_data_pts, tp_wts using collocKey et al.
-      integration_data(last_tp_index, tp_data_vars, tp_data_resp, tp_wts);
+      integration_data(start_append, tp_data_vars, tp_data_resp, tp_wts);
       // form trial expansion coeffs/grads
-      integrate_expansion(tp_mi[last_tp_index], tp_data_vars, tp_data_resp,
-			  tp_wts, tp_exp_coeffs[last_tp_index],
-			  tp_exp_coeff_grads[last_tp_index]);
+      integrate_expansion(tp_mi[start_append], tp_data_vars, tp_data_resp,
+			  tp_wts, tp_exp_coeffs[start_append],
+			  tp_exp_coeff_grads[start_append]);
       break;
     }
-
-    // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-
-    case UNIFORM_CONTROL: {
+    default: { // multiple index sets from iso/aniso sparse grid refinement
       size_t i, num_tp_mi = tp_mi.size();
       tp_exp_coeffs.resize(num_tp_mi);  tp_exp_coeff_grads.resize(num_tp_mi);
       // loop over tensor-products, forming sub-expansions, and sum them up
-      for (i=last_tp_index; i<num_tp_mi; ++i) {
+      for (i=start_append; i<num_tp_mi; ++i) {
 	// form tp_data_vars, tp_data_resp, tp_wts using collocKey et al.
 	integration_data(i, tp_data_vars, tp_data_resp, tp_wts);
 	// form tp expansion coeffs
@@ -259,14 +222,17 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
     }
     }
 
-    // for use in decrement_coefficients()
-    prevExpCoeffs     = expCoeffsIter->second;     // copy
-    prevExpCoeffGrads = expCoeffGradsIter->second; // copy
-
     // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-    append_tensor_expansions(last_tp_index);
+    append_tensor_expansions(start_append);
     break;
   }
+  case QUADRATURE: case CUBATURE:
+    integration_checks();
+    integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
+			modSurrData.response_data(),
+			data_rep->driver()->type1_weight_sets(),
+			expCoeffsIter->second, expCoeffGradsIter->second);
+    break;
   }
 
   clear_computed_bits();
@@ -283,52 +249,49 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   // then restores active key
   update_active_iterators(key);
 
+  if (save_data)
+    switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+    case INCREMENTAL_SPARSE_GRID: {
+      RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+      RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+
+      switch (data_rep->expConfigOptions.refinementControl) {
+      case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+	// reset tensor-product bookkeeping and save restorable data
+	poppedExpCoeffs[key].push_back(tp_exp_coeffs.back());
+	poppedExpCoeffGrads[key].push_back(tp_exp_coeff_grads.back());
+	tp_exp_coeffs.pop_back();  tp_exp_coeff_grads.pop_back();
+	break;
+      default: { // multiple index sets from iso/aniso sparse grid refinement
+	const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
+	RealVectorDeque& pop_exp_coeffs      = poppedExpCoeffs[key];
+	RealMatrixDeque& pop_exp_coeff_grads = poppedExpCoeffGrads[key];
+	size_t i, num_tp_mi = tp_mi.size(), num_tp_exp = tp_exp_coeffs.size();
+	RealVectorArray::iterator tp_ec_it  = tp_exp_coeffs.begin();
+	RealMatrixArray::iterator tp_ecg_it = tp_exp_coeff_grads.begin();
+	std::advance(tp_ec_it, num_tp_mi);  std::advance(tp_ecg_it, num_tp_mi);
+	pop_exp_coeffs.insert(pop_exp_coeffs.end(), tp_ec_it,
+			      tp_exp_coeffs.end());
+	pop_exp_coeff_grads.insert(pop_exp_coeff_grads.end(), tp_ecg_it,
+				   tp_exp_coeff_grads.end());
+	tp_exp_coeffs.resize(num_tp_mi);  tp_exp_coeff_grads.resize(num_tp_mi);
+	break;
+      }
+      }
+      break;
+    }
+    case QUADRATURE: case CUBATURE:
+      poppedExpCoeffs[key].push_back(expCoeffsIter->second);
+      poppedExpCoeffGrads[key].push_back(expCoeffGradsIter->second);
+      break;
+    }
+
   // reset expansion{Coeffs,CoeffGrads}
   expCoeffsIter->second     = prevExpCoeffs;
   expCoeffGradsIter->second = prevExpCoeffGrads;
   // don't update Sobol' array sizes for decrement, push, or finalize
 
   clear_computed_bits();
-
-  if (!save_data) return;
-
-  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
-    break;
-  }
-  case INCREMENTAL_SPARSE_GRID: {
-    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
-    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
-
-    switch (data_rep->expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-      // reset tensor-product bookkeeping and save restorable data
-      poppedTPExpCoeffs[key].push_back(tp_exp_coeffs.back());
-      poppedTPExpCoeffGrads[key].push_back(tp_exp_coeff_grads.back());
-      tp_exp_coeffs.pop_back();  tp_exp_coeff_grads.pop_back();
-      break;
-    }
-
-    // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-
-    case UNIFORM_CONTROL: {
-      const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
-      RealVectorDeque& pop_tp_coeffs      = poppedTPExpCoeffs[key];
-      RealMatrixDeque& pop_tp_coeff_grads = poppedTPExpCoeffGrads[key];
-      size_t i, num_tp_mi = tp_mi.size(), num_tp_exp = tp_exp_coeffs.size();
-      for (i=num_tp_mi; i<num_tp_exp; ++i) {
-	pop_tp_coeffs.push_back(tp_exp_coeffs[i]);
-	pop_tp_coeff_grads.push_back(tp_exp_coeff_grads[i]);
-      }
-      tp_exp_coeffs.resize(num_tp_mi);  tp_exp_coeff_grads.resize(num_tp_mi);
-      break;
-    }
-    }
-    break;
-  }
-  }
 }
 
 
@@ -341,59 +304,54 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
 
+  // for use in decrement; both pushes and new increments can be popped
+  prevExpCoeffs     = expCoeffsIter->second;     // copy
+  prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
+  RealVectorDeque& pop_exp_coeffs      = poppedExpCoeffs[key];
+  RealMatrixDeque& pop_exp_coeff_grads = poppedExpCoeffGrads[key];
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
-    break;
-  }
   case INCREMENTAL_SPARSE_GRID: {
-    RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-    RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
-    RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-    RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
-    size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
+    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+    size_t start_append = tp_exp_coeffs.size(); // before push_back
 
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // move previous expansion data to current expansion
       size_t index_star = data_rep->pushIndex;
 
-      RealVectorDeque::iterator cit = pop_tp_exp_coeffs.begin();
-      RealMatrixDeque::iterator git = pop_tp_exp_coeff_grads.begin();
+      RealVectorDeque::iterator cit = pop_exp_coeffs.begin();
+      RealMatrixDeque::iterator git = pop_exp_coeff_grads.begin();
       std::advance(cit, index_star); std::advance(git, index_star);
 
       tp_exp_coeffs.push_back(*cit);
       tp_exp_coeff_grads.push_back(*git);
-      pop_tp_exp_coeffs.erase(cit); pop_tp_exp_coeff_grads.erase(git);
+      pop_exp_coeffs.erase(cit); pop_exp_coeff_grads.erase(git);
       break;
     }
-
-    // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-
-    case UNIFORM_CONTROL: {
-      size_t i, num_pop = pop_tp_exp_coeffs.size();
-      for (i=0; i<num_pop; ++i) {
-	tp_exp_coeffs.push_back(pop_tp_exp_coeffs[i]);
-	tp_exp_coeff_grads.push_back(pop_tp_exp_coeff_grads[i]);
-      }
-      pop_tp_exp_coeffs.clear();  pop_tp_exp_coeff_grads.clear();
+    default: // multiple index sets from iso/aniso sparse grid refinement
+      tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_exp_coeffs.begin(),
+			   pop_exp_coeffs.end());
+      tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),
+				pop_exp_coeff_grads.begin(),
+				pop_exp_coeff_grads.end());
+      pop_exp_coeffs.clear();  pop_exp_coeff_grads.clear();
       break;
     }
-    }
-
-    // don't update Sobol' array sizes for decrement, push, or finalize
-
-    // for use in decrement_coefficients(); both pushes and new increments
-    // can be popped
-    prevExpCoeffs     = expCoeffsIter->second;     // copy
-    prevExpCoeffGrads = expCoeffGradsIter->second; // copy
 
     // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-    append_tensor_expansions(last_tp_index);
+    append_tensor_expansions(start_append);
     break;
   }
+  case QUADRATURE: case CUBATURE:
+    expCoeffsIter->second     = pop_exp_coeffs.back();
+    expCoeffGradsIter->second = pop_exp_coeff_grads.back();
+    pop_exp_coeffs.pop_back();  pop_exp_coeff_grads.pop_back();
+    break;    
   }
+
+  // don't update Sobol' array sizes for decrement, push, or finalize
 
   clear_computed_bits();
 }
@@ -408,44 +366,33 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
 
+  RealVectorDeque& pop_exp_coeffs      = poppedExpCoeffs[key];
+  RealMatrixDeque& pop_exp_coeff_grads = poppedExpCoeffGrads[key];
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
-    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
-    // *** TO DO ***
+  case INCREMENTAL_SPARSE_GRID: {
+    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+    // don't update Sobol' array sizes for decrement, push, or finalize
+    size_t start_append = tp_exp_coeffs.size(); // before insertion
+    // move previous expansion data to current expansion
+    tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_exp_coeffs.begin(),
+			 pop_exp_coeffs.end());
+    tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),
+			      pop_exp_coeff_grads.begin(),
+			      pop_exp_coeff_grads.end());
+    // sum remaining trial expansions into expansionCoeff{s,Grads}.  For
+    // finalize, don't need to cache prevExpCoeff{s,Grads} prior to append.
+    append_tensor_expansions(start_append);
     break;
   }
-  case INCREMENTAL_SPARSE_GRID:
-    switch (data_rep->expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-      RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-      RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
-      RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-      RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
-      // don't update Sobol' array sizes for decrement, push, or finalize
-      size_t start_tp_index = tp_exp_coeffs.size(); // before insertion
-      // move previous expansion data to current expansion
-      tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_tp_exp_coeffs.begin(),
-			   pop_tp_exp_coeffs.end());
-      tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),
-				pop_tp_exp_coeff_grads.begin(),
-				pop_tp_exp_coeff_grads.end());
-      pop_tp_exp_coeffs.clear();  pop_tp_exp_coeff_grads.clear();
-
-      // sum remaining trial expansions into expansionCoeff{s,Grads}.  For
-      // finalize, don't need to cache prevExpCoeff{s,Grads} prior to append.
-      append_tensor_expansions(start_tp_index);
-      break;
-    }
-
-    // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-
-    case UNIFORM_CONTROL:
-      // *** TO DO ***: multiple index sets from uniform sparse grid refinement
-      break;
-    }
+  case QUADRATURE: case CUBATURE:
+    if (!pop_exp_coeffs.empty()) expCoeffsIter->second = pop_exp_coeffs.back();
+    if (!pop_exp_coeff_grads.empty())
+      expCoeffGradsIter->second = pop_exp_coeff_grads.back();
     break;
   }
 
+  pop_exp_coeffs.clear();  pop_exp_coeff_grads.clear();
   clear_computed_bits();
 }
 

@@ -183,13 +183,12 @@ void SharedProjectOrthogPolyApproxData::increment_component_sobol()
 void SharedProjectOrthogPolyApproxData::decrement_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
+  case QUADRATURE: case CUBATURE:
     poppedMultiIndex[activeKey].push_back(multiIndexIter->second);
     poppedApproxOrder[activeKey].push_back(approxOrdIter->second);
     approxOrdIter->second  = prevApproxOrder;
     multiIndexIter->second = prevMultiIndex;
     break;
-  }
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
@@ -202,22 +201,6 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
       break;
     }
   }
-  }
-}
-
-
-bool SharedProjectOrthogPolyApproxData::push_available()
-{
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_trial_available(sg_driver->trial_set());
-    break;
-  }
-  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
-  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
-  default:
-    return !poppedMultiIndex[activeKey].empty(); break;
   }
 }
 

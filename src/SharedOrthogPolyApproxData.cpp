@@ -138,6 +138,22 @@ allocate_component_sobol(const UShort2DArray& multi_index)
 }
 
 
+bool SharedOrthogPolyApproxData::push_available()
+{
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return push_trial_available(sg_driver->trial_set());
+    break;
+  }
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
+  default:
+    return !poppedMultiIndex[activeKey].empty(); break;
+  }
+}
+
+
 void SharedOrthogPolyApproxData::
 precompute_maximal_rules(const UShort2DArray& multi_index)
 {
