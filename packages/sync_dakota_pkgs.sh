@@ -1,5 +1,13 @@
 #!/bin/sh 
 
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 # Link to dakota-packages when using Pecos separately from Dakota
 
 dakota_pkgs_dir=dakota-packages

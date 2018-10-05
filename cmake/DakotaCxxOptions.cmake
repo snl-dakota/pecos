@@ -1,3 +1,11 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 # Specify Dakota's C++ language requirements
 #
 # TODO: Would prefer to check for specific C++ features needed and let
