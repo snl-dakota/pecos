@@ -1065,17 +1065,21 @@ public:
   const UShortArray& active_key() const;
   /// searches for key and updates {vars,resp}DataIter only if found
   bool contains(const UShortArray& key);
-  /// reset initial state by clearing all model keys (empties all maps)
-  void clear_keys();
 
   /// clear active key within {vars,resp}Data
-  void clear_active();
+  void clear_active_data();
   /// clear all inactive data within {vars,resp}Data
-  void clear_inactive();
+  void clear_inactive_data();
+  /// clear {vars,resp}Data and restore to initial data state
+  void clear_data();
+
   /// clear active key within popped{Vars,Resp}Data
   void clear_active_popped();
-  /// clear popped{Vars,Resp}Data
+  /// clear popped{Vars,Resp}Data and restore to initial popped state
   void clear_popped();
+
+  /// clear all keys for all maps and restore to initial state
+  void clear_all();
 
   /// return sdRep
   SurrogateDataRep* data_rep() const;
@@ -2041,7 +2045,7 @@ copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const
 }
 
 
-inline void SurrogateData::clear_active()
+inline void SurrogateData::clear_active_data()
 {
   /*
   // Too aggressive due to DataFitSurrModel::build_approximation() call to
@@ -2065,7 +2069,7 @@ inline void SurrogateData::clear_active()
 }
 
 
-inline void SurrogateData::clear_inactive()
+inline void SurrogateData::clear_inactive_data()
 {
   std::map<UShortArray, SDVArray>::iterator vd_it = sdRep->varsData.begin();
   std::map<UShortArray, SDRArray>::iterator rd_it = sdRep->respData.begin();
@@ -2083,6 +2087,19 @@ inline void SurrogateData::clear_inactive()
       // Too aggressive. Note: postfix increments manage iterator invalidations
       //sdRep->varsData.erase(vd_it++); sdRep->respData.erase(rd_it++);
     }
+}
+
+
+inline void SurrogateData::clear_data()
+{
+  //sdRep->activeKey.clear();
+  sdRep->varsData.clear(); //sdRep->varsDataIter = sdRep->varsData.end();
+  sdRep->respData.clear(); //sdRep->respDataIter = sdRep->respData.end();
+  sdRep->anchorIndex.clear();
+  sdRep->failedRespData.clear();
+
+  // restore to initial state, consistent with key-based ctor
+  sdRep->update_active_iterators();
 }
 
 
@@ -2104,16 +2121,8 @@ inline void SurrogateData::clear_popped()
 }
 
 
-inline void SurrogateData::clear_keys()
-{
-  sdRep->activeKey.clear();
-  sdRep->varsData.clear(); sdRep->varsDataIter = sdRep->varsData.end();
-  sdRep->respData.clear(); sdRep->respDataIter = sdRep->respData.end();
-  sdRep->anchorIndex.clear();
-  sdRep->failedRespData.clear();
-
-  clear_popped();
-}
+inline void SurrogateData::clear_all()
+{ clear_data(); clear_popped(); }
 
 
 inline SurrogateDataRep* SurrogateData::data_rep() const
