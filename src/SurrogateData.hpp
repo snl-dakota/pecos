@@ -989,11 +989,16 @@ public:
   /// remove the last entry from {vars,resp}Data, managing anchorIndex
   void pop_back();
 
-  /// remove num_pop_pts entries from ends of {vars,resp}Data
+  /// remove num_pop_pts entries from ends of active entry in {vars,resp}Data
   void pop(bool save_data = true);
+  /// remove num_pop_pts entries from ends of keyed entries in {vars,resp}Data
+  void pop(const UShort2DArray& keys, bool save_data);
   /// return a previously popped data set (identified by index) to the
-  /// ends of {vars,resp}Data
+  /// ends of active entry in {vars,resp}Data
   void push(size_t index, bool erase_popped = true);
+  /// return previously popped data sets (identified by index) to the
+  /// ends of keyed entries in {vars,resp}Data
+  void push(const UShort2DArray& keys, size_t index, bool erase_popped = true);
 
   /// append count to popCountStack[activeKey]
   void pop_count(size_t count) const;
@@ -1068,18 +1073,22 @@ public:
 
   /// clear active key within {vars,resp}Data
   void clear_active_data();
+  /// clear a set of keys within {vars,resp}Data
+  void clear_active_data(const UShort2DArray& keys);
   /// clear all inactive data within {vars,resp}Data
   void clear_inactive_data();
   /// clear {vars,resp}Data and restore to initial data state
-  void clear_data();
+  void clear_data(bool initialize = true);
 
   /// clear active key within popped{Vars,Resp}Data
   void clear_active_popped();
+  /// clear a set of keys within popped{Vars,Resp}Data
+  void clear_active_popped(const UShort2DArray& keys);
   /// clear popped{Vars,Resp}Data and restore to initial popped state
   void clear_popped();
 
   /// clear all keys for all maps and restore to initial state
-  void clear_all();
+  void clear_all(bool initialize = true);
 
   /// return sdRep
   SurrogateDataRep* data_rep() const;
@@ -1128,6 +1137,13 @@ private:
     const std::map<UShortArray, SDRArrayDeque>& popped_resp);
   /// get poppedRespData
   const std::map<UShortArray, SDRArrayDeque>& popped_response_map() const;
+
+  /// helper function for an individual key
+  void pop(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref,
+	   const UShortArray& key, bool save_data);
+  /// helper function for an individual key
+  void push(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref,
+	    const UShortArray& key, size_t index, bool erase_popped);
 
   //
   //- Heading: Private data members
@@ -1418,15 +1434,14 @@ inline void SurrogateData::pop_front()
 }
 
 
-inline void SurrogateData::pop(bool save_data)
+inline void SurrogateData::
+pop(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
+    bool save_data)
 {
-  SDVArray& sdv_array_ref = sdRep->varsDataIter->second;
-  SDRArray& sdr_array_ref = sdRep->respDataIter->second;
   size_t num_ref_pts = std::min(sdv_array_ref.size(), sdr_array_ref.size());
 
   // harden logic for case of an empty SurrogateData (e.g.,
   // distinct discrepancy at level 0)
-  const UShortArray& key = sdRep->activeKey;
   std::map<UShortArray, SizetArray>::iterator it
     = sdRep->popCountStack.find(key);
   if (it == sdRep->popCountStack.end()) {
@@ -1478,10 +1493,27 @@ inline void SurrogateData::pop(bool save_data)
 }
 
 
-inline void SurrogateData::push(size_t index, bool erase_popped)
+inline void SurrogateData::pop(bool save_data)
 {
-  const UShortArray& key = sdRep->activeKey;
+  pop(sdRep->varsDataIter->second, sdRep->respDataIter->second,
+      sdRep->activeKey, save_data);
+}
 
+
+inline void SurrogateData::pop(const UShort2DArray& keys, bool save_data)
+{
+  size_t k, num_k = keys.size();
+  for (k=0; k<num_k; ++k) {
+    const UShortArray& key_k = keys[k];
+    pop(sdRep->varsData[key_k], sdRep->respData[key_k], key_k, save_data);
+  }
+}
+
+
+inline void SurrogateData::
+push(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
+     size_t index, bool erase_popped)
+{
   std::map<UShortArray, SDVArrayDeque>::iterator pvd_it
     = sdRep->poppedVarsData.find(key);
   std::map<UShortArray, SDRArrayDeque>::iterator prd_it
@@ -1501,8 +1533,6 @@ inline void SurrogateData::push(size_t index, bool erase_popped)
     std::advance(vit, index); std::advance(rit, index);
     size_t num_pts = std::min(vit->size(), rit->size());
 
-    SDVArray& sdv_array_ref = sdRep->varsDataIter->second;
-    SDRArray& sdr_array_ref = sdRep->respDataIter->second;
     sdv_array_ref.insert(sdv_array_ref.end(), vit->begin(), vit->end());
     sdr_array_ref.insert(sdr_array_ref.end(), rit->begin(), rit->end());
 
@@ -1520,6 +1550,25 @@ inline void SurrogateData::push(size_t index, bool erase_popped)
     abort_handler(-1);
   }
   // else ignore push request for empty popped (SurrogateData assumed inactive)
+}
+
+
+inline void SurrogateData::push(size_t index, bool erase_popped)
+{
+  push(sdRep->varsDataIter->second, sdRep->respDataIter->second,
+       sdRep->activeKey, index, erase_popped);
+}
+
+
+inline void SurrogateData::
+push(const UShort2DArray& keys, size_t index, bool erase_popped)
+{
+  size_t k, num_k = keys.size();
+  for (k=0; k<num_k; ++k) {
+    const UShortArray& key_k = keys[k];
+    push(sdRep->varsData[key_k], sdRep->respData[key_k], key_k,
+	 index, erase_popped);
+  }
 }
 
 
@@ -2049,7 +2098,7 @@ inline void SurrogateData::clear_active_data()
 {
   /*
   // Too aggressive due to DataFitSurrModel::build_approximation() call to
-  // approxInterface.clear_current();
+  // approxInterface.clear_current_active_data();
   const UShortArray& key = sdRep->activeKey;
   sdRep->varsData.erase(key);
   sdRep->varsDataIter = sdRep->varsData.end();
@@ -2066,6 +2115,22 @@ inline void SurrogateData::clear_active_data()
   const UShortArray& key = sdRep->activeKey;
   sdRep->anchorIndex.erase(key);   //sdRep->anchorIndex[key] = _NPOS;
   sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
+}
+
+
+inline void SurrogateData::clear_active_data(const UShort2DArray& keys)
+{
+  // clear each passed key without disturbing the active key
+  size_t k, num_k = keys.size();
+  for (k=0; k<num_k; ++k) {
+    const UShortArray& key_k = keys[k];
+    // clear instead of erase
+    sdRep->varsData[key_k].clear();
+    sdRep->respData[key_k].clear();
+    // can erase
+    sdRep->anchorIndex.erase(key_k);
+    sdRep->failedRespData.erase(key_k);
+  }
 }
 
 
@@ -2090,26 +2155,44 @@ inline void SurrogateData::clear_inactive_data()
 }
 
 
-inline void SurrogateData::clear_data()
+inline void SurrogateData::clear_data(bool initialize)
 {
-  //sdRep->activeKey.clear();
-  sdRep->varsData.clear(); //sdRep->varsDataIter = sdRep->varsData.end();
-  sdRep->respData.clear(); //sdRep->respDataIter = sdRep->respData.end();
+  sdRep->varsData.clear();
+  sdRep->respData.clear();
   sdRep->anchorIndex.clear();
   sdRep->failedRespData.clear();
 
-  // restore to initial state, consistent with key-based ctor
-  sdRep->update_active_iterators();
+  if (initialize) // preserve activeKey and restore to initialization state
+    sdRep->update_active_iterators();
+  else {
+    sdRep->activeKey.clear();
+    sdRep->varsDataIter = sdRep->varsData.end();
+    sdRep->respDataIter = sdRep->respData.end();
+  }
 }
 
 
 inline void SurrogateData::clear_active_popped()
 {
   const UShortArray& key = sdRep->activeKey;
-  // Ok to prune as will be recreated in pop() if needed:
+  // can erase as will be recreated in pop() if needed:
   sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
   sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
   sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
+}
+
+
+inline void SurrogateData::clear_active_popped(const UShort2DArray& keys)
+{
+  // clear each passed key without disturbing the active key
+  size_t k, num_k = keys.size();
+  for (k=0; k<num_k; ++k) {
+    const UShortArray& key_k = keys[k];
+    // can erase as will be recreated in pop() if needed
+    sdRep->poppedVarsData.erase(key_k);
+    sdRep->poppedRespData.erase(key_k);
+    sdRep->popCountStack.erase(key_k);
+  }
 }
 
 
@@ -2121,8 +2204,8 @@ inline void SurrogateData::clear_popped()
 }
 
 
-inline void SurrogateData::clear_all()
-{ clear_data(); clear_popped(); }
+inline void SurrogateData::clear_all(bool initialize)
+{ clear_data(initialize); clear_popped(); }
 
 
 inline SurrogateDataRep* SurrogateData::data_rep() const

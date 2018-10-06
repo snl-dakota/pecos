@@ -155,9 +155,20 @@ compute_moments(bool full_stats, bool combined_stats)
   //standardize_moments(expansionMoments);
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  if (full_stats &&
-      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
+  // if full stats, augment analytic expansion moments with numerical moments
+  // (from quadrature applied to the SurrogateData)
+  // > currently supported by TPQ, SSG, Cubature
+  // > combined expansions do not admit a unified set of collocation data
+  //   and backfilling with expansion values seems of limited usefulness
+  if (full_stats && //!data_rep->expConfigOptions.combineType &&
+      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) {
     integrate_response_moments(4);
+
+    // As in InterpPolyApproximation::compute_moments(), could segregate more
+    // advanced moment evaluators, if needed:
+    //if (combined_stats) integrate_combined_response_moments(4);
+    //else                integrate_response_moments(4);
+  }
   else numericalMoments.resize(0);
 }
 
