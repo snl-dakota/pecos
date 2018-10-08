@@ -282,7 +282,14 @@ nested_quadrature_order(const UShortArray& ref_quad_order)
     else // {INTEGRATION,DEFAULT}_MODE: synchronize on integrand prec 2m-1
       integrand_goal_to_nested_quadrature_order(i, 2 * ref_quad_order[i] - 1,
 						nested_order);
-    quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+    // update quadOrder / levelIndex
+    if (nested_order == USHRT_MAX) { // required order not available
+      PCerr << "Error: order goal could not be attained in TensorProductDriver"
+	    << "::nested_quadrature_order()" << std::endl;
+      abort_handler(-1);
+    }
+    else
+      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
   }
 }
 

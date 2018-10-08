@@ -209,7 +209,8 @@ integrand_goal_to_nested_quadrature_order(size_t i,
     unsigned short level = 0, max_level = 5;
     while (level <= max_level && precGenzKeister[level] < integrand_goal)
       ++level;
-    nested_quad_order = orderGenzKeister[level];
+    nested_quad_order = (level > max_level) ?
+      USHRT_MAX : orderGenzKeister[level]; // pass error state up a level
     /*
     nested_quad_order = 1;
     unsigned short integrand_goal = 2*ref_quad_order - 1, level = 0,
@@ -265,10 +266,10 @@ quadrature_goal_to_nested_quadrature_order(size_t i, unsigned short quad_goal,
   }
   case GENZ_KEISTER: { // open nested rule with lookup
     nested_quad_order = 1; unsigned short level = 0, max_level = 5;
-    while (level <= max_level && nested_quad_order < quad_goal) {
+    while (level <= max_level && orderGenzKeister[level] < quad_goal)
       ++level;
-      nested_quad_order = orderGenzKeister[level];
-    }
+    nested_quad_order = (level > max_level) ?
+      USHRT_MAX : orderGenzKeister[level]; // pass error state up a level
     break;
   }
   default: // open weakly/non-nested Gauss rules
