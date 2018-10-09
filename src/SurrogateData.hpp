@@ -1087,8 +1087,12 @@ public:
   /// clear popped{Vars,Resp}Data and restore to initial popped state
   void clear_popped();
 
-  /// clear all keys for all maps and restore to initial state
+  /// clear all keys for all maps and optionally restore to initial state
   void clear_all(bool initialize = true);
+  /// invokes both clear_active_data() and clear_active_popped()
+  void clear_all_active();
+  /// invokes both clear_active_data(keys) and clear_active_popped(keys)
+  void clear_all_active(const UShort2DArray& keys);
 
   /// return sdRep
   SurrogateDataRep* data_rep() const;
@@ -2206,6 +2210,14 @@ inline void SurrogateData::clear_popped()
 
 inline void SurrogateData::clear_all(bool initialize)
 { clear_data(initialize); clear_popped(); }
+
+
+inline void SurrogateData::clear_all_active()
+{ clear_active_data(); clear_active_popped(); }
+
+
+inline void SurrogateData::clear_all_active(const UShort2DArray& keys)
+{ clear_active_data(keys); clear_active_popped(keys); }
 
 
 inline SurrogateDataRep* SurrogateData::data_rep() const
