@@ -71,26 +71,25 @@ void NodalInterpPolyApproximation::compute_coefficients()
   allocate_arrays();
 
   const SDRArray& sdr_array = modSurrData.response_data();
-  size_t c_index, num_colloc_pts = modSurrData.points(); int i;
+  size_t num_colloc_pts = modSurrData.points(); int i;
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
     SharedNodalInterpPolyApproxData* data_rep
       = (SharedNodalInterpPolyApproxData*)sharedDataRep;
     bool derivs = data_rep->basisConfigOptions.useDerivs;
-    for (i=0, c_index=0; i<num_colloc_pts; ++i, ++c_index) {
-      
-      exp_t1_coeffs[i] = sdr_array[c_index].response_function();
+    for (i=0; i<num_colloc_pts; ++i) {
+      exp_t1_coeffs[i] = sdr_array[i].response_function();
       // Note: gradients from DAKOTA already scaled in u-space Recast
       if (derivs)
-	Teuchos::setCol(sdr_array[c_index].response_gradient(), i,
+	Teuchos::setCol(sdr_array[i].response_gradient(), i,
 			exp_t2_coeffs);
     }
   }
   if (expansionCoeffGradFlag) {
     RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-    for (i=0, c_index=0; i<num_colloc_pts; ++i, ++c_index)
-      Teuchos::setCol(sdr_array[c_index].response_gradient(), i,
+    for (i=0; i<num_colloc_pts; ++i)
+      Teuchos::setCol(sdr_array[i].response_gradient(), i,
 		      exp_t1_coeff_grads);
   }
 
@@ -132,20 +131,21 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
 
-  size_t index, old_colloc_pts, new_colloc_pts = modSurrData.points();
+  size_t old_colloc_pts, new_colloc_pts = modSurrData.points();
   const SDRArray& sdr_array = modSurrData.response_data();
+  bool append
+    = (data_rep->expConfigOptions.expCoeffsSolnApproach != QUADRATURE);
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
-    old_colloc_pts = exp_t1_coeffs.length();
+    old_colloc_pts = (append) ? exp_t1_coeffs.length() : 0;
     exp_t1_coeffs.resize(new_colloc_pts);
     if (data_rep->basisConfigOptions.useDerivs) {
       size_t num_deriv_vars = exp_t2_coeffs.numRows();
       exp_t2_coeffs.reshape(num_deriv_vars, new_colloc_pts);
     }
-    index = old_colloc_pts;
-    for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index) {
-      const SurrogateDataResp& sdr = sdr_array[index];
+    for (int i=old_colloc_pts; i<new_colloc_pts; ++i) {
+      const SurrogateDataResp& sdr = sdr_array[i];
       exp_t1_coeffs[i] = sdr.response_function();
       if (data_rep->basisConfigOptions.useDerivs)
 	Teuchos::setCol(sdr.response_gradient(), i, exp_t2_coeffs);
@@ -153,12 +153,11 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
   }
   if (expansionCoeffGradFlag) {
     RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-    old_colloc_pts = exp_t1_coeff_grads.numCols();
+    old_colloc_pts = (append) ? exp_t1_coeff_grads.numCols() : 0;
     size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
     exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);
-    index = old_colloc_pts;
-    for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index)
-      Teuchos::setCol(sdr_array[index].response_gradient(), i,
+    for (int i=old_colloc_pts; i<new_colloc_pts; ++i)
+      Teuchos::setCol(sdr_array[i].response_gradient(), i,
 		      exp_t1_coeff_grads);
   }
 

@@ -169,33 +169,46 @@ void SharedInterpPolyApproxData::allocate_data()
 
 void SharedInterpPolyApproxData::increment_data()
 {
-  unsigned short max_set_index = 0;
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     const UShortArray& trial_set = sg_driver->trial_set();
+    unsigned short max_set_index = 0;
     for (size_t i=0; i<numVars; ++i)
       if (trial_set[i] > max_set_index)
 	max_set_index = trial_set[i];
+    update_sparse_interpolation_basis(max_set_index);
+    increment_component_sobol();
     break;
   }
   default: // uniform/anisotropic refinement
     switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE: {
+      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      update_tensor_interpolation_basis(tpq_driver->level_index());
+      allocate_component_sobol();
+      // allow mixed allocate/increment:
+      quadOrderPrev = tpq_driver->quadrature_order();
+      break;
+    }
     case INCREMENTAL_SPARSE_GRID: {
       // As for allocate_arrays(), increments are performed in coarser steps
       // than may be strictly necessary: all increments are filled in for all
       // vars for a step in level (ignoring anisotropy or generalized indices).
       IncrementalSparseGridDriver* isg_driver
 	= (IncrementalSparseGridDriver*)driverRep;
-      size_t start_index = isg_driver->smolyak_coefficients_reference().size();
       const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
-      size_t i, v, num_sm_mi = sm_mi.size();
+      size_t i, v, num_sm_mi = sm_mi.size(),
+	start_index = isg_driver->smolyak_coefficients_reference().size();
+      unsigned short max_set_index = 0;
       for (i=start_index; i<num_sm_mi; ++i) {
 	const UShortArray& sm_mi_i = sm_mi[i];
 	for (v=0; v<numVars; ++v)
 	  if (sm_mi_i[v] > max_set_index)
 	    max_set_index = sm_mi_i[v];
       }
+      update_sparse_interpolation_basis(max_set_index);
+      increment_component_sobol();
       break;
     }
     case HIERARCHICAL_SPARSE_GRID: {
@@ -204,6 +217,7 @@ void SharedInterpPolyApproxData::increment_data()
       const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
       const UShortArray& incr_sets = hsg_driver->increment_sets();
       size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets, v;
+      unsigned short max_set_index = 0;
       for (lev=0; lev<num_lev; ++lev) {
 	start_set = incr_sets[lev]; num_sets = sm_mi[lev].size();
 	for (set=start_set; set<num_sets; ++set) {
@@ -213,6 +227,8 @@ void SharedInterpPolyApproxData::increment_data()
 	      max_set_index = sm_set[v];
 	}
       }
+      update_sparse_interpolation_basis(max_set_index);
+      increment_component_sobol();
       break;
     }
     default:
@@ -223,9 +239,6 @@ void SharedInterpPolyApproxData::increment_data()
     }
     break;
   }
-
-  update_sparse_interpolation_basis(max_set_index);
-  increment_component_sobol();
 }
 
 

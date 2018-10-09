@@ -13,7 +13,7 @@
 
 #include "SharedNodalInterpPolyApproxData.hpp"
 #include "TensorProductDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "InterpolationPolynomial.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
@@ -164,13 +164,42 @@ void SharedNodalInterpPolyApproxData::allocate_component_sobol()
 
 void SharedNodalInterpPolyApproxData::increment_component_sobol()
 {
-  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    if (csg_driver->smolyak_coefficients().back()) {
+  if (!expConfigOptions.vbdFlag || expConfigOptions.vbdOrderLimit == 1)
+    return;
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  //case QUADRATURE: // increment_data() uses allocate_component_sobol()
+  case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      if (isg_driver->smolyak_coefficients().back()) {
+	reset_sobol_index_map_values();
+	multi_index_to_sobol_index_map(isg_driver->collocation_key().back());
+	assign_sobol_index_map_values();
+      }
+      break;
+    default: {
+      const IntArray&      sm_coeffs  = isg_driver->smolyak_coefficients();
+      const UShort3DArray& colloc_key = isg_driver->collocation_key();
+      size_t i, num_smolyak_indices = sm_coeffs.size(),
+	start_index = isg_driver->smolyak_coefficients_reference().size();
       reset_sobol_index_map_values();
-      multi_index_to_sobol_index_map(csg_driver->collocation_key().back());
+      for (i=start_index; i<num_smolyak_indices; ++i)
+	if (sm_coeffs[i])
+	  multi_index_to_sobol_index_map(colloc_key[i]);
       assign_sobol_index_map_values();
+      break;
     }
+    }
+    break;
+  }
+  default:
+    PCerr << "Error: unsupported solution approach in SharedNodalInterpPoly"
+	  << "ApproxData::increment_component_sobol()" << std::endl;
+    abort_handler(-1);
+    break;    
   }
 }
 
