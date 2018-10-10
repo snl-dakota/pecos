@@ -1014,21 +1014,35 @@ public:
   /// return popCountStack
   const std::map<UShortArray, SizetArray>& pop_count_stack_map() const;
 
+  /// pop records from front of {vars,resp}Data to achieve target length,
+  /// for each key in passed set
+  void history_target(size_t target, const UShort2DArray& keys);
+
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
   /// assign anchorIndex[activeKey] to incoming index
   void anchor_index(size_t index) const;
+  /// assign anchorIndex[key] to incoming index
+  void anchor_index(size_t index, const UShortArray& key) const;
   /// return anchorIndex[activeKey], if defined
   size_t anchor_index() const;
+  /// return anchorIndex[key], if defined
+  size_t anchor_index(const UShortArray& key) const;
   /// assign anchorIndex
   void anchor_index_map(const std::map<UShortArray, size_t>& ai_map) const;
   /// return anchorIndex
   const std::map<UShortArray, size_t>& anchor_index_map() const;
   /// erase anchorIndex[activeKey]
   void clear_anchor_index();
+  /// erase anchorIndex[key]
+  void clear_anchor_index(const UShortArray& key);
+  /// erase anchorIndex for each key within passed set
+  void clear_anchor_index(const UShort2DArray& keys);
 
   /// return size of {vars,resp}Data arrays (neglecting anchor point)
   size_t points() const;
+  /// return size of {vars,resp}Data arrays (neglecting anchor point)
+  size_t points(const UShortArray& key) const;
 
   /// return total number of available data components
   size_t response_size() const;
@@ -1110,6 +1124,9 @@ private:
   size_t assign_anchor_index();
   /// retrieve anchorIndex[activeKey]
   size_t retrieve_anchor_index(bool hard_fail = false) const;
+  /// retrieve anchorIndex[key]
+  size_t retrieve_anchor_index(const UShortArray& key,
+			       bool hard_fail = false) const;
 
   /// assign sdv within varsData[activeKey] at indicated index
   void assign_variables(const SurrogateDataVars& sdv, size_t index);
@@ -1238,11 +1255,39 @@ data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
 
 
 inline void SurrogateData::anchor_index(size_t index) const
-{ if (index != _NPOS) sdRep->anchorIndex[sdRep->activeKey] = index; }
+{
+  std::map<UShortArray, size_t>& anchor_index = sdRep->anchorIndex;
+  const UShortArray& key = sdRep->activeKey;
+  std::map<UShortArray, size_t>::iterator anchor_it = anchor_index.find(key);
+  if (anchor_it == anchor_index.end()) { // conditionally insert new record
+    if (index != _NPOS)
+      anchor_index[key] = index;
+  }
+  else // update existing record
+    anchor_it->second = index;
+}
+
+
+inline void SurrogateData::
+anchor_index(size_t index, const UShortArray& key) const
+{
+  std::map<UShortArray, size_t>& anchor_index = sdRep->anchorIndex;
+  std::map<UShortArray, size_t>::iterator anchor_it = anchor_index.find(key);
+  if (anchor_it == anchor_index.end()) { // conditionally insert new record
+    if (index != _NPOS)
+      anchor_index[key] = index;
+  }
+  else // update existing record
+    anchor_it->second = index;
+}
 
 
 inline size_t SurrogateData::anchor_index() const
 { return retrieve_anchor_index(false); }
+
+
+inline size_t SurrogateData::anchor_index(const UShortArray& key) const
+{ return retrieve_anchor_index(key, false); }
 
 
 inline const std::map<UShortArray, size_t>& SurrogateData::
@@ -1257,6 +1302,18 @@ anchor_index_map(const std::map<UShortArray, size_t>& ai_map) const
 
 inline void SurrogateData::clear_anchor_index()
 { sdRep->anchorIndex.erase(sdRep->activeKey); }
+
+
+inline void SurrogateData::clear_anchor_index(const UShortArray& key)
+{ sdRep->anchorIndex.erase(key); }
+
+
+inline void SurrogateData::clear_anchor_index(const UShort2DArray& keys)
+{
+  size_t k, num_k = keys.size();
+  for (k=0; k<num_k; ++k)
+    sdRep->anchorIndex.erase(keys[k]);
+}
 
 
 inline size_t SurrogateData::assign_anchor_index()
@@ -1283,6 +1340,24 @@ inline size_t SurrogateData::retrieve_anchor_index(bool hard_fail) const
   std::map<UShortArray, size_t>& anchor_index = sdRep->anchorIndex;
   std::map<UShortArray, size_t>::iterator anchor_it
     = anchor_index.find(sdRep->activeKey);
+  if (anchor_it == anchor_index.end() || anchor_it->second == _NPOS) {
+    if (hard_fail) {
+      PCerr << "Error: lookup failure in SurrogateData::retrieve_anchor_index"
+	    << "()." << std::endl;
+      abort_handler(-1);
+    }
+    return _NPOS;
+  }
+  else
+    return anchor_it->second;
+}
+
+
+inline size_t SurrogateData::
+retrieve_anchor_index(const UShortArray& key, bool hard_fail) const
+{
+  std::map<UShortArray, size_t>& anchor_index = sdRep->anchorIndex;
+  std::map<UShortArray, size_t>::iterator anchor_it = anchor_index.find(key);
   if (anchor_it == anchor_index.end() || anchor_it->second == _NPOS) {
     if (hard_fail) {
       PCerr << "Error: lookup failure in SurrogateData::retrieve_anchor_index"
@@ -1424,16 +1499,55 @@ inline void SurrogateData::pop_back()
 
 inline void SurrogateData::pop_front()
 {
-  if (points()) {
-    SDVArray& sdv_array = sdRep->varsDataIter->second;
-    SDRArray& sdr_array = sdRep->respDataIter->second;
-    if (!sdv_array.empty()) sdv_array.erase(sdv_array.begin());
-    if (!sdr_array.empty()) sdr_array.erase(sdr_array.begin());
+  SDVArray& sdv_array = sdRep->varsDataIter->second;
+  SDRArray& sdr_array = sdRep->respDataIter->second;
+  if (!sdv_array.empty() && !sdr_array.empty()) {
+    sdv_array.erase(sdv_array.begin());
+    sdr_array.erase(sdr_array.begin());
+
     size_t index = retrieve_anchor_index();
     if (index == 0) // popped point was anchor
       clear_anchor_index();
     else if (index != _NPOS) // anchor (still) exists, decrement its index
       anchor_index(index - 1);
+  }
+}
+
+
+inline void SurrogateData::
+history_target(size_t target, const UShort2DArray& keys)
+{
+  size_t k, num_k = keys.size(), len, num_pops;
+  SDVArray::iterator v_start, v_end;  SDRArray::iterator r_start, r_end;
+  for (k=0; k<num_k; ++k) {
+    const UShortArray& key_k = keys[k];
+    SDVArray& sdv_array = sdRep->varsData[key_k];
+    SDRArray& sdr_array = sdRep->respData[key_k];
+    len = std::min(sdv_array.size(), sdr_array.size());
+    if (len > target) {
+      num_pops  = len - target;
+      v_start = v_end = sdv_array.begin();  std::advance(v_end, num_pops);
+      r_start = r_end = sdr_array.begin();  std::advance(r_end, num_pops);
+      sdv_array.erase(v_start, v_end);      sdr_array.erase(r_start, r_end);
+
+      // Avoid multiple lookups
+      std::map<UShortArray, size_t>& anchor_index = sdRep->anchorIndex;
+      std::map<UShortArray, size_t>::iterator anchor_it
+	= anchor_index.find(key_k);
+      if (anchor_it != anchor_index.end() && anchor_it->second != _NPOS) {
+	if (anchor_it->second < num_pops) // a popped point was anchor
+	  anchor_index.erase(anchor_it);//(key_k);
+	else // anchor still exists, decrement its index
+	  anchor_it->second -= num_pops;
+      }
+      /*
+      anch_index = retrieve_anchor_index(key_k);
+      if (anch_index < num_pops)    // a popped point was anchor
+	clear_anchor_index(key_k);
+      else if (anch_index != _NPOS) // anchor still exists, decrement its index
+	anchor_index(anch_index - num_pops, key_k);
+      */
+    }
   }
 }
 
