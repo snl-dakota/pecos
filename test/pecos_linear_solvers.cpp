@@ -13,7 +13,7 @@
 #include <Teuchos_UnitTestHarness.hpp> 
 
 #include "pecos_data_types.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 
 using namespace Pecos;
 

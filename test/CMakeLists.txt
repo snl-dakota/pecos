@@ -9,6 +9,7 @@
 # CMakeLists.txt for pecos "unit" tests
 
 include_directories(${Pecos_SOURCE_DIR}/src
+                    ${Pecos_SOURCE_DIR}/util/src
                     ${Boost_INCLUDE_DIR}
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
