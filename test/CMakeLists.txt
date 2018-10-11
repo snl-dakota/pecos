@@ -75,15 +75,13 @@ add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
 target_link_libraries(pecos_lhs_driver ${pecos_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
 
-if(PECOS_ENABLE_TEUCHOS_UNIT_TESTS)
-  set(pecos_teuchos_unit_tests
-    pecos_pochhammer.cpp
-    pecos_discrete_poly.cpp
-    pecos_linear_solvers.cpp
-    )
-  add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests} )
-  target_link_libraries(pecos_teuchos_unit_tests ${pecos_libs} ${Teuchos_LIBRARIES})
-  add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
-endif() # PECOS_ENABLE_TEUCHOS_UNIT_TESTS
+set(pecos_teuchos_unit_tests_src
+  pecos_pochhammer.cpp
+  pecos_discrete_poly.cpp
+  pecos_linear_solvers.cpp
+  )
+add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
+target_link_libraries(pecos_teuchos_unit_tests ${pecos_libs} ${Teuchos_LIBRARIES})
+add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
 
 install(TARGETS pecos_gsg_driver DESTINATION bin)

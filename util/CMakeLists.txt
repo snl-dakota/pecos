@@ -10,4 +10,6 @@
 include_directories(${Teuchos_INCLUDE_DIRS})
 
 add_subdirectory(src)
-add_subdirectory(unit)
+if(BUILD_TESTING AND PECOS_ENABLE_TESTS)
+  add_subdirectory(unit)
+endif()

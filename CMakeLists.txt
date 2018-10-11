@@ -147,7 +147,7 @@ link_directories(${Teuchos_LIBRARY_DIRS})
 option(PECOS_ENABLE_ORTHOGPOLY "Enable core pecos module" ON)
 option(PECOS_ENABLE_SURROGATES "Enable surrogates module" ON)
 option(PECOS_ENABLE_PYTHONAPI "Enable Python wrappers" OFF)
-option(PECOS_ENABLE_TESTS "Enable Pecos-specific tests?" ON)
+option(PECOS_ENABLE_TESTS "Enable Pecos tests?" ON)
 
 # --- Potential locally included packages ---
 
