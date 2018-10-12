@@ -16,6 +16,7 @@
 #include "SparseGridDriver.hpp"
 #include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
+#include "DiscrepancyCalculator.hpp"
 
 //#define DEBUG
 
@@ -229,39 +230,47 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   const SDRArray& lf_sdr_array = r_cit->second;
   // ***************************************************************************
 
+  DiscrepancyCalculator discrepCalc;
   SDRArray& delta_sdr_array = modSurrData.response_data();
-  Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
     size_t num_deriv_vars = surrData.num_derivative_variables();
     for (i=0; i<num_pts; ++i) {
-      // HF data is to be preserved in orig SD; LF is passed as modifiable data
-      Real lf_val = lf_sdr_array[i].response_function();
-      delta_val   = hf_sdr_array[i].response_function() / lf_val;
+      const SurrogateDataResp& lf_sdr =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr = delta_sdr_array[i];
+      short corr_order = (expansionCoeffGradFlag) ? 1 : 0;
+      if (discrepCalc.check_multiplicative(hf_sdr.response_function(),
+					   lf_sdr.response_function(),
+					   corr_order)) {
+	PCerr << "Error: numerical FPE in computing multiplicative discrepancy."
+	      << "\n       Please change to additive discrepancy." << std::endl;
+	abort_handler(-1);
+      }
       if (expansionCoeffFlag)
-	delta_sdr_array[i].response_function(delta_val);
+	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
+	  lf_sdr.response_function(), delta_sdr.response_function_view());
       if (expansionCoeffGradFlag) {
-	if (delta_grad.empty()) delta_grad.sizeUninitialized(num_deriv_vars);
-	const RealVector& hf_grad = hf_sdr_array[i].response_gradient();
-	const RealVector& lf_grad = lf_sdr_array[i].response_gradient();
-	for (size_t j=0; j<num_deriv_vars; ++j)
-	  delta_grad[j] = (hf_grad[j] - lf_grad[j] * delta_val) / lf_val;
-	delta_sdr_array[i].response_gradient(delta_grad);
+	RealVector delta_grad(delta_sdr.response_gradient_view());	
+	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
+	  hf_sdr.response_gradient(), lf_sdr.response_function(),
+	  lf_sdr.response_gradient(), delta_grad);
       }
     }
     break;
   }
   default: //case ADD_COMBINE: (correction specification not required)
     for (i=0; i<num_pts; ++i) {
-      if (expansionCoeffFlag) {
-	delta_val = hf_sdr_array[i].response_function()
-	          - lf_sdr_array[i].response_function();
-	delta_sdr_array[i].response_function(delta_val);
-      }
+      const SurrogateDataResp& lf_sdr =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr = delta_sdr_array[i];
+      if (expansionCoeffFlag)
+	discrepCalc.compute_additive(hf_sdr.response_function(),
+	  lf_sdr.response_function(), delta_sdr.response_function_view());
       if (expansionCoeffGradFlag) {
-	copy_data(hf_sdr_array[i].response_gradient(), delta_grad);
-	delta_grad -= lf_sdr_array[i].response_gradient();
-	delta_sdr_array[i].response_gradient(delta_grad);
+	RealVector delta_grad(delta_sdr.response_gradient_view());
+	discrepCalc.compute_additive(hf_sdr.response_gradient(),
+	  lf_sdr.response_gradient(), delta_grad);
       }
     }
     break;
