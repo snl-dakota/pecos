@@ -1120,7 +1120,7 @@ private:
   //- Heading: Member functions
   //
 
-  /// define or retrieve anchorIndex[activeKey]
+  /// define or update anchorIndex[activeKey]
   size_t assign_anchor_index();
   /// retrieve anchorIndex[activeKey]
   size_t retrieve_anchor_index(bool hard_fail = false) const;
@@ -1318,19 +1318,32 @@ inline void SurrogateData::clear_anchor_index(const UShort2DArray& keys)
 
 inline size_t SurrogateData::assign_anchor_index()
 {
+  // This is often called in sequence of assign_anchor_variables() and
+  // assign_anchor_response() --> use points() for consistent indexing
+  size_t index = points(); // push_back() to follow
+  // This approach reassigns an existing anchor index to freshly appended
+  // anchor data --> previous anchor data is preserved but demoted
+  sdRep->anchorIndex[sdRep->activeKey] = index;
+
+  /*
+  // This approach preserves a previously assigned anchor index, which is good
+  // for a pair of assign_anchor_{variables,response}() calls, but bad if a
+  // previous sdv/sdr anchor assignment has not been cleared --> a subsequent
+  // assign_{variables,response}() will overwrite the previous data, corrupting
+  // the history for multipoint approximations.
   std::map<UShortArray, size_t>& anchor_index = sdRep->anchorIndex;
   const UShortArray& key = sdRep->activeKey;
   std::map<UShortArray, size_t>::iterator anchor_it = anchor_index.find(key);
   size_t index;
-  if (anchor_it == anchor_index.end()) { // no anchor defined
-    index = sdRep->varsDataIter->second.size();
-    anchor_index[key] = index;
-  }
+  if (anchor_it == anchor_index.end()) // no anchor defined
+    anchor_index[key] = index = points();
   else {
     index = anchor_it->second;
-    if (index == _NPOS)
-      anchor_it->second = index = sdRep->varsDataIter->second.size();
+    if (index == _NPOS) // reassign only if undefined, else preserve
+      anchor_it->second = index = points();
   }
+  */
+
   return index;
 }
 
@@ -1525,6 +1538,7 @@ history_target(size_t target, const UShort2DArray& keys)
     SDRArray& sdr_array = sdRep->respData[key_k];
     len = std::min(sdv_array.size(), sdr_array.size());
     if (len > target) {
+      // erase oldest data (pop from front of array)
       num_pops  = len - target;
       v_start = v_end = sdv_array.begin();  std::advance(v_end, num_pops);
       r_start = r_end = sdr_array.begin();  std::advance(r_end, num_pops);
