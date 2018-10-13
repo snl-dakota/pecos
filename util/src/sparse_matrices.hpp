@@ -23,7 +23,7 @@ class BlockDiagonalMatrix
  public:
 
   /// Default constructor
-  BlockDiagonalMatrix() : numBlocks_(0.) {};
+  BlockDiagonalMatrix() : numBlocks_(0) {};
 
   /// Deconstructor
   ~BlockDiagonalMatrix(){};

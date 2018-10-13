@@ -25,6 +25,7 @@
 #include <boost/unordered_set.hpp>
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "OptionsList.hpp"
+#include <set>
 
 namespace Pecos {
 namespace util {

@@ -1202,7 +1202,7 @@ void complete_pivoted_lu_factorization( const RealMatrix &A,
     column_pivots[j] = j;
 
   RealVector max_col_values( num_cols, false );
-  RealVector argmax_col_values( num_cols, false );
+  IntVector argmax_col_values( num_cols, false );
   RealVector temp_row( num_cols, false );
   RealVector temp_col( num_rows, false );
   for ( int k = 0; k < std::min( num_rows-1, num_cols ); k++ )
@@ -1279,7 +1279,7 @@ void complete_pivoted_lu_factorization( const RealMatrix &A,
     }
 
   // final column swap if num_cols > num_rows
-  if ( num_cols > num_rows and num_cols >= max_iters )
+  if ( num_cols > num_rows && num_cols >= max_iters )
     {
       // determine pivot which is the maximum entry in A_copy
       Real max_entry = 0.;

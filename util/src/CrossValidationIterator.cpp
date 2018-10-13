@@ -134,7 +134,7 @@ void CrossValidationIterator::
 get_fold_indices(int iter, 
 		 IntVector &training_indices, 
 		 IntVector &validation_indices) const{
-  int num_training_indices, num_validation_indices;
+  //int num_training_indices, num_validation_indices;
   get_fold_validation_indices(iter, validation_indices);
   get_fold_training_indices(iter, training_indices);
 }
