@@ -17,10 +17,7 @@
 #define PECOS_UTIL_LINEAR_ALGEBRA_HPP
 
 #include "teuchos_data_types.hpp"
-#include "Teuchos_BLAS.hpp"
-#include "Teuchos_BLAS_wrappers.hpp"
 #include "Teuchos_LAPACK.hpp"
-#include <vector>
 
 // TODO: Consider replacing this macro
 #define PECOS_UTIL_ROUND_DOWN(x, s) ((x) & ~((s)-1)) // for loop unrolling
@@ -904,22 +901,6 @@ void unit_vector( int n, int k, Teuchos::SerialDenseVector<O,T> &result )
 
 void lu_inverse( const RealMatrix &L, const RealMatrix &U, const IntVector &p, 
 		 RealMatrix &result );
-
-extern "C"
-{
-  void dgeqp3_( const int *M, const int *N, double *A, 
-		const int *LDA, int *JPVT, double *TAU, 
-		double *WORK, const int *LWORK, int *INFO );
-
-  void dpstrf_( const char* UPLO, int *N, double *A,
-		int *LDA, int *PIV, int *RANK, double *TOL, double *WORK,
-		int *INFO );
-
-  void dgetc2_( int *N, double *A, int *LDA, int *IPIV, int *JPIV, int *INFO );
-
-  void dorgrq_( int *M, int *N, int *K, double *A, int* LDA, double* TAU, 
-		double *WORK, const int *LWORK, int *INFO );
-}
 
 template < typename O, typename T >
 void write_matrix( std::string filename, Teuchos::SerialDenseMatrix<O,T> &A )

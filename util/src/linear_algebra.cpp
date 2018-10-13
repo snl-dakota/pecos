@@ -7,15 +7,28 @@
     _______________________________________________________________________ */
 
 #include "linear_algebra.hpp"
+#include "Teuchos_BLAS_wrappers.hpp"
+#include "Teuchos_LAPACK_wrappers.hpp"
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 #include "teuchos_data_types.hpp"
 #define disp( a ) std::cout << #a << ": " << ( a ) << std::endl
 
-#define DLASWP_F77  F77_BLAS_MANGLE(dlaswp,DLASWP)
-extern "C" {
-  void DLASWP_F77( const int *N, double *A, const int *LDA, const int *K1, const int *K2, const int *IPIV, int * INCX );
-}
+// DLASWP and DGEQP3 are in Teuchos_LAPACK_wrappers.hpp
+#define DPSTRF_F77 F77_BLAS_MANGLE(dpstrf,DPSTRF)
+// unused:
+// #define DGETC2_F77 F77_BLAS_MANGLE(dgetc2,DGETC2)
+// #define DORGRQ_F77 F77_BLAS_MANGLE(dorgrq,DORGRQ)
+extern "C"
+{
+  void DPSTRF_F77( const char* UPLO, int *N, double *A,
+		   int *LDA, int *PIV, int *RANK, double *TOL, double *WORK,
+		   int *INFO );
 
+  // void DGETC2_F77( int *N, double *A, int *LDA, int *IPIV, int *JPIV, int *INFO );
+
+  // void DORGRQ_F77( int *M, int *N, int *K, double *A, int* LDA, double* TAU, 
+  // 		   double *WORK, const int *LWORK, int *INFO );
+}
 
 namespace Pecos {
 namespace util {
@@ -840,8 +853,8 @@ void pivoted_qr_factorization( const RealMatrix &A, RealMatrix &Q, RealMatrix &R
   lwork = -1;           // special code for workspace query
   work  = new Real [1]; // temporary work array
   
-  dgeqp3_( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
-	   work, &lwork, &info );
+  DGEQP3_F77( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+	      work, &lwork, &info );
 
   lwork = (int)work[0];  // optimal work array size returned by query
   delete [] work;
@@ -851,8 +864,8 @@ void pivoted_qr_factorization( const RealMatrix &A, RealMatrix &Q, RealMatrix &R
   // Compute the QR factorization    //
   //---------------------------------//
 
-  dgeqp3_( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
-	   work, &lwork, &info );
+  DGEQP3_F77( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+	      work, &lwork, &info );
 
   if ( info < 0 )
     {
@@ -1079,8 +1092,8 @@ void pivoted_cholesky_factorization( RealMatrix &A, RealMatrix &L, IntVector &p,
   //Teuchos::EUplo uplo
   //Teuchos::EUploChar[uplo]
   char uplo = 'L';
-  dpstrf_( &uplo, &N, A_copy.values(),
-	   &lda, p.values(), &rank, &tol, work, &info );
+  DPSTRF_F77( &uplo, &N, A_copy.values(),
+	      &lda, p.values(), &rank, &tol, work, &info );
   delete [] work;
 
   if ( info < 0 )
@@ -1351,8 +1364,8 @@ void complete_pivoted_lu_factorization_lapack( RealMatrix &A,
   int lda = A_copy.stride(), info;
   disp( N );
   disp( lda );
-  dgetc2_( &N, A_copy.values(), &lda, row_pivots.values(), 
-	   column_pivots.values(), &info );
+  DGETC2_F77( &N, A_copy.values(), &lda, row_pivots.values(), 
+	      column_pivots.values(), &info );
   
   disp( info );
   disp( row_pivots );
