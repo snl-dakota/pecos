@@ -61,8 +61,11 @@ void PolynomialApproximation::synchronize_surrogate_data()
   case DISTINCT_DISCREP:
     response_data_to_discrepancy_data(); break;
   default: // allow use of approxData or modSurrData, even if no modifications
-    if (modSurrData.is_null())
-      modSurrData = surrData; // shared rep (linking once is sufficient)
+    // depending on ctor for modSurrData, may be NULL or just empty
+    if (modSurrData.is_null()) // shared rep (linking once is sufficient)
+      modSurrData = surrData;
+    else if (modSurrData.points() == 0) // retain independence: shallow data cp
+      modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
     break;
   }
 }

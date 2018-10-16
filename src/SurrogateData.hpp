@@ -939,18 +939,18 @@ public:
   void copy_active_sdr(const SurrogateData& sd, short sdr_mode) const;
   void copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const;
 
-  /// set anchor{Vars,Resp}
+  /// augment {vars,resp}Data and define anchorIndex
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// set {vars,resp}Data
   void data_points(const SDVArray& sdv_array, const SDRArray& sdr_array);
 
-  /// set anchorVars
+  /// augment varsData and define anchorIndex
   void anchor_variables(const SurrogateDataVars& sdv);
-  /// get anchorVars
+  /// get varsData instance corresponding to anchorIndex
   const SurrogateDataVars& anchor_variables() const;
-  /// set anchorResp
+  /// augment respData and define anchorIndex
   void anchor_response(const SurrogateDataResp& sdr);
-  /// get anchorResp
+  /// get respData instance corresponding to anchorIndex
   const SurrogateDataResp& anchor_response() const;
 
   /// set varsData[activeKey]
@@ -1018,7 +1018,7 @@ public:
   /// for each key in passed set
   void history_target(size_t target, const UShort2DArray& keys);
 
-  /// query presence of anchor{Vars,Resp}
+  /// query presence of anchor indexed within {vars,resp}Data
   bool anchor() const;
   /// assign anchorIndex[activeKey] to incoming index
   void anchor_index(size_t index) const;
@@ -1039,9 +1039,9 @@ public:
   /// erase anchorIndex for each key within passed set
   void clear_anchor_index(const UShort2DArray& keys);
 
-  /// return size of {vars,resp}Data arrays (neglecting anchor point)
+  /// return size of active key within {vars,resp}Data
   size_t points() const;
-  /// return size of {vars,resp}Data arrays (neglecting anchor point)
+  /// return size of {vars,resp}Data instance corresponding to key
   size_t points(const UShortArray& key) const;
 
   /// return total number of available data components
@@ -1066,7 +1066,7 @@ public:
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
 
-  /// convenience function used by data_checks() for anchorResp and respData
+  /// convenience function used by data_checks() for respData
   void response_check(const SurrogateDataResp& sdr, short& failed_data) const;
   /// screen data sets for samples with Inf/Nan that should be excluded;
   /// defines failedRespData
