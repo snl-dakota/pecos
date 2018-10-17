@@ -370,6 +370,10 @@ update_collocation_indices_from_trial(const UShortArray& trial_set,
 				      Sizet3DArray& colloc_indices,
 				      int& num_colloc_pts)
 {
+  // TO DO: don't currently need to recompute reference point count since
+  // grid_size() not accessible within generalized sparse grid loop, but
+  // would be better to harden this as in _from_increment() case...
+
   size_t cntr = num_colloc_pts, num_lev = colloc_key.size();
   colloc_indices.resize(num_lev);
 
@@ -399,10 +403,20 @@ update_collocation_indices_from_increment(const UShortArray& incr_sets,
 					  Sizet3DArray& colloc_indices,
 					  int& num_colloc_pts)
 {
-  size_t cntr = num_colloc_pts, num_lev = colloc_key.size();
+  size_t lev, num_lev = colloc_key.size(), set, start_set, num_sets;
   colloc_indices.resize(num_lev);
 
-  size_t lev, set, start_set, num_sets, pt, num_tp_pts; SizetArray indices;
+  // recompute reference pt count due to possible use of grid_size()
+  num_colloc_pts = 0;
+  for (lev=0; lev<num_lev; ++lev) {
+    const UShort3DArray& key_l = colloc_key[lev];
+    start_set = incr_sets[lev];
+    for (set=0; set<start_set; ++set)
+      num_colloc_pts += key_l[set].size();
+  }
+
+  // update colloc_indices, num_colloc_pts
+  size_t cntr = num_colloc_pts, pt, num_tp_pts;  SizetArray indices;
   for (lev=0; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];
     Sizet2DArray&    indices_l = colloc_indices[lev];

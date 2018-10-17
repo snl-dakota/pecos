@@ -2777,6 +2777,7 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
 #ifdef DEBUG
+	  PCout << "c_index = " << c_index << std::endl;
 	  Real r1 = sdr_array_1[c_index].response_function(),
 	       r2 = sdr_array_2[c_index].response_function(), r1r2 = r1*r2,
 	       r1r2_lm1 =
