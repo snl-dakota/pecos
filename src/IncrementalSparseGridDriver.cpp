@@ -100,7 +100,8 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   */
 
 
-  /* Some assumptions to accelerate increment:
+  // Some assumptions to accelerate increment:
+  // *** TO DO: break this out into aniso update ... ?
   //
   // > consistent ordering for index sets present in old & new
   // > leading sm_mi index sets that are unmatched at front of new_sm_mi
@@ -127,14 +128,15 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
       sm_coeffs.push_back(new_sm_coeffs[i]);
     }
   }
-  */
 
 
+  /*
   // Strong(est) assumptions to further accelerate:
   // valid for both increment & decrement
 
   // > no interior differences (due to anisotropic refinement)
   //   --> only need to manage differences at front and end
+  // *** TO DO: break this out into iso update ... ?
   UShort2DArray::iterator sm_it = sm_mi.begin();  size_t old_index = 0;
   const UShortArray& first_new = new_sm_mi[0];
   // Check for old truncated from beginning of new (preserve in updated)
@@ -146,7 +148,7 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   // augment with active new
   sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
   sm_coeffs.insert(sm_coeffs.end(), new_sm_coeffs.begin(), new_sm_coeffs.end());
-
+  */
 
   /* Another efficient option: unroll and tailor assign_smolyak_arrays():
   unsigned short ssg_lev = ssgLevIter->second;
@@ -219,6 +221,9 @@ int IncrementalSparseGridDriver::grid_size()
   if (num_colloc_pts == 0) { // special value indicated update required
     update_smolyak_arrays();
     update_collocation_key();
+
+    PCout << "smolMIIter->second:\n" << smolMIIter->second <<"\nsize = "
+	  << smolMIIter->second.size() << std::endl;
 
     RealMatrix a1_pts, a1_t2_wts;  RealVector a1_t1_wts;
     compute_tensor_points_weights(0, smolMIIter->second.size(), true, a1_pts,
@@ -815,7 +820,7 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
   size_t i, j, k, l, cntr, num_tp_pts, num_colloc_pts = 0,
     end = start_index + num_indices;
   const UShort3DArray& colloc_key = collocKeyIter->second;
-   const UShort2DArray& sm_mi = smolMIIter->second;
+  const UShort2DArray& sm_mi      =    smolMIIter->second;
   // define num_colloc_pts
   for (i=start_index; i<end; ++i)
     num_colloc_pts += colloc_key[i].size();
@@ -827,6 +832,7 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
     t2_wts.shapeUninitialized(numVars, num_colloc_pts);
   for (i=start_index, cntr=0; i<end; ++i) {
     const UShortArray& sm_index = sm_mi[i];
+    PCout << "i = " << i << ":\n" << sm_index;
     if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
       UShortArray quad_order(numVars);
       level_to_order(sm_index, quad_order);
@@ -837,6 +843,7 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
       const UShortArray& key_ij = colloc_key[i][j];
       Real* pt    =    pts[cntr]; // column vector
       Real& t1_wt = t1_wts[cntr]; t1_wt = 1.;
+      PCout << "j = " << j << " key_ij:\n" << key_ij;
       for (k=0; k<numVars; ++k) {
 	pt[k]  =      collocPts1D[sm_index[k]][k][key_ij[k]];
 	t1_wt *= type1CollocWts1D[sm_index[k]][k][key_ij[k]];

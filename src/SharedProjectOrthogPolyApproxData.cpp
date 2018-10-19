@@ -149,7 +149,7 @@ void SharedProjectOrthogPolyApproxData::increment_data()
     allocate_component_sobol(mi);
     break;
   }
-   case INCREMENTAL_SPARSE_GRID: { // augment previous data
+  case INCREMENTAL_SPARSE_GRID: { // augment previous data
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
     switch (expConfigOptions.refinementControl) {
@@ -158,7 +158,7 @@ void SharedProjectOrthogPolyApproxData::increment_data()
       // update multiIndex and append bookkeeping
       increment_trial_set(isg_driver, multiIndexIter->second);
       break;
-    case UNIFORM_CONTROL:
+    default: // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY}
       increment_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
@@ -172,10 +172,42 @@ void SharedProjectOrthogPolyApproxData::increment_data()
 
 void SharedProjectOrthogPolyApproxData::increment_component_sobol()
 {
-  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
-    reset_sobol_index_map_values();
-    multi_index_to_sobol_index_map(tpMultiIndex[activeKey].back());
-    assign_sobol_index_map_values();
+  if (!expConfigOptions.vbdFlag || expConfigOptions.vbdOrderLimit == 1)
+    return;
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  //case QUADRATURE: // increment_data() uses allocate_component_sobol()
+  case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      if (isg_driver->smolyak_coefficients().back()) {
+	reset_sobol_index_map_values();
+	multi_index_to_sobol_index_map(tpMultiIndex[activeKey].back());
+	assign_sobol_index_map_values();
+      }
+      break;
+    default: {
+      const UShort3DArray& tp_mi = tpMultiIndex[activeKey];
+      const IntArray&  sm_coeffs = isg_driver->smolyak_coefficients();
+      size_t i, start = isg_driver->smolyak_coefficients_reference().size(),
+	end = tp_mi.size();
+      reset_sobol_index_map_values();
+      for (i=start; i<end; ++i)
+	if (sm_coeffs[i])
+	  multi_index_to_sobol_index_map(tp_mi[i]);
+      assign_sobol_index_map_values();
+      break;
+    }
+    }
+    break;
+  }
+  default:
+    PCerr << "Error: unsupported solution approach in SharedProjectOrthogPoly"
+	  << "ApproxData::increment_component_sobol()" << std::endl;
+    abort_handler(-1);
+    break;
   }
 }
 
@@ -196,7 +228,7 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       decrement_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
-    case UNIFORM_CONTROL:
+    default: // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY}
       decrement_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
@@ -237,7 +269,7 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       pre_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
-    case UNIFORM_CONTROL:
+    default: // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY}
       push_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
@@ -257,8 +289,9 @@ void SharedProjectOrthogPolyApproxData::post_push_data()
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       post_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
+    // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY} are no-op
     }
-    //case UNIFORM_CONTROL: // no-op
+    break;
   }
   }
 }
