@@ -101,8 +101,57 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 
 
   // Some assumptions to accelerate increment:
-  // *** TO DO: break this out into aniso update ... ?
-  //
+
+
+  // 1. See update_smolyak_arrays_aniso() for implementation that accelerates
+  //    with assumptions but is still general enough for anisotropic refinement
+
+
+  // 2. Stronger assumptions for uniform refinement
+  // > no interior differences (due to anisotropic refinement) --> only need
+  //   to manage differences at front and end
+  UShort2DArray::iterator sm_it = sm_mi.begin();  size_t old_index = 0;
+  const UShortArray& first_new = new_sm_mi[0];
+  // Check for old truncated from beginning of new (preserve in updated)
+  while (sm_it != sm_mi.end() && *sm_it != first_new)
+    { ++sm_it; ++old_index; }
+  // truncate to unmatched leading sets
+  sm_mi.resize(old_index);  sm_coeffs.resize(old_index);
+  sm_coeffs.assign(old_index, 0); // zero out prior to append of new active
+  // augment with active new
+  sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
+  sm_coeffs.insert(sm_coeffs.end(), new_sm_coeffs.begin(), new_sm_coeffs.end());
+
+
+  /* 3. Another efficient option: unroll and tailor assign_smolyak_arrays():
+  unsigned short ssg_lev = ssgLevIter->second;
+  UShortArray levels;
+  if (isotropic())
+    levels.assign(numVars, ssg_lev);
+  else
+    ;
+  SharedPolyApproxData::
+    total_order_multi_index(levels, new_sm_mi, ssg_lev-1);//don't know prev lev!
+  sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
+  */
+}
+
+
+void IncrementalSparseGridDriver::
+update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs)
+{
+  // if update indicator is off, Smolyak arrays already updated in grid_size()
+  if (numPtsIter->second)
+    return;
+
+  // compute new Smolyak multi-index and coefficients, but don't overwrite old
+  // (must avoid shifts due to index lower bound)
+  // TO DO: remove lower bound in assign_smolyak_arrays()?  --> still requires
+  // care since initial grid could be truncated and want to preserve this.
+  UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
+  assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
+
+  // Assumptions to accelerate increment (relative to simplest option above):
   // > consistent ordering for index sets present in old & new
   // > leading sm_mi index sets that are unmatched at front of new_sm_mi
   //   were truncated from new due to numVars-1 lower bound
@@ -128,39 +177,6 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
       sm_coeffs.push_back(new_sm_coeffs[i]);
     }
   }
-
-
-  /*
-  // Strong(est) assumptions to further accelerate:
-  // valid for both increment & decrement
-
-  // > no interior differences (due to anisotropic refinement)
-  //   --> only need to manage differences at front and end
-  // *** TO DO: break this out into iso update ... ?
-  UShort2DArray::iterator sm_it = sm_mi.begin();  size_t old_index = 0;
-  const UShortArray& first_new = new_sm_mi[0];
-  // Check for old truncated from beginning of new (preserve in updated)
-  while (sm_it != sm_mi.end() && *sm_it != first_new)
-    { ++sm_it; ++old_index; }
-  // truncate to unmatched leading sets
-  sm_mi.resize(old_index);  sm_coeffs.resize(old_index);
-  sm_coeffs.assign(old_index, 0); // zero out prior to append of new active
-  // augment with active new
-  sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
-  sm_coeffs.insert(sm_coeffs.end(), new_sm_coeffs.begin(), new_sm_coeffs.end());
-  */
-
-  /* Another efficient option: unroll and tailor assign_smolyak_arrays():
-  unsigned short ssg_lev = ssgLevIter->second;
-  UShortArray levels;
-  if (isotropic())
-    levels.assign(numVars, ssg_lev);
-  else
-    ;
-  SharedPolyApproxData::
-    total_order_multi_index(levels, new_sm_mi, ssg_lev-1);//don't know prev lev!
-  sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
-  */
 }
 
 
@@ -221,9 +237,6 @@ int IncrementalSparseGridDriver::grid_size()
   if (num_colloc_pts == 0) { // special value indicated update required
     update_smolyak_arrays();
     update_collocation_key();
-
-    PCout << "smolMIIter->second:\n" << smolMIIter->second <<"\nsize = "
-	  << smolMIIter->second.size() << std::endl;
 
     RealMatrix a1_pts, a1_t2_wts;  RealVector a1_t1_wts;
     compute_tensor_points_weights(0, smolMIIter->second.size(), true, a1_pts,
@@ -832,7 +845,6 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
     t2_wts.shapeUninitialized(numVars, num_colloc_pts);
   for (i=start_index, cntr=0; i<end; ++i) {
     const UShortArray& sm_index = sm_mi[i];
-    PCout << "i = " << i << ":\n" << sm_index;
     if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
       UShortArray quad_order(numVars);
       level_to_order(sm_index, quad_order);
@@ -843,7 +855,6 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
       const UShortArray& key_ij = colloc_key[i][j];
       Real* pt    =    pts[cntr]; // column vector
       Real& t1_wt = t1_wts[cntr]; t1_wt = 1.;
-      PCout << "j = " << j << " key_ij:\n" << key_ij;
       for (k=0; k<numVars; ++k) {
 	pt[k]  =      collocPts1D[sm_index[k]][k][key_ij[k]];
 	t1_wt *= type1CollocWts1D[sm_index[k]][k][key_ij[k]];

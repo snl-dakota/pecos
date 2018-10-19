@@ -128,8 +128,10 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// overloaded form updates sm_mi from sm_coeffs
+  /// updates sm_mi from sm_coeffs after uniform/isotropic refinement
   void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
+  /// updates sm_mi from sm_coeffs after anisotropic refinement
+  void update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs);
   /// increment sm_{mi,coeffs} to sync with new_sm_{mi,coeffs}
   void increment_smolyak_arrays(const UShort2DArray& new_sm_mi,
 				const IntArray& new_sm_coeffs,
@@ -449,7 +451,12 @@ inline int IncrementalSparseGridDriver::unique_trial_points() const
 
 /** Start from scratch rather than incur incremental coefficient update. */
 inline void IncrementalSparseGridDriver::update_smolyak_arrays()
-{ update_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
+{
+  if (isotropic())
+    update_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second);
+  else
+    update_smolyak_arrays_aniso(smolMIIter->second, smolCoeffsIter->second);
+}
 
 
 inline void IncrementalSparseGridDriver::
