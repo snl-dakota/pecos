@@ -99,9 +99,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     unsigned short    ssg_level = csg_driver->level();
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form
-      = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev ||
-	 activeKey != prevActiveKey || expConfigOptions.refinementControl ==
-	 DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
+      = (expConfigOptions.refinementControl || ssg_level != ssgLevelPrev ||
+	 aniso_wts != ssgAnisoWtsPrev       || activeKey != prevActiveKey );
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     UShort2DArray& mi = multiIndexIter->second;
