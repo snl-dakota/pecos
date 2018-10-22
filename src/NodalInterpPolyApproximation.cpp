@@ -926,7 +926,7 @@ tensor_product_covariance(const RealVector& x, Real mean_1, Real mean_2,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   IntegrationDriver* driver_rep = data_rep->driverRep;
   //bool same = (this == nip_approx_2);
-  Real tp_covar = 0., t1_coeff_1_mm1, t1_coeff_2_mm2;
+  Real t1_coeff_1_mm1, t1_coeff_2_mm2;
   size_t i, c_index_i, num_colloc_pts = colloc_key.size(),
     num_v = sharedDataRep->numVars;
 
@@ -1323,12 +1323,11 @@ tensor_product_covariance(const RealVector& x, Real mean_1, Real mean_2,
     //abort_handler(-1);
     //break;
   case PRODUCT_OF_INTERPOLANTS_FULL:
-    product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1, exp_t1c_2,
-			    exp_t2c_2, lev_index, colloc_key, colloc_index);
+    return product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1,
+				   exp_t1c_2, exp_t2c_2, lev_index, colloc_key,
+				   colloc_index);
     break;
   }
-
-  return tp_covar;
 }
 
 
