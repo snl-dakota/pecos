@@ -115,6 +115,9 @@ public:
     const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
     short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
+  /// set flag indicating that the grid (and its size) requires updating
+  void clear_grid();
+
   /// precompute quadrature rules to the maximum current order for each basis
   /// polynomial (efficiency optimization when rules are expensive to compute)
   void precompute_rules();
@@ -334,6 +337,10 @@ inline void SparseGridDriver::clear_keys()
 }
 
 
+inline void SparseGridDriver::clear_grid()
+{ numPtsIter->second = 0; } // special value indicating a grid update is reqd
+
+
 inline unsigned short SparseGridDriver::level() const
 { return ssgLevIter->second; }
 
@@ -342,7 +349,7 @@ inline void SparseGridDriver::level(unsigned short ssg_level)
 {
   if (ssgLevIter->second != ssg_level) {
     ssgLevIter->second = ssg_level;
-    numPtsIter->second = 0; // special value indicates update required
+    clear_grid();
   }
 }
 
