@@ -680,8 +680,11 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   Real mean_1, mean_2;
   if (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST)
-    mean_1 = mean_2 = 0.; // don't compute exp mean since tensor means used
+    // don't compute means here since not used by SSG with _FAST approximation
+    // (instead, tensor means are computed for each tensor grid)
+    mean_1 = mean_2 = 0.;
   else {
+    // TQP and SSG with PRODUCT_OF_INTERPOLANTS_FULL: compute global mean once
     mean_1 = mean(x);
     mean_2 = (same) ? mean_1 : nip_approx_2->mean(x);
   }

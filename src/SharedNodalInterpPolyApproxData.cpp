@@ -31,8 +31,16 @@ void SharedNodalInterpPolyApproxData::allocate_data()
   // but its usage of higher-order reinterpolation of covariance is currently
   // too slow for production usage.  Thus, we only activate it when needed to
   // support new capability, such as gradient-enhanced interpolation.
-  momentInterpType = (basisConfigOptions.useDerivs) ?
-    REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: // no FAST approx --> use FULL
+    momentInterpType = (basisConfigOptions.useDerivs) ?
+      REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FULL;
+    break;
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: // use FAST approx
+    momentInterpType = (basisConfigOptions.useDerivs) ?
+      REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+    break;
+  }
 
   // Map out current flow to integration driver:
   // > NonDStochCollocation::initialize_u_space_model() constructs driver_basis

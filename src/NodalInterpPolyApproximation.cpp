@@ -1317,11 +1317,7 @@ tensor_product_covariance(const RealVector& x, Real mean_1, Real mean_2,
     }
     break;
   }
-  case PRODUCT_OF_INTERPOLANTS_FAST: // Ok for TPQ; should not be used for SSG 
-    //PCerr << "Error: overloaded form of tensor_product_covariance() should "
-    //      << "not be used for PRODUCT_OF_INTERPOLANTS_FAST." << std::endl;
-    //abort_handler(-1);
-    //break;
+  case PRODUCT_OF_INTERPOLANTS_FAST: // Note: used for TPQ; SSG short-cuts
   case PRODUCT_OF_INTERPOLANTS_FULL:
     return product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1,
 				   exp_t1c_2, exp_t2c_2, lev_index, colloc_key,
@@ -2083,6 +2079,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
     }
     break;
   }
+  case PRODUCT_OF_INTERPOLANTS_FULL: // for matched products; mismatched = TO DO
   case PRODUCT_OF_INTERPOLANTS_FAST: {
     // -------------------------------------------------------------------
     // Mixed variable key:
@@ -2161,9 +2158,6 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
     }
     break;
   }
-  case PRODUCT_OF_INTERPOLANTS_FULL:
-    // TO DO
-    break;
   }
 
   return tpVarianceGrad;
@@ -3126,8 +3120,11 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
 	    tensor_product_mean(x, exp_t1c_2, exp_t2c_2, sm_mi_i,
 				key_i, c_index_i);
 	  covar += sm_coeffs[i] *
+	    // *** TO DO 10/2018: if not coeff^2, then more like
+	    //                    INTERPOLATION_OF_PRODUCTS !!
 	    product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1,
 	      exp_t1c_2, exp_t2c_2, sm_mi_i, key_i, c_index_i);
+	    // short-cut tensor_product_covariance(...)
 	}
       break;
 
@@ -3151,9 +3148,10 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
 	  PCout << "Diagonal covar: sm_coeffs[" << i << "] = " << sm_coeff_i
 		<< " tp_covar = " << tp_covar << '\n';
 #else
-	  covar += sm_coeff_i * sm_coeff_i * product_of_interpolants(x, mean_1,
-	    mean_2, exp_t1c_1, exp_t2c_1, exp_t1c_2, exp_t2c_2, sm_mi_i, key_i,
-	    c_index_i);
+	  covar += sm_coeff_i * sm_coeff_i * // *** coeff^2 for prod of interp
+	    product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1,
+	      exp_t1c_2, exp_t2c_2, sm_mi_i, key_i, c_index_i);
+	    // short-cut tensor_product_covariance(...)
 #endif // DEBUG
 	  for (j=0; j<i; ++j)
 	    if (sm_coeffs[j]) { // two of each off-diagonal term
@@ -3321,7 +3319,11 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
       break;
 
     case PRODUCT_OF_INTERPOLANTS_FULL:
-      // TO DO: variance gradient for matched + mis-matched tensor grids
+      // Note:  matched variance gradient contributions as above
+      // TO DO: variance gradient contributions from mis-matched tensor grids
+      PCerr << "Error: variance gradient not yet implemented for "
+	    << "PRODUCT_OF_INTERPOLANTS_FULL." << std::endl;
+      abort_handler(-1);
       break;
     }
     return varianceGradient;
