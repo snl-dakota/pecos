@@ -390,6 +390,17 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     // perform the overlay/addition of level expansions
     const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
     size_t i, num_combine = combined_mi_map.size();
+    // overlay with reindexing of sparse indices
+    for (i=0, sp_it = sparseIndices.begin(), ec_it = expansionCoeffs.begin(),
+	      eg_it = expansionCoeffGrads.begin();
+	 i<num_combine; ++i, ++sp_it, ++ec_it, ++eg_it)
+      overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
+			eg_it->second, 1,  combinedSparseIndices,
+			combinedExpCoeffs, combinedExpCoeffGrads);
+
+    /* Fragile in general, but combined_mi_map[0] will be simple sequence
+       of leading terms in combinedMultiIndex based on
+       SharedOrthogPolyApproxData::pre_combine_data()
     sp_it = sparseIndices.begin();
     ec_it = expansionCoeffs.begin();  eg_it = expansionCoeffGrads.begin();
     // avoid overhead of unnecessary reindexing on first overlay
@@ -400,6 +411,7 @@ void RegressOrthogPolyApproximation::combine_coefficients()
       overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
 			eg_it->second, 1,  combinedSparseIndices,
 			combinedExpCoeffs, combinedExpCoeffGrads);
+    */
     break;
   }
   }
