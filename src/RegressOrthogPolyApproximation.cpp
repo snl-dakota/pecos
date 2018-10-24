@@ -387,20 +387,26 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     abort_handler(-1);
     break;
   default: { //case ADD_COMBINE:
-    // perform the overlay/addition of level expansions
     const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
     size_t i, num_combine = combined_mi_map.size();
-    // overlay with reindexing of sparse indices
+
+    // overlay/add the level expansions, reindexing the sparse indices
+
+    /*
+    // Incurs a performance penalty by not assuming form of combined_mi_map[0]:
+    combinedSparseIndices.clear(); // combined coeffs,grads cleared in overlay
     for (i=0, sp_it = sparseIndices.begin(), ec_it = expansionCoeffs.begin(),
 	      eg_it = expansionCoeffGrads.begin();
 	 i<num_combine; ++i, ++sp_it, ++ec_it, ++eg_it)
       overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
 			eg_it->second, 1,  combinedSparseIndices,
 			combinedExpCoeffs, combinedExpCoeffGrads);
+    */
 
-    /* Fragile in general, but combined_mi_map[0] will be simple sequence
-       of leading terms in combinedMultiIndex based on
-       SharedOrthogPolyApproxData::pre_combine_data()
+    // More efficient for (coarse/large) leading expansion but fragile in that
+    // it ignores combined_mi_map[0] (but from SharedOrthogPolyApproxData::
+    // pre_combine_data(), we know combined_mi_map[0] will sequence the
+    // leading terms of combinedMultiIndex)
     sp_it = sparseIndices.begin();
     ec_it = expansionCoeffs.begin();  eg_it = expansionCoeffGrads.begin();
     // avoid overhead of unnecessary reindexing on first overlay
@@ -411,7 +417,6 @@ void RegressOrthogPolyApproximation::combine_coefficients()
       overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
 			eg_it->second, 1,  combinedSparseIndices,
 			combinedExpCoeffs, combinedExpCoeffGrads);
-    */
     break;
   }
   }
@@ -804,7 +809,7 @@ overlay_expansion(const SizetSet& sparse_ind, const SizetArray& multi_index_map,
     combined_exp_coeffs.size(num_combined_terms); // init to 0
   if (expansionCoeffGradFlag) {
     num_deriv_v = exp_grads_sum.numRows();
-    combined_exp_grads.shape(num_deriv_v, num_combined_terms); // -> 0.
+    combined_exp_grads.shape(num_deriv_v, num_combined_terms); // init to 0
   }
 
   for (i=0, cit=sparse_ind_sum.begin(); cit!=sparse_ind_sum.end(); ++i, ++cit) {
