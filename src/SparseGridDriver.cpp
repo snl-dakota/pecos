@@ -307,15 +307,7 @@ void SparseGridDriver::pop_increment()
 
 
 void SparseGridDriver::merge_increment()
-{
-  // Not needed for HierarchSparseGridDriver, so use no-op as default
-
-  /*
-  PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "merge_increment()." << std::endl;
-  abort_handler(-1);
-  */
-}
+{ } // not needed for HierarchSparseGridDriver, so use no-op as default
 
 
 const UShortArray& SparseGridDriver::trial_set(const UShortArray& key) const

@@ -72,7 +72,8 @@ public:
   int unique_trial_points() const;
 
   void compute_increment(RealMatrix& var_sets);
-  //void push_increment();
+  void push_increment();
+  void pop_increment();
   //void merge_increment();
 
   void print_smolyak_multi_index() const;
