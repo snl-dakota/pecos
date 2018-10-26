@@ -187,8 +187,8 @@ void SharedInterpPolyApproxData::increment_data()
       TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
       update_tensor_interpolation_basis(tpq_driver->level_index());
       allocate_component_sobol();
-      // allow mixed allocate/increment:
-      quadOrderPrev = tpq_driver->quadrature_order();
+      // For subsequent allocate_data():
+      //quadOrderPrev = tpq_driver->quadrature_order();
       break;
     }
     case INCREMENTAL_SPARSE_GRID: {
@@ -207,6 +207,7 @@ void SharedInterpPolyApproxData::increment_data()
 	  if (sm_mi_i[v] > max_set_index)
 	    max_set_index = sm_mi_i[v];
       }
+      //ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
       update_sparse_interpolation_basis(max_set_index);
       increment_component_sobol();
       break;
@@ -227,6 +228,8 @@ void SharedInterpPolyApproxData::increment_data()
 	      max_set_index = sm_set[v];
 	}
       }
+      // For subsequent allocate_data():
+      //ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
       update_sparse_interpolation_basis(max_set_index);
       increment_component_sobol();
       break;
@@ -253,9 +256,25 @@ void SharedInterpPolyApproxData::decrement_data()
     break;
   }
   default:
-    PCerr << "Error: unsupported refinement control in SharedInterpPolyApprox"
-	  << "Data::decrement_data()" << std::endl;
-    abort_handler(-1);
+    /* Leave interpolation basis and component sobol in incremented state.
+
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE: {
+      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      break;
+    }
+    case INCREMENTAL_SPARSE_GRID: {
+      IncrementalSparseGridDriver* isg_driver
+	= (IncrementalSparseGridDriver*)driverRep;
+      break;
+    }
+    case HIERARCHICAL_SPARSE_GRID: {
+      HierarchSparseGridDriver* hsg_driver
+	= (HierarchSparseGridDriver*)driverRep;
+      break;
+    }
+    }
+    */
     break;
   }
 }
@@ -277,9 +296,9 @@ void SharedInterpPolyApproxData::post_push_data()
     break;
   }
   default:
-    PCerr << "Error: unsupported refinement control in SharedInterpPolyApprox"
-	  << "Data::post_push_data()" << std::endl;
-    abort_handler(-1);
+
+    // Interpolation basis and component sobol already in incremented state
+
     break;
   }
 }
@@ -294,9 +313,9 @@ void SharedInterpPolyApproxData::post_finalize_data()
     poppedLevMultiIndex[activeKey].clear();
     break;
   default:
-    PCerr << "Error: unsupported refinement control in SharedInterpPolyApprox"
-	  << "Data::post_finalize_data()" << std::endl;
-    abort_handler(-1);
+
+    // Interpolation basis and component sobol already in incremented state
+
     break;
   }
 }

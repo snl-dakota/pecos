@@ -196,9 +196,8 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   else         increment_current_from_reference();
 
   switch (data_rep->expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
-    increment_coefficients(hsg_driver->trial_set());
-    break;
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+    increment_coefficients(hsg_driver->trial_set());  break;
   default: {
     const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
     const UShortArray& incr_sets = hsg_driver->increment_sets();
@@ -232,24 +231,40 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
   if (updated) clear_all_computed_bits();
   else         decrement_current_to_reference();
 
-  const UShortArray& trial_set = data_rep->hsg_driver()->trial_set();
-  size_t lev = l1_norm(trial_set);
-
-  if (expansionCoeffFlag) {
-    RealVector2DArray& exp_t1c = expT1CoeffsIter->second;
-    poppedExpT1Coeffs[key][trial_set] = exp_t1c[lev].back();
-    exp_t1c[lev].pop_back();
-    if (data_rep->basisConfigOptions.useDerivs) {
-      RealMatrix2DArray& exp_t2c = expT2CoeffsIter->second;
-      poppedExpT2Coeffs[key][trial_set] = exp_t2c[lev].back();
-      exp_t2c[lev].pop_back();
+  switch (data_rep->expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    const UShortArray& trial_set = data_rep->hsg_driver()->trial_set(); // *** NO LONGER VALID AFTER HierarchSparseGridDriver::pop_trial_set()
+    size_t lev = l1_norm(trial_set);
+    if (expansionCoeffFlag) {
+      RealVector2DArray& exp_t1c = expT1CoeffsIter->second;
+      poppedExpT1Coeffs[key][trial_set] = exp_t1c[lev].back();
+      exp_t1c[lev].pop_back();
+      if (data_rep->basisConfigOptions.useDerivs) {
+	RealMatrix2DArray& exp_t2c = expT2CoeffsIter->second;
+	poppedExpT2Coeffs[key][trial_set] = exp_t2c[lev].back();
+	exp_t2c[lev].pop_back();
+      }
     }
+    if (expansionCoeffGradFlag) {
+      RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
+      poppedExpT1CoeffGrads[key][trial_set] = exp_t1cg[lev].back();
+      exp_t1cg[lev].pop_back();
+    }
+    break;
   }
-  if (expansionCoeffGradFlag) {
-    RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
-    poppedExpT1CoeffGrads[key][trial_set] = exp_t1cg[lev].back();
-    exp_t1cg[lev].pop_back();
+  default: {
+    //const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index(); // *** already pruned in HierarchSparseGridDriver::pop_increment()
+    const UShortArray& incr_sets = data_rep->hsg_driver()->increment_sets();
+    size_t lev, num_lev = incr_sets.size(), set, start_set, num_sets;
+    for (lev=0; lev<num_lev; ++lev) {
+      start_set = incr_sets[lev]; //num_sets = sm_mi[lev].size();
+      for (set=start_set; set<num_sets; ++set)
+	;
+    }
+    break;
   }
+  }
+
 }
 
 
@@ -262,7 +277,13 @@ void HierarchInterpPolyApproximation::push_coefficients()
   if (updated) clear_all_computed_bits();
   else         increment_current_from_reference();
 
-  push_coefficients(data_rep->hsg_driver()->trial_set());
+  switch (data_rep->expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+    push_coefficients(data_rep->hsg_driver()->trial_set());  break;
+  default: {
+    break;
+  }
+  }
 }
 
 
