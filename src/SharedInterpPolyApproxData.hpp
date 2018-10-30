@@ -83,6 +83,7 @@ protected:
   void allocate_data();
   void increment_data();
   void decrement_data();
+  void pre_push_data();
   void post_push_data();
   void post_finalize_data();
 

@@ -249,6 +249,10 @@ void SharedInterpPolyApproxData::decrement_data()
 {
   // leave polynomialBasis as is
 
+  // Note: trial/increment sets are still available since expansion pop is
+  // ordered to precede grid pop (reverse order from increment grid +
+  // update / push expansion)
+  
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
@@ -280,19 +284,27 @@ void SharedInterpPolyApproxData::decrement_data()
 }
 
 
+void SharedInterpPolyApproxData::pre_push_data()
+{
+  // *** TO DO:
+  // Nodal index should be aggregated; Hierarch corresponds to trial level
+
+  // Note: pushIndex just caches result, avoiding need to call
+  //       data_rep->retrieval_index() for each QoI
+  pushIndex = find_index(poppedLevMultiIndex[activeKey],
+			 ((SparseGridDriver*)driverRep)->trial_set());
+  // same as retrieval_index(), but eliminates key lookup for trial_set()
+}
+
+
 void SharedInterpPolyApproxData::post_push_data()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
-    std::deque<UShortArray>::iterator sit
-      = std::find(popped_lev_mi.begin(), popped_lev_mi.end(),
-		  ssg_driver->trial_set());
-    if (sit != popped_lev_mi.end())
-      popped_lev_mi.erase(sit);
+    popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
     break;
   }
   default:

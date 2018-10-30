@@ -223,6 +223,9 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
+    // Note: trial/increment sets are still available since expansion pop is
+    // ordered to precede grid pop (reverse order from increment grid +
+    // update / push expansion)
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       decrement_trial_set(isg_driver->trial_set(), multiIndexIter->second);

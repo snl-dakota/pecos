@@ -174,9 +174,9 @@ public:
   /// return entry from activeMultiIndex corresponding to activeKey
   const UShortArraySet& active_multi_index() const;
   /// return entry from computedTrialSets corresponding to key
-  const UShortArraySet& computed_trial_sets(const UShortArray& key) const;
+  const UShortArrayDeque& computed_trial_sets(const UShortArray& key) const;
   /// return entry from computedTrialSets corresponding to activeKey
-  const UShortArraySet& computed_trial_sets() const;
+  const UShortArrayDeque& computed_trial_sets() const;
 
 protected:
 
@@ -221,14 +221,17 @@ protected:
   /// iterator to the number of unique points in the active grid
   std::map<UShortArray, int>::iterator numPtsIter;
 
-  /// old reference index sets for generalized sparse grids
-  std::map<UShortArray, UShortArraySet> oldMultiIndex; // or UShort2DArray
+  /// old reference index sets for generalized sparse grids.  Use std::set
+  /// for fast lookups in add_active_neighbors().
+  std::map<UShortArray, UShortArraySet> oldMultiIndex;
   /// active index sets under current consideration for inclusion in a
-  /// generalized sparse grid
-  std::map<UShortArray, UShortArraySet> activeMultiIndex; // or UShort2DArray
+  /// generalized sparse grid.  Use std::set for ordering of candidates.
+  std::map<UShortArray, UShortArraySet> activeMultiIndex;
   /// subset of active set that have been evaluated as trial sets
-  /// (incremented in compute_trial_grid() and decremented in update_sets())
-  std::map<UShortArray, UShortArraySet> computedTrialSets; // or UShort2DArray
+  /// (incremented in compute_trial_grid() and decremented in update_sets()).
+  /// Use std::deque to preserve order of data appending, while supporting
+  /// efficient push/pop and internal erase.
+  std::map<UShortArray, UShortArrayDeque> computedTrialSets;
 
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
@@ -400,10 +403,10 @@ inline const UShortArraySet& SparseGridDriver::active_multi_index() const
 { return active_multi_index(activeKey); }
 
 
-inline const UShortArraySet& SparseGridDriver::
+inline const UShortArrayDeque& SparseGridDriver::
 computed_trial_sets(const UShortArray& key) const
 {
-  std::map<UShortArray, UShortArraySet>::const_iterator cit
+  std::map<UShortArray, UShortArrayDeque>::const_iterator cit
     = computedTrialSets.find(key);
   if (cit == computedTrialSets.end()) {
     PCerr << "Error: active key not found in SparseGridDriver::"
@@ -414,7 +417,7 @@ computed_trial_sets(const UShortArray& key) const
 }
 
 
-inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
+inline const UShortArrayDeque& SparseGridDriver::computed_trial_sets() const
 { return computed_trial_sets(activeKey); }
 
 

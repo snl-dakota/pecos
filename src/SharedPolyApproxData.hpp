@@ -517,6 +517,9 @@ protected:
 
   /// popped trial sets that were computed but not selected
   std::map<UShortArray, std::deque<UShortArray> > poppedLevMultiIndex;
+  /// index into popped sets of data to be restored (stored in this
+  /// class for used by each PolynomialApproximation)
+  size_t pushIndex;
 
   /// database key indicating the currently active polynomial expansion;
   /// the key is a multi-index managing multiple modeling dimensions such
@@ -767,15 +770,13 @@ finalization_index(size_t i, const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    const UShortArraySet& trial_sets = sg_driver->computed_trial_sets(key);
-    // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid
-    // data with remaining computed trial sets (in sorted order from
+    SparseGridDriver*  sg_driver = (SparseGridDriver*)driverRep;
+    const UShortArray& trial_set = sg_driver->computed_trial_sets(key)[i];
+    // {Incremental,Hierarch}SparseGridDriver::finalize_sets() updates the
+    // grid data with remaining computed trial sets (in sorted order from
     // SparseGridDriver::computedTrialSets).  Below, we determine the order
     // with which these appended trial sets appear in poppedLevMultiIndex.
-    UShortArraySet::const_iterator cit = trial_sets.begin();
-    std::advance(cit, i);
-    return find_index(poppedLevMultiIndex[key], *cit);
+    return find_index(poppedLevMultiIndex[key], trial_set); // *** should rtn i
     break;
   }
   default:

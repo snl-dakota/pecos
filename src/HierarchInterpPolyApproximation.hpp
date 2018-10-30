@@ -437,10 +437,9 @@ private:
   /// for a single index_set
   void increment_coefficients(const UShortArray& index_set);
 
-  /// move the expansion coefficients for push_set from
-  /// poppedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
-  /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void push_coefficients(const UShortArray& push_set);
+  /// move all coefficient sets from poppedExp{T1Coeffs,T2Coeffs,T1CoeffGrads}
+  /// to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void promote_all_popped_coefficients();
 
   /// helper function for common case where coefficients and modSurrData
   /// are synchronized
@@ -535,14 +534,13 @@ private:
 
   /// type 1 expansion coefficients popped during decrement for later
   /// restoration to expansionType1Coeffs
-  std::map<UShortArray, std::map<UShortArray, RealVector> > poppedExpT1Coeffs;
+  std::map<UShortArray, RealVectorDequeArray> poppedExpT1Coeffs;
   /// type 2 expansion coefficients popped during decrement for later
   /// restoration to expansionType2Coeffs
-  std::map<UShortArray, std::map<UShortArray, RealMatrix> > poppedExpT2Coeffs;
+  std::map<UShortArray, RealMatrixDequeArray> poppedExpT2Coeffs;
   /// type 1 expansion coefficient gradients popped during decrement
   /// for later restoration to expansionType1CoeffGrads
-  std::map<UShortArray, std::map<UShortArray, RealMatrix> >
-    poppedExpT1CoeffGrads;
+  std::map<UShortArray, RealMatrixDequeArray> poppedExpT1CoeffGrads;
 
   /// roll up of expansion type 1 coefficients across all keys
   RealVector2DArray combinedExpT1Coeffs;

@@ -185,16 +185,14 @@ protected:
 			   UShort2DArray& aggregated_mi, bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void pre_push_trial_set(const UShortArray& trial_set,
-			     UShort2DArray& aggregated_mi,
-			     bool monotonic = true);
+			  UShort2DArray& aggregated_mi, bool monotonic = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void post_push_trial_set(const UShortArray& trial_set,
-			      UShort2DArray& aggregated_mi,
-			      bool save_map = true);
+			   UShort2DArray& aggregated_mi, bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void push_trial_set(const UShortArray& trial_set,
-			 UShort2DArray& aggregated_mi,
-			 bool monotonic = true, bool save_map = true);
+		      UShort2DArray& aggregated_mi, bool monotonic = true,
+		      bool save_map = true);
 
   /// Precompute a maximal order of quadrature rules (based on a
   /// multiIndex) when too expensive to compute on demand
@@ -378,10 +376,6 @@ protected:
   std::map<UShortArray, std::deque<SizetArray> > poppedMultiIndexMap;
   /// popped instances of tpMultiIndexMapRef that were computed but not selected
   std::map<UShortArray, std::deque<size_t> > poppedMultiIndexMapRef;
-
-  /// index into popped sets of data to be restored (stored in this
-  /// class for used by each ProjectOrthogPolyApproximation)
-  size_t pushIndex;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -627,7 +621,7 @@ inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag,
 
 inline void SharedOrthogPolyApproxData::
 push_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
-		  bool monotonic, bool save_map)
+	       bool monotonic, bool save_map)
 {
   pre_push_trial_set(trial_set, aggregated_mi, monotonic);
   post_push_trial_set(trial_set, aggregated_mi, save_map);

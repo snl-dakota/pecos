@@ -69,6 +69,7 @@ public:
 
   const UShortArray& trial_set(const UShortArray& key) const;
   const UShortArray& trial_set() const;
+  unsigned short trial_level() const;
   int unique_trial_points() const;
 
   void compute_increment(RealMatrix& var_sets);
@@ -303,10 +304,10 @@ private:
   /// type 1 weight sets popped during decrement for later restoration
   /// to type1WeightSets. First key is level-form multi-index; second key
   /// is the trial set.
-  std::map<UShortArray, std::map<UShortArray, RealVector> > poppedT1WtSets;
+  std::map<UShortArray, std::map<UShortArray, RealVector> > poppedT1WtSets; // *** TO DO
   /// type 2 weight sets popped during decrement for later restoration
   /// to type2WeightSets
-  std::map<UShortArray, std::map<UShortArray, RealMatrix> > poppedT2WtSets;
+  std::map<UShortArray, std::map<UShortArray, RealMatrix> > poppedT2WtSets; // *** TO DO
 };
 
 
@@ -460,6 +461,10 @@ trial_set(const UShortArray& key) const
 
 inline const UShortArray& HierarchSparseGridDriver::trial_set() const
 { return smolMIIter->second[trialLevIter->second].back(); }
+
+
+inline unsigned short HierarchSparseGridDriver::trial_level() const
+{ return trialLevIter->second; }
 
 
 inline int HierarchSparseGridDriver::unique_trial_points() const

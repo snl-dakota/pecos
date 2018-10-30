@@ -249,6 +249,7 @@ pre_push_trial_set(const UShortArray& trial_set,
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
+  // pushIndex caches result of retrieval_index()
   pushIndex = find_index(poppedLevMultiIndex[activeKey], trial_set);
   size_t last_index = tp_mi.size();
 

@@ -330,7 +330,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
       pop_exp_coeffs.erase(cit); pop_exp_coeff_grads.erase(git);
       break;
     }
-    default: // multiple index sets from iso/aniso sparse grid refinement
+    default: // multiple index sets from one sparse grid refinement candidate
       tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_exp_coeffs.begin(),
 			   pop_exp_coeffs.end());
       tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),

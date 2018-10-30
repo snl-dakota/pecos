@@ -231,35 +231,83 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
   if (updated) clear_all_computed_bits();
   else         decrement_current_to_reference();
 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  RealVector2DArray& exp_t1c  = expT1CoeffsIter->second;
+  RealMatrix2DArray& exp_t2c  = expT2CoeffsIter->second;
+  RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
   switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    const UShortArray& trial_set = data_rep->hsg_driver()->trial_set(); // *** NO LONGER VALID AFTER HierarchSparseGridDriver::pop_trial_set()
-    size_t lev = l1_norm(trial_set);
+    // Note: trial_set() is valid so long as expansion decrement precedes
+    // grid decrement (reversing order from increment + update/push), but
+    // trial_level() is less volatile / safer.
+    unsigned short tr_lev = hsg_driver->trial_level();
     if (expansionCoeffFlag) {
-      RealVector2DArray& exp_t1c = expT1CoeffsIter->second;
-      poppedExpT1Coeffs[key][trial_set] = exp_t1c[lev].back();
-      exp_t1c[lev].pop_back();
+      if (save_data) {
+	RealVectorDequeArray& pop_t1c = poppedExpT1Coeffs[key];
+	if (pop_t1c.size() <= tr_lev) pop_t1c.resize(tr_lev + 1);
+	pop_t1c[tr_lev].push_back(exp_t1c[tr_lev].back());
+      }
+      exp_t1c[tr_lev].pop_back();
       if (data_rep->basisConfigOptions.useDerivs) {
-	RealMatrix2DArray& exp_t2c = expT2CoeffsIter->second;
-	poppedExpT2Coeffs[key][trial_set] = exp_t2c[lev].back();
-	exp_t2c[lev].pop_back();
+	if (save_data) {
+	  RealMatrixDequeArray& pop_t2c = poppedExpT2Coeffs[key];
+	  if (pop_t2c.size() <= tr_lev) pop_t2c.resize(tr_lev + 1);
+	  pop_t2c[tr_lev].push_back(exp_t2c[tr_lev].back());
+	}
+	exp_t2c[tr_lev].pop_back();
       }
     }
     if (expansionCoeffGradFlag) {
-      RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
-      poppedExpT1CoeffGrads[key][trial_set] = exp_t1cg[lev].back();
-      exp_t1cg[lev].pop_back();
+      if (save_data) {
+	RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
+	if (pop_t1cg.size() <= tr_lev) pop_t1cg.resize(tr_lev + 1);
+	pop_t1cg[tr_lev].push_back(exp_t1cg[tr_lev].back());
+      }
+      exp_t1cg[tr_lev].pop_back();
     }
     break;
   }
   default: {
-    //const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index(); // *** already pruned in HierarchSparseGridDriver::pop_increment()
+    // See note above about ordering of expansion / grid decrements.
     const UShortArray& incr_sets = data_rep->hsg_driver()->increment_sets();
-    size_t lev, num_lev = incr_sets.size(), set, start_set, num_sets;
+    size_t lev, num_lev = incr_sets.size(), set, start_set;
+    RealVectorArray::iterator rv_it;  RealMatrixArray::iterator rm_it;
+    // save_data is typically on, so don't bother with avoiding lookup if off:
+    RealVectorDequeArray& pop_t1c  = poppedExpT1Coeffs[key];
+    RealMatrixDequeArray& pop_t2c  = poppedExpT2Coeffs[key];
+    RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
     for (lev=0; lev<num_lev; ++lev) {
-      start_set = incr_sets[lev]; //num_sets = sm_mi[lev].size();
-      for (set=start_set; set<num_sets; ++set)
-	;
+      start_set = incr_sets[lev];
+      if (expansionCoeffFlag) {
+	RealVectorArray& exp_t1c_l = exp_t1c[lev];
+	if (save_data) {
+	  if (pop_t1c.size() <= num_lev) pop_t1c.resize(num_lev + 1);
+	  RealVectorDeque& pop_t1c_l = pop_t1c[lev];
+	  rv_it = exp_t1c_l.begin() + start_set;
+	  pop_t1c_l.insert(pop_t1c_l.end(), rv_it, exp_t1c_l.end());
+	}
+	exp_t1c_l.resize(start_set);
+	if (data_rep->basisConfigOptions.useDerivs) {
+	  RealMatrixArray& exp_t2c_l = exp_t2c[lev];
+	  if (save_data) {
+	    if (pop_t2c.size() <= num_lev) pop_t2c.resize(num_lev + 1);
+	    RealMatrixDeque& pop_t2c_l = pop_t2c[lev];
+	    rm_it = exp_t2c_l.begin() + start_set;
+	    pop_t2c_l.insert(pop_t2c_l.end(), rm_it, exp_t2c_l.end());
+	  }
+	  exp_t2c_l.resize(start_set);
+	}
+      }
+      if (expansionCoeffGradFlag) {
+	RealMatrixArray& exp_t1cg_l = exp_t1cg[lev];
+	if (save_data) {
+	  if (pop_t1cg.size() <= num_lev) pop_t1cg.resize(num_lev + 1);
+	  RealMatrixDeque& pop_t1cg_l = pop_t1cg[lev];
+	  rm_it = exp_t1cg_l.begin() + start_set;
+	  pop_t1cg_l.insert(pop_t1cg_l.end(), rm_it, exp_t1cg_l.end());
+	}
+	exp_t1cg_l.resize(start_set);
+      }
     }
     break;
   }
@@ -272,17 +320,56 @@ void HierarchInterpPolyApproximation::push_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
 
-  bool updated = update_active_iterators(data_rep->activeKey);
+  bool updated = update_active_iterators(key);
   if (updated) clear_all_computed_bits();
   else         increment_current_from_reference();
 
   switch (data_rep->expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-    push_coefficients(data_rep->hsg_driver()->trial_set());  break;
-  default: {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    // Note: for both a restored or a selected candidate, trial set is pushed
+    // to Driver and corresponds to sm_mi[lev].back(), but in the latter case,
+    // must locate corresponding popped data within interior to push onto back
+    // of coeff arrays --> revert either to nested maps or adopt pushIndex
+    // approach of SharedOrthogPolyApproxData
+    // > pushIndex is defined from SharedPolyApproxData::poppedLevMultiIndex,
+    //   but is only defined in SharedOrthogPolyApproxData::pre_push_trial_set,
+    //   although poppedLevMultiIndex is used in SharedInterpPolyApproxData.
+    // > nested maps approach requires a valid map key and trial_set() is
+    //   a problem in decrement_coefficients() since it is downstream
+    //   (pushIndex is defined upstream in shared data) --> would have to
+    //   retrieve from poppedLevMultiIndex somehow (too late?)
+
+    //const UShortArray& tr_set = data_rep->hsg_driver()->trial_set();
+    //size_t lev = l1_norm(tr_set);
+    size_t   lev = data_rep->hsg_driver()->trial_level(),
+      push_index = data_rep->pushIndex;
+    if (expansionCoeffFlag) {
+      RealVectorDeque& pop_t1c_l = poppedExpT1Coeffs[key][lev];
+      RealVectorDeque::iterator v_it = pop_t1c_l.begin() + push_index; // index corresponds to trial level
+      expT1CoeffsIter->second[lev].push_back(*v_it);
+      pop_t1c_l.erase(v_it);
+      SharedHierarchInterpPolyApproxData* data_rep
+	= (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+      if (data_rep->basisConfigOptions.useDerivs) {
+	RealMatrixDeque& pop_t2c_l = poppedExpT2Coeffs[key][lev];
+	RealMatrixDeque::iterator m_it = pop_t2c_l.begin() + push_index; // index corresponds to trial level
+	expT2CoeffsIter->second[lev].push_back(*m_it);
+	pop_t2c_l.erase(m_it);
+      }
+    }
+    if (expansionCoeffGradFlag) {
+      RealMatrixDeque& pop_t1cg_l = poppedExpT1CoeffGrads[key][lev];
+      RealMatrixDeque::iterator m_it = pop_t1cg_l.begin() + push_index; // index corresponds to trial level
+      expT1CoeffGradsIter->second[lev].push_back(*m_it);
+      pop_t1cg_l.erase(m_it);
+    }
     break;
   }
+  default: // only one candidate for iso/aniso refinement: push all of its sets
+    promote_all_popped_coefficients();
+    break;
   }
 }
 
@@ -291,13 +378,15 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
-  bool updated = update_active_iterators(key);
+  bool updated = update_active_iterators(data_rep->activeKey);
   if (updated) clear_all_computed_bits();
   else         clear_computed_bits(); //clear_delta_computed_bits();
 
+  promote_all_popped_coefficients();
+
+  /*
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
   size_t lev, set, num_sets, num_levels = sm_mi.size(), num_smolyak_sets,
     num_coeff_sets;
@@ -311,8 +400,40 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
     for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
       push_coefficients(sm_mi_l[set]);
   }
+
   poppedExpT1Coeffs[key].clear(); poppedExpT2Coeffs[key].clear();
   poppedExpT1CoeffGrads[key].clear();
+  */
+}
+
+
+void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+
+  // Code supports iso/aniso refinement (one candidate with multiple index sets)
+  // or generalized refinement (multiple candidates, each with one index set)
+  RealVector2DArray&    exp_t1c  = expT1CoeffsIter->second;
+  RealMatrix2DArray&    exp_t2c  = expT2CoeffsIter->second;
+  RealMatrix2DArray&    exp_t1cg = expT1CoeffGradsIter->second;
+  RealVectorDequeArray& pop_t1c  = poppedExpT1Coeffs[key];
+  RealMatrixDequeArray& pop_t2c  = poppedExpT2Coeffs[key];
+  RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
+  size_t lev, num_lev = exp_t1c.size();
+  for (lev=0; lev<num_lev; ++lev) {
+    RealVectorArray& exp_t1c_l  = exp_t1c[lev];
+    RealMatrixArray& exp_t2c_l  = exp_t2c[lev];
+    RealMatrixArray& exp_t1cg_l = exp_t1cg[lev];
+    RealVectorDeque& pop_t1c_l  = pop_t1c[lev];
+    RealMatrixDeque& pop_t2c_l  = pop_t2c[lev];
+    RealMatrixDeque& pop_t1cg_l = pop_t1cg[lev];
+    exp_t1c_l.insert(exp_t1c_l.end(),  pop_t1c_l.begin(),  pop_t1c_l.end());
+    exp_t2c_l.insert(exp_t2c_l.end(),  pop_t2c_l.begin(),  pop_t2c_l.end());
+    exp_t2c_l.insert(exp_t1cg_l.end(), pop_t1cg_l.begin(), pop_t1cg_l.end());
+    pop_t1c_l.clear();  pop_t2c_l.clear();  pop_t2c_l.clear();
+  }
 }
 
 
@@ -559,37 +680,6 @@ increment_coefficients(const UShortArray& index_set)
       for (v=0; v<num_deriv_vars; ++v)
 	hier_grad[v] = data_grad[v] - prev_grad[v];
     }
-  }
-}
-
-
-/** Lower level helper function to process a single index set. */
-void HierarchInterpPolyApproximation::
-push_coefficients(const UShortArray& push_set)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  size_t lev = l1_norm(push_set);
-  if (expansionCoeffFlag) {
-    std::map<UShortArray, RealVector>& pop_t1c = poppedExpT1Coeffs[key];
-    std::map<UShortArray, RealVector>::iterator itv = pop_t1c.find(push_set);
-    expT1CoeffsIter->second[lev].push_back(itv->second);
-    pop_t1c.erase(itv);
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    if (data_rep->basisConfigOptions.useDerivs) {
-      std::map<UShortArray, RealMatrix>& pop_t2c = poppedExpT2Coeffs[key];
-      std::map<UShortArray, RealMatrix>::iterator itm = pop_t2c.find(push_set);
-      expT2CoeffsIter->second[lev].push_back(itm->second);
-      pop_t2c.erase(itm);
-    }
-  }
-  if (expansionCoeffGradFlag) {
-    std::map<UShortArray, RealMatrix>& pop_t1cg = poppedExpT1CoeffGrads[key];
-    std::map<UShortArray, RealMatrix>::iterator itm = pop_t1cg.find(push_set);
-    expT1CoeffGradsIter->second[lev].push_back(itm->second);
-    pop_t1cg.erase(itm);
   }
 }
 

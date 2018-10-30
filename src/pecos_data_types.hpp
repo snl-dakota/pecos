@@ -95,6 +95,7 @@ typedef std::vector<UShortArray>       UShort2DArray;
 typedef std::vector<UShort2DArray>     UShort3DArray;
 typedef std::vector<UShort3DArray>     UShort4DArray;
 typedef std::vector<UShort4DArray>     UShort5DArray;
+typedef std::deque<UShortArray>        UShortArrayDeque;
 typedef std::vector<size_t>            SizetArray;
 typedef std::vector<SizetArray>        Sizet2DArray;
 typedef std::vector<Sizet2DArray>      Sizet3DArray;
@@ -111,6 +112,8 @@ typedef std::vector<RealMatrix2DArray> RealMatrix3DArray;
 typedef std::vector<RealSymMatrix>     RealSymMatrixArray;
 typedef std::deque<RealVector>         RealVectorDeque;
 typedef std::deque<RealMatrix>         RealMatrixDeque;
+typedef std::vector<RealVectorDeque>   RealVectorDequeArray;
+typedef std::vector<RealMatrixDeque>   RealMatrixDequeArray;
 
 //typedef std::vector<BasisFunction>  BasisFunctionArray;
 typedef std::vector<SurrogateDataVars> SDVArray;

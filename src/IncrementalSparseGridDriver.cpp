@@ -311,7 +311,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
-  computedTrialSets[activeKey].insert(trial_set());
+  computedTrialSets[activeKey].push_back(trial_set());
 }
 
 
@@ -442,8 +442,8 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray&  sm_mi           = smolMIIter->second;
-  UShortArraySet& computed_trials = computedTrialSets[activeKey];
+  UShort2DArray&    sm_mi           = smolMIIter->second;
+  UShortArrayDeque& computed_trials = computedTrialSets[activeKey];
   size_t start_index = sm_mi.size();
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
