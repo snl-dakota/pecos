@@ -95,6 +95,38 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 }
 
 
+void SharedHierarchInterpPolyApproxData::pre_push_data()
+{
+  // pushIndex for Hierarch corresponds to candidate for current trial level
+
+  // Note: pushIndex just caches result, avoiding need to call
+  //       data_rep->retrieval_index() for each QoI
+  const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
+  //unsigned short tr_lev = l1_norm(tr_set);
+  pushIndex = find_index(poppedLevMultiIndex[activeKey]/*[tr_lev]*/, tr_set);
+  // same as retrieval_index(), but eliminates key lookup for trial_set()
+}
+
+
+void SharedHierarchInterpPolyApproxData::post_push_data()
+{
+  // leave polynomialBasis as is (a previous increment is being restored)
+
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey]/*[tr_lev]*/;
+    popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
+    break;
+  }
+  default:
+
+    // Interpolation basis and component sobol already in incremented state
+
+    break;
+  }
+}
+
+
 void SharedHierarchInterpPolyApproxData::pre_combine_data()
 {
   // Don't mix additive approach for hierarchical interpolation with

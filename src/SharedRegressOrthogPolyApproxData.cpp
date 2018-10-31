@@ -175,9 +175,9 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
   // for decrement
   prevMultiIndex = multiIndexIter->second;
 
-  std::map<UShortArray, std::deque<UShort2DArray> >::iterator pop_it
+  std::map<UShortArray, UShort2DArrayDeque>::iterator pop_it
     = poppedMultiIndex.find(activeKey);
-  std::deque<UShort2DArray>::iterator u2a_it;
+  UShort2DArrayDeque::iterator u2a_it;
   if (pop_it == poppedMultiIndex.end() || pop_it->second.size() <= pop_index) {
     PCerr << "Error: lookup failure in SharedRegressOrthogPolyApproxData::"
 	  << "pre_push_data()." << std::endl;

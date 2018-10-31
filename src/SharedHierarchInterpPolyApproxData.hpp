@@ -62,6 +62,7 @@ protected:
   void increment_component_sobol();
 
   void pre_push_data();
+  void post_push_data();
 
   void pre_combine_data();
   //void post_combine_data();

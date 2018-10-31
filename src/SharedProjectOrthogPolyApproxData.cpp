@@ -248,9 +248,9 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
     // for decrement
     prevMultiIndex = mi;  prevApproxOrder = ao;
 
-    std::map<UShortArray, std::deque<UShort2DArray> >::iterator pop1_it
+    std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
-    std::map<UShortArray, std::deque<UShortArray> >::iterator pop2_it
+    std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
       = poppedApproxOrder.find(activeKey);
     if (pop1_it == poppedMultiIndex.end()  || pop1_it->second.empty() ||
 	pop2_it == poppedApproxOrder.end() || pop2_it->second.empty() ) {
@@ -258,8 +258,8 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
 	    << "pre_push_data()." << std::endl;
       abort_handler(-1);
     }
-    std::deque<UShort2DArray>& pop_mi = pop1_it->second;
-    std::deque<UShortArray>&   pop_ao = pop2_it->second;
+    UShort2DArrayDeque& pop_mi = pop1_it->second;
+    UShortArrayDeque&   pop_ao = pop2_it->second;
     mi = pop_mi.back();  pop_mi.pop_back();
     ao = pop_ao.back();  pop_ao.pop_back();
     break;
@@ -303,9 +303,9 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: { // if push available, replace
-    std::map<UShortArray, std::deque<UShort2DArray> >::iterator pop1_it
+    std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
-    std::map<UShortArray, std::deque<UShortArray> >::iterator pop2_it
+    std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
       = poppedApproxOrder.find(activeKey);
     if (pop1_it == poppedMultiIndex.end() ||
 	pop2_it == poppedApproxOrder.end()) {
@@ -313,8 +313,8 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 	    << "pre_finalize_data()." << std::endl;
       abort_handler(-1);
     }
-    std::deque<UShort2DArray>& pop_mi = pop1_it->second;
-    std::deque<UShortArray>&   pop_ao = pop2_it->second;
+    UShort2DArrayDeque& pop_mi = pop1_it->second;
+    UShortArrayDeque&   pop_ao = pop2_it->second;
     if (!pop_mi.empty() && !pop_ao.empty()) {
       multiIndexIter->second = pop_mi.back();
       approxOrdIter->second  = pop_ao.back();
@@ -325,14 +325,13 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // update multiIndex
-      std::deque<UShort2DArray>& popped_tp_mi = poppedMultiIndex[activeKey];
-      std::deque<SizetArray>& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
-      std::deque<size_t>& popped_tp_mi_map_ref
-	= poppedMultiIndexMapRef[activeKey];
+      UShort2DArrayDeque&  popped_tp_mi = poppedMultiIndex[activeKey];
+      SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
+      SizetDeque&  popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
 
-      std::deque<UShort2DArray>::iterator iit = popped_tp_mi.begin();
-      std::deque<SizetArray>::iterator    mit = popped_tp_mi_map.begin();
-      std::deque<size_t>::iterator        rit = popped_tp_mi_map_ref.begin();
+      UShort2DArrayDeque::iterator iit = popped_tp_mi.begin();
+      SizetArrayDeque::iterator    mit = popped_tp_mi_map.begin();
+      SizetDeque::iterator         rit = popped_tp_mi_map_ref.begin();
       UShort2DArray& mi = multiIndexIter->second;
       for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
 	append_multi_index(*iit, *mit, *rit, mi);
@@ -657,9 +656,9 @@ decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
   const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_mi.size();
-  std::deque<UShort2DArray>&  pop_tp_mi = poppedMultiIndex[activeKey];
-  std::deque<SizetArray>& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
-  std::deque<size_t>& pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
+  UShort2DArrayDeque&  pop_tp_mi = poppedMultiIndex[activeKey];
+  SizetArrayDeque& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
+  SizetDeque&  pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
   for (i=num_smolyak_indices; i<num_tp_mi; ++i) {
     pop_tp_mi.push_back(tp_mi[i]);
     pop_tp_mi_map.push_back(tp_mi_map[i]);
@@ -685,9 +684,9 @@ push_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
-  std::deque<UShort2DArray>&  pop_tp_mi = poppedMultiIndex[activeKey];
-  std::deque<SizetArray>& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
-  std::deque<size_t>& pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
+  UShort2DArrayDeque&  pop_tp_mi = poppedMultiIndex[activeKey];
+  SizetArrayDeque& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
+  SizetDeque&  pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
   size_t i, num_pop = pop_tp_mi.size();
   for (i=0; i<num_pop; ++i) {
     tp_mi.push_back(pop_tp_mi[i]);

@@ -371,11 +371,11 @@ protected:
 
   /// popped instances of either multiIndex or tpMultiIndex (depending
   /// on expansion solution approach) that were computed but not selected
-  std::map<UShortArray, std::deque<UShort2DArray> > poppedMultiIndex;
+  std::map<UShortArray, UShort2DArrayDeque> poppedMultiIndex;
   /// popped instances of tpMultiIndexMap that were computed but not selected
-  std::map<UShortArray, std::deque<SizetArray> > poppedMultiIndexMap;
+  std::map<UShortArray, SizetArrayDeque> poppedMultiIndexMap;
   /// popped instances of tpMultiIndexMapRef that were computed but not selected
-  std::map<UShortArray, std::deque<size_t> > poppedMultiIndexMapRef;
+  std::map<UShortArray, SizetDeque> poppedMultiIndexMapRef;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())

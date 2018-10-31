@@ -516,7 +516,7 @@ protected:
   SizetList nonRandomIndices;
 
   /// popped trial sets that were computed but not selected
-  std::map<UShortArray, std::deque<UShortArray> > poppedLevMultiIndex;
+  std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
   /// index into popped sets of data to be restored (stored in this
   /// class for used by each PolynomialApproximation)
   size_t pushIndex;
@@ -724,7 +724,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 inline bool SharedPolyApproxData::
 push_trial_available(const UShortArray& trial_set)
 {
-  const std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
+  const UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
   return (std::find(popped_lev_mi.begin(), popped_lev_mi.end(), trial_set) !=
 	  popped_lev_mi.end());
 }
@@ -770,13 +770,21 @@ finalization_index(size_t i, const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver*  sg_driver = (SparseGridDriver*)driverRep;
-    const UShortArray& trial_set = sg_driver->computed_trial_sets(key)[i];
+    SparseGridDriver*    sg_driver = (SparseGridDriver*)driverRep;
+    const UShortArray& comp_tr_set = sg_driver->computed_trial_sets(key)[i];
     // {Incremental,Hierarch}SparseGridDriver::finalize_sets() updates the
     // grid data with remaining computed trial sets (in sorted order from
     // SparseGridDriver::computedTrialSets).  Below, we determine the order
     // with which these appended trial sets appear in poppedLevMultiIndex.
-    return find_index(poppedLevMultiIndex[key], trial_set); // *** should rtn i
+    size_t new_index = find_index(poppedLevMultiIndex[key], comp_tr_set); // *** should rtn i ?
+    /*
+    if (new_index != i) {
+      PCerr << "Error: SharedPolyApproxData::finalization_index() found index "
+	    << "mistmatch (" << new_index << ", " << i << ")." << std::endl;
+      abort_handler(-1);
+    }
+    */
+    return new_index;
     break;
   }
   default:

@@ -286,8 +286,7 @@ void SharedInterpPolyApproxData::decrement_data()
 
 void SharedInterpPolyApproxData::pre_push_data()
 {
-  // *** TO DO:
-  // Nodal index should be aggregated; Hierarch corresponds to trial level
+  // default (Nodal) is aggregated; Hierarch corresponds to trial level
 
   // Note: pushIndex just caches result, avoiding need to call
   //       data_rep->retrieval_index() for each QoI
@@ -303,7 +302,7 @@ void SharedInterpPolyApproxData::post_push_data()
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
+    UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
     popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
     break;
   }
