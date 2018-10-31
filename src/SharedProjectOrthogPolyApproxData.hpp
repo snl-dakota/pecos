@@ -20,6 +20,7 @@ namespace Pecos {
 
 class TensorProductDriver;
 class CombinedSparseGridDriver;
+class IncrementalSparseGridDriver;
 class CubatureDriver;
 
 
@@ -100,13 +101,13 @@ private:
   void sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 			       UShort2DArray& multi_index);
   /// increment multi_index after a grid refinement
-  void increment_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
-					 UShort2DArray& multi_index);
+  void increment_sparse_grid_multi_index(
+    IncrementalSparseGridDriver* isg_driver, UShort2DArray& multi_index);
   /// decrement multi_index after a grid contraction
-  void decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
-					 UShort2DArray& multi_index);
+  void decrement_sparse_grid_multi_index(
+    IncrementalSparseGridDriver* isg_driver, UShort2DArray& multi_index);
   /// return multi_index to a previously incremented state
-  void push_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+  void push_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
 				    UShort2DArray& multi_index);
 
   // initialize tp_multi_index from tpMultiIndexMap

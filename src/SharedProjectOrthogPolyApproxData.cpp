@@ -527,8 +527,6 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
   /*
   case SPARSE_INT_TENSOR_SUM_EXP: case SPARSE_INT_RESTR_TENSOR_SUM_EXP: {
-    // assemble a complete list of individual polynomial coverage
-    // defined from the linear combination of mixed tensor products
     multi_index.clear();
     UShort2DArray tp_multi_index;
     UShortArray int_order(numVars), exp_order(numVars);
@@ -615,17 +613,15 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedProjectOrthogPolyApproxData::
-increment_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+increment_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
 				  UShort2DArray& multi_index)
 {
-  // assemble a complete list of individual polynomial coverage
-  // defined from the linear combination of mixed tensor products
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   size_t num_tp_mi = tp_mi.size();
 
-  const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
+  const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_mi.size();
 
   tp_mi.resize(num_smolyak_indices);
@@ -636,7 +632,7 @@ increment_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
     // regenerate i-th exp_order as collocKey[i] cannot be used in general case
     // (i.e., for nested rules GP, CC, F2, or GK).  Rather, collocKey[i] is to
     // be used only as the key to the collocation pts.
-    sparse_grid_level_to_expansion_order(csg_driver, sm_mi[i], exp_order);
+    sparse_grid_level_to_expansion_order(isg_driver, sm_mi[i], exp_order);
     tensor_product_multi_index(exp_order, tp_mi[i]);
     append_multi_index(tp_mi[i], multi_index, tp_mi_map[i], tp_mi_map_ref[i]);
   }
@@ -644,18 +640,16 @@ increment_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedProjectOrthogPolyApproxData::
-decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+decrement_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
 				  UShort2DArray& multi_index)
 {
-  // assemble a complete list of individual polynomial coverage
-  // defined from the linear combination of mixed tensor products
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   size_t num_tp_mi = tp_mi.size();
 
-  const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
-  size_t i, num_smolyak_indices = sm_mi.size();
+  size_t i, num_smolyak_indices
+    = isg_driver->smolyak_coefficients_reference().size();
   UShort2DArrayDeque&  pop_tp_mi = poppedMultiIndex[activeKey];
   SizetArrayDeque& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
   SizetDeque&  pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
@@ -675,11 +669,9 @@ decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedProjectOrthogPolyApproxData::
-push_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+push_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
 			     UShort2DArray& multi_index)
 {
-  // assemble a complete list of individual polynomial coverage
-  // defined from the linear combination of mixed tensor products
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
