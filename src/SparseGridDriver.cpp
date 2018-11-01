@@ -352,18 +352,17 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   merge_increment(); // calls merge_unique()     --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
-  const UShortArray&         tr_set = trial_set();
-  UShortArrayDeque& computed_trials = computedTrialSets[activeKey];
-  UShortArraySet&         active_mi =  activeMultiIndex[activeKey];
-  UShortArraySet&            old_mi =     oldMultiIndex[activeKey];
+  const UShortArray&       tr_set = trial_set();
+  UShortArraySet& computed_trials = computedTrialSets[activeKey];
+  UShortArraySet&       active_mi =  activeMultiIndex[activeKey];
+  UShortArraySet&          old_mi =     oldMultiIndex[activeKey];
 
   // update set O by adding the trial set to oldMultiIndex:
   old_mi.insert(tr_set);
   // remove the trial set from set A by erasing from activeMultiIndex:
   active_mi.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  UShortArrayDeque::iterator tr_it
-    = std::find(computed_trials.begin(), computed_trials.end(), tr_set);
+  UShortArraySet::iterator tr_it = computed_trials.find(tr_set);
   if (tr_it != computed_trials.end()) // not used by LightweightSparseGridDriver
     computed_trials.erase(tr_it);
 

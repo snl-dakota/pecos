@@ -168,9 +168,9 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
 {
   // TO DO: ADAPTED_BASIS_GENERALIZED case ???
 
-  // SharedPolyApproxData::retrieval_index() currently returns 0 for
+  // SharedPolyApproxData::candidate_index() currently returns 0 for
   // all cases other than generalized sparse grids
-  size_t pop_index = retrieval_index(activeKey);
+  size_t pop_index = candidate_index(activeKey);
 
   // for decrement
   prevMultiIndex = multiIndexIter->second;

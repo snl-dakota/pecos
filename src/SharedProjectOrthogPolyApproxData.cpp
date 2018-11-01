@@ -324,6 +324,12 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
   case INCREMENTAL_SPARSE_GRID: { // augment with remaining popped sets
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+
+      // Note: these are not explicitly added in computed_trial_sets() order
+      //       as in IncrementalSparseGridDriver::finalize_sets().  However,
+      //       poppedLevMultiIndex et al. becomes ordered due to enumeration
+      //       of ordered active_multi_index().  *** TO DO: more robust design
+
       // update multiIndex
       UShort2DArrayDeque&  popped_tp_mi = poppedMultiIndex[activeKey];
       SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];

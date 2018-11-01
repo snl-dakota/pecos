@@ -286,13 +286,20 @@ void SharedInterpPolyApproxData::decrement_data()
 
 void SharedInterpPolyApproxData::pre_push_data()
 {
-  // default (Nodal) is aggregated; Hierarch corresponds to trial level
+  // Note: pushIndex just caches result, avoiding need to invoke for each QoI
 
-  // Note: pushIndex just caches result, avoiding need to call
-  //       data_rep->retrieval_index() for each QoI
-  pushIndex = find_index(poppedLevMultiIndex[activeKey],
-			 ((SparseGridDriver*)driverRep)->trial_set());
-  // same as retrieval_index(), but eliminates key lookup for trial_set()
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
+    pushIndex = candidate_index(activeKey, tr_set);
+    break;
+  }
+  default:
+
+    // Interpolation basis and component sobol already in incremented state
+
+    break;
+  }
 }
 
 

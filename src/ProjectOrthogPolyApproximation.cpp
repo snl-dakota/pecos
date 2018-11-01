@@ -375,6 +375,12 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     // don't update Sobol' array sizes for decrement, push, or finalize
     size_t start_append = tp_exp_coeffs.size(); // before insertion
     // move previous expansion data to current expansion
+
+    // Note: these are not explicitly added in computed_trial_sets() order
+    //       as in IncrementalSparseGridDriver::finalize_sets().  However,
+    //       poppedLevMultiIndex et al. become ordered due to enumeration of
+    //       ordered active_multi_index().  *** TO DO: more robust design
+
     tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_exp_coeffs.begin(),
 			 pop_exp_coeffs.end());
     tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),

@@ -326,10 +326,13 @@ public:
 
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  size_t retrieval_index(const UShortArray& key);
+  size_t candidate_index(const UShortArray& key, const UShortArray& tr_set);
+  /// returns index of the data set to be restored from within popped
+  /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
+  size_t candidate_index(const UShortArray& key);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
-  size_t retrieval_index();
+  size_t candidate_index();
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
   /// during finalization
@@ -747,7 +750,22 @@ inline bool SharedPolyApproxData::push_available()
 }
 
 
-inline size_t SharedPolyApproxData::retrieval_index(const UShortArray& key)
+inline size_t SharedPolyApproxData::
+candidate_index(const UShortArray& key, const UShortArray& tr_set)
+{
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+    return find_index(poppedLevMultiIndex[key], tr_set);  break;
+  default:
+    PCerr << "Error: trial set not supported in SharedPolyApproxData::"
+	  << "candidate_index()." << std::endl;
+    abort_handler(-1);
+    return 0;                                             break;
+  }
+}
+
+
+inline size_t SharedPolyApproxData::candidate_index(const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
@@ -756,13 +774,13 @@ inline size_t SharedPolyApproxData::retrieval_index(const UShortArray& key)
     break;
   }
   default: // other refinement types support a single candidate with index 0
-    return 0;
+    return 0;  break;
   }
 }
 
 
-inline size_t SharedPolyApproxData::retrieval_index()
-{ return retrieval_index(activeKey); }
+inline size_t SharedPolyApproxData::candidate_index()
+{ return candidate_index(activeKey); }
 
 
 inline size_t SharedPolyApproxData::
@@ -771,27 +789,30 @@ finalization_index(size_t i, const UShortArray& key)
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver*    sg_driver = (SparseGridDriver*)driverRep;
-    const UShortArray& comp_tr_set = sg_driver->computed_trial_sets(key)[i];
+    const UShortArraySet& comp_tr_sets = sg_driver->computed_trial_sets(key);
+    UShortArraySet::const_iterator cit = comp_tr_sets.begin();
+    std::advance(cit, i); // no operator+ for std::set advancement
     // {Incremental,Hierarch}SparseGridDriver::finalize_sets() updates the
-    // grid data with remaining computed trial sets (in sorted order from
-    // SparseGridDriver::computedTrialSets).  Below, we determine the order
-    // with which these appended trial sets appear in poppedLevMultiIndex.
-    size_t new_index = find_index(poppedLevMultiIndex[key], comp_tr_set); // *** should rtn i ?
-    /*
-    if (new_index != i) {
+    // grid data with remaining computed trial sets.  This function maps from
+    // the order of SparseGridDriver::computedTrialSets to the order of
+    // SharedPolyApproxData::poppedLevMultiIndex:
+    // > computedTrialSets are in sorted order (std::set)
+    // > poppedLevMultiIndex is a std::deque updated by push_back(), but when
+    //   generated from increment_sets(), it will reflect the _sorted_ order
+    //   of activeMultiIndex (minus one candidate following its selection).
+    size_t candidate = candidate_index(key, *cit);
+    if (candidate != i) { // activate to test need for this mapping
       PCerr << "Error: SharedPolyApproxData::finalization_index() found index "
-	    << "mistmatch (" << new_index << ", " << i << ")." << std::endl;
+	    << "mistmatch (" << candidate << ", " << i << ")." << std::endl;
       abort_handler(-1);
     }
-    */
-    return new_index;
-    break;
+    return candidate;  break;
   }
   default:
     PCerr << "Error: SharedPolyApproxData::finalization_index() not "
 	  << "implemented for this refinement type." << std::endl;
     abort_handler(-1);
-    return 0;
+    return 0;          break;
   }
 }
 

@@ -648,7 +648,7 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
   const UShortArray& tr_set = trial_set();
-  computedTrialSets[activeKey].push_back(tr_set);
+  computedTrialSets[activeKey].insert(tr_set);
 
   // update collocKey and compute trial variable/weight sets
   update_collocation_key_from_trial(tr_set);
@@ -1075,8 +1075,8 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
   if (nestedGrid) {
-    UShortArrayDeque& computed_trials = computedTrialSets[activeKey];
-    UShortArrayDeque::iterator it;
+    UShortArraySet& computed_trials = computedTrialSets[activeKey];
+    UShortArraySet::iterator it;
     for (it=computed_trials.begin(); it!=computed_trials.end(); ++it) {
       const UShortArray& trial_set = *it;
       trial_lev = l1_norm(trial_set);

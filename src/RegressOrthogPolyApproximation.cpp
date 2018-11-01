@@ -253,9 +253,10 @@ void RegressOrthogPolyApproximation::push_coefficients()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
 
-  // SharedPolyApproxData::retrieval_index() currently returns 0 for
+  // SharedPolyApproxData::candidate_index() currently returns 0 for
   // all cases other than generalized sparse grids
-  size_t pop_index = data_rep->retrieval_index(key);
+  // *** TO DO: use shared pushIndex instead of recomputing for each QoI
+  size_t pop_index = data_rep->candidate_index(key);//data_rep->pushIndex;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
