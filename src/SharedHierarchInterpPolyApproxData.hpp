@@ -61,8 +61,11 @@ protected:
   void allocate_component_sobol();
   void increment_component_sobol();
 
-  //void pre_push_data();
-  //void post_push_data();
+  //void pre_push_data();    // SharedInterpPolyApproxData version is sufficient
+  //void post_push_data();   // SharedInterpPolyApproxData version is sufficient
+
+  void pre_finalize_data();
+  //void post_finalize_data();//SharedInterpPolyApproxData version is sufficient
 
   void pre_combine_data();
   //void post_combine_data();

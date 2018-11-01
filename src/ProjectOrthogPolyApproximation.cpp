@@ -370,17 +370,23 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   RealMatrixDeque& pop_exp_coeff_grads = poppedExpCoeffGrads[key];
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case INCREMENTAL_SPARSE_GRID: {
+
+    // Note: finalization fns only used for generalized sparse grids, but
+    // would be the same for a single iso/aniso refinement candidate with
+    // multiple index sets
+
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
     // don't update Sobol' array sizes for decrement, push, or finalize
     size_t start_append = tp_exp_coeffs.size(); // before insertion
     // move previous expansion data to current expansion
 
-    // Note: these are not explicitly added in computed_trial_sets() order
-    //       as in IncrementalSparseGridDriver::finalize_sets().  However,
-    //       poppedLevMultiIndex et al. become ordered due to enumeration of
-    //       ordered active_multi_index().  *** TO DO: more robust design
-
+    // Note: popped sets are not explicitly added in computed_trial_sets()
+    //       order as in IncrementalSparseGridDriver::finalize_sets().
+    //       However, poppedLevMultiIndex et al. become ordered due to
+    //       enumeration of ordered active_multi_index().  Rather than
+    //       incurring additional overhead by mapping indices, a compile-time
+    //       verification block is defined in shared pre_finalize_data().
     tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_exp_coeffs.begin(),
 			 pop_exp_coeffs.end());
     tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),
@@ -391,7 +397,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     append_tensor_expansions(start_append);
     break;
   }
-  case QUADRATURE: case CUBATURE:
+  case QUADRATURE: case CUBATURE: // for completeness (not used)
     if (!pop_exp_coeffs.empty()) expCoeffsIter->second = pop_exp_coeffs.back();
     if (!pop_exp_coeff_grads.empty())
       expCoeffGradsIter->second = pop_exp_coeff_grads.back();

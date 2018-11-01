@@ -242,28 +242,19 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
     // trial_level() is less volatile / safer.
     unsigned short tr_lev = hsg_driver->trial_level();
     if (expansionCoeffFlag) {
-      if (save_data) {
-	RealVectorDequeArray& pop_t1c = poppedExpT1Coeffs[key];
-	if (pop_t1c.size() <= tr_lev) pop_t1c.resize(tr_lev + 1);
-	pop_t1c[tr_lev].push_back(exp_t1c[tr_lev].back());
-      }
-      exp_t1c[tr_lev].pop_back();
+      RealVectorArray& exp_t1c_l = exp_t1c[tr_lev];
+      if (save_data) poppedExpT1Coeffs[key].push_back(exp_t1c_l.back());
+      exp_t1c_l.pop_back();
       if (data_rep->basisConfigOptions.useDerivs) {
-	if (save_data) {
-	  RealMatrixDequeArray& pop_t2c = poppedExpT2Coeffs[key];
-	  if (pop_t2c.size() <= tr_lev) pop_t2c.resize(tr_lev + 1);
-	  pop_t2c[tr_lev].push_back(exp_t2c[tr_lev].back());
-	}
-	exp_t2c[tr_lev].pop_back();
+	RealMatrixArray& exp_t2c_l = exp_t2c[tr_lev];
+	if (save_data) poppedExpT2Coeffs[key].push_back(exp_t2c_l.back());
+	exp_t2c_l.pop_back();
       }
     }
     if (expansionCoeffGradFlag) {
-      if (save_data) {
-	RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
-	if (pop_t1cg.size() <= tr_lev) pop_t1cg.resize(tr_lev + 1);
-	pop_t1cg[tr_lev].push_back(exp_t1cg[tr_lev].back());
-      }
-      exp_t1cg[tr_lev].pop_back();
+      RealMatrixArray& exp_t1cg_l = exp_t1cg[tr_lev];
+      if (save_data) poppedExpT1CoeffGrads[key].push_back(exp_t1cg_l.back());
+      exp_t1cg_l.pop_back();
     }
     break;
   }
@@ -273,27 +264,23 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
     size_t lev, num_lev = incr_sets.size(), set, start_set;
     RealVectorArray::iterator rv_it;  RealMatrixArray::iterator rm_it;
     // save_data is typically on, so don't bother with avoiding lookup if off:
-    RealVectorDequeArray& pop_t1c  = poppedExpT1Coeffs[key];
-    RealMatrixDequeArray& pop_t2c  = poppedExpT2Coeffs[key];
-    RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
-    for (lev=0; lev<num_lev; ++lev) {
+    RealVectorDeque& pop_t1c  = poppedExpT1Coeffs[key];
+    RealMatrixDeque& pop_t2c  = poppedExpT2Coeffs[key];
+    RealMatrixDeque& pop_t1cg = poppedExpT1CoeffGrads[key];
+    for (lev=0; lev<num_lev; ++lev) { // *** TO DO ***: popped_lev_mi ordering
       start_set = incr_sets[lev];
       if (expansionCoeffFlag) {
 	RealVectorArray& exp_t1c_l = exp_t1c[lev];
 	if (save_data) {
-	  if (pop_t1c.size() <= num_lev) pop_t1c.resize(num_lev + 1);
-	  RealVectorDeque& pop_t1c_l = pop_t1c[lev];
 	  rv_it = exp_t1c_l.begin() + start_set;
-	  pop_t1c_l.insert(pop_t1c_l.end(), rv_it, exp_t1c_l.end());
+	  pop_t1c.insert(pop_t1c.end(), rv_it, exp_t1c_l.end());
 	}
 	exp_t1c_l.resize(start_set);
 	if (data_rep->basisConfigOptions.useDerivs) {
 	  RealMatrixArray& exp_t2c_l = exp_t2c[lev];
 	  if (save_data) {
-	    if (pop_t2c.size() <= num_lev) pop_t2c.resize(num_lev + 1);
-	    RealMatrixDeque& pop_t2c_l = pop_t2c[lev];
 	    rm_it = exp_t2c_l.begin() + start_set;
-	    pop_t2c_l.insert(pop_t2c_l.end(), rm_it, exp_t2c_l.end());
+	    pop_t2c.insert(pop_t2c.end(), rm_it, exp_t2c_l.end());
 	  }
 	  exp_t2c_l.resize(start_set);
 	}
@@ -301,10 +288,8 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
       if (expansionCoeffGradFlag) {
 	RealMatrixArray& exp_t1cg_l = exp_t1cg[lev];
 	if (save_data) {
-	  if (pop_t1cg.size() <= num_lev) pop_t1cg.resize(num_lev + 1);
-	  RealMatrixDeque& pop_t1cg_l = pop_t1cg[lev];
 	  rm_it = exp_t1cg_l.begin() + start_set;
-	  pop_t1cg_l.insert(pop_t1cg_l.end(), rm_it, exp_t1cg_l.end());
+	  pop_t1cg.insert(pop_t1cg.end(), rm_it, exp_t1cg_l.end());
 	}
 	exp_t1cg_l.resize(start_set);
       }
@@ -312,7 +297,6 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
     break;
   }
   }
-
 }
 
 
@@ -331,8 +315,7 @@ void HierarchInterpPolyApproximation::push_coefficients()
     // Note: for both a restored or a selected candidate, trial set is pushed
     // to Driver and corresponds to sm_mi[lev].back(), but in the latter case,
     // must locate corresponding popped data within interior to push onto back
-    // of coeff arrays --> revert either to nested maps or adopt pushIndex
-    // approach of SharedOrthogPolyApproxData
+    // of coeff arrays --> adopt pushIndex approach of SharedPolyApproxData
     // > pushIndex is defined from SharedPolyApproxData::poppedLevMultiIndex,
     //   but is only defined in SharedOrthogPolyApproxData::pre_push_trial_set,
     //   although poppedLevMultiIndex is used in SharedInterpPolyApproxData.
@@ -346,24 +329,26 @@ void HierarchInterpPolyApproximation::push_coefficients()
     size_t   lev = data_rep->hsg_driver()->trial_level(),
       push_index = data_rep->pushIndex;
     if (expansionCoeffFlag) {
-      RealVectorDeque& pop_t1c_l = poppedExpT1Coeffs[key][lev];
-      RealVectorDeque::iterator v_it = pop_t1c_l.begin() + push_index; // index corresponds to trial level
+      // poppedExpT{1,2}Coeffs are flattened (no level indexing)
+      RealVectorDeque& pop_t1c = poppedExpT1Coeffs[key];
+      RealVectorDeque::iterator v_it = pop_t1c.begin() + push_index;
       expT1CoeffsIter->second[lev].push_back(*v_it);
-      pop_t1c_l.erase(v_it);
+      pop_t1c.erase(v_it);
       SharedHierarchInterpPolyApproxData* data_rep
 	= (SharedHierarchInterpPolyApproxData*)sharedDataRep;
       if (data_rep->basisConfigOptions.useDerivs) {
-	RealMatrixDeque& pop_t2c_l = poppedExpT2Coeffs[key][lev];
-	RealMatrixDeque::iterator m_it = pop_t2c_l.begin() + push_index; // index corresponds to trial level
+	RealMatrixDeque& pop_t2c = poppedExpT2Coeffs[key];
+	RealMatrixDeque::iterator m_it = pop_t2c.begin() + push_index;
 	expT2CoeffsIter->second[lev].push_back(*m_it);
-	pop_t2c_l.erase(m_it);
+	pop_t2c.erase(m_it);
       }
     }
     if (expansionCoeffGradFlag) {
-      RealMatrixDeque& pop_t1cg_l = poppedExpT1CoeffGrads[key][lev];
-      RealMatrixDeque::iterator m_it = pop_t1cg_l.begin() + push_index; // index corresponds to trial level
+      // poppedExpT1CoeffGrads is flattened (no level indexing)
+      RealMatrixDeque& pop_t1cg = poppedExpT1CoeffGrads[key];
+      RealMatrixDeque::iterator m_it = pop_t1cg.begin() + push_index;
       expT1CoeffGradsIter->second[lev].push_back(*m_it);
-      pop_t1cg_l.erase(m_it);
+      pop_t1cg.erase(m_it);
     }
     break;
   }
@@ -385,25 +370,6 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
   else         clear_computed_bits(); //clear_delta_computed_bits();
 
   promote_all_popped_coefficients();
-
-  /*
-  const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
-  size_t lev, set, num_sets, num_levels = sm_mi.size(), num_smolyak_sets,
-    num_coeff_sets;
-  const RealVector2DArray& exp_t1_coeffs      = expT1CoeffsIter->second;
-  const RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  for (lev=0; lev<num_levels; ++lev) {
-    const UShort2DArray& sm_mi_l = sm_mi[lev];
-    num_smolyak_sets = sm_mi_l.size();
-    num_coeff_sets = (expansionCoeffFlag) ? exp_t1_coeffs[lev].size() :
-      exp_t1_coeff_grads[lev].size();
-    for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
-      push_coefficients(sm_mi_l[set]);
-  }
-
-  poppedExpT1Coeffs[key].clear(); poppedExpT2Coeffs[key].clear();
-  poppedExpT1CoeffGrads[key].clear();
-  */
 }
 
 
@@ -412,28 +378,31 @@ void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
+  const UShortArrayDeque& popped_lev_mi = data_rep->poppedLevMultiIndex[key];
 
   // Code supports iso/aniso refinement (one candidate with multiple index sets)
   // or generalized refinement (multiple candidates, each with one index set)
-  RealVector2DArray&    exp_t1c  = expT1CoeffsIter->second;
-  RealMatrix2DArray&    exp_t2c  = expT2CoeffsIter->second;
-  RealMatrix2DArray&    exp_t1cg = expT1CoeffGradsIter->second;
-  RealVectorDequeArray& pop_t1c  = poppedExpT1Coeffs[key];
-  RealMatrixDequeArray& pop_t2c  = poppedExpT2Coeffs[key];
-  RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
-  size_t lev, num_lev = exp_t1c.size();
-  for (lev=0; lev<num_lev; ++lev) {
-    RealVectorArray& exp_t1c_l  = exp_t1c[lev];
-    RealMatrixArray& exp_t2c_l  = exp_t2c[lev];
-    RealMatrixArray& exp_t1cg_l = exp_t1cg[lev];
-    RealVectorDeque& pop_t1c_l  = pop_t1c[lev];
-    RealMatrixDeque& pop_t2c_l  = pop_t2c[lev];
-    RealMatrixDeque& pop_t1cg_l = pop_t1cg[lev];
-    exp_t1c_l.insert(exp_t1c_l.end(),  pop_t1c_l.begin(),  pop_t1c_l.end());
-    exp_t2c_l.insert(exp_t2c_l.end(),  pop_t2c_l.begin(),  pop_t2c_l.end());
-    exp_t2c_l.insert(exp_t1cg_l.end(), pop_t1cg_l.begin(), pop_t1cg_l.end());
-    pop_t1c_l.clear();  pop_t2c_l.clear();  pop_t2c_l.clear();
+
+  RealVector2DArray& exp_t1c  = expT1CoeffsIter->second;
+  RealMatrix2DArray& exp_t2c  = expT2CoeffsIter->second;
+  RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
+  RealVectorDeque&   pop_t1c  = poppedExpT1Coeffs[key];
+  RealMatrixDeque&   pop_t2c  = poppedExpT2Coeffs[key];
+  RealMatrixDeque&   pop_t1cg = poppedExpT1CoeffGrads[key];
+  UShortArrayDeque::const_iterator mi_cit;
+  RealVectorDeque::iterator p1c_it = pop_t1c.begin();
+  RealMatrixDeque::iterator p2c_it = pop_t2c.begin(), p1g_it = pop_t1cg.begin();
+  for (mi_cit=popped_lev_mi.begin(); mi_cit!=popped_lev_mi.end(); ++mi_cit) {
+    size_t lev = l1_norm(*mi_cit);
+    if (expansionCoeffFlag) {
+      exp_t1c[lev].push_back(*p1c_it); ++p1c_it;
+      if (data_rep->basisConfigOptions.useDerivs)
+	{ exp_t2c[lev].push_back(*p2c_it); ++p2c_it; }
+    }
+    if (expansionCoeffGradFlag)
+      { exp_t1cg[lev].push_back(*p1g_it); ++p1g_it; }
   }
+  pop_t1c.clear();  pop_t2c.clear();  pop_t1cg.clear();
 }
 
 

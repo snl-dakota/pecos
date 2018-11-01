@@ -302,7 +302,7 @@ void SharedProjectOrthogPolyApproxData::post_push_data()
 void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: { // if push available, replace
+  case QUADRATURE: case CUBATURE: { // for completeness (not used)
     std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
     std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
@@ -322,41 +322,53 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     break;
   }
   case INCREMENTAL_SPARSE_GRID: { // augment with remaining popped sets
-    switch (expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
 
-      // Note: these are not explicitly added in computed_trial_sets() order
-      //       as in IncrementalSparseGridDriver::finalize_sets().  However,
-      //       poppedLevMultiIndex et al. becomes ordered due to enumeration
-      //       of ordered active_multi_index().  *** TO DO: more robust design
+    // Note: finalization fns only used for generalized sparse grids, but
+    // would be the same for a single iso/aniso refinement candidate with
+    // multiple index sets
 
-      // update multiIndex
-      UShort2DArrayDeque&  popped_tp_mi = poppedMultiIndex[activeKey];
-      SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
-      SizetDeque&  popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
+    UShort2DArrayDeque&  popped_tp_mi = poppedMultiIndex[activeKey];
+    SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
+    SizetDeque&  popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
 
-      UShort2DArrayDeque::iterator iit = popped_tp_mi.begin();
-      SizetArrayDeque::iterator    mit = popped_tp_mi_map.begin();
-      SizetDeque::iterator         rit = popped_tp_mi_map_ref.begin();
-      UShort2DArray& mi = multiIndexIter->second;
-      for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
-	append_multi_index(*iit, *mit, *rit, mi);
-      // move previous expansion data to current expansion
-      UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-      Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
-      SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
-      tp_mi.insert(tp_mi.end(), popped_tp_mi.begin(), popped_tp_mi.end());
-      tp_mi_map.insert(tp_mi_map.end(), popped_tp_mi_map.begin(),
-		       popped_tp_mi_map.end());
-      tp_mi_map_ref.insert(tp_mi_map_ref.end(), popped_tp_mi_map_ref.begin(),
-			   popped_tp_mi_map_ref.end());
-      break;
+#ifdef DEBUG
+    // Note: popped sets are not explicitly added in computed_trial_sets()
+    //       order as in IncrementalSparseGridDriver::finalize_sets().
+    //       However, poppedLevMultiIndex et al. become ordered due to
+    //       enumeration of ordered active_multi_index().  Rather than
+    //       incurring additional overhead by mapping indices, simply support
+    //       a verification block that can be activated (currently compile
+    //       time, but could be run time based on output level).
+    size_t i, num_pop = popped_tp_mi.size(), f_index;
+    for (i=0; i<num_pop; ++i) {
+      f_index = finalization_index(i);
+      if (f_index != i) {
+	PCerr << "Error: SharedProjectOrthogPolyApproxData::pre_finalize_data"
+	      << "() found index mismatch (" << f_index << ", " << i << ")."
+	      << std::endl;
+	abort_handler(-1);
+      }
     }
-    case UNIFORM_CONTROL:
-      // *** TO DO ***
-      break;
-    }
-    }
+#endif // DEBUG
+
+    // update multiIndex
+    UShort2DArrayDeque::iterator iit = popped_tp_mi.begin();
+    SizetArrayDeque::iterator    mit = popped_tp_mi_map.begin();
+    SizetDeque::iterator         rit = popped_tp_mi_map_ref.begin();
+    UShort2DArray& mi = multiIndexIter->second;
+    for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
+      append_multi_index(*iit, *mit, *rit, mi);
+    // move previous expansion data to current expansion
+    UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+    Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+    SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+    tp_mi.insert(tp_mi.end(), popped_tp_mi.begin(), popped_tp_mi.end());
+    tp_mi_map.insert(tp_mi_map.end(), popped_tp_mi_map.begin(),
+		     popped_tp_mi_map.end());
+    tp_mi_map_ref.insert(tp_mi_map_ref.end(), popped_tp_mi_map_ref.begin(),
+			 popped_tp_mi_map_ref.end());
+    break;
+  }
   }
 }
 
@@ -364,23 +376,22 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 void SharedProjectOrthogPolyApproxData::post_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case CUBATURE: {
+  case QUADRATURE: case CUBATURE: { // for completeness (not used)
     poppedMultiIndex[activeKey].clear();
     poppedApproxOrder[activeKey].clear();
     break;
   }
   case INCREMENTAL_SPARSE_GRID:
-    switch (expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-      poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
-      poppedMultiIndex[activeKey].clear();//.erase(activeKey);
-      poppedMultiIndexMap[activeKey].clear();//.erase(activeKey);
-      poppedMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
-      break;
-    case UNIFORM_CONTROL:
-      // *** TO DO ***
-      break;
-    }
+
+    // Note: finalization fns only used for generalized sparse grids, but
+    // would be the same for a single iso/aniso refinement candidate with
+    // multiple index sets
+
+    poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
+    poppedMultiIndex[activeKey].clear();//.erase(activeKey);
+    poppedMultiIndexMap[activeKey].clear();//.erase(activeKey);
+    poppedMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
+    break;
   }
 }
 

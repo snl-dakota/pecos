@@ -543,14 +543,14 @@ private:
 
 
 inline SharedPolyApproxData::SharedPolyApproxData():
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX), pushIndex(0)
 { }
 
 
 inline SharedPolyApproxData::
 SharedPolyApproxData(short basis_type, size_t num_vars):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX), pushIndex(0)
 { }
 
 
@@ -560,7 +560,7 @@ SharedPolyApproxData(short basis_type, size_t num_vars,
 		     const BasisConfigOptions& bc_options):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
   driverRep(NULL), expConfigOptions(ec_options), basisConfigOptions(bc_options),
-  ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX), pushIndex(0)
 { }
 
 
@@ -791,23 +791,23 @@ finalization_index(size_t i, const UShortArray& key)
     SparseGridDriver*    sg_driver = (SparseGridDriver*)driverRep;
     const UShortArraySet& comp_tr_sets = sg_driver->computed_trial_sets(key);
     UShortArraySet::const_iterator cit = comp_tr_sets.begin();
-    std::advance(cit, i); // no operator+ for std::set advancement
+    std::advance(cit, i); // no operator+ for std::set iterator advancement
     // {Incremental,Hierarch}SparseGridDriver::finalize_sets() updates the
     // grid data with remaining computed trial sets.  This function maps from
     // the order of SparseGridDriver::computedTrialSets to the order of
     // SharedPolyApproxData::poppedLevMultiIndex:
     // > computedTrialSets are in sorted order (std::set)
     // > poppedLevMultiIndex is a std::deque updated by push_back(), but when
-    //   generated from increment_sets(), it will reflect the _sorted_ order
-    //   of activeMultiIndex (minus one candidate following its selection).
+    //   generated from increment_sets(), it will reflect the sorted order of
+    //   activeMultiIndex (minus one candidate following its selection).
     size_t candidate = candidate_index(key, *cit);
-    /*
+#ifdef DEBUG
     if (candidate != i) { // activate to test need for this mapping
       PCerr << "Error: SharedPolyApproxData::finalization_index() found index "
 	    << "mismatch (" << candidate << ", " << i << ")." << std::endl;
       abort_handler(-1);
     }
-    */
+#endif // DEBUG
     return candidate;  break;
   }
   default:

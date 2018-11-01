@@ -95,47 +95,28 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 }
 
 
-/* *** TO DO: mismatch in definition and use of pushIndex
-void SharedHierarchInterpPolyApproxData::pre_push_data()
+void SharedHierarchInterpPolyApproxData::pre_finalize_data()
 {
-  // pushIndex for Hierarch corresponds to candidate for current trial level
-
-  // Note: pushIndex just caches result, avoiding need to invoke for each QoI
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
-    //unsigned short tr_lev = l1_norm(tr_set);
-    pushIndex = find_index(poppedLevMultiIndex[activeKey],//[tr_lev],
-                           tr_set); // not same as candidate_index()...
-    break;
+#ifdef DEBUG
+  // Note: popped sets are not explicitly added in computed_trial_sets()
+  //       order as in HierarchSparseGridDriver::finalize_sets().
+  //       However, poppedLevMultiIndex et al. become ordered due to
+  //       enumeration of ordered active_multi_index().  Rather than
+  //       incurring additional overhead by mapping indices, simply support
+  //       a verification block that can be activated (currently compile
+  //       time, but could be run time based on output level).
+  size_t i, num_pop = poppedLevMultiIndex[activeKey].size(), f_index;
+  for (i=0; i<num_pop; ++i) {
+    f_index = finalization_index(i);
+    if (f_index != i) {
+      PCerr << "Error: SharedHierarchInterpPolyApproxData::pre_finalize_data() "
+	    << "found index mismatch (" << f_index << ", " << i << ")."
+	    << std::endl;
+      abort_handler(-1);
+    }
   }
-  default:
-
-    // Interpolation basis and component sobol already in incremented state
-
-    break;
-  }
+#endif // DEBUG
 }
-
-
-void SharedHierarchInterpPolyApproxData::post_push_data()
-{
-  // leave polynomialBasis as is (a previous increment is being restored)
-
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];//[tr_lev];
-    popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
-    break;
-  }
-  default:
-
-    // Interpolation basis and component sobol already in incremented state
-
-    break;
-  }
-}
-*/
 
 
 void SharedHierarchInterpPolyApproxData::pre_combine_data()

@@ -534,13 +534,13 @@ private:
 
   /// type 1 expansion coefficients popped during decrement for later
   /// restoration to expansionType1Coeffs
-  std::map<UShortArray, RealVectorDequeArray> poppedExpT1Coeffs;
+  std::map<UShortArray, RealVectorDeque> poppedExpT1Coeffs;
   /// type 2 expansion coefficients popped during decrement for later
   /// restoration to expansionType2Coeffs
-  std::map<UShortArray, RealMatrixDequeArray> poppedExpT2Coeffs;
+  std::map<UShortArray, RealMatrixDeque> poppedExpT2Coeffs;
   /// type 1 expansion coefficient gradients popped during decrement
   /// for later restoration to expansionType1CoeffGrads
-  std::map<UShortArray, RealMatrixDequeArray> poppedExpT1CoeffGrads;
+  std::map<UShortArray, RealMatrixDeque> poppedExpT1CoeffGrads;
 
   /// roll up of expansion type 1 coefficients across all keys
   RealVector2DArray combinedExpT1Coeffs;

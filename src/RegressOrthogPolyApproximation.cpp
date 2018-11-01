@@ -253,13 +253,12 @@ void RegressOrthogPolyApproximation::push_coefficients()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
 
-  // SharedPolyApproxData::candidate_index() currently returns 0 for
-  // all cases other than generalized sparse grids
-  // *** TO DO: use shared pushIndex instead of recomputing for each QoI
-  size_t pop_index = data_rep->candidate_index(key);//data_rep->pushIndex;
-
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
+
+  // SharedPolyApproxData::candidate_index() currently returns 0 for
+  // all cases other than generalized sparse grids
+  size_t p_index = data_rep->pushIndex;
 
   // store current state for use in decrement_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
@@ -276,15 +275,15 @@ void RegressOrthogPolyApproximation::push_coefficients()
   RealVectorDeque::iterator rv_it;  RealMatrixDeque::iterator rm_it;
   SizetSetDeque::iterator   ss_it;
   if (prv_it != poppedExpCoeffs.end()) {
-    rv_it = prv_it->second.begin();     std::advance(rv_it, pop_index);
+    rv_it = prv_it->second.begin();     std::advance(rv_it, p_index);
     expCoeffsIter->second = *rv_it;     prv_it->second.erase(rv_it);
   }
   if (prm_it != poppedExpCoeffGrads.end()) {
-    rm_it = prm_it->second.begin();     std::advance(rm_it, pop_index);
+    rm_it = prm_it->second.begin();     std::advance(rm_it, p_index);
     expCoeffGradsIter->second = *rm_it; prm_it->second.erase(rm_it);
   }
   if (pss_it != poppedSparseInd.end()) {
-    ss_it = pss_it->second.begin();     std::advance(ss_it, pop_index);
+    ss_it = pss_it->second.begin();     std::advance(ss_it, p_index);
     sparseIndIter->second = *ss_it;     pss_it->second.erase(ss_it);
   }
 
