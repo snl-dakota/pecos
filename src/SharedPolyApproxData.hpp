@@ -801,11 +801,13 @@ finalization_index(size_t i, const UShortArray& key)
     //   generated from increment_sets(), it will reflect the _sorted_ order
     //   of activeMultiIndex (minus one candidate following its selection).
     size_t candidate = candidate_index(key, *cit);
+    /*
     if (candidate != i) { // activate to test need for this mapping
       PCerr << "Error: SharedPolyApproxData::finalization_index() found index "
-	    << "mistmatch (" << candidate << ", " << i << ")." << std::endl;
+	    << "mismatch (" << candidate << ", " << i << ")." << std::endl;
       abort_handler(-1);
     }
+    */
     return candidate;  break;
   }
   default:
