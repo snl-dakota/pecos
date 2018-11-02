@@ -88,29 +88,20 @@ const UShortArray& HierarchSparseGridDriver::maximal_grid() const
 
 int HierarchSparseGridDriver::grid_size()
 {
-  // This fn is currently used to ensure change in the number of grid points
-  // under a coarse-grain refinement of incrementing ssgLevel.  As such, the
-  // logic below does not currently support fine-grained index set increments.
-
   int& num_colloc_pts = numPtsIter->second;
   if (num_colloc_pts == 0) { // special value indicated update required
-    unsigned short ssg_lev = ssgLevIter->second;
-    if (collocKeyIter->second.size() == ssg_lev + 1) // coarse-grained updating
-      update_collocation_points();
-    else {
-      update_smolyak_multi_index();
-      // rather than full collocKey update, just sum grid sizes:
-      UShortArray delta_sizes(numVars);
-      unsigned short lev, set, num_sets;
-      const UShort3DArray& sm_mi = smolMIIter->second;
-      for (lev=0; lev<=ssg_lev; ++lev) {
-	const UShort2DArray& sm_mi_l = sm_mi[lev];
-	num_sets = sm_mi_l.size();
-	for (set=0; set<num_sets; ++set) {
-	  levels_to_delta_sizes(sm_mi_l[set], delta_sizes);
-	  num_colloc_pts +=
-	    SharedPolyApproxData::tensor_product_terms(delta_sizes, false);
-	}
+    // perform minimal updating sufficient to sum grid sizes:
+    update_smolyak_multi_index();
+    const UShort3DArray& sm_mi = smolMIIter->second;
+    unsigned short lev, num_lev = sm_mi.size(), set, num_sets;
+    UShortArray delta_sizes(numVars);
+    for (lev=0; lev<num_lev; ++lev) {
+      const UShort2DArray& sm_mi_l = sm_mi[lev];
+      num_sets = sm_mi_l.size();
+      for (set=0; set<num_sets; ++set) {
+	levels_to_delta_sizes(sm_mi_l[set], delta_sizes);
+	num_colloc_pts +=
+	  SharedPolyApproxData::tensor_product_terms(delta_sizes, false);
       }
     }
   }
