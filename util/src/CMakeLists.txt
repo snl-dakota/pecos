@@ -21,24 +21,27 @@ set(UTIL_SOURCES
 )
 
 set(UTIL_HEADERS
+  CrossValidatedSolver.hpp
+  CrossValidationIterator.hpp
+  EqConstrainedLSQSolver.hpp
+  LARSolver.hpp
   least_angle_regression.hpp
   linear_algebra.hpp
-  LinearSystemSolver.hpp
   linear_solvers.hpp
+  LinearSystemCrossValidationIterator.hpp
+  LinearSystemSolver.hpp
+  LSQCrossValidationIterator.hpp
+  LSQSolver.hpp
   math_tools.hpp
+  OMPSolver.hpp
+  OptionsList.hpp
   orthogonal_matching_pursuit.hpp
   sparse_matrices.hpp
-  CrossValidationIterator.hpp
-  LinearSystemCrossValidationIterator.hpp
-  LSQCrossValidationIterator.hpp
-  OMPSolver.hpp
-  LARSolver.hpp	
-  LSQSolver.hpp
-  EqConstrainedLSQSolver.hpp
-  CrossValidatedSolver.hpp
+  teuchos_data_types.hpp
   )
 
 add_library(pecos_util ${UTIL_SOURCES} ${UTIL_HEADERS})
 #SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 #target_link_libraries(pecos_util ${Teuchos_LIBRARIES})
 install(TARGETS pecos_util EXPORT ${ExportTarget} DESTINATION lib)
+install(FILES ${UTIL_HEADERS} DESTINATION include)
