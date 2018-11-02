@@ -15,7 +15,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "pecos_stat_util.hpp"
 
-//#define DEBUG
+#define DEBUG
 //#define VBD_DEBUG
 
 namespace Pecos {
@@ -91,6 +91,62 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 
     // update aggregated sobolIndexMap to indices into sobolIndices array
     assign_sobol_index_map_values();
+  }
+}
+
+
+void SharedHierarchInterpPolyApproxData::pre_push_data()
+{
+  // Note: pushIndex just caches result, avoiding need to invoke for each QoI
+
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    const UShortArray& tr_set = hsg_driver->trial_set();
+
+    // base class implementation uses index of tr_set within popped_lev_mi:
+    //pushIndex = candidate_index(activeKey, tr_set);
+
+    // Hierarchical implementation uses a level-specific index:
+    UShortArrayDeque& pop_lev_mi = poppedLevMultiIndex[activeKey];
+    UShortArrayDeque::iterator it;
+    size_t tr_lev = hsg_driver->trial_level();
+    pushIndex = 0;
+    for (it=pop_lev_mi.begin(); it!=pop_lev_mi.end(); ++it)
+      if      (*it          == tr_set) break;       // trial set found
+      else if (l1_norm(*it) == tr_lev) ++pushIndex; // part of trial level
+    break;
+  }
+  default:
+
+    // Interpolation basis and component sobol already in incremented state
+
+    break;
+  }
+}
+
+
+void SharedHierarchInterpPolyApproxData::post_push_data()
+{
+  // leave polynomialBasis as is (a previous increment is being restored)
+
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    // pushIndex is level-specific, so recompute candidate index for removal
+    UShortArrayDeque& pop_lev_mi = poppedLevMultiIndex[activeKey];
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    // would be desirable to use reverse_iterator since trial_set will often
+    // be at the end, but erase() only supports a forward iterator.
+    UShortArrayDeque::iterator it =
+      std::find(pop_lev_mi.begin(), pop_lev_mi.end(), hsg_driver->trial_set());
+    if (it != pop_lev_mi.end()) pop_lev_mi.erase(it);
+    break;
+  }
+  default:
+
+    // Interpolation basis and component sobol already in incremented state
+
+    break;
   }
 }
 

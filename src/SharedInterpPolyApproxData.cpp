@@ -286,7 +286,7 @@ void SharedInterpPolyApproxData::decrement_data()
 
 void SharedInterpPolyApproxData::pre_push_data()
 {
-  // Note: pushIndex just caches result, avoiding need to invoke for each QoI
+  // Note: pushIndex avoids need to recompute index f or each QoI approximation
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids

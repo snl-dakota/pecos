@@ -53,10 +53,11 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     }
 
 #ifdef DEBUG
-    for (i=0; i<numVars; ++i) {
+    // Activate with care: insufficient logic for nested rules...
+    for (size_t i=0; i<numVars; ++i) {
       OrthogonalPolynomial* poly_rep
 	= (OrthogonalPolynomial*)polynomialBasis[i].polynomial_rep();
-      for (j=1; j<=quad_order[i]; ++j)
+      for (size_t j=1; j<=quad_order[i]; ++j)
 	poly_rep->gauss_check(j);
     }
 #endif // DEBUG
@@ -331,7 +332,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
     SizetDeque&  popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
 
-#ifdef DEBUG
+//#ifdef DEBUG
     // Note: popped sets are not explicitly added in computed_trial_sets()
     //       order as in IncrementalSparseGridDriver::finalize_sets().
     //       However, poppedLevMultiIndex et al. become ordered due to
@@ -349,7 +350,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 	abort_handler(-1);
       }
     }
-#endif // DEBUG
+//#endif // DEBUG
 
     // update multiIndex
     UShort2DArrayDeque::iterator iit = popped_tp_mi.begin();
