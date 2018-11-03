@@ -115,18 +115,20 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
   unsigned short ssg_lev   = ssgLevIter->second;
   RealVector&    aniso_wts = anisoWtsIter->second;
 
-  if (clear_sm_mi) sm_mi.clear();
-
+  if (clear_sm_mi) sm_mi.clear(); // call to compute_grid() (not an increment)
   size_t prev_sm_len = sm_mi.size();
-  // anisotropic weight updates always accompanied by a level increment, so
-  // we are already up to date for both iso and aniso cases if equal:
-  if (prev_sm_len == ssg_lev + 1)
-    return;
+  bool  from_scratch = (prev_sm_len == 0);
+
+  // In the presence of decrements that remove sets while preserving levels,
+  // this short-cut is no longer valid:
+  //   anisotropic weight updates always accompanied by a level increment,
+  //   so we are already up to date for both iso and aniso cases if equal.
+  //if (prev_sm_len == ssg_lev + 1)
+  //  return;
 
   // this function is for use with isotropic/anisotropic grids, including
   // the initial starting point for a generalized sparse grid adaptation
-  bool from_scratch = (prev_sm_len == 0);
-  if (!from_scratch && refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED){
+  if (!clear_sm_mi && refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
     PCerr << "Error: HierarchSparseGridDriver::update_smolyak_multi_index() "
 	  << "intended for use with isotropic and anisotropic grid refinements."
 	  << std::endl;
@@ -141,9 +143,14 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 
   size_t lev;
   sm_mi.resize(ssg_lev + 1);
-  if (aniso_wts.empty())
-    for (lev=prev_sm_len; lev<=ssg_lev; ++lev)
-      SharedPolyApproxData::total_order_multi_index(lev, numVars, sm_mi[lev]);
+  if (aniso_wts.empty()) {
+    for (lev=0; lev<=ssg_lev; ++lev) {
+      UShort2DArray& sm_mi_l = sm_mi[lev];
+      if (sm_mi_l.empty()) // short cut for uniform decrement
+    //if (sm_mi_l.size() != SharedPolyApproxData::total_order_terms())
+	SharedPolyApproxData::total_order_multi_index(lev, numVars, sm_mi_l);
+    }
+  }
   else { // utilize webbur::sandia_sgmga_vcn_ordered
 
     // With scaling alpha_min = 1: q_min < |alpha . j| <= q_max.

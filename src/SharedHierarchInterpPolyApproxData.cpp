@@ -95,6 +95,27 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 }
 
 
+/*
+bool SharedHierarchInterpPolyApproxData::push_available()
+{
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return push_trial_available(sg_driver->trial_set());
+    break;
+  }
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
+  default:
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    return (hsg_driver->popped_sets() > 0);
+    // Note: better option may be to clear incrementSets and then test it here
+    break;
+  }
+}
+*/
+
+
 void SharedHierarchInterpPolyApproxData::pre_push_data()
 {
   // Note: pushIndex just caches result, avoiding need to invoke for each QoI

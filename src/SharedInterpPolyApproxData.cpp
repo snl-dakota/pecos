@@ -98,8 +98,8 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 void SharedInterpPolyApproxData::active_key(const UShortArray& key)
 {
   if (activeKey != key) {
-    activeKey = key; // SharedPolyApproxData::active_key(key);
-    //update_active_iterators(); // not currently used in SharedInterp
+    activeKey = key;
+    update_active_iterators();
     driverRep->active_key(key);
   }
 }
@@ -108,6 +108,7 @@ void SharedInterpPolyApproxData::active_key(const UShortArray& key)
 void SharedInterpPolyApproxData::clear_keys()
 {
   SharedPolyApproxData::clear_keys();
+  pushAvail.clear();
   driverRep->clear_keys();
 }
 
@@ -260,6 +261,10 @@ void SharedInterpPolyApproxData::decrement_data()
     break;
   }
   default:
+    // Neither of the derived SharedInterp classes have a convenient indicator
+    // from local popped data (as in SharedOrthog*), so use a separate flag.
+    pushAvail[activeKey] = true;
+
     /* Leave interpolation basis and component sobol in incremented state.
 
     switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -280,6 +285,22 @@ void SharedInterpPolyApproxData::decrement_data()
     }
     */
     break;
+  }
+}
+
+
+bool SharedInterpPolyApproxData::push_available()
+{
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return push_trial_available(sg_driver->trial_set());
+    break;
+  }
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
+  default:
+    return pushAvail[activeKey];  break;
   }
 }
 
@@ -314,6 +335,7 @@ void SharedInterpPolyApproxData::post_push_data()
     break;
   }
   default:
+    pushAvail[activeKey] = false;
 
     // Interpolation basis and component sobol already in incremented state
 

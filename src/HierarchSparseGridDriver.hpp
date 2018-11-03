@@ -145,6 +145,11 @@ public:
   /// return active entry in incrementSets
   const UShortArray& increment_sets() const;
 
+  /// return number of sets within popped{T1,T2}WtSets identified by key
+  size_t popped_sets(const UShortArray& key) const;
+  /// return number of sets within popped{T1,T2}WtSets identified by activeKey
+  size_t popped_sets() const;
+
   /// return active entry in smolyakMultiIndex
   const UShort3DArray& smolyak_multi_index() const;
   /// set active entry in smolyakMultiIndex
@@ -473,6 +478,22 @@ inline int HierarchSparseGridDriver::unique_trial_points() const
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
 { return incrSetsIter->second; }
+
+
+inline size_t HierarchSparseGridDriver::
+popped_sets(const UShortArray& key) const
+{
+  // Avoid double lookup since T2 cannot currently exist w/o T1
+  //return std::max(poppedT1WtSets[key].size(), poppedT2WtSets[key].size());
+
+  std::map<UShortArray, std::map<UShortArray, RealVector> >::const_iterator cit
+    = poppedT1WtSets.find(key);
+  return (cit == poppedT1WtSets.end()) ? 0 : cit->second.size();
+}
+
+
+inline size_t HierarchSparseGridDriver::popped_sets() const
+{ return popped_sets(activeKey); }
 
 
 inline void HierarchSparseGridDriver::print_smolyak_multi_index() const

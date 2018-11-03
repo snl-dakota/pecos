@@ -83,8 +83,11 @@ protected:
   void allocate_data();
   void increment_data();
   void decrement_data();
+
+  bool push_available();
   void pre_push_data();
   void post_push_data();
+
   void post_finalize_data();
 
   void clear_inactive_data();
@@ -140,8 +143,11 @@ protected:
 						unsigned short level_i);
 
   //
-  //- Heading: Convenience functions
+  //- Heading: Member functions
   //
+
+  /// update {multiIndex,approxOrd}Iter from activeKey
+  void update_active_iterators();
 
   /// return value of type 1 interpolation polynomial using all dimensions
   Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
@@ -308,6 +314,10 @@ protected:
   /// value-based Lagrange interpolation
   bool barycentricFlag;
 
+  /// flag indicating availability of pushing (restoring) a previous
+  /// grid increment
+  std::map<UShortArray, bool> pushAvail;
+
 private:
 
   //
@@ -379,7 +389,7 @@ private:
 inline SharedInterpPolyApproxData::
 SharedInterpPolyApproxData(short basis_type, size_t num_vars):
   SharedPolyApproxData(basis_type, num_vars)
-{ }
+{ update_active_iterators(); }
 
 
 inline SharedInterpPolyApproxData::
@@ -387,11 +397,18 @@ SharedInterpPolyApproxData(short basis_type, size_t num_vars,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options)
-{ }
+{ update_active_iterators(); }
 
 
 inline SharedInterpPolyApproxData::~SharedInterpPolyApproxData()
 { }
+
+
+inline void SharedInterpPolyApproxData::update_active_iterators()
+{
+  if (pushAvail.find(activeKey) == pushAvail.end())
+    pushAvail[activeKey] = false; // initialize
+}
 
 
 inline void SharedInterpPolyApproxData::
