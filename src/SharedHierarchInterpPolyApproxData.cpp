@@ -170,12 +170,10 @@ void SharedHierarchInterpPolyApproxData::post_push_data()
     break;
   }
 }
-*/
 
 
 void SharedHierarchInterpPolyApproxData::pre_finalize_data()
 {
-/*
 #ifdef DEBUG
   // Note: popped sets are not explicitly added in computed_trial_sets() order
   //       as in HierarchSparseGridDriver::finalize_sets().  However,
@@ -194,8 +192,8 @@ void SharedHierarchInterpPolyApproxData::pre_finalize_data()
     }
   }
 #endif // DEBUG
-*/
 }
+*/
 
 
 void SharedHierarchInterpPolyApproxData::pre_combine_data()

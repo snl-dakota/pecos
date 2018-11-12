@@ -306,6 +306,7 @@ void SharedInterpPolyApproxData::pre_push_data()
     break;
   }
 }
+*/
 
 
 void SharedInterpPolyApproxData::post_push_data()
@@ -328,6 +329,7 @@ void SharedInterpPolyApproxData::post_push_data()
 }
 
 
+/*
 void SharedInterpPolyApproxData::post_finalize_data()
 {
   // leave polynomialBasis as is (all previous increments are being restored)

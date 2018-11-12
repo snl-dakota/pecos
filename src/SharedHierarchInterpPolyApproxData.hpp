@@ -62,10 +62,10 @@ protected:
   void increment_component_sobol();
 
   //bool push_available();
-  void pre_push_data();
-  void post_push_data();
+  //void pre_push_data();
+  //void post_push_data();
 
-  void pre_finalize_data();
+  //void pre_finalize_data();
   //void post_finalize_data();//SharedInterpPolyApproxData version is sufficient
 
   void pre_combine_data();

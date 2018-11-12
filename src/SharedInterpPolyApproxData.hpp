@@ -85,10 +85,10 @@ protected:
   void decrement_data();
 
   bool push_available();
-  void pre_push_data();
+  //void pre_push_data();
   void post_push_data();
 
-  void post_finalize_data();
+  //void post_finalize_data();
 
   void clear_inactive_data();
 
