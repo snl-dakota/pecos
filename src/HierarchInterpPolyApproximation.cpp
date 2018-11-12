@@ -346,27 +346,28 @@ void HierarchInterpPolyApproximation::push_coefficients()
     //   (pushIndex is defined upstream in shared data) --> would have to
     //   retrieve from poppedLevMultiIndex somehow (too late?)
 
-    //const UShortArray& tr_set = data_rep->hsg_driver()->trial_set();
+    //HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+    //const UShortArray& tr_set = hsg_driver->trial_set();
     //size_t lev = l1_norm(tr_set);
     size_t tr_lev = data_rep->hsg_driver()->trial_level(),
-      push_index  = data_rep->pushIndex;
+          p_index = data_rep->push_index();
     if (expansionCoeffFlag) {
       RealVectorDeque& pop_t1c_l = poppedExpT1Coeffs[key][tr_lev];
-      RealVectorDeque::iterator v_it = pop_t1c_l.begin() + push_index;
+      RealVectorDeque::iterator v_it = pop_t1c_l.begin() + p_index;
       expT1CoeffsIter->second[tr_lev].push_back(*v_it);
       pop_t1c_l.erase(v_it);
       SharedHierarchInterpPolyApproxData* data_rep
 	= (SharedHierarchInterpPolyApproxData*)sharedDataRep;
       if (data_rep->basisConfigOptions.useDerivs) {
 	RealMatrixDeque& pop_t2c_l = poppedExpT2Coeffs[key][tr_lev];
-	RealMatrixDeque::iterator m_it = pop_t2c_l.begin() + push_index;
+	RealMatrixDeque::iterator m_it = pop_t2c_l.begin() + p_index;
 	expT2CoeffsIter->second[tr_lev].push_back(*m_it);
 	pop_t2c_l.erase(m_it);
       }
     }
     if (expansionCoeffGradFlag) {
       RealMatrixDeque& pop_t1cg_l = poppedExpT1CoeffGrads[key][tr_lev];
-      RealMatrixDeque::iterator m_it = pop_t1cg_l.begin() + push_index;
+      RealMatrixDeque::iterator m_it = pop_t1cg_l.begin() + p_index;
       expT1CoeffGradsIter->second[tr_lev].push_back(*m_it);
       pop_t1cg_l.erase(m_it);
     }

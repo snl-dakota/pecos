@@ -168,9 +168,8 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
 {
   // TO DO: ADAPTED_BASIS_GENERALIZED case ???
 
-  // SharedPolyApproxData::candidate_index() currently returns 0 for
-  // all cases other than generalized sparse grids
-  pushIndex = candidate_index(activeKey);
+  // currently returns 0 for all cases other than generalized sparse grids
+  size_t p_index = push_index();
 
   // for decrement
   prevMultiIndex = multiIndexIter->second;
@@ -178,13 +177,13 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
   std::map<UShortArray, UShort2DArrayDeque>::iterator pop_it
     = poppedMultiIndex.find(activeKey);
   UShort2DArrayDeque::iterator u2a_it;
-  if (pop_it == poppedMultiIndex.end() || pop_it->second.size() <= pushIndex) {
+  if (pop_it == poppedMultiIndex.end() || pop_it->second.size() <= p_index) {
     PCerr << "Error: lookup failure in SharedRegressOrthogPolyApproxData::"
 	  << "pre_push_data()." << std::endl;
     abort_handler(-1);
   }
   else {
-    u2a_it = pop_it->second.begin();   std::advance(u2a_it, pushIndex);
+    u2a_it = pop_it->second.begin();   std::advance(u2a_it, p_index);
     multiIndexIter->second = *u2a_it;  pop_it->second.erase(u2a_it);
   }
   //approx_order_to_multi_index();

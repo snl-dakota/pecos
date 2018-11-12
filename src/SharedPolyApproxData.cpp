@@ -297,7 +297,7 @@ void SharedPolyApproxData::active_key(const UShortArray& key)
 void SharedPolyApproxData::clear_keys()
 {
   activeKey.clear();
-  poppedLevMultiIndex.clear();
+  //poppedLevMultiIndex.clear();
 }
 
 
@@ -319,6 +319,10 @@ void SharedPolyApproxData::decrement_data()
 	<< std::endl;
   abort_handler(-1);
 }
+
+
+bool SharedPolyApproxData::push_available()
+{ return false; } // default implementation
 
 
 void SharedPolyApproxData::pre_push_data()

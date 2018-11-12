@@ -67,10 +67,17 @@ public:
   void clear_keys();
 
   void initialize_sets();
-  void push_trial_set(const UShortArray& set);
-  void restore_set();
+  void increment_smolyak_multi_index(const UShortArray& set);
+  bool push_trial_available(const UShortArray& key, const UShortArray& tr_set);
+  bool push_trial_available(const UShortArray& key);
+  bool push_trial_available();
+  size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
+  size_t push_trial_index(const UShortArray& key);
+  size_t push_trial_index();
+  size_t push_index() const;
+  void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
-  void pop_trial_set();
+  void pop_set();
   void finalize_sets(bool output_sets, bool converged_within_tol,
 		     bool reverted);
 
@@ -188,6 +195,11 @@ private:
   /// reference grid; used in incremental approaches that update type2WeightSets
   std::map<UShortArray, RealMatrix> type2WeightSetsRef;
 
+  /// popped trial sets that were computed but not selected
+  std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
+  /// index into poppedLevMultiIndex for data to be restored
+  size_t pushIndex;
+
   /// number of unique points in set 1 (reference)
   std::map<UShortArray, int> numUnique1;
   /// active entry within numUnique1
@@ -270,7 +282,7 @@ private:
 
 
 inline IncrementalSparseGridDriver::IncrementalSparseGridDriver():
-  CombinedSparseGridDriver(), a1PIter(a1Points.end())
+  CombinedSparseGridDriver(), pushIndex(_NPOS), a1PIter(a1Points.end())
 { update_active_iterators(); }
 
 
@@ -279,7 +291,7 @@ IncrementalSparseGridDriver(unsigned short ssg_level,
 			    const RealVector& dim_pref, short growth_rate,
 			    short refine_control):
   CombinedSparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  a1PIter(a1Points.end())
+  pushIndex(_NPOS), a1PIter(a1Points.end())
 { update_active_iterators(); }
 
 
@@ -379,6 +391,7 @@ inline void IncrementalSparseGridDriver::clear_keys()
 
   smolyakCoeffsRef.clear();
   type1WeightSetsRef.clear(); type2WeightSetsRef.clear();
+  poppedLevMultiIndex.clear();
 
   zVec.clear();            r1Vec.clear();          r2Vec.clear();
   sortIndex1.clear();      sortIndex2.clear();
@@ -417,7 +430,55 @@ trial_set(const UShortArray& key) const
 
 
 inline const UShortArray& IncrementalSparseGridDriver::trial_set() const
-{ return smolMIIter->second.back(); } // last set appended to active smol MI
+{ return smolMIIter->second.back(); } // last set appended to active smolyak MI
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool IncrementalSparseGridDriver::
+push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+{
+  const UShortArrayDeque& pop_mi = poppedLevMultiIndex[key];
+  return (std::find(pop_mi.begin(), pop_mi.end(), tr_set) != pop_mi.end());
+}
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool IncrementalSparseGridDriver::
+push_trial_available(const UShortArray& key)
+{
+  const UShortArrayDeque& pop_mi = poppedLevMultiIndex[key];
+  return
+    (std::find(pop_mi.begin(), pop_mi.end(), trial_set(key)) != pop_mi.end());
+}
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool IncrementalSparseGridDriver::push_trial_available()
+{
+  const UShortArrayDeque& pop_mi = poppedLevMultiIndex[activeKey];
+  return (std::find(pop_mi.begin(), pop_mi.end(), trial_set()) != pop_mi.end());
+}
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t IncrementalSparseGridDriver::
+push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+{ return find_index(poppedLevMultiIndex[key], tr_set); }
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t IncrementalSparseGridDriver::
+push_trial_index(const UShortArray& key)
+{ return find_index(poppedLevMultiIndex[key], trial_set(key)); }
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t IncrementalSparseGridDriver::push_trial_index()
+{ return find_index(poppedLevMultiIndex[activeKey], trial_set()); }
+
+
+inline size_t IncrementalSparseGridDriver::push_index() const
+{ return pushIndex; }
 
 
 inline void IncrementalSparseGridDriver::update_reference()

@@ -258,7 +258,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
 
   // SharedPolyApproxData::candidate_index() currently returns 0 for
   // all cases other than generalized sparse grids
-  size_t p_index = data_rep->pushIndex;
+  size_t p_index = data_rep->push_index();
 
   // store current state for use in decrement_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
@@ -612,7 +612,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     //lsg_driver->push_trial_set(trial_set);
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
-    if (data_rep->push_trial_available(trial_set))
+    if (data_rep->push_available())
       // cannot assume monotonicity in bookkeeping due to restriction above
       data_rep->push_trial_set(trial_set, adaptedMultiIndex, false);
     else
@@ -655,7 +655,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
     // restore previous state (destruct order is reversed from construct order)
     data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);
-    //lsg_driver->pop_trial_set();
+    //lsg_driver->pop_set();
   }
   const UShortArray& best_set = *cit_star;
   PCout << "\n<<<<< Evaluation of active index sets completed.\n"

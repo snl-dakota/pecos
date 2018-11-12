@@ -16,7 +16,7 @@
 
 #include "SharedPolyApproxData.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 
 namespace Pecos {
 

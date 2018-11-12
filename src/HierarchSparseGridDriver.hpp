@@ -60,10 +60,17 @@ public:
   //const UShortArray& maximal_grid() const;
 
   void initialize_sets();
-  void push_trial_set(const UShortArray& set);
-  void restore_set();
+  void increment_smolyak_multi_index(const UShortArray& set);
+  bool push_trial_available(const UShortArray& key, const UShortArray& tr_set);
+  bool push_trial_available(const UShortArray& key);
+  bool push_trial_available();
+  size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
+  size_t push_trial_index(const UShortArray& key);
+  size_t push_trial_index();
+  size_t push_index() const;
+  void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
-  void pop_trial_set();
+  void pop_set();
   void finalize_sets(bool output_sets, bool converged_within_tol,
 		     bool reverted);
 
@@ -145,10 +152,10 @@ public:
   /// return active entry in incrementSets
   const UShortArray& increment_sets() const;
 
-  /// return number of sets within popped{T1,T2}WtSets identified by key
-  size_t popped_sets(const UShortArray& key) const;
-  /// return number of sets within popped{T1,T2}WtSets identified by activeKey
-  size_t popped_sets() const;
+  // return number of sets within popped{T1,T2}WtSets identified by key
+  //size_t popped_sets(const UShortArray& key) const;
+  // return number of sets within popped{T1,T2}WtSets identified by activeKey
+  //size_t popped_sets() const;
 
   /// return active entry in smolyakMultiIndex
   const UShort3DArray& smolyak_multi_index() const;
@@ -235,8 +242,12 @@ private:
 
   /// update {smolMI,collocKey,collocInd}Iter from activeKey
   void update_active_iterators();
-  
+
+  /// update active smolyakMultiIndex for change in level and/or aniso weights
   void update_smolyak_multi_index(bool clear_sm_mi = false);
+
+  /// moves all data from popped weights to active arrays
+  void push_popped_weights();
 
   /// kernel routine used for computing points and weights for a tensor grid
   /// corresponding to a single index set
@@ -267,8 +278,8 @@ private:
   /// iterator for active entry within smolyakMultiIndex
   std::map<UShortArray, UShort3DArray>::iterator smolMIIter;
 
-  /// level of trial evaluation set from push_trial_set() during an
-  /// index set-based refinement
+  /// level of trial evaluation set passed to increment_smolyak_multi_index()
+  /// during an index set-based refinement
   std::map<UShortArray, unsigned short> trialLevel;
   /// iterator for active entry within trialLevel
   std::map<UShortArray, unsigned short>::iterator trialLevIter;
@@ -306,19 +317,23 @@ private:
   // concatenation of type2WeightSets RealMatrix2DArray into a RealMatrix
   //RealMatrix concatT2WeightSets;
 
-  /// type 1 weight sets popped during decrement for later restoration
-  /// to type1WeightSets. First key is level-form multi-index; second key
-  /// is the trial set.
-  std::map<UShortArray, std::map<UShortArray, RealVector> > poppedT1WtSets; // *** TO DO
-  /// type 2 weight sets popped during decrement for later restoration
-  /// to type2WeightSets
-  std::map<UShortArray, std::map<UShortArray, RealMatrix> > poppedT2WtSets; // *** TO DO
+  /// popped trial sets that were computed but not selected
+  std::map<UShortArray, UShortArrayDequeArray> poppedLevMultiIndex;
+  /// index into poppedLevMultiIndex[trial_lev] for data to be restored
+  size_t pushIndex;
+
+  /// type 1 weight sets popped during decrement for later restoration to
+  /// type1WeightSets
+  std::map<UShortArray, RealVectorDequeArray> poppedT1WtSets;
+  /// type 2 weight sets popped during decrement for later restoration to
+  /// type2WeightSets
+  std::map<UShortArray, RealMatrixDequeArray> poppedT2WtSets;
 };
 
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
   SparseGridDriver(), nestedGrid(true), trackCollocIndices(true),
-  smolMIIter(smolyakMultiIndex.end())
+  smolMIIter(smolyakMultiIndex.end()), pushIndex(_NPOS)
 { update_active_iterators(); }
 
 
@@ -327,7 +342,7 @@ HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
   nestedGrid(true), trackCollocIndices(true),
-  smolMIIter(smolyakMultiIndex.end())
+  smolMIIter(smolyakMultiIndex.end()), pushIndex(_NPOS)
 { update_active_iterators(); }
 
 
@@ -444,7 +459,7 @@ inline void HierarchSparseGridDriver::clear_keys()
   type1WeightSets.clear();    t1WtIter      = type1WeightSets.end();
   type2WeightSets.clear();    t2WtIter      = type2WeightSets.end();
 
-  poppedT1WtSets.clear();     poppedT2WtSets.clear();
+  poppedLevMultiIndex.clear(); poppedT1WtSets.clear(); poppedT2WtSets.clear();
 }
 
 
@@ -476,24 +491,89 @@ inline int HierarchSparseGridDriver::unique_trial_points() const
 { return collocKeyIter->second[trialLevIter->second].back().size(); }
 
 
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool HierarchSparseGridDriver::
+push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+{
+  size_t tr_lev = l1_norm(tr_set);
+  const UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[key][tr_lev];
+  return
+    (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+}
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool HierarchSparseGridDriver::
+push_trial_available(const UShortArray& key)
+{
+  const UShortArray& tr_set = trial_set(key);
+  size_t tr_lev = l1_norm(tr_set);
+  const UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[key][tr_lev];
+  return
+    (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+}
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool HierarchSparseGridDriver::push_trial_available()
+{ return push_trial_available(activeKey, trial_set()); }
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t HierarchSparseGridDriver::
+push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+{
+  size_t tr_lev = l1_norm(tr_set);
+  return find_index(poppedLevMultiIndex[key][tr_lev], tr_set);
+}
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t HierarchSparseGridDriver::push_trial_index(const UShortArray& key)
+{
+  const UShortArray& tr_set = trial_set(key);
+  size_t tr_lev = l1_norm(tr_set);
+  return find_index(poppedLevMultiIndex[key][tr_lev], tr_set);
+}
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t HierarchSparseGridDriver::push_trial_index()
+{ return push_trial_index(activeKey, trial_set()); }
+
+
+inline size_t HierarchSparseGridDriver::push_index() const
+{ return pushIndex; }
+
+
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
 { return incrSetsIter->second; }
 
 
+/*
 inline size_t HierarchSparseGridDriver::
 popped_sets(const UShortArray& key) const
 {
   // Avoid double lookup since T2 cannot currently exist w/o T1
   //return std::max(poppedT1WtSets[key].size(), poppedT2WtSets[key].size());
 
-  std::map<UShortArray, std::map<UShortArray, RealVector> >::const_iterator cit
+  std::map<UShortArray, RealVectorDequeArray>::const_iterator cit
     = poppedT1WtSets.find(key);
-  return (cit == poppedT1WtSets.end()) ? 0 : cit->second.size();
+  if (cit == poppedT1WtSets.end())
+    return 0;
+  else {
+    const RealVectorDequeArray& pop_t1w = cit->second;
+    size_t lev, num_lev = pop_t1w.size(), num_sets = 0;
+    for (lev=0; lev<num_lev; ++lev)
+      num_sets += pop_t1w[lev].size();
+    return num_sets;
+  }
 }
 
 
 inline size_t HierarchSparseGridDriver::popped_sets() const
 { return popped_sets(activeKey); }
+*/
 
 
 inline void HierarchSparseGridDriver::print_smolyak_multi_index() const

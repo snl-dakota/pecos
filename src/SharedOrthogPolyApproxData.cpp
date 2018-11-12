@@ -142,8 +142,9 @@ bool SharedOrthogPolyApproxData::push_available()
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_trial_available(sg_driver->trial_set());
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
+    return isg_driver->push_trial_available();
     break;
   }
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
@@ -230,7 +231,7 @@ decrement_trial_set(const UShortArray& trial_set,
   aggregated_mi.resize(num_exp_terms); // truncate previous increment
 
   // reset tensor-product bookkeeping and save restorable data
-  poppedLevMultiIndex[activeKey].push_back(trial_set);
+  //poppedLevMultiIndex[activeKey].push_back(trial_set);
   poppedMultiIndex[activeKey].push_back(tp_mi.back());
   if (save_map) { // always needed if we want to mix and match
     poppedMultiIndexMap[activeKey].push_back(tp_mi_map.back());
@@ -249,20 +250,19 @@ pre_push_trial_set(const UShortArray& trial_set,
   Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
-  // pushIndex caches result to avoid computing for each QoI
-  pushIndex = candidate_index(activeKey, trial_set);
-  size_t last_index = tp_mi.size();
+  // retrieve restoration index, previously-computed by ISGDriver
+  size_t p_index = push_index(), last_index = tp_mi.size();
 
   UShort2DArrayDeque::iterator iit
-    = poppedMultiIndex[activeKey].begin() + pushIndex;
+    = poppedMultiIndex[activeKey].begin() + p_index;
   tp_mi.push_back(*iit);
 
   // update multiIndex
   if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
     SizetArrayDeque::iterator mit
-      = poppedMultiIndexMap[activeKey].begin() + pushIndex;
+      = poppedMultiIndexMap[activeKey].begin() + p_index;
     SizetDeque::iterator rit
-      = poppedMultiIndexMapRef[activeKey].begin() + pushIndex;
+      = poppedMultiIndexMapRef[activeKey].begin() + p_index;
     tp_mi_map.push_back(*mit);  tp_mi_map_ref.push_back(*rit);
     append_multi_index(tp_mi[last_index], tp_mi_map[last_index],
 		       tp_mi_map_ref[last_index], aggregated_mi);
@@ -279,21 +279,24 @@ void SharedOrthogPolyApproxData::
 post_push_trial_set(const UShortArray& trial_set,
 		       UShort2DArray& aggregated_mi, bool save_map)
 {
-  UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
-  UShortArrayDeque::iterator sit = popped_lev_mi.begin() + pushIndex;
-  popped_lev_mi.erase(sit);
+  //UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
+  //UShortArrayDeque::iterator sit = popped_lev_mi.begin() + p_index;
+  //popped_lev_mi.erase(sit);
+
+  // retrieve restoration index, previously-computed by ISGDriver
+  size_t p_index = push_index();
 
   UShort2DArrayDeque& popped_tp_mi = poppedMultiIndex[activeKey];
-  UShort2DArrayDeque::iterator iit = popped_tp_mi.begin() + pushIndex;
+  UShort2DArrayDeque::iterator iit = popped_tp_mi.begin() + p_index;
   popped_tp_mi.erase(iit);
 
   if (save_map) { // always needed if we want to mix and match
     SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
-    SizetArrayDeque::iterator mit = popped_tp_mi_map.begin() + pushIndex;
+    SizetArrayDeque::iterator mit = popped_tp_mi_map.begin() + p_index;
     popped_tp_mi_map.erase(mit);
 
     SizetDeque& popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
-    SizetDeque::iterator rit = popped_tp_mi_map_ref.begin() + pushIndex;
+    SizetDeque::iterator rit = popped_tp_mi_map_ref.begin() + p_index;
     popped_tp_mi_map_ref.erase(rit);
   }
 }

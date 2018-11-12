@@ -256,8 +256,8 @@ void SharedInterpPolyApproxData::decrement_data()
   
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
+    //SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    //poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
     break;
   }
   default:
@@ -265,25 +265,8 @@ void SharedInterpPolyApproxData::decrement_data()
     // from local popped data (as in SharedOrthog*), so use a separate flag.
     pushAvail[activeKey] = true;
 
-    /* Leave interpolation basis and component sobol in incremented state.
+    // Leave interpolation basis and component sobol in incremented state
 
-    switch (expConfigOptions.expCoeffsSolnApproach) {
-    case QUADRATURE: {
-      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-      break;
-    }
-    case INCREMENTAL_SPARSE_GRID: {
-      IncrementalSparseGridDriver* isg_driver
-	= (IncrementalSparseGridDriver*)driverRep;
-      break;
-    }
-    case HIERARCHICAL_SPARSE_GRID: {
-      HierarchSparseGridDriver* hsg_driver
-	= (HierarchSparseGridDriver*)driverRep;
-      break;
-    }
-    }
-    */
     break;
   }
 }
@@ -294,7 +277,7 @@ bool SharedInterpPolyApproxData::push_available()
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_trial_available(sg_driver->trial_set());
+    return sg_driver->push_trial_available();
     break;
   }
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
@@ -305,14 +288,15 @@ bool SharedInterpPolyApproxData::push_available()
 }
 
 
+/*
 void SharedInterpPolyApproxData::pre_push_data()
 {
   // Note: pushIndex avoids need to recompute index f or each QoI approximation
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
-    pushIndex = candidate_index(activeKey, tr_set);
+    //const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
+    //pushIndex = candidate_index(activeKey, tr_set);
     break;
   }
   default:
@@ -330,8 +314,8 @@ void SharedInterpPolyApproxData::post_push_data()
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
-    popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
+    //UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
+    //popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
     break;
   }
   default:
@@ -350,7 +334,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
 
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
-    poppedLevMultiIndex[activeKey].clear();
+    //poppedLevMultiIndex[activeKey].clear();
     break;
   default:
 
@@ -359,6 +343,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
     break;
   }
 }
+*/
 
 
 void SharedInterpPolyApproxData::

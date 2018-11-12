@@ -319,7 +319,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // move previous expansion data to current expansion
-      size_t index_star = data_rep->pushIndex;
+      size_t index_star = data_rep->push_index();
 
       RealVectorDeque::iterator cit = pop_exp_coeffs.begin();
       RealMatrixDeque::iterator git = pop_exp_coeff_grads.begin();

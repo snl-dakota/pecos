@@ -55,19 +55,40 @@ public:
   virtual void initialize_sets();
   /// update smolyakMultiIndex with a new trial set for use within the
   /// generalized sparse grid procedure
-  virtual void push_trial_set(const UShortArray& set);
+  virtual void increment_smolyak_multi_index(const UShortArray& set);
+
+  /// determine whether trial set is available for restoration (by push)
+  virtual bool push_trial_available(const UShortArray& key,
+				    const UShortArray& tr_set);
+  /// determine whether trial set is available for restoration (by push
+  virtual bool push_trial_available(const UShortArray& key);
+  /// determine whether trial set is available for restoration (by push
+  virtual bool push_trial_available();
+
+  /// determine index of trial set for restoration (by push)
+  virtual size_t push_trial_index(const UShortArray& key,
+				  const UShortArray& tr_set);
+  /// determine index of trial set for restoration (by push)
+  virtual size_t push_trial_index(const UShortArray& key);
+  /// determine index of trial set for restoration (by push)
+  virtual size_t push_trial_index();
+
+  /// return pushIndex (cached lookup result in derived Driver classes)
+  virtual size_t push_index();
+
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
-  virtual void restore_set();
+  virtual void push_set();
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
-  virtual void pop_trial_set();
+  virtual void pop_set();
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
   virtual void finalize_sets(bool output_sets, bool converged_within_tol,
 			     bool reverted);
 
-  /// computes the tensor grid for the index set from push_trial_set()
+  /// computes the tensor grid for the trial index set used in
+  /// increment_smolyak_multi_index()
   virtual void compute_trial_grid(RealMatrix& var_sets);
 
   /// computes a grid increment and evaluates the new parameter sets
@@ -82,9 +103,11 @@ public:
   /// update derived reference data, if required
   virtual void update_reference();
 
-  /// return the trial index set from push_trial_set()
+  /// return the trial index set used in increment_smolyak_multi_index()
+  /// that corresponds to key
   virtual const UShortArray& trial_set(const UShortArray& key) const;
-  /// return the trial index set from push_trial_set()
+  /// return the trial index set used in increment_smolyak_multi_index()
+  /// that corresponds to activeKey
   virtual const UShortArray& trial_set() const;
 
   /// return the number of unique collocation points in the trial index set

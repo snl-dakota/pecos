@@ -100,28 +100,28 @@ bool SharedHierarchInterpPolyApproxData::push_available()
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_trial_available(sg_driver->trial_set());
-    break;
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    return hsg_driver->push_trial_available();  break;
   }
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
   //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
   default:
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    return (hsg_driver->popped_sets() > 0);
-    // Note: better option may be to clear incrementSets and then test it here
+    return pushAvail[activeKey];  break;
+
+    //return (hsg_driver->popped_sets() > 0);
+    // Another option would be to clear incrementSets and then test it here
     break;
   }
 }
-*/
 
 
 void SharedHierarchInterpPolyApproxData::pre_push_data()
 {
-  // Note: pushIndex just caches result, avoiding need to invoke for each QoI
-
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+
+    // pushIndex now computed by HierarchSparseGridDriver::push_set()
+
     HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
     const UShortArray& tr_set = hsg_driver->trial_set();
 
@@ -170,21 +170,22 @@ void SharedHierarchInterpPolyApproxData::post_push_data()
     break;
   }
 }
+*/
 
 
 void SharedHierarchInterpPolyApproxData::pre_finalize_data()
 {
+/*
 #ifdef DEBUG
-  // Note: popped sets are not explicitly added in computed_trial_sets()
-  //       order as in HierarchSparseGridDriver::finalize_sets().
-  //       However, poppedLevMultiIndex et al. become ordered due to
-  //       enumeration of ordered active_multi_index().  Rather than
-  //       incurring additional overhead by mapping indices, simply support
-  //       a verification block that can be activated (currently compile
-  //       time, but could be run time based on output level).
-  size_t i, num_pop = poppedLevMultiIndex[activeKey].size(), f_index;
+  // Note: popped sets are not explicitly added in computed_trial_sets() order
+  //       as in HierarchSparseGridDriver::finalize_sets().  However,
+  //       poppedLevMultiIndex becomes ordered due to enumeration of ordered
+  //       active_multi_index().  Rather than incurring additional overhead by
+  //       mapping indices, simply support a verification block that can be
+  //       activated at compile time (current) or run time (via output level).
+  size_t i, num_pop = poppedLevMultiIndex[activeKey].size(), f_index; // ***
   for (i=0; i<num_pop; ++i) {
-    f_index = finalization_index(i);
+    f_index = finalization_index(i); // *** now level specific
     if (f_index != i) {
       PCerr << "Error: SharedHierarchInterpPolyApproxData::pre_finalize_data() "
 	    << "found index mismatch (" << f_index << ", " << i << ")."
@@ -193,6 +194,7 @@ void SharedHierarchInterpPolyApproxData::pre_finalize_data()
     }
   }
 #endif // DEBUG
+*/
 }
 
 

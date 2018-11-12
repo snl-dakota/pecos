@@ -326,13 +326,13 @@ public:
 
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  size_t candidate_index(const UShortArray& key, const UShortArray& tr_set);
+  size_t push_index(const UShortArray& key, const UShortArray& tr_set);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  size_t candidate_index(const UShortArray& key);
+  size_t push_index(const UShortArray& key);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
-  size_t candidate_index();
+  size_t push_index();
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
   /// during finalization
@@ -483,9 +483,6 @@ protected:
   /// Define the mapping from sobolIndexMap into sobolIndices
   void assign_sobol_index_map_values();
 
-  /// check for the presence of trial_set within poppedLevMultiIndex[activeKey]
-  bool push_trial_available(const UShortArray& trial_set);
-
   //
   //- Heading: Data
   //
@@ -518,12 +515,6 @@ protected:
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
 
-  /// popped trial sets that were computed but not selected
-  std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
-  /// index into popped sets of data to be restored (stored in this
-  /// class for used by each PolynomialApproximation)
-  size_t pushIndex;
-
   /// database key indicating the currently active polynomial expansion;
   /// the key is a multi-index managing multiple modeling dimensions such
   /// as model form, discretization level, etc.
@@ -543,14 +534,14 @@ private:
 
 
 inline SharedPolyApproxData::SharedPolyApproxData():
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX), pushIndex(0)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
 { }
 
 
 inline SharedPolyApproxData::
 SharedPolyApproxData(short basis_type, size_t num_vars):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX), pushIndex(0)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -560,7 +551,7 @@ SharedPolyApproxData(short basis_type, size_t num_vars,
 		     const BasisConfigOptions& bc_options):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
   driverRep(NULL), expConfigOptions(ec_options), basisConfigOptions(bc_options),
-  ssgLevelPrev(USHRT_MAX), pushIndex(0)
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -724,53 +715,30 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 }
 
 
-inline bool SharedPolyApproxData::
-push_trial_available(const UShortArray& trial_set)
-{
-  const UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
-  return (std::find(popped_lev_mi.begin(), popped_lev_mi.end(), trial_set) !=
-	  popped_lev_mi.end());
-}
-
-
-inline bool SharedPolyApproxData::push_available()
+inline size_t SharedPolyApproxData::
+push_index(const UShortArray& key, const UShortArray& tr_set)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_trial_available(sg_driver->trial_set());
+    return sg_driver->push_trial_index(key, tr_set);// lookup for incoming data
     break;
   }
-  // Implemented by SharedRegressOrthogPolyApproxData::push_available()
-  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
-  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
-  default:
-    return false;
-  }
-}
-
-
-inline size_t SharedPolyApproxData::
-candidate_index(const UShortArray& key, const UShortArray& tr_set)
-{
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-    return find_index(poppedLevMultiIndex[key], tr_set);  break;
   default:
     PCerr << "Error: trial set not supported in SharedPolyApproxData::"
-	  << "candidate_index()." << std::endl;
+	  << "push_index()." << std::endl;
     abort_handler(-1);
     return 0;                                             break;
   }
 }
 
 
-inline size_t SharedPolyApproxData::candidate_index(const UShortArray& key)
+inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return find_index(poppedLevMultiIndex[key], sg_driver->trial_set(key));
+    return sg_driver->push_trial_index(key); // lookup for incoming key
     break;
   }
   default: // other refinement types support a single candidate with index 0
@@ -779,8 +747,23 @@ inline size_t SharedPolyApproxData::candidate_index(const UShortArray& key)
 }
 
 
-inline size_t SharedPolyApproxData::candidate_index()
-{ return candidate_index(activeKey); }
+inline size_t SharedPolyApproxData::push_index()
+{
+  //return push_index(activeKey); // induces unnecessary lookup(s)
+
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    size_t p_index = sg_driver->push_index(); // retrieve pushIndex (no lookup)
+    return (p_index == _NPOS) ?
+      sg_driver->push_trial_index() : // not pre-computed -> perform lookup
+      p_index;                        //     pre-computed -> return
+    break;
+  }
+  default: // other refinement types support a single candidate with index 0
+    return 0;  break;
+  }
+}
 
 
 inline size_t SharedPolyApproxData::
@@ -800,7 +783,7 @@ finalization_index(size_t i, const UShortArray& key)
     // > poppedLevMultiIndex is a std::deque updated by push_back(), but when
     //   generated from increment_sets(), it will reflect the sorted order of
     //   activeMultiIndex (minus one candidate following its selection).
-    size_t candidate = candidate_index(key, *cit);
+    size_t candidate = push_index(key, *cit);
 #ifdef DEBUG
     if (candidate != i) { // activate to test need for this mapping
       PCerr << "Error: SharedPolyApproxData::finalization_index() found index "
@@ -820,7 +803,7 @@ finalization_index(size_t i, const UShortArray& key)
 
 
 inline size_t SharedPolyApproxData::finalization_index(size_t i)
-{ return finalization_index(i, activeKey); }
+{ return finalization_index(i, activeKey); } // induces unnecessary lookups
 
 
 inline bool SharedPolyApproxData::

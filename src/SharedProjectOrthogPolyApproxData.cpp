@@ -332,7 +332,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
     SizetDeque&  popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
 
-//#ifdef DEBUG
+#ifdef DEBUG
     // Note: popped sets are not explicitly added in computed_trial_sets()
     //       order as in IncrementalSparseGridDriver::finalize_sets().
     //       However, poppedLevMultiIndex et al. become ordered due to
@@ -342,7 +342,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     //       time, but could be run time based on output level).
     size_t i, num_pop = popped_tp_mi.size(), f_index;
     for (i=0; i<num_pop; ++i) {
-      f_index = finalization_index(i);
+      f_index = finalization_index(i); // Ok: isg index is flattened
       if (f_index != i) {
 	PCerr << "Error: SharedProjectOrthogPolyApproxData::pre_finalize_data"
 	      << "() found index mismatch (" << f_index << ", " << i << ")."
@@ -350,7 +350,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 	abort_handler(-1);
       }
     }
-//#endif // DEBUG
+#endif // DEBUG
 
     // update multiIndex
     UShort2DArrayDeque::iterator iit = popped_tp_mi.begin();
@@ -388,7 +388,7 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
     // would be the same for a single iso/aniso refinement candidate with
     // multiple index sets
 
-    poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
+    //poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
     poppedMultiIndex[activeKey].clear();//.erase(activeKey);
     poppedMultiIndexMap[activeKey].clear();//.erase(activeKey);
     poppedMultiIndexMapRef[activeKey].clear();//.erase(activeKey);

@@ -310,7 +310,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 #endif // DEBUG
 
   // track trial sets that have been evaluated (do here since
-  // push_trial_set() used for both new trials and restorations)
+  // increment_smolyak_multi_index() used for both new trials and restorations)
   computedTrialSets[activeKey].insert(trial_set());
 }
 
@@ -394,7 +394,8 @@ void IncrementalSparseGridDriver::initialize_sets()
 }
 
 
-void IncrementalSparseGridDriver::push_trial_set(const UShortArray& set)
+void IncrementalSparseGridDriver::
+increment_smolyak_multi_index(const UShortArray& set)
 {
   UShort2DArray& sm_mi = smolMIIter->second;
   size_t last_index = sm_mi.size();
@@ -404,13 +405,18 @@ void IncrementalSparseGridDriver::push_trial_set(const UShortArray& set)
   update_smolyak_coefficients(last_index);
 
   // collocKey, collocIndices, and uniqueIndexMapping updated within either
-  // restore_set() or compute_trial_grid()
+  // push_set() or compute_trial_grid()
 }
 
 
-void IncrementalSparseGridDriver::restore_set()
+void IncrementalSparseGridDriver::push_set()
 {
   // SparseGridDriver currently retains no memory, so updates are recomputed
+
+  // store pushIndex for use by other classes
+  UShortArrayDeque& pop_mi = poppedLevMultiIndex[activeKey];
+  pushIndex = find_index(pop_mi, trial_set());
+  pop_mi.erase(pop_mi.begin() + pushIndex); // *** upstream of post_push_data
 
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
@@ -420,10 +426,14 @@ void IncrementalSparseGridDriver::restore_set()
 }
 
 
-void IncrementalSparseGridDriver::pop_trial_set()
+void IncrementalSparseGridDriver::pop_set()
 {
+  UShort2DArray& sm_mi = smolMIIter->second;
+  poppedLevMultiIndex[activeKey].push_back(sm_mi.back());
+  pushIndex = _NPOS;
+
   // restore reference grid state
-  smolMIIter->second.pop_back();
+  sm_mi.pop_back();
   collocKeyIter->second.pop_back();
   collocIndIter->second.pop_back();
   smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
@@ -998,12 +1008,15 @@ void IncrementalSparseGridDriver::clear_inactive()
     = type1WeightSetsRef.begin();
   std::map<UShortArray, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
+  std::map<UShortArray, UShortArrayDeque>::iterator pmi_it
+    = poppedLevMultiIndex.begin();
 
   while (a1p_it != a1Points.end())
     if (a1p_it == a1PIter) { // preserve active
       ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
       ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it; ++us1_it;
-      ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++uim_it; ++scr_it;
+      ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++uim_it;
+      ++scr_it; ++pmi_it;
       if (trackUniqueProdWeights)
 	{ ++t1r_it; if (computeType2Weights) ++t2r_it; }
     }
@@ -1017,7 +1030,8 @@ void IncrementalSparseGridDriver::clear_inactive()
       uniqueSet1.erase(us1_it++);         uniqueSet2.erase(us2_it++);
       uniqueIndex1.erase(ui1_it++);       uniqueIndex2.erase(ui2_it++);
       isUnique1.erase(iu1_it++);          isUnique2.erase(iu2_it++);
-      uniqueIndexMapping.erase(uim_it++); smolyakCoeffsRef.erase(scr_it++);
+      uniqueIndexMapping.erase(uim_it++);
+      smolyakCoeffsRef.erase(scr_it++);   poppedLevMultiIndex.erase(pmi_it++);
       if (trackUniqueProdWeights) {
 	type1WeightSetsRef.erase(t1r_it++);
 	if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);

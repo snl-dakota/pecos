@@ -229,26 +229,56 @@ void SparseGridDriver::initialize_sets()
 }
 
 
-void SparseGridDriver::push_trial_set(const UShortArray& set)
+void SparseGridDriver::increment_smolyak_multi_index(const UShortArray& set)
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "push_trial_set()." << std::endl;
+	<< "increment_smolyak_multi_index()." << std::endl;
   abort_handler(-1);
 }
 
 
-void SparseGridDriver::restore_set()
+bool SparseGridDriver::
+push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+{ return false; }
+
+
+bool SparseGridDriver::push_trial_available(const UShortArray& key)
+{ return false; }
+
+
+bool SparseGridDriver::push_trial_available()
+{ return false; }
+
+
+size_t SparseGridDriver::
+push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+{ return _NPOS; }
+
+
+size_t SparseGridDriver::push_trial_index(const UShortArray& key)
+{ return _NPOS; }
+
+
+size_t SparseGridDriver::push_trial_index()
+{ return _NPOS; }
+
+
+size_t SparseGridDriver::push_index()
+{ return _NPOS; }
+
+
+void SparseGridDriver::push_set()
 {
-  PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "()." << std::endl;
+  PCerr << "Error: no default implementation for SparseGridDriver::push_set()."
+	<< std::endl;
   abort_handler(-1);
 }
 
 
-void SparseGridDriver::pop_trial_set()
+void SparseGridDriver::pop_set()
 {
-  PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "pop_trial_set()." << std::endl;
+  PCerr << "Error: no default implementation for SparseGridDriver::pop_set()."
+	<< std::endl;
   abort_handler(-1);
 }
 
@@ -346,9 +376,9 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // Therefore, we must use caution in updates to activeMultiIndex that can
   // invalidate cit_star.
 
-  // update evaluation set smolyakMultiIndex (permanently, will not be popped)
-  push_trial_set(set_star);
-  restore_set();     // calls increment_unique() --> INC2
+  // update smolyakMultiIndex (permanently, will not be popped)
+  increment_smolyak_multi_index(set_star);
+  push_set();        // calls increment_unique() --> INC2
   merge_increment(); // calls merge_unique()     --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
