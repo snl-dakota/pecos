@@ -415,9 +415,11 @@ void IncrementalSparseGridDriver::push_set()
 
   // store pushIndex for use by other classes
   UShortArrayDeque& pop_mi = poppedLevMultiIndex[activeKey];
-  pushIndex = find_index(pop_mi, trial_set());
-  pop_mi.erase(pop_mi.begin() + pushIndex); // *** upstream of post_push_data
-
+  size_t p_index = find_index(pop_mi, trial_set());
+  if (p_index != _NPOS)
+    pop_mi.erase(pop_mi.begin() + p_index); // *** upstream of post_push_data
+  pushIndex[activeKey] = p_index;
+ 
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
   // compute a2; update collocIndices, uniqueIndexMapping
@@ -430,7 +432,7 @@ void IncrementalSparseGridDriver::pop_set()
 {
   UShort2DArray& sm_mi = smolMIIter->second;
   poppedLevMultiIndex[activeKey].push_back(sm_mi.back());
-  pushIndex = _NPOS;
+  pushIndex[activeKey] = _NPOS;
 
   // restore reference grid state
   sm_mi.pop_back();

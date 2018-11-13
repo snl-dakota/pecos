@@ -337,10 +337,8 @@ void HierarchInterpPolyApproximation::push_coefficients()
     // Note: for both a restored or a selected candidate, trial set is pushed
     // to Driver and corresponds to sm_mi[lev].back(), but in the latter case,
     // must locate corresponding popped data within interior to push onto back
-    // of coeff arrays --> adopt pushIndex approach of SharedPolyApproxData
-    // > pushIndex is defined from SharedPolyApproxData::poppedLevMultiIndex,
-    //   but is only defined in SharedOrthogPolyApproxData::pre_push_trial_set,
-    //   although poppedLevMultiIndex is used in SharedInterpPolyApproxData.
+    // of coeff arrays --> adopt SharedPolyApproxData::push_index() approach
+    // > pushIndex is defined from *SparseGridDriver::poppedLevMultiIndex.
     // > nested maps approach requires a valid map key and trial_set() is
     //   a problem in decrement_coefficients() since it is downstream
     //   (pushIndex is defined upstream in shared data) --> would have to

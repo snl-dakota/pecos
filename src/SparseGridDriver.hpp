@@ -74,7 +74,7 @@ public:
   virtual size_t push_trial_index();
 
   /// return pushIndex (cached lookup result in derived Driver classes)
-  virtual size_t push_index();
+  virtual size_t push_index(const UShortArray& key) const;
 
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
@@ -140,6 +140,9 @@ public:
 
   /// set flag indicating that the grid (and its size) requires updating
   void clear_grid();
+
+  /// return pushIndex (cached lookup result in derived Driver classes)
+  size_t push_index() const;
 
   /// precompute quadrature rules to the maximum current order for each basis
   /// polynomial (efficiency optimization when rules are expensive to compute)
@@ -364,6 +367,10 @@ inline void SparseGridDriver::clear_keys()
 
 inline void SparseGridDriver::clear_grid()
 { numPtsIter->second = 0; } // special value indicating a grid update is reqd
+
+
+inline size_t SparseGridDriver::push_index() const
+{ return push_index(activeKey); }
 
 
 inline unsigned short SparseGridDriver::level() const

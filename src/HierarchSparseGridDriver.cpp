@@ -973,16 +973,18 @@ void HierarchSparseGridDriver::push_set()
 
     unsigned short    tr_lev   = trialLevIter->second;
     UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[activeKey][tr_lev];
-    pushIndex = find_index(pop_mi_l, tr_set); //push_trial_index(tr_set);
-    pop_mi_l.erase(pop_mi_l.begin() + pushIndex); // *** sooner than post_push_data()
+    size_t p_index = find_index(pop_mi_l, tr_set); //push_trial_index(tr_set);
+    if (p_index != _NPOS)
+      pop_mi_l.erase(pop_mi_l.begin() + p_index);//*** precedes post_push_data()
+    pushIndex[activeKey] = p_index;
 
     RealVectorDeque& pop_t1w_l = poppedT1WtSets[activeKey][tr_lev];
-    RealVectorDeque::iterator p1w_it = pop_t1w_l.begin() + pushIndex;
+    RealVectorDeque::iterator p1w_it = pop_t1w_l.begin() + p_index;
     t1WtIter->second[tr_lev].push_back(*p1w_it);
     pop_t1w_l.erase(p1w_it);
     if (computeType2Weights) {
       RealMatrixDeque& pop_t2w_l = poppedT2WtSets[activeKey][tr_lev];
-      RealMatrixDeque::iterator p2w_it = pop_t2w_l.begin() + pushIndex;
+      RealMatrixDeque::iterator p2w_it = pop_t2w_l.begin() + p_index;
       t2WtIter->second[tr_lev].push_back(*p2w_it);
       pop_t2w_l.erase(p2w_it);
     }
@@ -1024,7 +1026,7 @@ void HierarchSparseGridDriver::pop_set()
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
   poppedLevMultiIndex[activeKey][tr_lev].push_back(sm_mi_l.back());
-  pushIndex = _NPOS;
+  pushIndex[activeKey] = _NPOS;
   sm_mi_l.pop_back(); // tr_set no longer valid
   key_l.pop_back();
   if (trackCollocIndices) collocIndIter->second[tr_lev].pop_back();

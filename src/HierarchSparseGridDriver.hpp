@@ -67,7 +67,7 @@ public:
   size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
   size_t push_trial_index(const UShortArray& key);
   size_t push_trial_index();
-  size_t push_index() const;
+  size_t push_index(const UShortArray& key) const;
   void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_set();
@@ -320,7 +320,7 @@ private:
   /// popped trial sets that were computed but not selected
   std::map<UShortArray, UShortArrayDequeArray> poppedLevMultiIndex;
   /// index into poppedLevMultiIndex[trial_lev] for data to be restored
-  size_t pushIndex;
+  std::map<UShortArray, size_t> pushIndex;
 
   /// type 1 weight sets popped during decrement for later restoration to
   /// type1WeightSets
@@ -333,7 +333,7 @@ private:
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
   SparseGridDriver(), nestedGrid(true), trackCollocIndices(true),
-  smolMIIter(smolyakMultiIndex.end()), pushIndex(_NPOS)
+  smolMIIter(smolyakMultiIndex.end())
 { update_active_iterators(); }
 
 
@@ -342,7 +342,7 @@ HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
   nestedGrid(true), trackCollocIndices(true),
-  smolMIIter(smolyakMultiIndex.end()), pushIndex(_NPOS)
+  smolMIIter(smolyakMultiIndex.end())
 { update_active_iterators(); }
 
 
@@ -542,8 +542,11 @@ inline size_t HierarchSparseGridDriver::push_trial_index()
 { return push_trial_index(activeKey, trial_set()); }
 
 
-inline size_t HierarchSparseGridDriver::push_index() const
-{ return pushIndex; }
+inline size_t HierarchSparseGridDriver::push_index(const UShortArray& key) const
+{
+  std::map<UShortArray, size_t>::const_iterator cit = pushIndex.find(key);
+  return (cit == pushIndex.end()) ? _NPOS : cit->second;
+}
 
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const

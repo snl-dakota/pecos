@@ -74,7 +74,7 @@ public:
   size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
   size_t push_trial_index(const UShortArray& key);
   size_t push_trial_index();
-  size_t push_index() const;
+  size_t push_index(const UShortArray& key) const;
   void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_set();
@@ -198,7 +198,7 @@ private:
   /// popped trial sets that were computed but not selected
   std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
   /// index into poppedLevMultiIndex for data to be restored
-  size_t pushIndex;
+  std::map<UShortArray, size_t> pushIndex;
 
   /// number of unique points in set 1 (reference)
   std::map<UShortArray, int> numUnique1;
@@ -282,7 +282,7 @@ private:
 
 
 inline IncrementalSparseGridDriver::IncrementalSparseGridDriver():
-  CombinedSparseGridDriver(), pushIndex(_NPOS), a1PIter(a1Points.end())
+  CombinedSparseGridDriver(), a1PIter(a1Points.end())
 { update_active_iterators(); }
 
 
@@ -291,7 +291,7 @@ IncrementalSparseGridDriver(unsigned short ssg_level,
 			    const RealVector& dim_pref, short growth_rate,
 			    short refine_control):
   CombinedSparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  pushIndex(_NPOS), a1PIter(a1Points.end())
+  a1PIter(a1Points.end())
 { update_active_iterators(); }
 
 
@@ -477,8 +477,12 @@ inline size_t IncrementalSparseGridDriver::push_trial_index()
 { return find_index(poppedLevMultiIndex[activeKey], trial_set()); }
 
 
-inline size_t IncrementalSparseGridDriver::push_index() const
-{ return pushIndex; }
+inline size_t IncrementalSparseGridDriver::
+push_index(const UShortArray& key) const
+{
+  std::map<UShortArray, size_t>::const_iterator cit = pushIndex.find(key);
+  return (cit == pushIndex.end()) ? _NPOS : cit->second;
+}
 
 
 inline void IncrementalSparseGridDriver::update_reference()

@@ -738,7 +738,10 @@ inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return sg_driver->push_trial_index(key); // lookup for incoming key
+    size_t p_index = sg_driver->push_index(key); // retrieve value (no lookup)
+    return (p_index == _NPOS) ?
+      sg_driver->push_trial_index(key) : // not pre-computed -> perform lookup
+      p_index;                           //     pre-computed -> return
     break;
   }
   default: // other refinement types support a single candidate with index 0

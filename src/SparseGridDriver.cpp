@@ -263,7 +263,7 @@ size_t SparseGridDriver::push_trial_index()
 { return _NPOS; }
 
 
-size_t SparseGridDriver::push_index()
+size_t SparseGridDriver::push_index(const UShortArray& key) const
 { return _NPOS; }
 
 
@@ -392,9 +392,7 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // remove the trial set from set A by erasing from activeMultiIndex:
   active_mi.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  UShortArraySet::iterator tr_it = computed_trials.find(tr_set);
-  if (tr_it != computed_trials.end()) // not used by LightweightSparseGridDriver
-    computed_trials.erase(tr_it);
+  computed_trials.erase(tr_set);
 
   // update set A (activeMultiIndex) based on neighbors of trial set
   add_active_neighbors(tr_set, false);//, isotropic());
