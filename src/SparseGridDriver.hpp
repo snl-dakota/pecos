@@ -73,8 +73,13 @@ public:
   /// determine index of trial set for restoration (by push)
   virtual size_t push_trial_index();
 
-  /// return pushIndex (cached lookup result in derived Driver classes)
+  /// return pushIndex (cached lookup result in derived Driver classes),
+  /// which may be combined (flattened) or hierarchical (level-specific) index
   virtual size_t push_index(const UShortArray& key) const;
+  /// map pushIndex to consistent (flattened) representation
+  virtual size_t restore_index(const UShortArray& key) const;
+  /// return consistent (flattened) index
+  virtual size_t finalize_index(size_t i, const UShortArray& key) const;
 
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex

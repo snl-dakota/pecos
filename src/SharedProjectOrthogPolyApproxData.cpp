@@ -332,26 +332,6 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
     SizetDeque&  popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
 
-#ifdef DEBUG
-    // Note: popped sets are not explicitly added in computed_trial_sets()
-    //       order as in IncrementalSparseGridDriver::finalize_sets().
-    //       However, poppedLevMultiIndex et al. become ordered due to
-    //       enumeration of ordered active_multi_index().  Rather than
-    //       incurring additional overhead by mapping indices, simply support
-    //       a verification block that can be activated (currently compile
-    //       time, but could be run time based on output level).
-    size_t i, num_pop = popped_tp_mi.size(), f_index;
-    for (i=0; i<num_pop; ++i) {
-      f_index = finalization_index(i); // Ok: isg index is flattened
-      if (f_index != i) {
-	PCerr << "Error: SharedProjectOrthogPolyApproxData::pre_finalize_data"
-	      << "() found index mismatch (" << f_index << ", " << i << ")."
-	      << std::endl;
-	abort_handler(-1);
-      }
-    }
-#endif // DEBUG
-
     // update multiIndex
     UShort2DArrayDeque::iterator iit = popped_tp_mi.begin();
     SizetArrayDeque::iterator    mit = popped_tp_mi_map.begin();

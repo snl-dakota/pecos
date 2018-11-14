@@ -68,6 +68,8 @@ public:
   size_t push_trial_index(const UShortArray& key);
   size_t push_trial_index();
   size_t push_index(const UShortArray& key) const;
+  size_t restore_index(const UShortArray& key) const;
+  size_t finalize_index(size_t i, const UShortArray& key) const;
   void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_set();
@@ -319,8 +321,12 @@ private:
 
   /// popped trial sets that were computed but not selected
   std::map<UShortArray, UShortArrayDequeArray> poppedLevMultiIndex;
-  /// index into poppedLevMultiIndex[trial_lev] for data to be restored
+  /// hierarchical index into poppedLevMultiIndex[lev] for data to be pushed
   std::map<UShortArray, size_t> pushIndex;
+  /// flattened index for data to be restored
+  std::map<UShortArray, size_t> restoreIndex;
+  /// flattened indices for data to be finalized
+  std::map<UShortArray, SizetArray/*SizetPairArray*/> finalizeIndex;
 
   /// type 1 weight sets popped during decrement for later restoration to
   /// type1WeightSets
@@ -546,6 +552,23 @@ inline size_t HierarchSparseGridDriver::push_index(const UShortArray& key) const
 {
   std::map<UShortArray, size_t>::const_iterator cit = pushIndex.find(key);
   return (cit == pushIndex.end()) ? _NPOS : cit->second;
+}
+
+
+inline size_t HierarchSparseGridDriver::
+restore_index(const UShortArray& key) const
+{
+  std::map<UShortArray, size_t>::const_iterator cit = restoreIndex.find(key);
+  return (cit == restoreIndex.end()) ? _NPOS : cit->second;
+}
+
+
+inline size_t HierarchSparseGridDriver::
+finalize_index(size_t i, const UShortArray& key) const
+{
+  std::map<UShortArray, SizetArray>::const_iterator cit
+    = finalizeIndex.find(key);
+  return (cit == finalizeIndex.end()) ? _NPOS : cit->second[i];
 }
 
 

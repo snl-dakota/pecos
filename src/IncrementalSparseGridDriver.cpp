@@ -454,15 +454,23 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray&  sm_mi           = smolMIIter->second;
-  UShortArraySet& computed_trials = computedTrialSets[activeKey];
+  UShort2DArray&  sm_mi       = smolMIIter->second;
+  UShortArraySet& comp_trials = computedTrialSets[activeKey];
   size_t start_index = sm_mi.size();
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
-  sm_mi.insert(sm_mi.end(), computed_trials.begin(), computed_trials.end());
+  sm_mi.insert(sm_mi.end(), comp_trials.begin(), comp_trials.end());
+
+  UShortArrayDeque& pop_mi = poppedLevMultiIndex[activeKey];
+  SizetArray f_indices(comp_trials.size());
+  UShortArraySet::iterator it; size_t i;
+  for (i=0, it=comp_trials.begin(); it!=comp_trials.end(); ++i, ++it)
+    f_indices[i] = find_index(pop_mi, *it);
+  finalizeIndex[activeKey] = f_indices;
+
+  pop_mi.clear();
   activeMultiIndex[activeKey].clear();
-  // defer since needed for SharedPolyApproxData::finalization_index()
-  //computed_trials.clear();
+  comp_trials.clear();
 
   // update smolyakCoeffs from smolyakMultiIndex
   update_smolyak_coefficients(start_index);

@@ -170,29 +170,6 @@ void SharedHierarchInterpPolyApproxData::post_push_data()
     break;
   }
 }
-
-
-void SharedHierarchInterpPolyApproxData::pre_finalize_data()
-{
-#ifdef DEBUG
-  // Note: popped sets are not explicitly added in computed_trial_sets() order
-  //       as in HierarchSparseGridDriver::finalize_sets().  However,
-  //       poppedLevMultiIndex becomes ordered due to enumeration of ordered
-  //       active_multi_index().  Rather than incurring additional overhead by
-  //       mapping indices, simply support a verification block that can be
-  //       activated at compile time (current) or run time (via output level).
-  size_t i, num_pop = poppedLevMultiIndex[activeKey].size(), f_index; // ***
-  for (i=0; i<num_pop; ++i) {
-    f_index = finalization_index(i); // *** now level specific
-    if (f_index != i) {
-      PCerr << "Error: SharedHierarchInterpPolyApproxData::pre_finalize_data() "
-	    << "found index mismatch (" << f_index << ", " << i << ")."
-	    << std::endl;
-      abort_handler(-1);
-    }
-  }
-#endif // DEBUG
-}
 */
 
 

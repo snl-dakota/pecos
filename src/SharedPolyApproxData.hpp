@@ -324,23 +324,29 @@ public:
   static void update_basis_distribution_parameters(const ShortArray& u_types,
     const AleatoryDistParams& dp, std::vector<BasisPolynomial>& poly_basis);
 
-  /// returns index of the data set to be restored from within popped
-  /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  size_t push_index(const UShortArray& key, const UShortArray& tr_set);
+  // returns index of the data set to be restored from within popped
+  // bookkeeping (entry in poppedLevMultiIndex corresponding to key)
+  //size_t push_index(const UShortArray& key, const UShortArray& tr_set);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
   size_t push_index(const UShortArray& key);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   size_t push_index();
+  /// maps from push_index (flattened or hierarchical index for internal use)
+  /// to a consistent (flattened) index for external use
+  size_t restore_index(const UShortArray& key);
+  /// maps from push_index (flattened or hierarchical index for internal use)
+  /// to a consistent (flattened) index for external use
+  size_t restore_index();
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
   /// during finalization
-  size_t finalization_index(size_t i, const UShortArray& key);
+  size_t finalize_index(size_t i, const UShortArray& key);
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   /// during finalization
-  size_t finalization_index(size_t i);
+  size_t finalize_index(size_t i);
 
   /// set expConfigOptions as a group (instead of per option below)
   void configuration_options(const ExpansionConfigOptions& ec_options);
@@ -715,6 +721,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 }
 
 
+/*
 inline size_t SharedPolyApproxData::
 push_index(const UShortArray& key, const UShortArray& tr_set)
 {
@@ -731,6 +738,7 @@ push_index(const UShortArray& key, const UShortArray& tr_set)
     return 0;                                             break;
   }
 }
+*/
 
 
 inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
@@ -769,12 +777,43 @@ inline size_t SharedPolyApproxData::push_index()
 }
 
 
-inline size_t SharedPolyApproxData::
-finalization_index(size_t i, const UShortArray& key)
+inline size_t SharedPolyApproxData::restore_index(const UShortArray& key)
 {
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver*    sg_driver = (SparseGridDriver*)driverRep;
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    // Option 1: default to be overridden by SharedHierarchPAD:
+    //return sg_driver->push_index(key);
+    // Option 2: add/use virtual sg_driver->restore_index(key) [more consistent with finalize_index()]
+    return sg_driver->restore_index(key);
+    break;
+  }
+  default: // not currently used, but a valid operation
+    return 0;  break;
+  }
+}
+
+
+inline size_t SharedPolyApproxData::restore_index()
+{ return restore_index(activeKey); }
+
+
+inline size_t SharedPolyApproxData::
+finalize_index(size_t i, const UShortArray& key)
+{
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return sg_driver->finalize_index(i, key);  break;
+
+    /*
+    // Note: popped sets are not explicitly added in computed_trial_sets()
+    //       order as in {Incr,Hierarch}SparseGridDriver::finalize_sets().
+    //       However, poppedLevMultiIndex et al. become ordered due to
+    //       enumeration of ordered active_multi_index().  Rather than
+    //       incurring additional overhead by mapping indices, the
+    //       compile-time verification below can provide spot checking.
+
     const UShortArraySet& comp_tr_sets = sg_driver->computed_trial_sets(key);
     UShortArraySet::const_iterator cit = comp_tr_sets.begin();
     std::advance(cit, i); // no operator+ for std::set iterator advancement
@@ -789,24 +828,22 @@ finalization_index(size_t i, const UShortArray& key)
     size_t candidate = push_index(key, *cit);
 #ifdef DEBUG
     if (candidate != i) { // activate to test need for this mapping
-      PCerr << "Error: SharedPolyApproxData::finalization_index() found index "
+      PCerr << "Error: SharedPolyApproxData::finalize_index() found index "
 	    << "mismatch (" << candidate << ", " << i << ")." << std::endl;
       abort_handler(-1);
     }
 #endif // DEBUG
     return candidate;  break;
+    */
   }
-  default:
-    PCerr << "Error: SharedPolyApproxData::finalization_index() not "
-	  << "implemented for this refinement type." << std::endl;
-    abort_handler(-1);
-    return 0;          break;
+  default: // not currently used, but a valid operation
+    return 0;  break;
   }
 }
 
 
-inline size_t SharedPolyApproxData::finalization_index(size_t i)
-{ return finalization_index(i, activeKey); } // induces unnecessary lookups
+inline size_t SharedPolyApproxData::finalize_index(size_t i)
+{ return finalize_index(i, activeKey); }
 
 
 inline bool SharedPolyApproxData::

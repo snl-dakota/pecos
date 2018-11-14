@@ -267,6 +267,14 @@ size_t SparseGridDriver::push_index(const UShortArray& key) const
 { return _NPOS; }
 
 
+size_t SparseGridDriver::restore_index(const UShortArray& key) const
+{ return push_index(key); } // default for identity mapping (flat to flat)
+
+
+size_t SparseGridDriver::finalize_index(size_t i, const UShortArray& key) const
+{ return _NPOS; }
+
+
 void SparseGridDriver::push_set()
 {
   PCerr << "Error: no default implementation for SparseGridDriver::push_set()."

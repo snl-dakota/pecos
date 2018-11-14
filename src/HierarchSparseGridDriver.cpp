@@ -977,6 +977,7 @@ void HierarchSparseGridDriver::push_set()
     if (p_index != _NPOS)
       pop_mi_l.erase(pop_mi_l.begin() + p_index);//*** precedes post_push_data()
     pushIndex[activeKey] = p_index;
+    //restoreIndex[activeKey] = r_index; // *** TO DO
 
     RealVectorDeque& pop_t1w_l = poppedT1WtSets[activeKey][tr_lev];
     RealVectorDeque::iterator p1w_it = pop_t1w_l.begin() + p_index;
@@ -1026,7 +1027,7 @@ void HierarchSparseGridDriver::pop_set()
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
   poppedLevMultiIndex[activeKey][tr_lev].push_back(sm_mi_l.back());
-  pushIndex[activeKey] = _NPOS;
+  pushIndex[activeKey] = _NPOS;  restoreIndex[activeKey] = _NPOS;
   sm_mi_l.pop_back(); // tr_set no longer valid
   key_l.pop_back();
   if (trackCollocIndices) collocIndIter->second[tr_lev].pop_back();
@@ -1061,13 +1062,22 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // > don't insert activeMultiIndex, as this may include sets which have not
   //   been evaluated (due to final update_sets() call); use computedTrialSets
 
+  UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[activeKey];
+  UShortArraySet&   comp_trials =   computedTrialSets[activeKey];
+  UShortArraySet::iterator it; size_t i;
+
   if (nestedGrid) {
-    UShortArraySet& computed_trials = computedTrialSets[activeKey];
-    UShortArraySet::iterator it;
-    for (it=computed_trials.begin(); it!=computed_trials.end(); ++it) {
+    SizetArray/*SizetPairArray*/ f_indices(comp_trials.size()); // ***
+    for (i=0, it=comp_trials.begin(); it!=comp_trials.end(); ++i, ++it) {
       const UShortArray& trial_set = *it;
       trial_lev = l1_norm(trial_set);
       sm_mi[trial_lev].push_back(trial_set);
+
+      // *** level-specific index is a problem for Dakota::Approximation -> SurrogateData (requires flattened index)
+      //size_t f_index = find_index(pop_mi[trial_lev], trial_set);
+      //f_indices[i] = SizetPair(trial_lev, f_index);
+      f_indices[i] = find_index(pop_mi[trial_lev], trial_set);
+
       update_collocation_key_from_trial(trial_set); // update collocKey
       if (trackCollocIndices) // update collocIndices & numCollocPts
 	update_collocation_indices_from_trial(trial_set);
@@ -1080,9 +1090,11 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
       if (output_sets && converged_within_tol) // print trials below tol
 	print_index_set(PCout, trial_set);
     }
-    // This approach assumes computed_trials ordering already exists within
+    finalizeIndex[activeKey] = f_indices;
+
+    // This approach assumes comp_trials ordering already exists within
     // poppedT{1,2}WtSets:
-    push_popped_weights(); // *** clears poppedLevMI sooner than post_finalize_data()
+    push_popped_weights();
   }
   /*
   else {
@@ -1105,8 +1117,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   }
 
   activeMultiIndex[activeKey].clear();
-  // defer since needed for SharedPolyApproxData::finalization_index()
-  //computed_trials.clear();
+  comp_trials.clear();
 }
 
 
