@@ -66,7 +66,7 @@ protected:
   //void post_push_data();
 
   //void pre_finalize_data();
-  //void post_finalize_data();//SharedInterpPolyApproxData version is sufficient
+  //void post_finalize_data();
 
   void pre_combine_data();
   //void post_combine_data();

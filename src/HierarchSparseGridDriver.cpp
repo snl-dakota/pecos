@@ -971,13 +971,27 @@ void HierarchSparseGridDriver::push_set()
     if (trackCollocIndices)
       update_collocation_indices_from_trial(tr_set);
 
-    unsigned short    tr_lev   = trialLevIter->second;
-    UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[activeKey][tr_lev];
-    size_t p_index = find_index(pop_mi_l, tr_set); //push_trial_index(tr_set);
-    if (p_index != _NPOS)
-      pop_mi_l.erase(pop_mi_l.begin() + p_index);//*** precedes post_push_data()
+    unsigned short         tr_lev   = trialLevIter->second;
+    UShortArrayDequeArray& pop_mi   = poppedLevMultiIndex[activeKey];
+    UShortArrayDeque&      pop_mi_l = pop_mi[tr_lev];
+    size_t p_index = find_index(pop_mi_l, tr_set);//push_trial_index(tr_set);
     pushIndex[activeKey] = p_index;
-    //restoreIndex[activeKey] = r_index; // *** TO DO
+    if (p_index != _NPOS) pop_mi_l.erase(pop_mi_l.begin() + p_index);
+
+    // Thia approach respects that active/computed trial ordering is not
+    // level-based:
+    UShortArraySet& comp_trials = computedTrialSets[activeKey];
+    UShortArraySet::iterator c_it = comp_trials.find(tr_set);
+    restoreIndex[activeKey] = (c_it == comp_trials.end()) ? _NPOS :
+      std::distance(comp_trials.begin(), c_it);
+
+    /* This shortcut assumes candidate order proceeds level by level:
+    // offset p_index (level-specific) to define r_index (flattened index)
+    size_t lev, r_index = p_index;
+    for (lev=0; lev<tr_lev; ++lev)
+      r_index += pop_mi[lev].size();
+    restoreIndex[activeKey] = r_index;
+    */
 
     RealVectorDeque& pop_t1w_l = poppedT1WtSets[activeKey][tr_lev];
     RealVectorDeque::iterator p1w_it = pop_t1w_l.begin() + p_index;
@@ -1064,36 +1078,31 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 
   UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[activeKey];
   UShortArraySet&   comp_trials =   computedTrialSets[activeKey];
-  UShortArraySet::iterator it; size_t i;
+  UShortArraySet::iterator it; size_t i, num_comp_tr = comp_trials.size();
 
   if (nestedGrid) {
-    SizetArray/*SizetPairArray*/ f_indices(comp_trials.size()); // ***
-    for (i=0, it=comp_trials.begin(); it!=comp_trials.end(); ++i, ++it) {
-      const UShortArray& trial_set = *it;
-      trial_lev = l1_norm(trial_set);
-      sm_mi[trial_lev].push_back(trial_set);
-
-      // *** level-specific index is a problem for Dakota::Approximation -> SurrogateData (requires flattened index)
-      //size_t f_index = find_index(pop_mi[trial_lev], trial_set);
-      //f_indices[i] = SizetPair(trial_lev, f_index);
-      f_indices[i] = find_index(pop_mi[trial_lev], trial_set);
-
-      update_collocation_key_from_trial(trial_set); // update collocKey
-      if (trackCollocIndices) // update collocIndices & numCollocPts
-	update_collocation_indices_from_trial(trial_set);
-      /* More robust, but additional lookup overhead
-      f_index = find_index(poppedLevMultiIndex[trial_lev], trial_set);
-      t1WtIter->second[trial_lev].push_back(pop_t1_wts[f_index]);
-      if (computeType2Weights)
-	t2WtIter->second[trial_lev].push_back(pop2_it->second[f_index]);
-      */
-      if (output_sets && converged_within_tol) // print trials below tol
-	print_index_set(PCout, trial_set);
+    size_t lev, num_lev = pop_mi.size(), set, num_sets, cntr = 0;
+    SizetArray& f_indices = finalizeIndex[activeKey];
+    f_indices.resize(num_comp_tr);
+    UShortArraySet::iterator c_it;
+    for (lev=0; lev<num_lev; ++lev) {
+      UShortArrayDeque& pop_mi_l = pop_mi[lev];
+      sm_mi[lev].insert(sm_mi[lev].end(), pop_mi_l.begin(), pop_mi_l.end());
+      num_sets = pop_mi_l.size();
+      for (set=0; set<num_sets; ++set, ++cntr) {
+	const UShortArray& trial_set = pop_mi_l[set];
+	c_it = comp_trials.find(trial_set);
+	f_indices[cntr] = (c_it == comp_trials.end()) ? _NPOS :
+	  std::distance(comp_trials.begin(), c_it);
+	update_collocation_key_from_trial(trial_set); // update collocKey
+	if (trackCollocIndices) // update collocIndices & numCollocPts
+	  update_collocation_indices_from_trial(trial_set);
+	if (output_sets && converged_within_tol) // print trials below tol
+	  print_index_set(PCout, trial_set);
+      }
     }
-    finalizeIndex[activeKey] = f_indices;
 
-    // This approach assumes comp_trials ordering already exists within
-    // poppedT{1,2}WtSets:
+    // use level,set order in poppedT{1,2}WtSets, same as poppedLevMultiIndex
     push_popped_weights();
   }
   /*
@@ -1116,8 +1125,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
     }
   }
 
-  activeMultiIndex[activeKey].clear();
-  comp_trials.clear();
+  activeMultiIndex[activeKey].clear();  comp_trials.clear();  pop_mi.clear();
 }
 
 
