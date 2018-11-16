@@ -775,25 +775,28 @@ void HierarchSparseGridDriver::pop_increment()
   UShortArray& incr_sets = incrSetsIter->second;
   size_t lev, num_lev = incr_sets.size(), set, start_set, num_sets;
   if (nestedGrid) {
-    UShort3DArray&             sm_mi =    smolMIIter->second;
-    UShort4DArray&        colloc_key = collocKeyIter->second;
-    Sizet3DArray&         colloc_ind = collocIndIter->second;
-    RealVector2DArray&        t1_wts =      t1WtIter->second;
-    RealMatrix2DArray&        t2_wts =      t2WtIter->second;
-    RealVectorDequeArray& pop_t1_wts = poppedT1WtSets[activeKey];
-    RealMatrixDequeArray& pop_t2_wts = poppedT2WtSets[activeKey];
+    UShort3DArray&          sm_mi =    smolMIIter->second;
+    UShort4DArray&     colloc_key = collocKeyIter->second;
+    Sizet3DArray&      colloc_ind = collocIndIter->second;
+    RealVector2DArray&        t1w =      t1WtIter->second;
+    RealMatrix2DArray&        t2w =      t2WtIter->second;
+    RealVectorDequeArray& pop_t1w = poppedT1WtSets[activeKey];
+    RealMatrixDequeArray& pop_t2w = poppedT2WtSets[activeKey];
     RealVectorArray::iterator t1w_it;  RealMatrixArray::iterator t2w_it;
+    if (pop_t1w.size() < num_lev) pop_t1w.resize(num_lev);
+    if (computeType2Weights && pop_t2w.size() < num_lev)
+      pop_t2w.resize(num_lev);
     // update type1/2 weights and subset view of points
     for (lev=0; lev<num_lev; ++lev) {
-      RealVectorArray&     t1w_l =     t1_wts[lev];
-      RealVectorDeque& pop_t1w_l = pop_t1_wts[lev];
+      RealVectorArray&     t1w_l =     t1w[lev];
+      RealVectorDeque& pop_t1w_l = pop_t1w[lev];
       start_set = incr_sets[lev];
       t1w_it = t1w_l.begin() + start_set;
       pop_t1w_l.insert(pop_t1w_l.end(), t1w_it, t1w_l.end());
       t1w_l.resize(start_set);
       if (computeType2Weights) {
-	RealMatrixArray&     t2w_l =     t2_wts[lev];
-	RealMatrixDeque& pop_t2w_l = pop_t2_wts[lev];
+	RealMatrixArray&     t2w_l =     t2w[lev];
+	RealMatrixDeque& pop_t2w_l = pop_t2w[lev];
 	t2w_it = t2w_l.begin() + start_set;
 	pop_t2w_l.insert(pop_t2w_l.end(), t2w_it, t2w_l.end());
 	t2w_l.resize(start_set);

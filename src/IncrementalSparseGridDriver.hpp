@@ -196,8 +196,6 @@ private:
   /// reference grid; used in incremental approaches that update type2WeightSets
   std::map<UShortArray, RealMatrix> type2WeightSetsRef;
 
-  // popped trial sets that were computed but not selected
-  //std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
   /// index into poppedTrialSets for data to be restored
   std::map<UShortArray, size_t> pushIndex;
   /// indices into poppedTrialSets indicating finalization order
@@ -394,7 +392,6 @@ inline void IncrementalSparseGridDriver::clear_keys()
 
   smolyakCoeffsRef.clear();
   type1WeightSetsRef.clear(); type2WeightSetsRef.clear();
-  //poppedLevMultiIndex.clear();
 
   zVec.clear();            r1Vec.clear();          r2Vec.clear();
   sortIndex1.clear();      sortIndex2.clear();

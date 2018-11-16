@@ -453,9 +453,8 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray&         sm_mi =             smolMIIter->second;
-  UShortArrayDeque& pop_trials =     poppedTrialSets[activeKey];
-  //UShortArrayDeque&   pop_trials = poppedLevMultiIndex[activeKey];
+  UShort2DArray&         sm_mi =         smolMIIter->second;
+  UShortArrayDeque& pop_trials = poppedTrialSets[activeKey];
   size_t i, start_index = sm_mi.size();
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call) -- use poppedTrialSets.
@@ -465,10 +464,11 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // poppedTrialSets index ordering
   size_t num_pop_tr = pop_trials.size();
   SizetArray& f_indices = finalizeIndex[activeKey];
+  // in latest design, f_indices mapping is trivial
   f_indices.resize(num_pop_tr);
   for (i=0; i<num_pop_tr; ++i)
     f_indices[i] = i;//find_index(pop_trials, pop_mi[i]);
-  activeMultiIndex[activeKey].clear();  pop_trials.clear();  //pop_mi.clear();
+  activeMultiIndex[activeKey].clear();  pop_trials.clear();
 
   // update smolyakCoeffs from smolyakMultiIndex
   update_smolyak_coefficients(start_index);
@@ -1016,8 +1016,6 @@ void IncrementalSparseGridDriver::clear_inactive()
     = type1WeightSetsRef.begin();
   std::map<UShortArray, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
-  //std::map<UShortArray, UShortArrayDeque>::iterator pmi_it
-  //  = poppedLevMultiIndex.begin();
 
   while (a1p_it != a1Points.end())
     if (a1p_it == a1PIter) { // preserve active
@@ -1038,8 +1036,7 @@ void IncrementalSparseGridDriver::clear_inactive()
       uniqueSet1.erase(us1_it++);         uniqueSet2.erase(us2_it++);
       uniqueIndex1.erase(ui1_it++);       uniqueIndex2.erase(ui2_it++);
       isUnique1.erase(iu1_it++);          isUnique2.erase(iu2_it++);
-      uniqueIndexMapping.erase(uim_it++);
-      smolyakCoeffsRef.erase(scr_it++); //poppedLevMultiIndex.erase(pmi_it++);
+      uniqueIndexMapping.erase(uim_it++); smolyakCoeffsRef.erase(scr_it++);
       if (trackUniqueProdWeights) {
 	type1WeightSetsRef.erase(t1r_it++);
 	if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);
