@@ -127,11 +127,12 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       // lower bound defines a weight upper bound based on the current ssgLevel:
       // LB_i = level*wt_min/wt_i --> wt_i = level*wt_min/LB_i and wt_min=1.
       // Catch special case of dim_pref_i = 0 --> wt_i = LB_i = 0.
-      const RealVector& axis_l_bnds = axisLBndsIter->second;
+      const RealVector& axis_l_bnds
+	= axisLowerBounds[activeKey];//axisLBndsIter->second;
       if (!axis_l_bnds.empty()) {
 	Real ssg_lev = (Real)(ssgLevIter->second);
 	for (i=0; i<numVars; ++i)
-	  if (axis_l_bnds[i] > SMALL_NUMBER) {                 // nonzero LB
+	  if (axis_l_bnds[i] > SMALL_NUMBER) {                     // nonzero LB
 	    Real wt_u_bnd = ssg_lev / axis_l_bnds[i];
 	    curr_aniso_wts[i] = (curr_aniso_wts[i] > SMALL_NUMBER) // nonzero wt
 	      ? std::min(wt_u_bnd, curr_aniso_wts[i]) : wt_u_bnd;
@@ -152,7 +153,7 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 void SparseGridDriver::update_axis_lower_bounds()
 {
   const RealVector& aniso_wts = anisoWtsIter->second;
-  RealVector& axis_l_bnds = axisLBndsIter->second;
+  RealVector& axis_l_bnds = axisLowerBounds[activeKey];//axisLBndsIter->second;
   if (axis_l_bnds.empty())
     axis_l_bnds.sizeUninitialized(numVars);
   // An axis lower bound is the maximum index coverage achieved on a coordinate
@@ -390,19 +391,19 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   merge_increment(); // calls merge_unique()     --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
-  const UShortArray&     tr_set = trial_set();
-  UShortArrayDeque& comp_trials = computedTrialSets[activeKey];
-  UShortArraySet&     active_mi =  activeMultiIndex[activeKey];
-  UShortArraySet&        old_mi =     oldMultiIndex[activeKey];
+  const UShortArray&    tr_set = trial_set();
+  UShortArrayDeque& pop_trials =  poppedTrialSets[activeKey];
+  UShortArraySet&    active_mi = activeMultiIndex[activeKey];
+  UShortArraySet&       old_mi =    oldMultiIndex[activeKey];
 
   // update set O by adding the trial set to oldMultiIndex:
   old_mi.insert(tr_set);
   // remove the trial set from set A by erasing from activeMultiIndex:
   active_mi.erase(tr_set); // invalidates cit_star -> set_star
-  // update subset of A that have been evaluated as trial sets
+  // update subset of A that have been evaluated as trial sets but not selected
   UShortArrayDeque::iterator tr_it
-    = std::find(comp_trials.begin(), comp_trials.end(), tr_set);
-  if (tr_it != comp_trials.end()) comp_trials.erase(tr_it);
+    = std::find(pop_trials.begin(), pop_trials.end(), tr_set);
+  if (tr_it != pop_trials.end()) pop_trials.erase(tr_it);
 
   // update set A (activeMultiIndex) based on neighbors of trial set
   add_active_neighbors(tr_set, false);//, isotropic());
@@ -413,7 +414,7 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 #ifdef DEBUG
   PCout << "Sets updated: (Smolyak,Old,Active,Trial) = (" << smolyak_size()
 	<< ',' << old_mi.size() << ',' << active_mi.size() << ','
-	<< comp_trials.size() << ')' << std::endl;
+	<< pop_trials.size() << ')' << std::endl;
 #endif // DEBUG
 }
 
@@ -449,6 +450,52 @@ add_active_neighbors(const UShortArray& set, bool frontier)
 	active_mi.insert(trial_set);
     }
     --trial_set_i; // restore
+  }
+}
+
+
+void SparseGridDriver::clear_inactive()
+{
+  // These are always defined in update_active_iterators()
+  std::map<UShortArray, unsigned short>::iterator sg_it = ssgLevel.begin();
+  std::map<UShortArray, RealVector>::iterator     aw_it = anisoLevelWts.begin();
+  std::map<UShortArray, int>::iterator            cp_it = numCollocPts.begin();
+  while (sg_it != ssgLevel.end())
+    if (sg_it == ssgLevIter) // preserve active
+      { ++sg_it; ++aw_it; ++cp_it; }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      ssgLevel.erase(sg_it++);
+      anisoLevelWts.erase(aw_it++);
+      numCollocPts.erase(cp_it++);
+    }
+
+  // Generalized sparse grid sets may be active
+  if (!oldMultiIndex.empty()) {
+    std::map<UShortArray, UShortArraySet>::iterator
+      om_it = oldMultiIndex.begin(), om_act_it = oldMultiIndex.find(activeKey);
+    std::map<UShortArray, UShortArraySet>::iterator am_it
+      = activeMultiIndex.begin();
+    std::map<UShortArray, UShortArrayDeque>::iterator pt_it
+      = poppedTrialSets.begin();
+    while (om_it != oldMultiIndex.end())
+      if (om_it == om_act_it) // preserve active
+	{ ++om_it; ++am_it; ++pt_it; }
+      else { // clear inactive: postfix increments manage iterator invalidations
+	oldMultiIndex.erase(om_it++);
+	activeMultiIndex.erase(am_it++);
+	poppedTrialSets.erase(pt_it++);
+      }
+  }
+
+  // Anisotropic refinement bounds may be active
+  if (!axisLowerBounds.empty()) {
+    std::map<UShortArray, RealVector>::iterator ab_it = axisLowerBounds.begin(),
+      ab_act_it = axisLowerBounds.find(activeKey);
+    while (ab_it != axisLowerBounds.end())
+      if (ab_it == ab_act_it) // preserve active
+	++ab_it;
+      else // clear inactive: postfix increments manage iterator invalidations
+	axisLowerBounds.erase(ab_it++);
   }
 }
 

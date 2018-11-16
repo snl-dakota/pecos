@@ -67,7 +67,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 
 void CombinedSparseGridDriver::clear_inactive()
 {
-  //SparseGridDriver::clear_inactive();
+  SparseGridDriver::clear_inactive();
 
   std::map<UShortArray, UShort2DArray>::iterator sm_it
     = smolyakMultiIndex.begin();

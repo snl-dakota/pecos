@@ -131,6 +131,7 @@ public:
   //
 
   void active_key(const UShortArray& key);
+  void clear_inactive();
   void clear_keys();
 
   //
@@ -204,10 +205,6 @@ public:
   const UShortArraySet& active_multi_index(const UShortArray& key) const;
   /// return entry from activeMultiIndex corresponding to activeKey
   const UShortArraySet& active_multi_index() const;
-  // return entry from computedTrialSets corresponding to key
-  //const UShortArrayDeque& computed_trial_sets(const UShortArray& key) const;
-  // return entry from computedTrialSets corresponding to activeKey
-  //const UShortArrayDeque& computed_trial_sets() const;
 
 protected:
 
@@ -258,10 +255,9 @@ protected:
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid.  Use std::set for ordering of candidates.
   std::map<UShortArray, UShortArraySet> activeMultiIndex;
-  /// subset of active set that have been evaluated as trial sets
-  /// (incremented in compute_trial_grid() and decremented in update_sets()).
+  /// subset of active trial sets that have been evaluated but not selected.
   /// Use std::deque to retain append ordering (mirroring SurrogateData).
-  std::map<UShortArray, UShortArrayDeque> computedTrialSets;
+  std::map<UShortArray, UShortArrayDeque> poppedTrialSets;
 
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
@@ -281,8 +277,8 @@ private:
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
   std::map<UShortArray, RealVector> axisLowerBounds;
-  /// iterator to the active set of axis lower bounds
-  std::map<UShortArray, RealVector>::iterator axisLBndsIter;
+  // iterator to the active set of axis lower bounds
+  //std::map<UShortArray, RealVector>::iterator axisLBndsIter;
 };
 
 
@@ -349,11 +345,13 @@ inline void SparseGridDriver::update_active_iterators()
     std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
     anisoWtsIter = anisoLevelWts.insert(urv_pair).first;
   }
+  /*
   axisLBndsIter = axisLowerBounds.find(activeKey);
   if (axisLBndsIter == axisLowerBounds.end()) {
     std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
     axisLBndsIter = axisLowerBounds.insert(urv_pair).first;
   }
+  */
 }
 
 
@@ -361,12 +359,12 @@ inline void SparseGridDriver::clear_keys()
 {
   activeKey.clear();
 
-  ssgLevel.clear();        ssgLevIter    =        ssgLevel.end();
-  numCollocPts.clear();    numPtsIter    =    numCollocPts.end();
-  anisoLevelWts.clear();   anisoWtsIter  =   anisoLevelWts.end();
-  axisLowerBounds.clear(); axisLBndsIter = axisLowerBounds.end();
+  ssgLevel.clear();          ssgLevIter    =        ssgLevel.end();
+  numCollocPts.clear();      numPtsIter    =    numCollocPts.end();
+  anisoLevelWts.clear();     anisoWtsIter  =   anisoLevelWts.end();
+  axisLowerBounds.clear(); //axisLBndsIter = axisLowerBounds.end();
 
-  oldMultiIndex.clear(); activeMultiIndex.clear(); computedTrialSets.clear();
+  oldMultiIndex.clear();  activeMultiIndex.clear();  poppedTrialSets.clear();
 }
 
 
@@ -435,26 +433,6 @@ active_multi_index(const UShortArray& key) const
 
 inline const UShortArraySet& SparseGridDriver::active_multi_index() const
 { return active_multi_index(activeKey); }
-
-
-/*
-inline const UShortArrayDeque& SparseGridDriver::
-computed_trial_sets(const UShortArray& key) const
-{
-  std::map<UShortArray, UShortArrayDeque>::const_iterator cit
-    = computedTrialSets.find(key);
-  if (cit == computedTrialSets.end()) {
-    PCerr << "Error: active key not found in SparseGridDriver::"
-	  << "computed_trial_sets()." << std::endl;
-    abort_handler(-1);
-  }
-  return cit->second;
-}
-
-
-inline const UShortArrayDeque& SparseGridDriver::computed_trial_sets() const
-{ return computed_trial_sets(activeKey); }
-*/
 
 
 inline void SparseGridDriver::

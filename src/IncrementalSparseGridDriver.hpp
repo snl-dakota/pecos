@@ -196,11 +196,11 @@ private:
   /// reference grid; used in incremental approaches that update type2WeightSets
   std::map<UShortArray, RealMatrix> type2WeightSetsRef;
 
-  /// popped trial sets that were computed but not selected
-  std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
-  /// index into poppedLevMultiIndex for data to be restored
+  // popped trial sets that were computed but not selected
+  //std::map<UShortArray, UShortArrayDeque> poppedLevMultiIndex;
+  /// index into poppedTrialSets for data to be restored
   std::map<UShortArray, size_t> pushIndex;
-  /// indices into poppedLevMultiIndex indicating finalization order
+  /// indices into poppedTrialSets indicating finalization order
   std::map<UShortArray, SizetArray> finalizeIndex;
 
   /// number of unique points in set 1 (reference)
@@ -394,7 +394,7 @@ inline void IncrementalSparseGridDriver::clear_keys()
 
   smolyakCoeffsRef.clear();
   type1WeightSetsRef.clear(); type2WeightSetsRef.clear();
-  poppedLevMultiIndex.clear();
+  //poppedLevMultiIndex.clear();
 
   zVec.clear();            r1Vec.clear();          r2Vec.clear();
   sortIndex1.clear();      sortIndex2.clear();
@@ -440,8 +440,8 @@ inline const UShortArray& IncrementalSparseGridDriver::trial_set() const
 inline bool IncrementalSparseGridDriver::
 push_trial_available(const UShortArray& key, const UShortArray& tr_set)
 {
-  const UShortArrayDeque& pop_mi = poppedLevMultiIndex[key];
-  return (std::find(pop_mi.begin(), pop_mi.end(), tr_set) != pop_mi.end());
+  const UShortArrayDeque& pop_tr = poppedTrialSets[key];
+  return (std::find(pop_tr.begin(), pop_tr.end(), tr_set) != pop_tr.end());
 }
 
 
@@ -449,35 +449,35 @@ push_trial_available(const UShortArray& key, const UShortArray& tr_set)
 inline bool IncrementalSparseGridDriver::
 push_trial_available(const UShortArray& key)
 {
-  const UShortArrayDeque& pop_mi = poppedLevMultiIndex[key];
+  const UShortArrayDeque& pop_tr = poppedTrialSets[key];
   return
-    (std::find(pop_mi.begin(), pop_mi.end(), trial_set(key)) != pop_mi.end());
+    (std::find(pop_tr.begin(), pop_tr.end(), trial_set(key)) != pop_tr.end());
 }
 
 
 /** identify if newly-pushed trial set exists within stored data sets */
 inline bool IncrementalSparseGridDriver::push_trial_available()
 {
-  const UShortArrayDeque& pop_mi = poppedLevMultiIndex[activeKey];
-  return (std::find(pop_mi.begin(), pop_mi.end(), trial_set()) != pop_mi.end());
+  const UShortArrayDeque& pop_tr = poppedTrialSets[activeKey];
+  return (std::find(pop_tr.begin(), pop_tr.end(), trial_set()) != pop_tr.end());
 }
 
 
 /** identify where newly-pushed trial set exists within stored data sets */
 inline size_t IncrementalSparseGridDriver::
 push_trial_index(const UShortArray& key, const UShortArray& tr_set)
-{ return find_index(poppedLevMultiIndex[key], tr_set); }
+{ return find_index(poppedTrialSets[key], tr_set); }
 
 
 /** identify where newly-pushed trial set exists within stored data sets */
 inline size_t IncrementalSparseGridDriver::
 push_trial_index(const UShortArray& key)
-{ return find_index(poppedLevMultiIndex[key], trial_set(key)); }
+{ return find_index(poppedTrialSets[key], trial_set(key)); }
 
 
 /** identify where newly-pushed trial set exists within stored data sets */
 inline size_t IncrementalSparseGridDriver::push_trial_index()
-{ return find_index(poppedLevMultiIndex[activeKey], trial_set()); }
+{ return find_index(poppedTrialSets[activeKey], trial_set()); }
 
 
 inline size_t IncrementalSparseGridDriver::

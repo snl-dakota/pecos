@@ -311,7 +311,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // track trial sets that have been evaluated (do here since
   // increment_smolyak_multi_index() used for both new trials and restorations)
-  computedTrialSets[activeKey].push_back(trial_set());
+  //computedTrialSets[activeKey].push_back(trial_set());
 }
 
 
@@ -369,8 +369,8 @@ void IncrementalSparseGridDriver::initialize_sets()
   //old_mi = sm_mi;
   old_mi.clear(); old_mi.insert(sm_mi.begin(), sm_mi.end());
 
-  computedTrialSets[activeKey].clear(); // no longer cleared in finalize_sets()
-  activeMultiIndex[activeKey].clear();  // also cleared in finalize_sets()
+  //poppedTrialSets[activeKey].clear();  // cleared in finalize_sets()
+  //activeMultiIndex[activeKey].clear(); // cleared in finalize_sets()
 
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
@@ -414,10 +414,9 @@ void IncrementalSparseGridDriver::push_set()
   // SparseGridDriver currently retains no memory, so updates are recomputed
 
   // store pushIndex for use by other classes
-  UShortArrayDeque& pop_mi = poppedLevMultiIndex[activeKey];
-  size_t p_index = find_index(pop_mi, trial_set());
-  if (p_index != _NPOS)
-    pop_mi.erase(pop_mi.begin() + p_index); // *** upstream of post_push_data
+  UShortArrayDeque& pop_trials = poppedTrialSets[activeKey];
+  size_t p_index = find_index(pop_trials, trial_set());
+  if (p_index != _NPOS) pop_trials.erase(pop_trials.begin() + p_index);
   pushIndex[activeKey] = p_index;
  
   // synchronize collocKey with smolyakMultiIndex
@@ -431,7 +430,7 @@ void IncrementalSparseGridDriver::push_set()
 void IncrementalSparseGridDriver::pop_set()
 {
   UShort2DArray& sm_mi = smolMIIter->second;
-  poppedLevMultiIndex[activeKey].push_back(sm_mi.back());
+  poppedTrialSets[activeKey].push_back(sm_mi.back());
   pushIndex[activeKey] = _NPOS;
 
   // restore reference grid state
@@ -454,26 +453,22 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray&          sm_mi =             smolMIIter->second;
-  UShortArrayDeque& comp_trials =   computedTrialSets[activeKey];
-  UShortArrayDeque&      pop_mi = poppedLevMultiIndex[activeKey];
+  UShort2DArray&         sm_mi =             smolMIIter->second;
+  UShortArrayDeque& pop_trials =     poppedTrialSets[activeKey];
+  //UShortArrayDeque&   pop_trials = poppedLevMultiIndex[activeKey];
   size_t i, start_index = sm_mi.size();
-  // don't insert activeMultiIndex, as this may include sets which have
-  // not been evaluated (due to final update_sets() call) -- use either
-  // computedTrialSets or poppedLevMultiIndex.  The former was used in
-  // earlier releases, but the latter is generally faster since it allows
-  // Shared*ApproxData and *PolyApproximation to use the same vector
-  // insertion and clear of popped data without need to manage indexing.
-  sm_mi.insert(sm_mi.end(), pop_mi.begin(), pop_mi.end());
+  // don't insert activeMultiIndex, as this may include sets which have not
+  // been evaluated (due to final update_sets() call) -- use poppedTrialSets.
+  sm_mi.insert(sm_mi.end(), pop_trials.begin(), pop_trials.end());
 
   // finalizeIndex allows external clients to synchronize with
-  // poppedLevMultiIndex index ordering
-  size_t num_comp_tr = comp_trials.size();
+  // poppedTrialSets index ordering
+  size_t num_pop_tr = pop_trials.size();
   SizetArray& f_indices = finalizeIndex[activeKey];
-  f_indices.resize(num_comp_tr);
-  for (i=0; i<num_comp_tr; ++i)
-    f_indices[i] = find_index(comp_trials, pop_mi[i]);
-  activeMultiIndex[activeKey].clear();  comp_trials.clear();  pop_mi.clear();
+  f_indices.resize(num_pop_tr);
+  for (i=0; i<num_pop_tr; ++i)
+    f_indices[i] = i;//find_index(pop_trials, pop_mi[i]);
+  activeMultiIndex[activeKey].clear();  pop_trials.clear();  //pop_mi.clear();
 
   // update smolyakCoeffs from smolyakMultiIndex
   update_smolyak_coefficients(start_index);
@@ -1021,15 +1016,15 @@ void IncrementalSparseGridDriver::clear_inactive()
     = type1WeightSetsRef.begin();
   std::map<UShortArray, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
-  std::map<UShortArray, UShortArrayDeque>::iterator pmi_it
-    = poppedLevMultiIndex.begin();
+  //std::map<UShortArray, UShortArrayDeque>::iterator pmi_it
+  //  = poppedLevMultiIndex.begin();
 
   while (a1p_it != a1Points.end())
     if (a1p_it == a1PIter) { // preserve active
       ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
       ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it; ++us1_it;
       ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++uim_it;
-      ++scr_it; ++pmi_it;
+      ++scr_it; //++pmi_it;
       if (trackUniqueProdWeights)
 	{ ++t1r_it; if (computeType2Weights) ++t2r_it; }
     }
@@ -1044,7 +1039,7 @@ void IncrementalSparseGridDriver::clear_inactive()
       uniqueIndex1.erase(ui1_it++);       uniqueIndex2.erase(ui2_it++);
       isUnique1.erase(iu1_it++);          isUnique2.erase(iu2_it++);
       uniqueIndexMapping.erase(uim_it++);
-      smolyakCoeffsRef.erase(scr_it++);   poppedLevMultiIndex.erase(pmi_it++);
+      smolyakCoeffsRef.erase(scr_it++); //poppedLevMultiIndex.erase(pmi_it++);
       if (trackUniqueProdWeights) {
 	type1WeightSetsRef.erase(t1r_it++);
 	if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);

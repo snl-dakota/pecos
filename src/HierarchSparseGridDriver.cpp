@@ -40,6 +40,8 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 
 void HierarchSparseGridDriver::clear_inactive()
 {
+  SparseGridDriver::clear_inactive();
+
   // list erase could be done in two passes...
   //smolyakMultiIndex.erase(smolyakMultiIndex.begin(), smolMIIter);
   //smolyakMultiIndex.erase(++sm_it, smolyakMultiIndex.end());
@@ -647,7 +649,7 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // track trial sets that have been evaluated (do here since
   // increment_smolyak_multi_index() used for both new trials and restorations)
-  computedTrialSets[activeKey].push_back(tr_set);
+  //computedTrialSets[activeKey].push_back(tr_set);
 
   // update collocKey and compute trial variable/weight sets
   update_collocation_key_from_trial(tr_set);
@@ -923,8 +925,8 @@ void HierarchSparseGridDriver::initialize_sets()
   for (unsigned short lev=0; lev<=ssg_lev; ++lev)
     old_mi.insert(sm_mi[lev].begin(), sm_mi[lev].end());
 
-  // computedTrialSets no longer cleared in finalize_sets(), so do on init
-  computedTrialSets[activeKey].clear();
+  // poppedTrialSets no longer cleared in finalize_sets(), so do on init
+  //poppedTrialSets[activeKey].clear();
 
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
@@ -971,24 +973,18 @@ void HierarchSparseGridDriver::push_set()
     if (trackCollocIndices)
       update_collocation_indices_from_trial(tr_set);
 
-    unsigned short         tr_lev   = trialLevIter->second;
-    UShortArrayDequeArray& pop_mi   = poppedLevMultiIndex[activeKey];
-    UShortArrayDeque&      pop_mi_l = pop_mi[tr_lev];
-    size_t p_index = find_index(pop_mi_l, tr_set);//push_trial_index(tr_set);
+    // restoration index uses flattened array (index is not level-based):
+    UShortArrayDeque& pop_trials = poppedTrialSets[activeKey];
+    size_t r_index = find_index(pop_trials, tr_set);
+    restoreIndex[activeKey] = r_index;
+    if (r_index != _NPOS) pop_trials.erase(pop_trials.begin() + r_index);
+
+    // push index uses hierarchical array (index is level-based):
+    unsigned short    tr_lev   = trialLevIter->second;
+    UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[activeKey][tr_lev];
+    size_t p_index = find_index(pop_mi_l, tr_set);
     pushIndex[activeKey] = p_index;
     if (p_index != _NPOS) pop_mi_l.erase(pop_mi_l.begin() + p_index);
-
-    // This approach respects that active/computed trial ordering is not
-    // level-based:
-    restoreIndex[activeKey] = find_index(computedTrialSets[activeKey], tr_set); // ***
-
-    /* This shortcut assumes candidate order proceeds level by level:
-    // offset p_index (level-specific) to define r_index (flattened index)
-    size_t lev, r_index = p_index;
-    for (lev=0; lev<tr_lev; ++lev)
-      r_index += pop_mi[lev].size();
-    restoreIndex[activeKey] = r_index;
-    */
 
     RealVectorDeque& pop_t1w_l = poppedT1WtSets[activeKey][tr_lev];
     RealVectorDeque::iterator p1w_it = pop_t1w_l.begin() + p_index;
@@ -1041,10 +1037,12 @@ void HierarchSparseGridDriver::pop_set()
     t2_wts_l.pop_back();
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
+  const UShortArray& tr_set = sm_mi_l.back();
   UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[activeKey];
   if (pop_mi.size() <= tr_lev) pop_mi.resize(tr_lev+1);
-  pop_mi[tr_lev].push_back(sm_mi_l.back());
-  sm_mi_l.pop_back(); // tr_set no longer valid
+  pop_mi[tr_lev].push_back(tr_set);
+  poppedTrialSets[activeKey].push_back(tr_set);
+  sm_mi_l.pop_back(); // tr_set invalidated
   key_l.pop_back();
   if (trackCollocIndices) collocIndIter->second[tr_lev].pop_back();
   pushIndex[activeKey] = _NPOS;  restoreIndex[activeKey] = _NPOS;
@@ -1076,17 +1074,16 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 
   // For final answer, push all evaluated sets into old and clear active.
   // > Multiple trial insertion approach must be compatible with bookkeeping
-  //   elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
-  //   occur one at a time without mixing.
+  //   elsewhere (e.g., Dakota::Approximation)
   // > don't insert activeMultiIndex, as this may include sets which have not
-  //   been evaluated (due to final update_sets() call); use computedTrialSets
+  //   been evaluated (due to final update_sets() call); use poppedTrialSets
 
   UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[activeKey];
-  UShortArrayDeque& comp_trials =   computedTrialSets[activeKey];
+  UShortArrayDeque&  pop_trials =     poppedTrialSets[activeKey];
 
   if (nestedGrid) {
     SizetArray& f_indices = finalizeIndex[activeKey];
-    f_indices.resize(comp_trials.size());
+    f_indices.resize(pop_trials.size());
     num_lev = pop_mi.size(); size_t cntr = 0;
     for (lev=0; lev<num_lev; ++lev) {
       UShortArrayDeque& pop_mi_l = pop_mi[lev];
@@ -1094,7 +1091,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
       num_sets = pop_mi_l.size();
       for (set=0; set<num_sets; ++set, ++cntr) {
 	const UShortArray& trial_set = pop_mi_l[set];
-	f_indices[cntr] = find_index(comp_trials, trial_set);
+	f_indices[cntr] = find_index(pop_trials, trial_set);
 	update_collocation_key_from_trial(trial_set); // update collocKey
 	if (trackCollocIndices) // update collocIndices & numCollocPts
 	  update_collocation_indices_from_trial(trial_set);
@@ -1126,7 +1123,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
     }
   }
 
-  activeMultiIndex[activeKey].clear();  comp_trials.clear();  pop_mi.clear();
+  activeMultiIndex[activeKey].clear();  pop_trials.clear();  pop_mi.clear();
 }
 
 
