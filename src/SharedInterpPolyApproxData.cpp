@@ -283,7 +283,8 @@ bool SharedInterpPolyApproxData::push_available()
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
   //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
   default:
-    return pushAvail[activeKey];  break;
+    return pushAvail[activeKey]; // initialized in update_active_iterators()
+    break;
   }
 }
 

@@ -128,7 +128,7 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 
   // this function is for use with isotropic/anisotropic grids, including
   // the initial starting point for a generalized sparse grid adaptation
-  if (!clear_sm_mi && refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+  if (!from_scratch && refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED){
     PCerr << "Error: HierarchSparseGridDriver::update_smolyak_multi_index() "
 	  << "intended for use with isotropic and anisotropic grid refinements."
 	  << std::endl;
@@ -647,7 +647,7 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // track trial sets that have been evaluated (do here since
   // increment_smolyak_multi_index() used for both new trials and restorations)
-  computedTrialSets[activeKey].insert(tr_set);
+  computedTrialSets[activeKey].push_back(tr_set);
 
   // update collocKey and compute trial variable/weight sets
   update_collocation_key_from_trial(tr_set);
@@ -978,12 +978,9 @@ void HierarchSparseGridDriver::push_set()
     pushIndex[activeKey] = p_index;
     if (p_index != _NPOS) pop_mi_l.erase(pop_mi_l.begin() + p_index);
 
-    // Thia approach respects that active/computed trial ordering is not
+    // This approach respects that active/computed trial ordering is not
     // level-based:
-    UShortArraySet& comp_trials = computedTrialSets[activeKey];
-    UShortArraySet::iterator c_it = comp_trials.find(tr_set);
-    restoreIndex[activeKey] = (c_it == comp_trials.end()) ? _NPOS :
-      std::distance(comp_trials.begin(), c_it);
+    restoreIndex[activeKey] = find_index(computedTrialSets[activeKey], tr_set); // ***
 
     /* This shortcut assumes candidate order proceeds level by level:
     // offset p_index (level-specific) to define r_index (flattened index)
@@ -1031,20 +1028,26 @@ void HierarchSparseGridDriver::pop_set()
   */
 
   //const UShortArray& tr_set = trial_set(); // valid prior to smolyakMI pop
-  RealVectorArray& t1_wts_l = t1WtIter->second[tr_lev];
-  poppedT1WtSets[activeKey][tr_lev].push_back(t1_wts_l.back());
+  RealVectorArray&     t1_wts_l = t1WtIter->second[tr_lev];
+  RealVectorDequeArray& pop_t1w = poppedT1WtSets[activeKey];
+  if (pop_t1w.size() <= tr_lev) pop_t1w.resize(tr_lev+1);
+  pop_t1w[tr_lev].push_back(t1_wts_l.back());
   t1_wts_l.pop_back();
   if (computeType2Weights) {
     RealMatrixArray& t2_wts_l = t2WtIter->second[tr_lev];
-    poppedT2WtSets[activeKey][tr_lev].push_back(t2_wts_l.back());
+    RealMatrixDequeArray& pop_t2w = poppedT2WtSets[activeKey];
+    if (pop_t2w.size() <= tr_lev) pop_t2w.resize(tr_lev+1);
+    pop_t2w[tr_lev].push_back(t2_wts_l.back());
     t2_wts_l.pop_back();
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
-  poppedLevMultiIndex[activeKey][tr_lev].push_back(sm_mi_l.back());
-  pushIndex[activeKey] = _NPOS;  restoreIndex[activeKey] = _NPOS;
+  UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[activeKey];
+  if (pop_mi.size() <= tr_lev) pop_mi.resize(tr_lev+1);
+  pop_mi[tr_lev].push_back(sm_mi_l.back());
   sm_mi_l.pop_back(); // tr_set no longer valid
   key_l.pop_back();
   if (trackCollocIndices) collocIndIter->second[tr_lev].pop_back();
+  pushIndex[activeKey] = _NPOS;  restoreIndex[activeKey] = _NPOS;
 }
 
 
@@ -1053,16 +1056,18 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 {
   UShort3DArray& sm_mi = smolMIIter->second;
   unsigned short trial_lev = trialLevIter->second;
+  size_t lev, num_lev, set, num_sets;
+
   if (output_sets && converged_within_tol) {
-    size_t l, s, num_lev = sm_mi.size();
+    num_lev = sm_mi.size();
     PCout << "Above tolerance index sets:\n";
-    for (l=0; l<num_lev; ++l) {
-      const UShort2DArray& sm_mi_l = sm_mi[l];
-      size_t num_sets = sm_mi_l.size();
+    for (lev=0; lev<num_lev; ++lev) {
+      const UShort2DArray& sm_mi_l = sm_mi[lev];
+      num_sets = sm_mi_l.size();
       // omit trial set if not reverted (was below tolerance at convergence)
-      if (!reverted && l == trial_lev) --num_sets;
-      for (s=0; s<num_sets; ++s)
-	print_index_set(PCout, sm_mi_l[s]);
+      if (!reverted && lev == trial_lev) --num_sets;
+      for (set=0; set<num_sets; ++set)
+	print_index_set(PCout, sm_mi_l[set]);
     }
     PCout << "Below tolerance index sets:\n";
     if (!reverted)
@@ -1077,23 +1082,19 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   //   been evaluated (due to final update_sets() call); use computedTrialSets
 
   UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[activeKey];
-  UShortArraySet&   comp_trials =   computedTrialSets[activeKey];
-  UShortArraySet::iterator it; size_t i, num_comp_tr = comp_trials.size();
+  UShortArrayDeque& comp_trials =   computedTrialSets[activeKey];
 
   if (nestedGrid) {
-    size_t lev, num_lev = pop_mi.size(), set, num_sets, cntr = 0;
     SizetArray& f_indices = finalizeIndex[activeKey];
-    f_indices.resize(num_comp_tr);
-    UShortArraySet::iterator c_it;
+    f_indices.resize(comp_trials.size());
+    num_lev = pop_mi.size(); size_t cntr = 0;
     for (lev=0; lev<num_lev; ++lev) {
       UShortArrayDeque& pop_mi_l = pop_mi[lev];
       sm_mi[lev].insert(sm_mi[lev].end(), pop_mi_l.begin(), pop_mi_l.end());
       num_sets = pop_mi_l.size();
       for (set=0; set<num_sets; ++set, ++cntr) {
 	const UShortArray& trial_set = pop_mi_l[set];
-	c_it = comp_trials.find(trial_set);
-	f_indices[cntr] = (c_it == comp_trials.end()) ? _NPOS :
-	  std::distance(comp_trials.begin(), c_it);
+	f_indices[cntr] = find_index(comp_trials, trial_set);
 	update_collocation_key_from_trial(trial_set); // update collocKey
 	if (trackCollocIndices) // update collocIndices & numCollocPts
 	  update_collocation_indices_from_trial(trial_set);
@@ -1116,12 +1117,12 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 
   if (output_sets && !converged_within_tol) { // print all together in order
     PCout << "Final index sets:\n";
-    size_t l, s, num_lev = sm_mi.size();
-    for (l=0; l<num_lev; ++l) {
-      const UShort2DArray& sm_mi_l = sm_mi[l];
-      size_t num_sets = sm_mi_l.size();
-      for (s=0; s<num_sets; ++s)
-	print_index_set(PCout, sm_mi_l[s]);
+    num_lev = sm_mi.size();
+    for (lev=0; lev<num_lev; ++lev) {
+      const UShort2DArray& sm_mi_l = sm_mi[lev];
+      num_sets = sm_mi_l.size();
+      for (set=0; set<num_sets; ++set)
+	print_index_set(PCout, sm_mi_l[set]);
     }
   }
 

@@ -502,9 +502,14 @@ inline bool HierarchSparseGridDriver::
 push_trial_available(const UShortArray& key, const UShortArray& tr_set)
 {
   size_t tr_lev = l1_norm(tr_set);
-  const UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[key][tr_lev];
-  return
-    (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  if (pop_mi.size() <= tr_lev)
+    return false;
+  else {
+    const UShortArrayDeque& pop_mi_l = pop_mi[tr_lev];
+    return
+      (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+  }
 }
 
 
@@ -514,9 +519,14 @@ push_trial_available(const UShortArray& key)
 {
   const UShortArray& tr_set = trial_set(key);
   size_t tr_lev = l1_norm(tr_set);
-  const UShortArrayDeque& pop_mi_l = poppedLevMultiIndex[key][tr_lev];
-  return
-    (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  if (pop_mi.size() <= tr_lev)
+    return false;
+  else {
+    const UShortArrayDeque& pop_mi_l = pop_mi[tr_lev];
+    return
+      (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+  }
 }
 
 
@@ -530,7 +540,8 @@ inline size_t HierarchSparseGridDriver::
 push_trial_index(const UShortArray& key, const UShortArray& tr_set)
 {
   size_t tr_lev = l1_norm(tr_set);
-  return find_index(poppedLevMultiIndex[key][tr_lev], tr_set);
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  return (pop_mi.size() <= tr_lev) ? _NPOS : find_index(pop_mi[tr_lev], tr_set);
 }
 
 
@@ -539,7 +550,8 @@ inline size_t HierarchSparseGridDriver::push_trial_index(const UShortArray& key)
 {
   const UShortArray& tr_set = trial_set(key);
   size_t tr_lev = l1_norm(tr_set);
-  return find_index(poppedLevMultiIndex[key][tr_lev], tr_set);
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  return (pop_mi.size() <= tr_lev) ? _NPOS : find_index(pop_mi[tr_lev], tr_set);
 }
 
 

@@ -204,10 +204,10 @@ public:
   const UShortArraySet& active_multi_index(const UShortArray& key) const;
   /// return entry from activeMultiIndex corresponding to activeKey
   const UShortArraySet& active_multi_index() const;
-  /// return entry from computedTrialSets corresponding to key
-  const UShortArraySet& computed_trial_sets(const UShortArray& key) const;
-  /// return entry from computedTrialSets corresponding to activeKey
-  const UShortArraySet& computed_trial_sets() const;
+  // return entry from computedTrialSets corresponding to key
+  //const UShortArrayDeque& computed_trial_sets(const UShortArray& key) const;
+  // return entry from computedTrialSets corresponding to activeKey
+  //const UShortArrayDeque& computed_trial_sets() const;
 
 protected:
 
@@ -260,8 +260,8 @@ protected:
   std::map<UShortArray, UShortArraySet> activeMultiIndex;
   /// subset of active set that have been evaluated as trial sets
   /// (incremented in compute_trial_grid() and decremented in update_sets()).
-  /// Use std::set for efficient lookups in finalization operations.
-  std::map<UShortArray, UShortArraySet> computedTrialSets;
+  /// Use std::deque to retain append ordering (mirroring SurrogateData).
+  std::map<UShortArray, UShortArrayDeque> computedTrialSets;
 
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
@@ -437,10 +437,11 @@ inline const UShortArraySet& SparseGridDriver::active_multi_index() const
 { return active_multi_index(activeKey); }
 
 
-inline const UShortArraySet& SparseGridDriver::
+/*
+inline const UShortArrayDeque& SparseGridDriver::
 computed_trial_sets(const UShortArray& key) const
 {
-  std::map<UShortArray, UShortArraySet>::const_iterator cit
+  std::map<UShortArray, UShortArrayDeque>::const_iterator cit
     = computedTrialSets.find(key);
   if (cit == computedTrialSets.end()) {
     PCerr << "Error: active key not found in SparseGridDriver::"
@@ -451,8 +452,9 @@ computed_trial_sets(const UShortArray& key) const
 }
 
 
-inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
+inline const UShortArrayDeque& SparseGridDriver::computed_trial_sets() const
 { return computed_trial_sets(activeKey); }
+*/
 
 
 inline void SparseGridDriver::

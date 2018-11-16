@@ -390,17 +390,19 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   merge_increment(); // calls merge_unique()     --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
-  const UShortArray&       tr_set = trial_set();
-  UShortArraySet& computed_trials = computedTrialSets[activeKey];
-  UShortArraySet&       active_mi =  activeMultiIndex[activeKey];
-  UShortArraySet&          old_mi =     oldMultiIndex[activeKey];
+  const UShortArray&     tr_set = trial_set();
+  UShortArrayDeque& comp_trials = computedTrialSets[activeKey];
+  UShortArraySet&     active_mi =  activeMultiIndex[activeKey];
+  UShortArraySet&        old_mi =     oldMultiIndex[activeKey];
 
   // update set O by adding the trial set to oldMultiIndex:
   old_mi.insert(tr_set);
   // remove the trial set from set A by erasing from activeMultiIndex:
   active_mi.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  computed_trials.erase(tr_set);
+  UShortArrayDeque::iterator tr_it
+    = std::find(comp_trials.begin(), comp_trials.end(), tr_set);
+  if (tr_it != comp_trials.end()) comp_trials.erase(tr_it);
 
   // update set A (activeMultiIndex) based on neighbors of trial set
   add_active_neighbors(tr_set, false);//, isotropic());
@@ -411,7 +413,7 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 #ifdef DEBUG
   PCout << "Sets updated: (Smolyak,Old,Active,Trial) = (" << smolyak_size()
 	<< ',' << old_mi.size() << ',' << active_mi.size() << ','
-	<< computed_trials.size() << ')' << std::endl;
+	<< comp_trials.size() << ')' << std::endl;
 #endif // DEBUG
 }
 

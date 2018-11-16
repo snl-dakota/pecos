@@ -311,7 +311,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
   // track trial sets that have been evaluated (do here since
   // increment_smolyak_multi_index() used for both new trials and restorations)
-  computedTrialSets[activeKey].insert(trial_set());
+  computedTrialSets[activeKey].push_back(trial_set());
 }
 
 
@@ -454,9 +454,9 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray&        sm_mi = smolMIIter->second;
-  UShortArraySet& comp_trials = computedTrialSets[activeKey];
-  UShortArrayDeque&    pop_mi = poppedLevMultiIndex[activeKey];
+  UShort2DArray&          sm_mi =             smolMIIter->second;
+  UShortArrayDeque& comp_trials =   computedTrialSets[activeKey];
+  UShortArrayDeque&      pop_mi = poppedLevMultiIndex[activeKey];
   size_t i, start_index = sm_mi.size();
   // don't insert activeMultiIndex, as this may include sets which have
   // not been evaluated (due to final update_sets() call) -- use either
@@ -468,14 +468,11 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
 
   // finalizeIndex allows external clients to synchronize with
   // poppedLevMultiIndex index ordering
+  size_t num_comp_tr = comp_trials.size();
   SizetArray& f_indices = finalizeIndex[activeKey];
-  f_indices.resize(comp_trials.size());
-  UShortArraySet::iterator c_it;  UShortArrayDeque::iterator p_it;
-  for (i=0, p_it=pop_mi.begin(); p_it!=pop_mi.end(); ++i, ++p_it) {
-    c_it = comp_trials.find(*p_it);
-    f_indices[i] = (c_it == comp_trials.end()) ? _NPOS :
-      std::distance(comp_trials.begin(), c_it);
-  }
+  f_indices.resize(num_comp_tr);
+  for (i=0; i<num_comp_tr; ++i)
+    f_indices[i] = find_index(comp_trials, pop_mi[i]);
   activeMultiIndex[activeKey].clear();  comp_trials.clear();  pop_mi.clear();
 
   // update smolyakCoeffs from smolyakMultiIndex
