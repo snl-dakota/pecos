@@ -273,7 +273,7 @@ size_t SparseGridDriver::restore_index(const UShortArray& key) const
 
 
 size_t SparseGridDriver::finalize_index(size_t i, const UShortArray& key) const
-{ return _NPOS; }
+{ return i; } // default is an identity mapping
 
 
 void SparseGridDriver::push_set()
