@@ -1,9 +1,15 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 #ifndef CROSS_VALIDATION_HPP
 #define CROSS_VALIDATION_HPP
 
-#include "MathTools.hpp"
-#include "RandomNumberGenerator.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "FaultTolerance.hpp"
 #include "pecos_data_types.hpp"
@@ -27,8 +33,6 @@ protected:
 
   int numEquationsPerPoint_;
 
-  RandomNumberGenerator RNG_;
-  
   // Dakota specific member variables
   bool faultInfoActive_;
   FaultInfo faultInfo_;

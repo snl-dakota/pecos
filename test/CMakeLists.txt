@@ -1,6 +1,15 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 # CMakeLists.txt for pecos "unit" tests
 
 include_directories(${Pecos_SOURCE_DIR}/src
+                    ${Pecos_SOURCE_DIR}/util/src
                     ${Boost_INCLUDE_DIR}
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
@@ -66,15 +75,13 @@ add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
 target_link_libraries(pecos_lhs_driver ${pecos_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
 
-if(PECOS_ENABLE_TEUCHOS_UNIT_TESTS)
-  set(pecos_teuchos_unit_tests
-    pecos_pochhammer.cpp
-    pecos_discrete_poly.cpp
-    pecos_linear_solvers.cpp
-    )
-  add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests} )
-  target_link_libraries(pecos_teuchos_unit_tests ${pecos_libs} ${Teuchos_LIBRARIES})
-  add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
-endif() # PECOS_ENABLE_TEUCHOS_UNIT_TESTS
+set(pecos_teuchos_unit_tests_src
+  pecos_pochhammer.cpp
+  pecos_discrete_poly.cpp
+  pecos_linear_solvers.cpp
+  )
+add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
+target_link_libraries(pecos_teuchos_unit_tests ${pecos_libs} ${Teuchos_LIBRARIES})
+add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
 
 install(TARGETS pecos_gsg_driver DESTINATION bin)

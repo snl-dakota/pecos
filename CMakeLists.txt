@@ -1,18 +1,27 @@
-cmake_minimum_required(VERSION 2.8)
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
+cmake_minimum_required(VERSION 3.1)
+
+set( CMAKE_MODULE_PATH
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+  ${CMAKE_MODULE_PATH}
+)
+
+# Pecos requires C++11
+include(DakotaCxxOptions)
+dakota_cxx_standard()
 
 project("Pecos" C CXX Fortran)
 
 # --- CMake modules ---
 include(FortranCInterface)
 include(CTest)
-
-set( CMAKE_MODULE_PATH
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_arch
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config_tests
-  ${CMAKE_MODULE_PATH}
-)
 
 
 # --- Global options ---
@@ -97,6 +106,22 @@ if (NOT BUILD_IN_TRILINOS)
       #	  "Pecos is the top-level package; don't write Trilinos config files")
 
       message(STATUS "Pecos setting Teuchos_DIR to ${Teuchos_DIR}")
+
+      # This mirrors the Trilinos release process setting, so Pecos
+      # can work with Trilinos master, when needed.  Specifically it
+      # will suppress errors about missing packages.
+      set(Trilinos_ENABLE_DEVELOPMENT_MODE OFF CACHE BOOL
+	"Pecos disabling Trilinos development mode")
+      # This would be lighter weight, but might result in strong warnings
+      ##set(Trilinos_ASSERT_MISSING_PACKAGES OFF CACHE BOOL "Dakota being lazy")
+
+      set(Trilinos_GENERATE_REPO_VERSION_FILE OFF CACHE BOOL
+        "Pecos disabling generation of TrilinosRepoVersion.txt")
+
+      # TODO: Propagate to top-level Dakota configure
+      set(Teuchos_ENABLE_COMPLEX TRUE CACHE BOOL
+	"Pecos requires some complex blas wrappers")
+
       add_subdirectory(packages/trilinos)
 
     else()
@@ -116,6 +141,14 @@ endif() # NOT BUILD_IN_TRILINOS
 link_directories(${Teuchos_LIBRARY_DIRS})
 
 
+
+# --- Options for Pecos components
+##option(PECOS_ENABLE_SAMPLING "Enable sampling module" ON)
+option(PECOS_ENABLE_ORTHOGPOLY "Enable core pecos module" ON)
+option(PECOS_ENABLE_SURROGATES "Enable surrogates module" ON)
+option(PECOS_ENABLE_PYTHONAPI "Enable Python wrappers" OFF)
+option(PECOS_ENABLE_TESTS "Enable Pecos tests?" ON)
+
 # --- Potential locally included packages ---
 
 option(HAVE_FFT "Use either the fftw or dfftpack packages" ON)
@@ -133,7 +166,11 @@ add_subdirectory(packages)
 # --- Dependency configuration based on previously defined packages ---
 
 # Keep track of what libraries should be included in libpecos
-set(SUBLIBS pecos_src)
+set(SUBLIBS pecos_util)
+
+if(PECOS_ENABLE_ORTHOGPOLY)
+  list(APPEND SUBLIBS pecos_src)
+endif()
 
 function(CheckPackage package)
   if(HAVE_${package})
@@ -165,10 +202,17 @@ if(HAVE_SPARSE_GRID)
   set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
 
-add_subdirectory(src)
 
-option(PECOS_ENABLE_TESTS "Enable Pecos-specific tests?" ON)
-if(BUILD_TESTING AND PECOS_ENABLE_TESTS)
+
+# Foundational utilities
+add_subdirectory(util)
+
+# Core Pecos
+if(PECOS_ENABLE_ORTHOGPOLY)
+  add_subdirectory(src)
+endif()
+
+if(BUILD_TESTING AND PECOS_ENABLE_TESTS AND PECOS_ENABLE_ORTHOGPOLY)
   add_subdirectory(test)
 endif()
 
@@ -185,3 +229,16 @@ install(TARGETS pecos EXPORT ${ExportTarget} DESTINATION lib)
 
 set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
 
+# Modular surrogate model library
+# TODO: optionally depences on Pecos core (need tests with and without)
+if(PECOS_ENABLE_SURROGATES)
+  add_subdirectory(surrogates)
+endif()
+
+# Python wrappers are optional; this approach is having CMake invoke
+# distutils setup.py. Must add this subdirectory after all other core
+# libraries. TODO: check for required dependencies.
+if(PECOS_ENABLE_PYTHONAPI)
+  find_package(PythonInterp REQUIRED)
+  add_subdirectory(python)
+endif()

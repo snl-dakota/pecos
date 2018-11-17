@@ -2,6 +2,13 @@
 *.swp
 packages/LHS
 packages/VPISparseGrid
+packages/dakota-packages
 packages/dfftpack
 packages/fftw
 packages/teuchos
+packages/trilinos
+*.pyc
+*_wrap.*
+swigpyrun.h
+
+*.so

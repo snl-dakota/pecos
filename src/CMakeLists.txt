@@ -1,7 +1,19 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 # CMakeLists.txt for pecos source (WJB: Note the source file GLOB below)
 
 include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
   ${Teuchos_INCLUDE_DIRS})
+
+# TODO: when configuring each package, do we want to add to
+# include_directories, or be explicit in each package?
+include_directories(${Pecos_SOURCE_DIR}/util/src)
 
 remove_definitions("-DHAVE_CONFIG_H")
 
@@ -49,7 +61,7 @@ file(GLOB Pecos_src *.cpp)
 file(GLOB Pecos_hdr *.hpp)
 
 add_library(pecos_src ${Pecos_src})
-target_link_libraries(pecos_src ${Pecos_libs})
+target_link_libraries(pecos_src pecos_util ${Pecos_libs})
 if (HAVE_FFTW)
   add_dependencies(pecos_src fftw)
 endif()

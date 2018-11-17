@@ -15,7 +15,7 @@
 #define REGRESS_ORTHOG_POLY_APPROXIMATION_HPP
 
 #include "OrthogPolyApproximation.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 #include "FaultTolerance.hpp"
 #include "SharedRegressOrthogPolyApproxData.hpp"
 
