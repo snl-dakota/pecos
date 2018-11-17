@@ -303,9 +303,9 @@ int main(int argc, char* argv[])
     	fev = getFeval(evalGrid,evalFlag,evalData,var_sets,foundFlag);
         if ( !foundFlag ) foundAllSets = false ;
       } else {
-	csg_driver->restore_set();
+	csg_driver->push_set();
       }
-      csg_driver->pop_trial_set();
+      csg_driver->pop_set();
     }
     if ( !foundAllSets ) {
       saveData((char *)"func",evalGrid,evalFlag,evalData);
@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
 
-      csg_driver->push_trial_set(*it);
+      csg_driver->increment_smolyak_multi_index(*it);
 
       // Update surrogate data
       numPts = 0;
@@ -327,9 +327,9 @@ int main(int argc, char* argv[])
 	}
 
         // Set available -> restore in csg and the rest
-	csg_driver->restore_set();
+	csg_driver->push_set();
 
-        size_t idxRestore = shared_poly_data->retrieval_index();
+        size_t idxRestore = shared_poly_data->restore_index();
 	shared_poly_data->pre_push_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  poly_approx[iQoI].push_coefficients();
@@ -402,7 +402,7 @@ int main(int argc, char* argv[])
         asave = *it;
       }
 
-      csg_driver->pop_trial_set();
+      csg_driver->pop_set();
 
       shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -422,7 +422,7 @@ int main(int argc, char* argv[])
       csg_driver->update_sets(asave);
 
       //need to restore the data
-      size_t idxRestore = shared_poly_data->retrieval_index();
+      size_t idxRestore = shared_poly_data->restore_index();
       shared_poly_data->pre_push_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
         poly_approx[iQoI].push_coefficients();
@@ -451,7 +451,7 @@ int main(int argc, char* argv[])
     SurrogateData& sdi = poly_approx[iQoI].surrogate_data();
     size_t i, num_restore = sdi.popped_sets(); // # of popped trial sets
     for (i=0; i<num_restore; ++i)
-      sdi.push(shared_poly_data->finalization_index(i),false);
+      sdi.push(shared_poly_data->finalize_index(i),false);
     sdi.clear_popped();
     // from PecosApproximation::finalize()
     poly_approx[iQoI].finalize_coefficients();
