@@ -326,7 +326,7 @@ private:
   /// flattened index for data to be restored
   std::map<UShortArray, size_t> restoreIndex;
   /// flattened indices for data to be finalized
-  std::map<UShortArray, SizetArray/*SizetPairArray*/> finalizeIndex;
+  std::map<UShortArray, SizetArray> finalizeIndex;
 
   /// type 1 weight sets popped during decrement for later restoration to
   /// type1WeightSets

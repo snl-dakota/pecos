@@ -75,7 +75,7 @@ public:
   size_t push_trial_index(const UShortArray& key);
   size_t push_trial_index();
   size_t push_index(const UShortArray& key) const;
-  size_t finalize_index(size_t i, const UShortArray& key) const;
+  //size_t finalize_index(size_t i, const UShortArray& key) const;
   void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_set();
@@ -198,8 +198,8 @@ private:
 
   /// index into poppedTrialSets for data to be restored
   std::map<UShortArray, size_t> pushIndex;
-  /// indices into poppedTrialSets indicating finalization order
-  std::map<UShortArray, SizetArray> finalizeIndex;
+  // indices into poppedTrialSets indicating finalization order
+  //std::map<UShortArray, SizetArray> finalizeIndex;
 
   /// number of unique points in set 1 (reference)
   std::map<UShortArray, int> numUnique1;
@@ -485,6 +485,7 @@ push_index(const UShortArray& key) const
 }
 
 
+/*
 inline size_t IncrementalSparseGridDriver::
 finalize_index(size_t i, const UShortArray& key) const
 {
@@ -492,6 +493,7 @@ finalize_index(size_t i, const UShortArray& key) const
     = finalizeIndex.find(key);
   return (cit == finalizeIndex.end()) ? _NPOS : cit->second[i];
 }
+*/
 
 
 inline void IncrementalSparseGridDriver::update_reference()

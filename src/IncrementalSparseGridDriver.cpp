@@ -460,6 +460,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // been evaluated (due to final update_sets() call) -- use poppedTrialSets.
   sm_mi.insert(sm_mi.end(), pop_trials.begin(), pop_trials.end());
 
+  /*
   // finalizeIndex allows external clients to synchronize with
   // poppedTrialSets index ordering
   size_t num_pop_tr = pop_trials.size();
@@ -468,6 +469,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   f_indices.resize(num_pop_tr);
   for (i=0; i<num_pop_tr; ++i)
     f_indices[i] = i;//find_index(pop_trials, pop_mi[i]);
+  */
   activeMultiIndex[activeKey].clear();  pop_trials.clear();
 
   // update smolyakCoeffs from smolyakMultiIndex
