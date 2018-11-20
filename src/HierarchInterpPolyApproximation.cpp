@@ -1681,9 +1681,9 @@ delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
     }
     else if (sigma1 > SMALL_NUMBER)// neglect beta0 term (zero init reliability)
       return delta_mu / sigma1; // or delta = beta1 = (mu1 - z_bar) / sigma1 ?
-    else if (sigma0 > SMALL_NUMBER) // assume beta1 = 0 -> delta = -beta0
+    else if (sigma0 > SMALL_NUMBER)// assume beta1 = 0 -> delta = -beta0
       return (z_bar - mu0) / sigma0;
-    else                      // assume beta0 = beta1 = 0
+    else                           // assume beta0 = beta1 = 0
       return 0;
   }
   else {
@@ -1693,9 +1693,9 @@ delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
     }
     else if (sigma1 > SMALL_NUMBER)// neglect beta0 term (zero init reliability)
       return -delta_mu / sigma1;
-    else if (sigma0 > SMALL_NUMBER) // assume beta1 = 0 -> delta = -beta0
+    else if (sigma0 > SMALL_NUMBER)// assume beta1 = 0 -> delta = -beta0
       return (mu0 - z_bar) / sigma0;
-    else                      // assume beta0 = beta1 = 0
+    else                           // assume beta0 = beta1 = 0
       return 0;
   }
 }
