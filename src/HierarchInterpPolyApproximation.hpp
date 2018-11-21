@@ -99,6 +99,8 @@ protected:
 
   Real mean();
   Real mean(const RealVector& x);
+  Real combined_mean();
+  Real combined_mean(const RealVector& x);
   
   const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x,
@@ -106,6 +108,9 @@ protected:
 
   Real variance();
   Real variance(const RealVector& x);
+  Real combined_variance();
+  Real combined_variance(const RealVector& x);
+
   const RealVector& variance_gradient();
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
@@ -117,6 +122,11 @@ protected:
   Real combined_covariance(const RealVector& x,
 			   PolynomialApproximation* poly_approx_2);
 
+  Real beta(bool cdf_flag, Real z_bar);
+  Real beta(const RealVector& x, bool cdf_flag, Real z_bar);
+  Real combined_beta(bool cdf_flag, Real z_bar);
+  Real combined_beta(const RealVector& x, bool cdf_flag, Real z_bar);
+
   Real delta_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_covariance(const RealVector& x,
 			PolynomialApproximation* poly_approx_2);
@@ -126,12 +136,23 @@ protected:
 
   Real delta_mean();
   Real delta_mean(const RealVector& x);
+  //Real delta_combined_mean();
+  //Real delta_combined_mean(const RealVector& x);
+
   Real delta_std_deviation();
   Real delta_std_deviation(const RealVector& x);
+  //Real delta_combined_std_deviation();
+  //Real delta_combined_std_deviation(const RealVector& x);
+
   Real delta_beta(bool cdf_flag, Real z_bar);
   Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar);
+  Real delta_combined_beta(bool cdf_flag, Real z_bar);
+  Real delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar);
+
   Real delta_z(bool cdf_flag, Real beta_bar);
   Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar);
+  Real delta_combined_z(bool cdf_flag, Real beta_bar);
+  Real delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar);
 
   void compute_total_sobol_indices();
   void compute_partial_variance(const BitArray& set_value);
@@ -283,15 +304,18 @@ private:
   /// compute the reliability index increment due to the current grid increment
   Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar,
 		  const UShort2DArray& ref_key, const UShort2DArray& incr_key);
-  /// shared logic for handling exceptional cases
-  Real delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
-		      bool cdf_flag, Real z_bar);
   /// compute the response level increment due to the current grid increment
   Real delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
 	       const UShort2DArray& incr_key);
   /// compute the response level increment due to the current grid increment
   Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar,
 	       const UShort2DArray& ref_key, const UShort2DArray& incr_key);
+
+  /// shared logic for handling exceptional cases
+  Real beta_map(Real mu, Real var, bool cdf_flag, Real z_bar);
+  /// shared logic for handling exceptional cases
+  Real delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
+		      bool cdf_flag, Real z_bar);
 
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
@@ -694,6 +718,47 @@ inline Real HierarchInterpPolyApproximation::variance()
 
 inline Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 { return covariance(x, this); }
+
+
+inline Real HierarchInterpPolyApproximation::combined_variance()
+{ return combined_covariance(this); }
+
+
+inline Real HierarchInterpPolyApproximation::
+combined_variance(const RealVector& x)
+{ return combined_covariance(x, this); }
+
+
+inline Real HierarchInterpPolyApproximation::
+beta_map(Real mu, Real var, bool cdf_flag, Real z_bar)
+{
+  if (var > 0.) {
+    Real stdev = std::sqrt(var);
+    return (cdf_flag) ? (mu - z_bar)/stdev : (z_bar - mu)/stdev;
+  }
+  else
+    return ( (cdf_flag && mu <= z_bar) || (!cdf_flag && mu > z_bar) ) ?
+      Pecos::LARGE_NUMBER : -Pecos::LARGE_NUMBER;
+}
+
+
+inline Real HierarchInterpPolyApproximation::beta(bool cdf_flag, Real z_bar)
+{ return beta_map(mean(), variance(), cdf_flag, z_bar); }
+
+
+inline Real HierarchInterpPolyApproximation::
+beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{ return beta_map(mean(x), variance(x), cdf_flag, z_bar); }
+
+
+inline Real HierarchInterpPolyApproximation::
+combined_beta(bool cdf_flag, Real z_bar)
+{ return beta_map(combined_mean(), combined_variance(), cdf_flag, z_bar); }
+
+
+inline Real HierarchInterpPolyApproximation::
+combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{ return beta_map(combined_mean(x), combined_variance(x), cdf_flag, z_bar); }
 
 
 inline Real HierarchInterpPolyApproximation::delta_mean()
