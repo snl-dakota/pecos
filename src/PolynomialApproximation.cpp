@@ -467,26 +467,6 @@ size_t PolynomialApproximation::expansion_terms() const
 
 
 Real PolynomialApproximation::
-delta_covariance(PolynomialApproximation* poly_approx_2)
-{
-  PCerr << "Error: delta_covariance() not available for this polynomial "
-	<< "approximation type." << std::endl;
-  abort_handler(-1);
-  return 0.;
-}
-
-
-Real PolynomialApproximation::
-delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
-{
-  PCerr << "Error: delta_covariance() not available for this polynomial "
-	<< "approximation type." << std::endl;
-  abort_handler(-1);
-  return 0.;
-}
-
-
-Real PolynomialApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   PCerr << "Error: combined_covariance() not available for this polynomial "
@@ -506,22 +486,39 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
-Real PolynomialApproximation::
-delta_combined_covariance(PolynomialApproximation* poly_approx_2)
+Real PolynomialApproximation::beta(bool cdf_flag, Real z_bar)
 {
-  PCerr << "Error: delta_combined_covariance() not available for this "
-	<< "polynomial approximation type." << std::endl;
+  PCerr << "Error: beta() not available for this polynomial approximation type."
+	<< std::endl;
   abort_handler(-1);
   return 0.;
 }
 
 
 Real PolynomialApproximation::
-delta_combined_covariance(const RealVector& x,
-			  PolynomialApproximation* poly_approx_2)
+beta(const RealVector& x, bool cdf_flag, Real z_bar)
 {
-  PCerr << "Error: delta_combined_covariance() not available for this "
-	<< "polynomial approximation type." << std::endl;
+  PCerr << "Error: beta(x) not available for this polynomial approximation "
+	<< "type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::combined_beta(bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: combined_beta() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: combined_beta(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
 }
@@ -563,6 +560,47 @@ Real PolynomialApproximation::delta_std_deviation(const RealVector& x)
 }
 
 
+Real PolynomialApproximation::
+delta_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_combined_covariance() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_covariance(const RealVector& x,
+			  PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_combined_covariance() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::delta_beta(bool cdf_flag, Real z_bar)
 {
   PCerr << "Error: delta_beta() not available for this polynomial "
@@ -596,6 +634,44 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
   PCerr << "Error: delta_z(x) not available for this polynomial approximation "
 	<< "type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_beta(bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: delta_combined_beta() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: delta_combined_beta(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_z(bool cdf_flag, Real beta_bar)
+{
+  PCerr << "Error: delta_combined_z() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
+{
+  PCerr << "Error: delta_combined_z(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
 }

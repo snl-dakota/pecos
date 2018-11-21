@@ -141,14 +141,6 @@ public:
   /// parameter vector, treating a subset of the variables as random
   virtual Real covariance(const RealVector& x,
 			  PolynomialApproximation* poly_approx_2) = 0;
-  /// return the change in covariance between two response expansions,
-  /// treating all variables as random
-  virtual Real delta_covariance(PolynomialApproximation* poly_approx_2);
-  /// return the change in covariance between two response expansions for a
-  /// given parameter vector, treating a subset of the variables as random
-  virtual Real delta_covariance(const RealVector& x,
-				PolynomialApproximation* poly_approx_2);
-
   /// return the covariance between two combined response expansions,
   /// treating all variables as random
   virtual Real combined_covariance(PolynomialApproximation* poly_approx_2);
@@ -156,6 +148,40 @@ public:
   /// given parameter vector, treating a subset of the variables as random
   virtual Real combined_covariance(const RealVector& x,
 				   PolynomialApproximation* poly_approx_2);
+
+  /// return the reliability index (mapped from z_bar), where all active
+  /// variables are random
+  virtual Real beta(bool cdf_flag, Real z_bar);
+  /// return the reliability index (mapped from z_bar), treating a subset of
+  /// variables as random
+  virtual Real beta(const RealVector& x, bool cdf_flag, Real z_bar);
+  /// return the reliability index (mapped from z_bar), where all active
+  /// variables are random
+  virtual Real combined_beta(bool cdf_flag, Real z_bar);
+  /// return the reliability index (mapped from z_bar), treating a subset of
+  /// variables as random
+  virtual Real combined_beta(const RealVector& x, bool cdf_flag, Real z_bar);
+
+  /// return the change in mean resulting from expansion refinement,
+  /// treating all variables as random
+  virtual Real delta_mean();
+  /// return the change in mean resulting from expansion refinement,
+  /// treating a subset of the variables as random
+  virtual Real delta_mean(const RealVector& x);
+  /// return the change in standard deviation resulting from expansion
+  /// refinement, treating all variables as random
+  virtual Real delta_std_deviation();
+  /// return the change in standard deviation resulting from expansion
+  /// refinement, treating a subset of the variables as random
+  virtual Real delta_std_deviation(const RealVector& x);
+
+  /// return the change in covariance between two response expansions,
+  /// treating all variables as random
+  virtual Real delta_covariance(PolynomialApproximation* poly_approx_2);
+  /// return the change in covariance between two response expansions for a
+  /// given parameter vector, treating a subset of the variables as random
+  virtual Real delta_covariance(const RealVector& x,
+				PolynomialApproximation* poly_approx_2);
   /// return the change in covariance between two combined response expansions,
   /// treating all variables as random
   virtual Real
@@ -166,30 +192,32 @@ public:
     delta_combined_covariance(const RealVector& x,
 			      PolynomialApproximation* poly_approx_2);
 
-  /// return the change in mean between two response expansions,
-  /// treating all variables as random
-  virtual Real delta_mean();
-  /// return the change in mean between two response expansions,
-  /// treating a subset of the variables as random
-  virtual Real delta_mean(const RealVector& x);
-  /// return the change in standard deviation between two response
-  /// expansions, treating all variables as random
-  virtual Real delta_std_deviation();
-  /// return the change in standard deviation between two response
-  /// expansions, treating a subset of the variables as random
-  virtual Real delta_std_deviation(const RealVector& x);
-  /// return the change in reliability index (mapped from z_bar) between
-  /// two response expansions, treating all variables as random
+  /// return the change in reliability index (mapped from z_bar) resulting
+  /// from expansion refinement, treating all variables as random
   virtual Real delta_beta(bool cdf_flag, Real z_bar);
-  /// return the change in reliability index (mapped from z_bar) between
-  /// two response expansions, treating a subset of the variables as random
+  /// return the change in reliability index (mapped from z_bar) resulting
+  /// from expansion refinement, treating a subset of the variables as random
   virtual Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar);
-  /// return the change in response level (mapped from beta_bar) between
-  /// two response expansions, treating all variables as random
+  /// return the change in response level (mapped from beta_bar) resulting
+  /// from expansion refinement, treating all variables as random
   virtual Real delta_z(bool cdf_flag, Real beta_bar);
-  /// return the change in response level (mapped from beta_bar) between
-  /// two response expansions, treating a subset of the variables as random
+  /// return the change in response level (mapped from beta_bar) resulting
+  /// from expansion refinement, treating a subset of the variables as random
   virtual Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar);
+  /// return the change in reliability index (mapped from z_bar) resulting
+  /// from expansion refinement, treating all variables as random
+  virtual Real delta_combined_beta(bool cdf_flag, Real z_bar);
+  /// return the change in reliability index (mapped from z_bar) resulting
+  /// from expansion refinement, treating a subset of the variables as random
+  virtual Real delta_combined_beta(const RealVector& x, bool cdf_flag,
+				   Real z_bar);
+  /// return the change in response level (mapped from beta_bar) resulting
+  /// from expansion refinement, treating all variables as random
+  virtual Real delta_combined_z(bool cdf_flag, Real beta_bar);
+  /// return the change in response level (mapped from beta_bar) resulting
+  /// from expansion refinement, treating a subset of the variables as random
+  virtual Real delta_combined_z(const RealVector& x, bool cdf_flag,
+				Real beta_bar);
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration

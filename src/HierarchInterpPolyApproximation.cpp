@@ -1003,6 +1003,27 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 }
 
 
+Real HierarchInterpPolyApproximation::combined_mean()
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  return expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
+		     data_rep->combinedT1WeightSets,
+		     data_rep->combinedT2WeightSets);
+}
+
+
+
+Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  return expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
+		     data_rep->combinedSmolyakMultiIndex,
+		     data_rep->combinedCollocKey);
+}
+
+
 /** In this function, all expansion variables are random variables and
     any design/state variables are omitted from the expansion.  In
     this case, the derivative of the expectation is the expectation of
@@ -1657,6 +1678,40 @@ delta_beta(const RealVector& x, bool cdf_flag, Real z_bar,
 
 
 Real HierarchInterpPolyApproximation::
+delta_combined_beta(bool cdf_flag, Real z_bar)
+//, const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+{
+  PCerr << "Error: delta_combined_beta() not yet implemented" << std::endl;
+  abort_handler(-1);  return 0;
+
+  /*
+  Real mu0      = reference_combined_mean(ref_key),
+    delta_mu    = delta_combined_mean(incr_key),
+    var0        = reference_combined_variance(ref_key), 
+    delta_sigma = delta_combined_std_deviation(ref_key, incr_key);
+  return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
+  */
+}
+
+
+Real HierarchInterpPolyApproximation::
+delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+//, const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+{
+  PCerr << "Error: delta_combined_beta() not yet implemented" << std::endl;
+  abort_handler(-1);  return 0;
+
+  /*
+  Real   mu0    = reference_combined_mean(x, ref_key),
+    delta_mu    = delta_combined_mean(x, incr_key),
+    var0        = reference_combined_variance(x, ref_key), 
+    delta_sigma = delta_combined_std_deviation(x, ref_key, incr_key);
+  return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
+  */
+}
+
+
+Real HierarchInterpPolyApproximation::
 delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
 	       bool cdf_flag, Real z_bar)
 {
@@ -1730,6 +1785,48 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar,
     delta_sigma = delta_std_deviation(x, ref_key, incr_key);
   return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
                       delta_mu + delta_sigma * beta_bar;
+}
+
+
+Real HierarchInterpPolyApproximation::
+delta_combined_z(bool cdf_flag, Real beta_bar)
+//, const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+{
+  //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
+  //              = delta-mu - delta-sigma * beta-bar
+  // CCDF delta-z = (mu1 + sigma1 beta-bar) - (mu0 + sigma0 beta-bar)
+  //              = delta-mu + delta-sigma * beta-bar
+
+  PCerr << "Error: delta_combined_z() not yet implemented" << std::endl;
+  abort_handler(-1);  return 0;
+
+  /*
+  Real delta_mu = delta_combined_mean(incr_key),
+    delta_sigma = delta_combined_std_deviation(ref_key, incr_key);
+  return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
+                      delta_mu + delta_sigma * beta_bar;
+  */
+}
+
+
+Real HierarchInterpPolyApproximation::
+delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
+//,const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+{
+  //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
+  //              = delta-mu - delta-sigma * beta-bar
+  // CCDF delta-z = (mu1 + sigma1 beta-bar) - (mu0 + sigma0 beta-bar)
+  //              = delta-mu + delta-sigma * beta-bar
+
+  PCerr << "Error: delta_combined_z() not yet implemented" << std::endl;
+  abort_handler(-1);  return 0;
+
+  /*
+  Real delta_mu = delta_combined_mean(x, incr_key),
+    delta_sigma = delta_combined_std_deviation(x, ref_key, incr_key);
+  return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
+                      delta_mu + delta_sigma * beta_bar;
+  */
 }
 
 
