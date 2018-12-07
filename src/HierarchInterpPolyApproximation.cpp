@@ -454,6 +454,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
 
   // Coefficient combination is not dependent on active state
   //bool updated = update_active_iterators(data_rep->activeKey);
@@ -462,8 +463,9 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  const UShort4DArray&   comb_key = data_rep->combinedCollocKey;
-  const Sizet3DArray& comb_sm_map = data_rep->combinedSmolyakMultiIndexMap;
+  const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
+  const Sizet3DArray& comb_sm_map
+    = hsg_driver->combined_smolyak_multi_index_map();
   size_t i, lev, set, pt, num_lev = comb_key.size(), num_sets, num_tp_pts,
     num_v = modSurrData.num_derivative_variables();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
@@ -1007,9 +1009,10 @@ Real HierarchInterpPolyApproximation::combined_mean()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   return expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-		     data_rep->combinedT1WeightSets,
-		     data_rep->combinedT2WeightSets);
+		     hsg_driver->combined_type1_weight_sets(),
+		     hsg_driver->combined_type2_weight_sets());
 }
 
 
@@ -1018,9 +1021,10 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   return expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		     data_rep->combinedSmolyakMultiIndex,
-		     data_rep->combinedCollocKey);
+		     hsg_driver->combined_smolyak_multi_index(),
+		     hsg_driver->combined_collocation_key());
 }
 
 
@@ -1218,9 +1222,9 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
 
   /*
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const std::map<UShortArray, RealVector2DArray>& t1_wts_map
     = hsg_driver->type1_weight_sets_map();
   const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map
@@ -1247,19 +1251,20 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  const RealVector2DArray& comb_t1w   = data_rep->combinedT1WeightSets;
-  const RealMatrix2DArray& comb_t2w   = data_rep->combinedT2WeightSets;
+  const RealVector2DArray& comb_t1w = hsg_driver->combined_type1_weight_sets();
+  const RealMatrix2DArray& comb_t2w = hsg_driver->combined_type2_weight_sets();
   Real mean_1 = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 			    comb_t1w, comb_t2w),
        mean_2 = (same) ? mean_1 : expectation(comb_t1c_2, comb_t2c_2,
 					      comb_t1w, comb_t2w);
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(data_rep->combinedVarSets,
-			      data_rep->combinedSmolyakMultiIndex,
-			      data_rep->combinedCollocKey, combinedExpT1Coeffs,
-			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
-			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
+  central_product_interpolant(hsg_driver->combined_variable_sets(),
+			      hsg_driver->combined_smolyak_multi_index(),
+			      hsg_driver->combined_collocation_key(),
+			      combinedExpT1Coeffs, combinedExpT2Coeffs,
+			      comb_t1c_2, comb_t2c_2, same, mean_1, mean_2,
+			      cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
   return expectation(cov_t1_coeffs, cov_t2_coeffs, comb_t1w, comb_t2w);
@@ -1274,9 +1279,9 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
 
   /*
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const std::map<UShortArray, UShort3DArray>& sm_mi
     = hsg_driver->smolyak_multi_index_map();
   const std::map<UShortArray, UShort4DArray>& colloc_key
@@ -1301,8 +1306,8 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   //     map-based central_product_interpolant across all dimensions
   */
 
-  const UShort3DArray&     comb_sm_mi = data_rep->combinedSmolyakMultiIndex;
-  const UShort4DArray&       comb_key = data_rep->combinedCollocKey;
+  const UShort3DArray& comb_sm_mi = hsg_driver->combined_smolyak_multi_index();
+  const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
   Real mean_1 =
@@ -1311,10 +1316,10 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     expectation(x, comb_t1c_2, comb_t2c_2, comb_sm_mi, comb_key);
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(data_rep->combinedVarSets, comb_sm_mi, comb_key,
-			      combinedExpT1Coeffs, combinedExpT2Coeffs,
-			      comb_t1c_2, comb_t2c_2, same, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
+  central_product_interpolant(hsg_driver->combined_variable_sets(), comb_sm_mi,
+			      comb_key, combinedExpT1Coeffs,
+			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
+			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
   return expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);

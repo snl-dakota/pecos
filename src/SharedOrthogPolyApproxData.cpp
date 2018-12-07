@@ -13,6 +13,7 @@
 
 #include "SharedOrthogPolyApproxData.hpp"
 #include "pecos_global_defs.hpp"
+#include "pecos_math_util.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG

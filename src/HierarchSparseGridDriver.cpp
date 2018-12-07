@@ -17,6 +17,7 @@
 #include "sandia_sgmga.hpp"
 #include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
+#include "pecos_math_util.hpp"
 
 static const char rcsId[]="@(#) $Id: HierarchSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -804,6 +805,68 @@ void HierarchSparseGridDriver::pop_increment()
       sm_mi[lev].resize(start_set);  colloc_key[lev].resize(start_set);
       if (trackCollocIndices) colloc_ind[lev].resize(start_set);
     }
+  }
+}
+
+
+void HierarchSparseGridDriver::combine_grid()
+{
+  size_t i, num_combine = smolyakMultiIndex.size(), lev, num_lev,
+    combine_sm_map_ref;
+  combinedSmolyakMultiIndex.clear();
+  combinedSmolyakMultiIndexMap.resize(num_combine);
+  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
+  for (sm_cit  = smolyakMultiIndex.begin(), i=0;
+       sm_cit != smolyakMultiIndex.end(); ++sm_cit, ++i) {
+    const UShort3DArray& sm_mi_i = sm_cit->second;
+    num_lev = sm_mi_i.size();
+    if (num_lev > combinedSmolyakMultiIndex.size()) // don't contract
+      combinedSmolyakMultiIndex.resize(num_lev);
+    Sizet2DArray& comb_sm_map_i = combinedSmolyakMultiIndexMap[i];
+    comb_sm_map_i.resize(num_lev);
+    for (lev=0; lev<num_lev; ++lev)
+      append_multi_index(sm_mi_i[lev], combinedSmolyakMultiIndex[lev],
+			 comb_sm_map_i[lev], combine_sm_map_ref);
+  }
+
+  // Flag indicates unstructured set ordering (can't assume a no-op return if
+  // level/set counts are consistent).  Recompute combinedCollocKey from
+  // combinedSmolyakMultiIndex, rather than overlay collocKey.
+  assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey, false);
+  // Can't use collocation indices for combined expansions without adding
+  // additional tracking of model indices (no thanks), so create combined
+  // points and weights to support expectation() calls.
+  compute_points_weights(combinedSmolyakMultiIndex, combinedCollocKey,
+    combinedVarSets, combinedT1WeightSets, combinedT2WeightSets);
+}
+
+
+void HierarchSparseGridDriver::combined_to_active(bool clear_combined)
+{
+  // Replace active arrays with combined arrays
+
+  // Update type2 wts even if inactive, so that 2D array sizes are correct
+  // Note: inactive weight sets to be removed by clear_inactive()
+
+  if (clear_combined) {
+    std::swap(smolMIIter->second,    combinedSmolyakMultiIndex);
+    std::swap(collocKeyIter->second, combinedCollocKey);
+    std::swap(t1WtIter->second,      combinedT1WeightSets);
+    std::swap(t2WtIter->second,      combinedT2WeightSets);
+
+    combinedCollocKey.clear();
+    combinedSmolyakMultiIndex.clear();
+    combinedSmolyakMultiIndexMap.clear();     // no corresponding active
+    //combinedVarSets.clear(); // preserve since no corresponding active
+    combinedT1WeightSets.clear();
+    combinedT2WeightSets.clear();
+  }
+  else {
+    smolMIIter->second    = combinedSmolyakMultiIndex;
+    collocKeyIter->second = combinedCollocKey;
+    // combinedSmolyakMultiIndexMap,combinedVarSets: no corresponding active
+    t1WtIter->second = combinedT1WeightSets;
+    t2WtIter->second = combinedT2WeightSets;
   }
 }
 

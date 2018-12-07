@@ -689,7 +689,7 @@ integrate_combined_response_moments(size_t num_moments)
   // combined_to_active() should precede this call -> can use active coeffs/wts,
   // but rely on combinedVarSets instead of modSurrData variables
   integrate_response_moments(num_moments,
-    data_rep->combinedVarSets, // not cleared in combined_to_active()
+    hsg_driver->combined_variable_sets(),// not cleared in combined_to_active()
     hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
     expT1CoeffsIter->second, expT2CoeffsIter->second,
     hsg_driver->type1_hierarchical_weight_sets(),
