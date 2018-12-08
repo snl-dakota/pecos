@@ -80,8 +80,8 @@ protected:
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;
-  /// compute moments of response using numerical integration
-  virtual void integrate_combined_response_moments(size_t num_moments) = 0;
+  // compute moments of response using numerical integration
+  //virtual void integrate_combined_response_moments(size_t num_moments) = 0;
   /// compute moments of expansion using numerical integration
   virtual void integrate_expansion_moments(size_t num_moments) = 0;
 
@@ -143,8 +143,8 @@ compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports four moments using the collocation rules
   // as integration rules
-  if (combined_stats) integrate_combined_response_moments(4);
-  else                integrate_response_moments(4);
+  //if (combined_stats) integrate_combined_response_moments(4);
+  /*else*/ integrate_response_moments(4);
 
   // do this second so that clearing any existing rules does not cause rework
   if (full_stats) { //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)

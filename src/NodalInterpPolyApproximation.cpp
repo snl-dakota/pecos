@@ -3407,6 +3407,7 @@ integrate_response_moments(size_t num_moments)
 }
 
 
+/*
 void NodalInterpPolyApproximation::
 integrate_combined_response_moments(size_t num_moments)
 {
@@ -3429,6 +3430,7 @@ integrate_combined_response_moments(size_t num_moments)
     integrate_moments(combinedExpT1Coeffs, driver_rep->type1_weight_sets(),
 		      numericalMoments);
 }
+*/
 
 
 void NodalInterpPolyApproximation::

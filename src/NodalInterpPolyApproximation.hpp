@@ -74,7 +74,7 @@ protected:
   void clear_inactive();
 
   void integrate_response_moments(size_t num_moments);
-  void integrate_combined_response_moments(size_t num_moments);
+  //void integrate_combined_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
 
   Real value(const RealVector& x);
