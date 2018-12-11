@@ -808,33 +808,30 @@ void HierarchSparseGridDriver::pop_increment()
     RealMatrixDequeArray& pop_pts = poppedVarSets[activeKey];
     RealVectorDequeArray& pop_t1w = poppedT1WtSets[activeKey];
     RealMatrixDequeArray& pop_t2w = poppedT2WtSets[activeKey];
-    RealVectorArray::iterator rva_it;  RealMatrixArray::iterator rma_it;
+    if (pop_pts.size() < num_lev) pop_pts.resize(num_lev);
     if (pop_t1w.size() < num_lev) pop_t1w.resize(num_lev);
-    if (computeType2Weights && pop_t2w.size() < num_lev)
-      pop_t2w.resize(num_lev);
+    if (computeType2Weights && pop_t2w.size()<num_lev) pop_t2w.resize(num_lev);
     // update type1/2 weights and subset view of points
     for (lev=0; lev<num_lev; ++lev) {
       start_set = incr_sets[lev];
 
       RealMatrixArray&     pts_l =     pts[lev];
       RealMatrixDeque& pop_pts_l = pop_pts[lev];
-      rma_it = pts_l.begin() + start_set;
-      pop_pts_l.insert(pop_pts_l.end(), rma_it, pts_l.end());
+      pop_pts_l.insert(pop_pts_l.end(), pts_l.begin()+start_set, pts_l.end());
       pts_l.resize(start_set);
 
       RealVectorArray&     t1w_l =     t1w[lev];
       RealVectorDeque& pop_t1w_l = pop_t1w[lev];
-      rva_it = t1w_l.begin() + start_set;
-      pop_t1w_l.insert(pop_t1w_l.end(), rva_it, t1w_l.end());
+      pop_t1w_l.insert(pop_t1w_l.end(), t1w_l.begin()+start_set, t1w_l.end());
       t1w_l.resize(start_set);
 
       if (computeType2Weights) {
 	RealMatrixArray&     t2w_l =     t2w[lev];
 	RealMatrixDeque& pop_t2w_l = pop_t2w[lev];
-	rma_it = t2w_l.begin() + start_set;
-	pop_t2w_l.insert(pop_t2w_l.end(), rma_it, t2w_l.end());
+	pop_t2w_l.insert(pop_t2w_l.end(), t2w_l.begin()+start_set, t2w_l.end());
 	t2w_l.resize(start_set);
       }
+
       sm_mi[lev].resize(start_set);  colloc_key[lev].resize(start_set);
       if (trackCollocIndices) colloc_ind[lev].resize(start_set);
     }
@@ -906,7 +903,8 @@ void HierarchSparseGridDriver::combined_to_active(bool clear_combined)
 
   // collocation indices are invalidated by expansion combination since
   // corresponding hierarchical expansions involve overlays of data that
-  // no longer reflect individual evaluations
+  // no longer reflect individual evaluations (to restore validity of
+  // collocIndices, new modSurrData would have to be defined)
   collocIndIter->second.clear();
 }
 

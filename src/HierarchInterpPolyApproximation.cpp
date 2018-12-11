@@ -1142,6 +1142,7 @@ covariance(PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   bool same = (this == hip_approx_2),
     std_mode = data_rep->nonRandomIndices.empty();
 
@@ -1160,8 +1161,17 @@ covariance(PolynomialApproximation* poly_approx_2)
   // (containing discrepancies) for computing central product interpolants:
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   Real mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
-  central_product_interpolant(hip_approx_2, true, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
+  if (hsg_driver->track_collocation_indices() &&
+      hsg_driver->collocation_indices().empty()) // invalidated by combination
+    central_product_interpolant(hsg_driver->variable_sets(),
+      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
+      expT1CoeffsIter->second, expT2CoeffsIter->second,
+      hip_approx_2->expT1CoeffsIter->second,
+      hip_approx_2->expT2CoeffsIter->second, same, mean_1, mean_2,
+      cov_t1_coeffs, cov_t2_coeffs);
+  else
+    central_product_interpolant(hip_approx_2, true, mean_1, mean_2,
+      cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
   Real covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
@@ -1183,6 +1193,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   bool same = (this == hip_approx_2),
     all_mode = !data_rep->nonRandomIndices.empty();
 
@@ -1202,8 +1213,17 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   // (containing discrepancies) for computing central product interpolants:
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   Real mean_1 = mean(x), mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
-  central_product_interpolant(hip_approx_2, true, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
+  if (hsg_driver->track_collocation_indices() &&
+      hsg_driver->collocation_indices().empty()) // invalidated by combination
+    central_product_interpolant(hsg_driver->variable_sets(),
+      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
+      expT1CoeffsIter->second, expT2CoeffsIter->second,
+      hip_approx_2->expT1CoeffsIter->second,
+      hip_approx_2->expT2CoeffsIter->second, same, mean_1, mean_2,
+      cov_t1_coeffs, cov_t2_coeffs);
+  else
+    central_product_interpolant(hip_approx_2, true, mean_1, mean_2,
+      cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
   Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
