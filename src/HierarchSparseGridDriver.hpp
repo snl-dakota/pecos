@@ -267,8 +267,8 @@ private:
   /// update active smolyakMultiIndex for change in level and/or aniso weights
   void update_smolyak_multi_index(bool clear_sm_mi = false);
 
-  /// moves all data from popped weights to active arrays
-  void push_popped_weights();
+  /// moves all data from popped points/weights to active arrays
+  void push_popped_points_weights();
 
   /// kernel routine used for computing points and weights for a tensor grid
   /// corresponding to a single index set
@@ -372,6 +372,8 @@ private:
   /// flattened indices for data to be finalized
   std::map<UShortArray, SizetArray> finalizeIndex;
 
+  /// point sets popped during decrement for later restoration to variableSets
+  std::map<UShortArray, RealMatrixDequeArray> poppedVarSets;
   /// type 1 weight sets popped during decrement for later restoration to
   /// type1WeightSets
   std::map<UShortArray, RealVectorDequeArray> poppedT1WtSets;
