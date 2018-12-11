@@ -1073,7 +1073,7 @@ void HierarchSparseGridDriver::pop_set()
 
   //const UShortArray& tr_set = trial_set(); // valid prior to smolyakMI pop
   RealMatrixArray& pts_l = varSetsIter->second[tr_lev];
-  RealMatrixDequeArray& pop_pts = poppedT2WtSets[activeKey];
+  RealMatrixDequeArray& pop_pts = poppedVarSets[activeKey];
   if (pop_pts.size() <= tr_lev) pop_pts.resize(tr_lev+1);
   pop_pts[tr_lev].push_back(pts_l.back());
   pts_l.pop_back();
