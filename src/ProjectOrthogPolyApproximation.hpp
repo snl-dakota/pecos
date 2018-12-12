@@ -166,11 +166,14 @@ compute_moments(bool full_stats, bool combined_stats)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   // if full stats, augment analytic expansion moments with numerical moments
   // (from quadrature applied to the SurrogateData)
-  // > currently supported by TPQ, SSG, Cubature
-  // > combined expansions do not admit a unified set of collocation data
-  //   and backfilling with expansion values seems of limited usefulness
-  if (full_stats && //!data_rep->expConfigOptions.combineType &&
-      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
+  if (full_stats &&
+      // > currently supported by TPQ, SSG, Cubature (Sampling also possible)
+      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) //&&
+      // > combined expansions do not admit a unified set of collocation data
+      //   and backfilling direct response data with interpolated surrogate
+      //   values violates some of the intent (Other considerations: adds post-
+      //   processing expense; adds support for higher order moment estimates)
+    //!data_rep->expConfigOptions.combineType)
     integrate_response_moments(4);//, combined_stats);
   else
     numericalMoments.resize(0);
