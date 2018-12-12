@@ -733,7 +733,7 @@ void ProjectOrthogPolyApproximation::expectation()
 
 
 void ProjectOrthogPolyApproximation::
-integrate_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments)//, bool combined_stats)
 {
   // define data_coeffs
   size_t i, num_pts = modSurrData.points();
@@ -742,11 +742,24 @@ integrate_response_moments(size_t num_moments)
   for (i=0; i<num_pts; ++i)
     data_coeffs[i] = sdr_array[i].response_function();
 
+  // TO DO: this is an odd implementation.  combined_to_active() has been
+  // applied so mixing modSurrData for active expansion from maximal grid
+  // (ignoring combined coefficients) with evaluations of uncombined/non-active
+  // expansion evaluations (prior to clear_inactive()) since corresponding
+  // response values aren't available in non-maximal surrData.
+  // > consider just evaluating active expansion (promoted from combined)
+  //   on maximal grid.  Then combined_stats can replace expansionCoeffs
+  //   with combinedExpCoeffs for uses prior to combined_to_active().
+  // > 3 cases?: single-level approx use of modSurrData, ML approx use of
+  //   {expansion,combinedExp}Coeffs on active grid
+  // > also consider deactivating response moment integration for ML expansions
+  //   since some of the value of a numerical integration sanity check is lost
+
   // update data_coeffs using evaluations from stored expansions
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-  if (mi.size() > 1) {
+  if (mi.size() > 1) { //if (combined_stats) {
     std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
     std::map<UShortArray, RealVector>::const_iterator ec_cit;
     short combine_type = data_rep->expConfigOptions.combineType;

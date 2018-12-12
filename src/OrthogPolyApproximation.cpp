@@ -171,12 +171,13 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
   update_active_iterators(data_rep->activeKey);
   allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
+  // Note: no swap() available for Real{Vector,Matrix}
   if (expansionCoeffFlag) {
-    expCoeffsIter->second = combinedExpCoeffs;
+    expCoeffsIter->second = combinedExpCoeffs; // copy
     if (clear_combined) combinedExpCoeffs.resize(0);
   }
   if (expansionCoeffGradFlag) {
-    expCoeffGradsIter->second = combinedExpCoeffGrads;
+    expCoeffGradsIter->second = combinedExpCoeffGrads; // copy
     if (clear_combined) combinedExpCoeffGrads.reshape(0, 0);
   }
 

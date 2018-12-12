@@ -327,16 +327,17 @@ void NodalInterpPolyApproximation::combine_coefficients()
 void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
 {
   // replace active expansions with combined expansion arrays
-  // Note: clear_inactive() takes care of the auxilliary inactive expansions
-  //       that are now assimilated within each new active expansion
+  // > clear_inactive() takes care of the auxilliary inactive expansions that
+  //   are now assimilated within each new active expansion
+  // > swap() not available for Real{Vector,Matrix}
 
   if (expansionCoeffFlag) {
-    expT1CoeffsIter->second = combinedExpT1Coeffs;
+    expT1CoeffsIter->second = combinedExpT1Coeffs; // copy
     if (clear_combined) combinedExpT1Coeffs.resize(0);
     SharedNodalInterpPolyApproxData* data_rep
       = (SharedNodalInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
-      expT2CoeffsIter->second = combinedExpT2Coeffs;
+      expT2CoeffsIter->second = combinedExpT2Coeffs; // copy
       if (clear_combined) combinedExpT2Coeffs.reshape(0, 0);
     }
   }
@@ -3376,7 +3377,7 @@ reinterpolated_level(const UShortArray& lev_index)
 
 
 void NodalInterpPolyApproximation::
-integrate_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments, bool combined_stats)
 {
   // In this case, we are constrained to use the original collocation points
   // (for which response values are available) within the numerical integration.
@@ -3387,7 +3388,7 @@ integrate_response_moments(size_t num_moments)
 
   // Error check for required data
   if (!expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::integrate_response_moments()" << std::endl;
     abort_handler(-1);
   }
@@ -3397,44 +3398,30 @@ integrate_response_moments(size_t num_moments)
   IntegrationDriver* driver_rep = data_rep->driverRep;
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
-  if (data_rep->basisConfigOptions.useDerivs)
-    integrate_moments(expT1CoeffsIter->second, expT2CoeffsIter->second,
-		      driver_rep->type1_weight_sets(),
+
+  // Support combined_stats for completeness
+  // > use of combined_to_active() prior to full_stats computation makes
+  //   this moot / unused for NIPA
+  // > SharedNodalInterpPolyApproxData::pre_combine_data() activates the
+  //   maximal grid and NodalInterpPolyApproximation::combine_coefficients()
+  //   computes combinedExpT{1,2}Coeffs based on it, so
+  //   driver_rep->type{1,2}_weight_sets() are synchronized/sufficient
+  //   (no need for driver_rep->combined_type{1,2}_weight_sets()
+  RealVector& t1c = (combined_stats) ? combinedExpT1Coeffs :
+    expT1CoeffsIter->second;
+  if (data_rep->basisConfigOptions.useDerivs) {
+    RealMatrix& t2c = (combined_stats) ? combinedExpT2Coeffs :
+      expT2CoeffsIter->second;
+    integrate_moments(t1c, t2c, driver_rep->type1_weight_sets(),
 		      driver_rep->type2_weight_sets(), numericalMoments);
+  }
   else
-    integrate_moments(expT1CoeffsIter->second, driver_rep->type1_weight_sets(),
-		      numericalMoments);
+    integrate_moments(t1c, driver_rep->type1_weight_sets(), numericalMoments);
 }
 
 
-/*
 void NodalInterpPolyApproximation::
-integrate_combined_response_moments(size_t num_moments)
-{
-  // Notes:
-  // > use of combinedExpT{1,2}Coeffs needs to be synchronized with
-  //   active_key(driverRep->maximal_grid()) in SharedNodalInterpPolyApproxData
-  //   ::pre_combine_data() so that typ1{1,2} weight sets are correct
-  // > use of combined_to_active() generally makes this moot / unused for NIPA
-
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
-  if (numericalMoments.length() != num_moments)
-    numericalMoments.sizeUninitialized(num_moments);
-  if (data_rep->basisConfigOptions.useDerivs)
-    integrate_moments(combinedExpT1Coeffs, combinedExpT2Coeffs,
-		      driver_rep->type1_weight_sets(),
-		      driver_rep->type2_weight_sets(), numericalMoments);
-  else
-    integrate_moments(combinedExpT1Coeffs, driver_rep->type1_weight_sets(),
-		      numericalMoments);
-}
-*/
-
-
-void NodalInterpPolyApproximation::
-integrate_expansion_moments(size_t num_moments)
+integrate_expansion_moments(size_t num_moments, bool combined_stats)
 {
   // In this case, we are integrating the interpolant expansion instead of the
   // response and are *not* constrained to use the original collocation points
@@ -3447,8 +3434,16 @@ integrate_expansion_moments(size_t num_moments)
 
   // Error check for required data
   if (!expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::integrate_expansion_moments()"<< std::endl;
+    abort_handler(-1);
+  }
+  if (combined_stats) {
+    // requires use of modular value() and gradient_basis_variables() for
+    // combinedExpT{1,2}Coeffs, which are available, but don't bother for now
+    PCerr << "Error: combined_stats unavailable.  NodalInterpPolyApproximation"
+	  << "::integrate_expansion_moments()\n       currently requires "
+	  << "promotion of combined to active." << std::endl;
     abort_handler(-1);
   }
   if (expansionMoments.length() != num_moments)

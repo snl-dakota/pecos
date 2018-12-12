@@ -75,9 +75,8 @@ protected:
   void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
-  void integrate_response_moments(size_t num_moments);
-  //void integrate_combined_response_moments(size_t num_moments);
-  void integrate_expansion_moments(size_t num_moments);
+  void integrate_response_moments(size_t num_moments, bool combined_stats);
+  void integrate_expansion_moments(size_t num_moments, bool combined_stats);
 
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);
@@ -664,50 +663,43 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
 
 
 inline void HierarchInterpPolyApproximation::
-integrate_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments, bool combined_stats)
 {
   // standard variables mode supports four moments using the collocation rules
   // as integration rules
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi = hsg_driver->smolyak_multi_index();
-  const UShort4DArray& colloc_key = hsg_driver->collocation_key();
-  const Sizet3DArray&  colloc_ind = hsg_driver->collocation_indices();
-  if (colloc_ind.empty()) // invalidated by expansion combination
-    integrate_response_moments(num_moments, hsg_driver->variable_sets(),
-      sm_mi, colloc_key, expT1CoeffsIter->second, expT2CoeffsIter->second,
-      hsg_driver->type1_hierarchical_weight_sets(),
-      hsg_driver->type2_hierarchical_weight_sets());
-  else // colloc_index is valid -> can pull from modSurrData vars/responses
-    integrate_response_moments(num_moments, sm_mi, colloc_key,
-      hsg_driver->collocation_indices(), modSurrData.variables_data(),
-      modSurrData.response_data());
+
+  // Support combined_stats for completeness
+  // > use of combined_to_active() prior to full_stats computation makes
+  //   this moot / unused for HIPA
+  if (combined_stats)
+    integrate_response_moments(num_moments,
+      hsg_driver->combined_variable_sets(),
+      hsg_driver->combined_smolyak_multi_index(),
+      hsg_driver->combined_collocation_key(), combinedExpT1Coeffs,
+      combinedExpT2Coeffs, hsg_driver->combined_type1_weight_sets(),
+      hsg_driver->combined_type2_weight_sets());
+  else { // compute response moments for active expansion
+    const UShort3DArray&      sm_mi = hsg_driver->smolyak_multi_index();
+    const UShort4DArray& colloc_key = hsg_driver->collocation_key();
+    const Sizet3DArray&  colloc_ind = hsg_driver->collocation_indices();
+    // check for colloc indices that were invalidated by expansion combination
+    if (hsg_driver->track_collocation_indices() && colloc_ind.empty())
+      integrate_response_moments(num_moments, hsg_driver->variable_sets(),
+        sm_mi, colloc_key, expT1CoeffsIter->second, expT2CoeffsIter->second,
+        hsg_driver->type1_hierarchical_weight_sets(),
+        hsg_driver->type2_hierarchical_weight_sets());
+    else // colloc_index is valid -> can pull from modSurrData vars/responses
+      integrate_response_moments(num_moments, sm_mi, colloc_key, colloc_ind,
+        modSurrData.variables_data(), modSurrData.response_data());
+  }
 }
 
 
-/*
 inline void HierarchInterpPolyApproximation::
-integrate_combined_response_moments(size_t num_moments)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  // if expansions have been combined, there is no consolidated colloc_index
-  // --> modSurrData access is replaced with value()/gradient_bases_variables()
-  // combined_to_active() should precede this call -> can use active coeffs/wts,
-  // but rely on combinedVarSets instead of modSurrData variables
-  integrate_response_moments(num_moments,
-    hsg_driver->variable_sets(), hsg_driver->smolyak_multi_index(),
-    hsg_driver->collocation_key(), expT1CoeffsIter->second,
-    expT2CoeffsIter->second, hsg_driver->type1_hierarchical_weight_sets(),
-    hsg_driver->type2_hierarchical_weight_sets());
-}
-*/
-
-
-inline void HierarchInterpPolyApproximation::
-integrate_expansion_moments(size_t num_moments)
+integrate_expansion_moments(size_t num_moments, bool combined_stats)
 {
   // for now: nested interpolation is exact
   expansionMoments = numericalMoments;

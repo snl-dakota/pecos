@@ -566,34 +566,22 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
 {
   // replace active expansions with combined expansion arrays
-  // Note: clear_inactive() takes care of the auxilliary inactive expansions
-  //       that are now assimilated within the active expansion
+  // > clear_inactive() takes care of the auxilliary inactive expansions
+  //   that are now assimilated within the active expansion
+  // > we reassign T1Coeffs,T2Coeffs,T1CoeffGrads even if not active in order
+  //   to preserve hierarchical sizing needed downstream (in value() et al.)
 
-  if (expansionCoeffFlag) {
-    if (clear_combined) {
-      std::swap(expT1CoeffsIter->second, combinedExpT1Coeffs);
-      combinedExpT1Coeffs.clear();
-    }
-    else
-      expT1CoeffsIter->second = combinedExpT1Coeffs; // copy
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    if (data_rep->basisConfigOptions.useDerivs) {
-      if (clear_combined) {
-	std::swap(expT2CoeffsIter->second, combinedExpT2Coeffs);
-	combinedExpT2Coeffs.clear();
-      }
-      else
-	expT2CoeffsIter->second = combinedExpT2Coeffs; // copy
-    }
+  if (clear_combined) {
+    std::swap(expT1CoeffsIter->second,     combinedExpT1Coeffs);
+    std::swap(expT2CoeffsIter->second,     combinedExpT2Coeffs);
+    std::swap(expT1CoeffGradsIter->second, combinedExpT1CoeffGrads);
+    combinedExpT1Coeffs.clear();  combinedExpT2Coeffs.clear();
+    combinedExpT1CoeffGrads.clear();
   }
-  if (expansionCoeffGradFlag) {
-    if (clear_combined) {
-      std::swap(expT1CoeffGradsIter->second, combinedExpT1CoeffGrads);
-      combinedExpT1CoeffGrads.clear();
-    }
-    else
-      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads; // copy
+  else { // (redundant) copies
+    expT1CoeffsIter->second     = combinedExpT1Coeffs;
+    expT2CoeffsIter->second     = combinedExpT2Coeffs;
+    expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;
   }
 
   clear_all_computed_bits();
