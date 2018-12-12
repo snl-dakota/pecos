@@ -95,84 +95,6 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 }
 
 
-/*
-bool SharedHierarchInterpPolyApproxData::push_available()
-{
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    return hsg_driver->push_trial_available();  break;
-  }
-  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
-  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
-  default:
-    return pushAvail[activeKey];  break;
-
-    //return (hsg_driver->popped_sets() > 0);
-    // Another option would be to clear incrementSets and then test it here
-    break;
-  }
-}
-
-
-void SharedHierarchInterpPolyApproxData::pre_push_data()
-{
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-
-    // pushIndex now computed by HierarchSparseGridDriver::push_set()
-
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    const UShortArray& tr_set = hsg_driver->trial_set();
-
-    // base class implementation uses index of tr_set within popped_lev_mi:
-    //pushIndex = candidate_index(activeKey, tr_set);
-
-    // Hierarchical implementation uses a level-specific index:
-    UShortArrayDeque& pop_lev_mi = poppedLevMultiIndex[activeKey];
-    UShortArrayDeque::iterator it;
-    size_t tr_lev = hsg_driver->trial_level();
-    pushIndex = 0;
-    for (it=pop_lev_mi.begin(); it!=pop_lev_mi.end(); ++it)
-      if      (*it          == tr_set) break;       // trial set found
-      else if (l1_norm(*it) == tr_lev) ++pushIndex; // part of trial level
-    break;
-  }
-  default:
-
-    // Interpolation basis and component sobol already in incremented state
-
-    break;
-  }
-}
-
-
-void SharedHierarchInterpPolyApproxData::post_push_data()
-{
-  // leave polynomialBasis as is (a previous increment is being restored)
-
-  switch (expConfigOptions.refinementControl) {
-  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    // pushIndex is level-specific, so recompute candidate index for removal
-    UShortArrayDeque& pop_lev_mi = poppedLevMultiIndex[activeKey];
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    // would be desirable to use reverse_iterator since trial_set will often
-    // be at the end, but erase() only supports a forward iterator.
-    UShortArrayDeque::iterator it =
-      std::find(pop_lev_mi.begin(), pop_lev_mi.end(), hsg_driver->trial_set());
-    if (it != pop_lev_mi.end()) pop_lev_mi.erase(it);
-    break;
-  }
-  default:
-
-    // Interpolation basis and component sobol already in incremented state
-
-    break;
-  }
-}
-*/
-
-
 void SharedHierarchInterpPolyApproxData::pre_combine_data()
 {
   // Don't mix additive approach for hierarchical interpolation with
@@ -185,60 +107,22 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
 
   // combine all multiIndex keys into combinedMultiIndex{,Map}
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const std::map<UShortArray, UShort3DArray>& sm_mi_map
-    = hsg_driver->smolyak_multi_index_map();
-  size_t i, num_combine = sm_mi_map.size(), lev, num_lev, combine_sm_map_ref;
-  combinedSmolyakMultiIndex.clear();
-  combinedSmolyakMultiIndexMap.resize(num_combine);
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
-  for (sm_cit=sm_mi_map.begin(), i=0; sm_cit!=sm_mi_map.end(); ++sm_cit, ++i) {
-    const UShort3DArray& sm_mi = sm_cit->second;
-    num_lev = sm_mi.size();
-    if (num_lev > combinedSmolyakMultiIndex.size()) // don't contract
-      combinedSmolyakMultiIndex.resize(num_lev);
-    Sizet2DArray& comb_sm_map_i = combinedSmolyakMultiIndexMap[i];
-    comb_sm_map_i.resize(num_lev);
-    for (lev=0; lev<num_lev; ++lev)
-      append_multi_index(sm_mi[lev], combinedSmolyakMultiIndex[lev],
-			 comb_sm_map_i[lev], combine_sm_map_ref);
-  }
-
-  // Flag indicates unstructured set ordering (can't assume a no-op return if
-  // level/set counts are consistent).  Recompute combinedCollocKey from
-  // combinedSmolyakMultiIndex, rather than overlay collocKey.
-  hsg_driver->
-    assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey, false);
-  // Can't use collocation indices for combined expansions without adding
-  // additional tracking of model indices (no thanks), so create combined
-  // points and weights to support expectation() calls.
-  hsg_driver->compute_points_weights(combinedSmolyakMultiIndex,
-    combinedCollocKey, combinedVarSets, combinedT1WeightSets,
-    combinedT2WeightSets);
+  hsg_driver->combine_grid();
+  // Note: grid combination is only currently required in the hierarchical
+  // interpolation case, so there is not currently support at higher levels
+  // for an abstract call to Driver::combine_grid().  For now, our hook is
+  // in SharedPolyApproxData::pre_combine_data().
 }
 
 
 void SharedHierarchInterpPolyApproxData::combined_to_active(bool clear_combined)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-
-  hsg_driver->smolyak_multi_index(combinedSmolyakMultiIndex);
-  hsg_driver->collocation_key(combinedCollocKey);
-  // combinedSmolyakMultiIndexMap not used by hsg_driver
-
-  //hsg_driver->combine_weight_sets(combinedSmolyakMultiIndexMap);
-  //hsg_driver->combined_to_active();
-  // Replace active weights with combined weights.
-  // Update type2 wts even if inactive, so that 2D array sizes are correct
-  // Note: inactive weight sets to be removed by clear_inactive()
-  hsg_driver->type1_hierarchical_weight_sets(combinedT1WeightSets);
-  hsg_driver->type2_hierarchical_weight_sets(combinedT2WeightSets);
-
-  if (clear_combined) {
-    combinedCollocKey.clear();
-    combinedSmolyakMultiIndex.clear();  combinedSmolyakMultiIndexMap.clear();
-    //combinedVarSets.clear();
-    combinedT1WeightSets.clear();       combinedT2WeightSets.clear();
-  }
+  hsg_driver->combined_to_active(clear_combined);
+  // Note: grid combination is only currently required in the hierarchical
+  // interpolation case, so there is not currently support at higher levels
+  // for an abstract call to Driver::combine_grid().  For now, our hook is
+  // in SharedPolyApproxData::pre_combine_data().
 }
 
 

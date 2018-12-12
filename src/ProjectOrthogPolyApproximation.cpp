@@ -733,8 +733,11 @@ void ProjectOrthogPolyApproximation::expectation()
 
 
 void ProjectOrthogPolyApproximation::
-integrate_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments)//, bool combined_stats)
 {
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+
   // define data_coeffs
   size_t i, num_pts = modSurrData.points();
   const SDRArray& sdr_array = modSurrData.response_data();
@@ -742,11 +745,32 @@ integrate_response_moments(size_t num_moments)
   for (i=0; i<num_pts; ++i)
     data_coeffs[i] = sdr_array[i].response_function();
 
-  // update data_coeffs using evaluations from stored expansions
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  // For MLMF, augment modSurrData using evaluations from stored expansions.
+  // This fn is used in final expansion post-processing so combined_to_active()
+  // has been applied.
+  //
+  // Note: this is a mixed implementation --> mixes direct response integration
+  // (using modSurrData for maximal grid / active expansion, ignoring combined
+  // coefficients) with surrogate integration (prior to clear_inactive(),
+  // interpolate uncombined/non-active expansions onto maximal grid since
+  // these response data aren't available for non-maximal modSurrData keys).
+  // > similar to NodalInterpPolyApproximation::combine_coefficients(), which
+  //   is then used in NIPA::integrate_response_moments()
+  // > consider deactivating response moment integration for ML expansions
+  //   (the default at OPA used by ROPA) since some of the intent (a numerical
+  //   integration sanity check) is lost.  However, a useful benefit is it
+  //   supports higher moment estimates.
+  // > consider just evaluating the active expansion (promoted from combined)
+  //   on the maximal grid (combined_stats is then easily supported, swapping
+  //   expansionCoeffs and combinedExpCoeffs).  But numerical integration of
+  //   the ML expansion doesn't provide much value beyond analytic moments of
+  //   the same expansion --> if preserved, the current implementation seems
+  //   the best compromise, short of the next item:
+  // > the only rigorous way to do this would be to roll up the numerical
+  //   quadrature contributions at each level --> perhaps NIPA could be
+  //   (improved and) leveraged for this in the future.
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-  if (mi.size() > 1) {
+  if (mi.size() > 1) { //if (combined_stats) {
     std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
     std::map<UShortArray, RealVector>::const_iterator ec_cit;
     short combine_type = data_rep->expConfigOptions.combineType;

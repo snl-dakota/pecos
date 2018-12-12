@@ -79,11 +79,11 @@ protected:
   virtual bool update_active_iterators(const UShortArray& key);
 
   /// compute moments of response using numerical integration
-  virtual void integrate_response_moments(size_t num_moments) = 0;
-  /// compute moments of response using numerical integration
-  virtual void integrate_combined_response_moments(size_t num_moments) = 0;
+  virtual void integrate_response_moments(size_t num_moments,
+					  bool combined_stats) = 0;
   /// compute moments of expansion using numerical integration
-  virtual void integrate_expansion_moments(size_t num_moments) = 0;
+  virtual void integrate_expansion_moments(size_t num_moments,
+					   bool combined_stats) = 0;
 
   virtual void compute_total_sobol_indices() = 0;
   virtual void compute_partial_variance(const BitArray& set_value);
@@ -143,14 +143,11 @@ compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports four moments using the collocation rules
   // as integration rules
-  if (combined_stats) integrate_combined_response_moments(4);
-  else                integrate_response_moments(4);
+  integrate_response_moments(4, combined_stats);
 
   // do this second so that clearing any existing rules does not cause rework
-  if (full_stats) { //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
-    //if (combined_stats) integrate_combined_expansion_moments(4);
-    /*else*/ integrate_expansion_moments(4);
-  }
+  if (full_stats) //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
+    integrate_expansion_moments(4, combined_stats);
   else
     expansionMoments.resize(0);
 }
@@ -166,7 +163,7 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
     { mean(x); variance(x); }
   //standardize_moments(numericalMoments);
 
-  //if (full_stats) integrate_expansion_moments(4, x);
+  //if (full_stats) integrate_expansion_moments(4, x, combined_stats);
   //else            expansionMoments.resize(0);
   // Note: it would be feasible to implement an all_variables version of
   // integrate_expansion_moments() by evaluating the combined expansion at

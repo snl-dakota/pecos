@@ -13,10 +13,11 @@
 
 #include "SharedRegressOrthogPolyApproxData.hpp"
 #include "pecos_global_defs.hpp"
+#include "pecos_math_util.hpp"
 #include "SurrogateData.hpp"
 
-
 namespace Pecos {
+
 
 void SharedRegressOrthogPolyApproxData::allocate_data()
 {

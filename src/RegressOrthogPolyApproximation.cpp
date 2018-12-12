@@ -13,6 +13,7 @@
 
 #include "RegressOrthogPolyApproximation.hpp"
 #include "pecos_global_defs.hpp"
+#include "pecos_math_util.hpp"
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
@@ -716,7 +717,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
     // already provides unique additions --> append_multi_index() is inefficient
     // since duplication checks are redundant.
     const UShortArraySet& candidate_exp = candidate_basis_exp[i];
-    //data_rep->append_multi_index(candidate_exp, adaptedMultiIndex);
+    //append_multi_index(candidate_exp, adaptedMultiIndex);
     PCout << "\n>>>>> Evaluating trial basis " << i+1 << " expanded from "
 	  << adaptedMultiIndex.size() << " to ";
     adaptedMultiIndex.insert(adaptedMultiIndex.end(), candidate_exp.begin(),
@@ -2766,7 +2767,7 @@ advance_multi_index(const UShort2DArray& multi_index,
   if (num_advance > 1) {
     UShort2DArray combined_mi = multi_index; // copy
     for (i=1; i<num_advance; ++i) {
-      data_rep->append_multi_index(mi_advancements[i-1], combined_mi);
+      append_multi_index(mi_advancements[i-1], combined_mi);
       add_admissible_forward_neighbors(combined_mi, mi_advancements[i]);
     }
   }

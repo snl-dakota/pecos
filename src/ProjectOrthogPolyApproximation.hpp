@@ -110,7 +110,7 @@ private:
 
   /// update numericalMoments using numerical integration applied
   /// directly to modSurrData
-  void integrate_response_moments(size_t num_moments);
+  void integrate_response_moments(size_t num_moments);//, bool combined_stats);
 
   //
   //- Heading: Data
@@ -150,6 +150,15 @@ inline ProjectOrthogPolyApproximation::~ProjectOrthogPolyApproximation()
 inline void ProjectOrthogPolyApproximation::
 compute_moments(bool full_stats, bool combined_stats)
 {
+  // current uses follow combined_to_active(), so don't need this for now
+  // (requires mean,variance,integrate_response_moments() for combinedExpCoeffs)
+  if (combined_stats) {
+    PCerr << "Error: combined_stats unavailable.  ProjectOrthogPoly"
+	  << "Approximation::compute_moments()\n       currently requires "
+	  << "promotion of combined to active." << std::endl;
+    abort_handler(-1);
+  }
+
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
@@ -157,25 +166,32 @@ compute_moments(bool full_stats, bool combined_stats)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   // if full stats, augment analytic expansion moments with numerical moments
   // (from quadrature applied to the SurrogateData)
-  // > currently supported by TPQ, SSG, Cubature
-  // > combined expansions do not admit a unified set of collocation data
-  //   and backfilling with expansion values seems of limited usefulness
-  if (full_stats && //!data_rep->expConfigOptions.combineType &&
-      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) {
-    integrate_response_moments(4);
-
-    // As in InterpPolyApproximation::compute_moments(), could segregate more
-    // advanced moment evaluators, if needed:
-    //if (combined_stats) integrate_combined_response_moments(4);
-    //else                integrate_response_moments(4);
-  }
-  else numericalMoments.resize(0);
+  if (full_stats &&
+      // > currently supported by TPQ, SSG, Cubature (Sampling also possible)
+      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) //&&
+      // > combined expansions do not admit a unified set of collocation data
+      //   and backfilling direct response data with interpolated surrogate
+      //   values violates some of the intent (Other considerations: adds post-
+      //   processing expense; adds support for higher order moment estimates)
+    //!data_rep->expConfigOptions.combineType)
+    integrate_response_moments(4);//, combined_stats);
+  else
+    numericalMoments.resize(0);
 }
 
 
 inline void ProjectOrthogPolyApproximation::
 compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
+  // current uses follow combined_to_active(), so don't need this for now
+  // (requires mean,variance,integrate_response_moments(x) w/ combinedExpCoeffs)
+  if (combined_stats) {
+    PCerr << "Error: combined_stats unavailable.  ProjectOrthogPoly"
+	  << "Approximation::compute_moments()\n       currently requires "
+	  << "promotion of combined to active." << std::endl;
+    abort_handler(-1);
+  }
+
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
@@ -183,8 +199,9 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
   //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   //if (full_stats &&
   //    data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
-  //  integrate_response_moments(2, x); // TO DO
-  //else numericalMoments.resize(0);
+  //  integrate_response_moments(2, x);//, combined_stats);
+  //else
+  //  numericalMoments.resize(0);
 }
 
 } // namespace Pecos

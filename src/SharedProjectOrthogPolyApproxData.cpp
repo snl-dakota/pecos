@@ -16,6 +16,7 @@
 #include "IncrementalSparseGridDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_global_defs.hpp"
+#include "pecos_math_util.hpp"
 
 //#define DEBUG
 

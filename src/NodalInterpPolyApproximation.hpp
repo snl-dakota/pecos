@@ -73,9 +73,8 @@ protected:
   void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
-  void integrate_response_moments(size_t num_moments);
-  void integrate_combined_response_moments(size_t num_moments);
-  void integrate_expansion_moments(size_t num_moments);
+  void integrate_response_moments(size_t num_moments, bool combined_stats);
+  void integrate_expansion_moments(size_t num_moments, bool combined_stats);
 
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);
