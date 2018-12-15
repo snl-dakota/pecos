@@ -319,12 +319,12 @@ private:
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShort2DArray& ref_key = UShort2DArray());
+    const UShort2DArray& incr_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_difference_interpolant(
     HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShortArray& lf_key, const UShort2DArray& ref_key = UShort2DArray());
+    const UShortArray& lf_key, const UShort2DArray& incr_key = UShort2DArray());
   /* No current need to form product interpolants using combined coefficients
 
   // form type 1/2 coefficients for interpolation of R_1 R_2
@@ -335,7 +335,7 @@ private:
     const RealVector2DArray& r2_t1_coeffs,
     const RealMatrix2DArray& r2_t2_coeffs, bool same,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShort2DArray& ref_key = UShort2DArray());
+    const UShort2DArray& incr_key = UShort2DArray());
   */
 
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
@@ -343,7 +343,7 @@ private:
     HierarchInterpPolyApproximation* hip_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, RealVector2DArray& cov_t1_coeffs,
     RealMatrix2DArray& cov_t2_coeffs,
-    const UShort2DArray& ref_key = UShort2DArray());
+    const UShort2DArray& incr_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
@@ -352,7 +352,7 @@ private:
     const RealVector2DArray& r2_t1_coeffs,
     const RealMatrix2DArray& r2_t2_coeffs, bool same, Real mean_1,Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
-    const UShort2DArray& ref_key = UShort2DArray());
+    const UShort2DArray& incr_key = UShort2DArray());
 
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
@@ -360,7 +360,7 @@ private:
     HierarchInterpPolyApproximation* hip_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, const RealVector& mean1_grad,
     const RealVector& mean2_grad, RealMatrix2DArray& cov_t1_coeff_grads,
-    const UShort2DArray& ref_key = UShort2DArray());
+    const UShort2DArray& incr_key = UShort2DArray());
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
   void central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
@@ -373,7 +373,7 @@ private:
     const RealMatrix2DArray& r2_t1_coeff_grads, bool same, Real mean_1,
     Real mean_2, const RealVector& mean1_grad, const RealVector& mean2_grad, 
     RealMatrix2DArray& cov_t1_coeff_grads,
-    const UShort2DArray& ref_key = UShort2DArray());
+    const UShort2DArray& incr_key = UShort2DArray());
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
@@ -537,12 +537,12 @@ private:
 
   /// the type1 coefficients of the expansion for interpolating values
   std::map<UShortArray, RealVector2DArray> expansionType1Coeffs;
-  /// iterator pointing to active node in expansionCoeffs
+  /// iterator pointing to active node in expansionType1Coeffs
   std::map<UShortArray, RealVector2DArray>::iterator expT1CoeffsIter;
 
   /// the type2 coefficients of the expansion for interpolating gradients
   std::map<UShortArray, RealMatrix2DArray> expansionType2Coeffs;
-  /// iterator pointing to active node in expansionCoeffGrads
+  /// iterator pointing to active node in expansionType2Coeffs
   std::map<UShortArray, RealMatrix2DArray>::iterator expT2CoeffsIter;
 
   /// the gradients of the type1 expansion coefficients
@@ -552,7 +552,7 @@ private:
       variables that do not appear in the expansion (e.g., with respect to
       design variables for an expansion only over the random variables). */
   std::map<UShortArray, RealMatrix2DArray> expansionType1CoeffGrads;
-  /// iterator pointing to active node in expansionCoeffGrads
+  /// iterator pointing to active node in expansionType1CoeffGrads
   std::map<UShortArray, RealMatrix2DArray>::iterator expT1CoeffGradsIter;
 
   /// type 1 expansion coefficients popped during decrement for later
@@ -571,6 +571,18 @@ private:
   RealMatrix2DArray combinedExpT2Coeffs;
   /// roll up of expansion type 1 coefficient gradients across all keys
   RealMatrix2DArray combinedExpT1CoeffGrads;
+
+  /// the type1 coefficients of the expansion for interpolating values
+  std::map<std::pair<UShortArray, PolynomialApproximation*>, RealVector2DArray>
+    expProdType1Coeffs;
+  /// iterator pointing to active node in expProdType1Coeffs
+  //std::map<UShortArray, RealVector2DArray>::iterator expProdT1CoeffsIter;
+
+  /// the type2 coefficients of the expansion for interpolating values
+  std::map<std::pair<UShortArray, PolynomialApproximation*>, RealMatrix2DArray>
+    expProdType2Coeffs;
+  /// iterator pointing to active node in expProdType2Coeffs
+  //std::map<UShortArray, RealMatrix2DArray>::iterator expProdT2CoeffsIter;
 };
 
 
