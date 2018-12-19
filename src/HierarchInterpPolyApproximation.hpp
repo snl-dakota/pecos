@@ -7,7 +7,8 @@
     _______________________________________________________________________ */
 
 //- Class:        HierarchInterpPolyApproximation
-//- Description:  Class for Nodal Interpolation Polynomial Approximation
+//- Description:  Class for polynomial approximation by hierarchical
+//-               interpolation
 //-               
 //- Owner:        Mike Eldred
 
@@ -317,17 +318,15 @@ private:
 		      bool cdf_flag, Real z_bar);
 
   /// form type 1/2 coefficients for interpolation of R_1 R_2
-  void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+  void product_interpolant(PolynomialApproximation* poly_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShort2DArray& incr_key = UShort2DArray());
+    const UShort2DArray& set_partition = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of R_1 R_2
-  void product_difference_interpolant(
-    HierarchInterpPolyApproximation* hip_approx_2,
+  void product_difference_interpolant(PolynomialApproximation* poly_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShortArray& lf_key, const UShort2DArray& incr_key = UShort2DArray());
+    const UShortArray& lf_key,
+    const UShort2DArray& set_partition = UShort2DArray());
   /* No current need to form product interpolants using combined coefficients
-
-  // form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
     const RealVector2DArray& r1_t1_coeffs,
@@ -335,15 +334,15 @@ private:
     const RealVector2DArray& r2_t1_coeffs,
     const RealMatrix2DArray& r2_t2_coeffs, bool same,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShort2DArray& incr_key = UShort2DArray());
+    const UShort2DArray& set_partition = UShort2DArray());
   */
 
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(
-    HierarchInterpPolyApproximation* hip_approx_2, bool mod_surr_data,
+    PolynomialApproximation* poly_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, RealVector2DArray& cov_t1_coeffs,
     RealMatrix2DArray& cov_t2_coeffs,
-    const UShort2DArray& incr_key = UShort2DArray());
+    const UShort2DArray& set_partition = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
@@ -352,15 +351,15 @@ private:
     const RealVector2DArray& r2_t1_coeffs,
     const RealMatrix2DArray& r2_t2_coeffs, bool same, Real mean_1,Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
-    const UShort2DArray& incr_key = UShort2DArray());
+    const UShort2DArray& set_partition = UShort2DArray());
 
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
   void central_product_gradient_interpolant(
-    HierarchInterpPolyApproximation* hip_approx_2, bool mod_surr_data,
+    PolynomialApproximation* poly_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, const RealVector& mean1_grad,
     const RealVector& mean2_grad, RealMatrix2DArray& cov_t1_coeff_grads,
-    const UShort2DArray& incr_key = UShort2DArray());
+    const UShort2DArray& set_partition = UShort2DArray());
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
   void central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
@@ -373,7 +372,7 @@ private:
     const RealMatrix2DArray& r2_t1_coeff_grads, bool same, Real mean_1,
     Real mean_2, const RealVector& mean1_grad, const RealVector& mean2_grad, 
     RealMatrix2DArray& cov_t1_coeff_grads,
-    const UShort2DArray& incr_key = UShort2DArray());
+    const UShort2DArray& set_partition = UShort2DArray());
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
@@ -576,23 +575,23 @@ private:
 
   /// the type1 coefficients of the expansion for interpolating values
   std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
-    expProdType1Coeffs;
-  /// iterator pointing to active node in expProdType1Coeffs
-  //std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >::iterator expProdT1CoeffsIter;
+    productType1Coeffs;
+  /// iterator pointing to active node in productType1Coeffs
+  std::map<UShortArray, std::map<PolynomialApproximation*,
+    RealVector2DArray> >::iterator prodT1CoeffsIter;
   /// the type2 coefficients of the expansion for interpolating values
   std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
-    expProdType2Coeffs;
-  /// iterator pointing to active node in expProdType2Coeffs
-  //std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >::iterator expProdT2CoeffsIter;
+    productType2Coeffs;
+  /// iterator pointing to active node in productType2Coeffs
+  std::map<UShortArray, std::map<PolynomialApproximation*,
+    RealMatrix2DArray> >::iterator prodT2CoeffsIter;
 
   /// the type1 coefficients of the expansion for interpolating values
-  std::map<UShortArray,
-	   std::map<PolynomialApproximation*, RealVectorDequeArray> >
-    poppedProdType1Coeffs;
+  std::map<UShortArray, std::map<PolynomialApproximation*,
+    RealVectorDequeArray> > poppedProdType1Coeffs;
   /// the type2 coefficients of the expansion for interpolating values
-  std::map<UShortArray,
-	   std::map<PolynomialApproximation*, RealMatrixDequeArray> >
-    poppedProdType2Coeffs;
+  std::map<UShortArray, std::map<PolynomialApproximation*,
+    RealMatrixDequeArray> > poppedProdType2Coeffs;
 };
 
 
@@ -629,6 +628,20 @@ update_active_iterators(const UShortArray& key)
   if (expT1CoeffGradsIter == expansionType1CoeffGrads.end()) {
     std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
+  }
+  prodT1CoeffsIter = productType1Coeffs.find(key);
+  if (prodT1CoeffsIter == productType1Coeffs.end()) {
+    std::map<PolynomialApproximation*, RealVector2DArray> empty_rvm;
+    std::pair<UShortArray, std::map<PolynomialApproximation*,
+      RealVector2DArray> > prv_pair(key, empty_rvm);
+    prodT1CoeffsIter = productType1Coeffs.insert(prv_pair).first;
+  }
+  prodT2CoeffsIter = productType2Coeffs.find(key);
+  if (prodT2CoeffsIter == productType2Coeffs.end()) {
+    std::map<PolynomialApproximation*, RealMatrix2DArray> empty_rmm;
+    std::pair<UShortArray, std::map<PolynomialApproximation*,
+       RealMatrix2DArray> > prm_pair(key, empty_rmm);
+    prodT2CoeffsIter = productType2Coeffs.insert(prm_pair).first;
   }
 
   InterpPolyApproximation::update_active_iterators(key);
