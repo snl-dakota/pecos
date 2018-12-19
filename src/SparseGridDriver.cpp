@@ -179,8 +179,8 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 		BasisConfigOptions& bc_options, short growth_rate)
 {
   growthRate             = growth_rate;
-  //refineType           = ec_options.refinementType;
-  refineControl          = ec_options.refinementControl;
+  //refineType           = ec_options.refineType;
+  refineControl          = ec_options.refineControl;
 
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:

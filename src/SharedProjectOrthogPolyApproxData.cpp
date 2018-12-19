@@ -101,8 +101,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     unsigned short    ssg_level = csg_driver->level();
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form
-      = (expConfigOptions.refinementControl || ssg_level != ssgLevelPrev ||
-	 aniso_wts != ssgAnisoWtsPrev       || activeKey != prevActiveKey );
+      = (expConfigOptions.refineControl || ssg_level != ssgLevelPrev ||
+	 aniso_wts != ssgAnisoWtsPrev   || activeKey != prevActiveKey );
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     UShort2DArray& mi = multiIndexIter->second;
@@ -153,7 +153,7 @@ void SharedProjectOrthogPolyApproxData::increment_data()
   case INCREMENTAL_SPARSE_GRID: { // augment previous data
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
       // update multiIndex and append bookkeeping
@@ -181,7 +181,7 @@ void SharedProjectOrthogPolyApproxData::increment_component_sobol()
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       if (isg_driver->smolyak_coefficients().back()) {
 	reset_sobol_index_map_values();
@@ -228,7 +228,7 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
     // Note: trial/increment sets are still available since expansion pop is
     // ordered to precede grid pop (reverse order from increment grid +
     // update / push expansion)
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       decrement_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
@@ -269,7 +269,7 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       pre_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
@@ -289,7 +289,7 @@ void SharedProjectOrthogPolyApproxData::post_push_data()
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       post_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;

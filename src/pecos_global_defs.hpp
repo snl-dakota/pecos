@@ -122,12 +122,16 @@ enum { QUADRATURE, CUBATURE, LIGHTWEIGHT_SPARSE_GRID, COMBINED_SPARSE_GRID,
 enum { NO_NESTING_OVERRIDE=0, NESTED, NON_NESTED };
 /// options for overriding the default growth restriction policy
 enum { NO_GROWTH_OVERRIDE=0, RESTRICTED, UNRESTRICTED };
-/// options for ExpansionConfigOptions::refinementType (inactive)
+/// options for ExpansionConfigOptions::refineType (inactive)
 enum { NO_REFINEMENT=0, P_REFINEMENT, H_REFINEMENT };
-/// options for ExpansionConfigOptions::refinementControl
+/// options for ExpansionConfigOptions::refineControl
 enum { NO_CONTROL=0, UNIFORM_CONTROL, LOCAL_ADAPTIVE_CONTROL,
        DIMENSION_ADAPTIVE_CONTROL_SOBOL, DIMENSION_ADAPTIVE_CONTROL_DECAY,
        DIMENSION_ADAPTIVE_CONTROL_GENERALIZED };
+/// options for ExpansionConfigOptions::refineMetric
+enum { NO_METRIC=0, COVARIANCE_METRIC, LEVEL_STATS_METRIC, MIXED_STATS_METRIC };
+/// options for ExpansionConfigOptions::refineStatsType
+enum { NO_EXPANSION_STATS=0, ACTIVE_EXPANSION_STATS, COMBINED_EXPANSION_STATS };
 
 /// options for expansion basis type
 enum { DEFAULT_BASIS=0, TENSOR_PRODUCT_BASIS, TOTAL_ORDER_BASIS,

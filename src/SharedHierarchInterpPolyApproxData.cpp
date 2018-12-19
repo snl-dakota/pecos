@@ -70,7 +70,7 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 
     HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
     const UShort4DArray&      key        = hsg_driver->collocation_key();
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
       size_t lev = l1_norm(hsg_driver->trial_set());
       multi_index_to_sobol_index_map(key[lev].back());

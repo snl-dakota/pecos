@@ -459,6 +459,8 @@ private:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
   void increment_coefficients(const UShortArray& index_set);
+  /// increment coefficients of product interpolants
+  void increment_products(const UShort2DArray& incr_key = UShort2DArray());
 
   /// move all coefficient sets from poppedExp{T1Coeffs,T2Coeffs,T1CoeffGrads}
   /// to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -573,16 +575,24 @@ private:
   RealMatrix2DArray combinedExpT1CoeffGrads;
 
   /// the type1 coefficients of the expansion for interpolating values
-  std::map<std::pair<UShortArray, PolynomialApproximation*>, RealVector2DArray>
+  std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
     expProdType1Coeffs;
   /// iterator pointing to active node in expProdType1Coeffs
-  //std::map<UShortArray, RealVector2DArray>::iterator expProdT1CoeffsIter;
-
+  //std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >::iterator expProdT1CoeffsIter;
   /// the type2 coefficients of the expansion for interpolating values
-  std::map<std::pair<UShortArray, PolynomialApproximation*>, RealMatrix2DArray>
+  std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
     expProdType2Coeffs;
   /// iterator pointing to active node in expProdType2Coeffs
-  //std::map<UShortArray, RealMatrix2DArray>::iterator expProdT2CoeffsIter;
+  //std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >::iterator expProdT2CoeffsIter;
+
+  /// the type1 coefficients of the expansion for interpolating values
+  std::map<UShortArray,
+	   std::map<PolynomialApproximation*, RealVectorDequeArray> >
+    poppedProdType1Coeffs;
+  /// the type2 coefficients of the expansion for interpolating values
+  std::map<UShortArray,
+	   std::map<PolynomialApproximation*, RealMatrixDequeArray> >
+    poppedProdType2Coeffs;
 };
 
 

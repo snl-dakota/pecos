@@ -73,7 +73,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
   //  ( (expansionCoeffFlag     && exp_t1_coeffs.length() != num_points) ||
   //    (expansionCoeffGradFlag && exp_t1_coeff_grads.numCols() != num_points));
 
-  if (ec_options.refinementControl) {
+  if (ec_options.refineControl) {
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
     if (referenceMoments.empty())
       referenceMoments.sizeUninitialized(num_moments);
@@ -164,6 +164,11 @@ void HierarchInterpPolyApproximation::compute_coefficients()
     }
   }
 
+  // if efficient deltas needed, compute coefficients of product interpolants
+  short ref_metric = data_rep->expConfigOptions.refineMetric;
+  if (ref_metric == COVARIANCE_METRIC || ref_metric == MIXED_STATS_METRIC)
+    increment_products(); // empty incr_key -> compute reference product interp
+
 #ifdef INTERPOLATION_TEST
   test_interpolation();
 #endif
@@ -195,10 +200,19 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   if (updated) clear_all_computed_bits();
   else         increment_current_from_reference();
 
-  switch (data_rep->expConfigOptions.refinementControl) {
+  switch (data_rep->expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-    increment_coefficients(hsg_driver->trial_set());  break;
+    // increment expansionType{1,2}Coeff{s,Grads}
+    increment_coefficients(hsg_driver->trial_set());
+    // increment expProdType{1,2}Coeffs, if needed
+    if (!expProdType1Coeffs.empty()) {
+      UShort2DArray incr_key;
+      hsg_driver->partition_increment_key(incr_key);
+      increment_products(incr_key);
+    }
+    break;
   default: {
+    // increment expansionType{1,2}Coeff{s,Grads}
     const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
     const UShortArray& incr_sets = hsg_driver->increment_sets();
     size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets;
@@ -207,6 +221,12 @@ void HierarchInterpPolyApproximation::increment_coefficients()
       for (set=start_set; set<num_sets; ++set)
 	increment_coefficients(sm_mi[lev][set]);
     }
+    // increment expProdType{1,2}Coeffs, if needed
+    if (!expProdType1Coeffs.empty()) {
+      UShort2DArray incr_key;
+      hsg_driver->increment_sets_to_increment_key(incr_sets, incr_key);
+      increment_products(incr_key);
+    }
     break;
   }
   }
@@ -214,11 +234,6 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   // size sobolIndices based on shared sobolIndexMap
   allocate_component_sobol();
 }
-
-
-// ***************************************************************
-// TO DO: verify that decrement/push is always valid for surpluses
-// ***************************************************************
 
 
 void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
@@ -235,7 +250,8 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
   RealVector2DArray& exp_t1c  = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2c  = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
-  switch (data_rep->expConfigOptions.refinementControl) {
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+  switch (data_rep->expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     // Note: trial_set() is valid so long as expansion decrement precedes
     // grid decrement (reversing order from increment + update/push), but
@@ -249,7 +265,7 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	pop_t1c[tr_lev].push_back(exp_t1c_l.back());
       }
       exp_t1c_l.pop_back();
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	RealMatrixArray& exp_t2c_l = exp_t2c[tr_lev];
 	if (save_data) {
 	  RealMatrixDequeArray& pop_t2c = poppedExpT2Coeffs[key];
@@ -267,6 +283,42 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	pop_t1cg[tr_lev].push_back(exp_t1cg_l.back());
       }
       exp_t1cg_l.pop_back();
+    }
+
+    // decrement expProdType{1,2}Coeffs if in use
+    if (!expProdType1Coeffs.empty()) {
+      std::map<PolynomialApproximation*, RealVector2DArray>& prod_t1c = 
+	expProdType1Coeffs[key];// = *expProdT1CoeffsIter;
+      std::map<PolynomialApproximation*, RealMatrix2DArray>& prod_t2c = 
+	expProdType2Coeffs[key];// = *expProdT2CoeffsIter;
+      std::map<PolynomialApproximation*, RealVector2DArray>::iterator e1_it;
+      std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator e2_it;
+      std::map<PolynomialApproximation*, RealVectorDequeArray>& pop_prod_t1c = 
+	poppedProdType1Coeffs[key];
+      std::map<PolynomialApproximation*, RealMatrixDequeArray>& pop_prod_t2c = 
+	poppedProdType2Coeffs[key];
+      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
+      std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
+      for (e1_it  = prod_t1c.begin(),     e2_it = prod_t2c.begin(),
+	   p1_it  = pop_prod_t1c.begin(), p2_it = pop_prod_t2c.begin();
+	   e1_it != prod_t1c.end(); ++e1_it, ++e2_it, ++p1_it, ++p2_it) {
+	RealVectorArray& prod_t1c_l = e1_it->second[tr_lev];
+	if (save_data) {
+	  RealVectorDequeArray& pop_prod_t1c = p1_it->second;
+	  if (pop_prod_t1c.size() <= tr_lev) pop_prod_t1c.resize(tr_lev+1);
+	  pop_prod_t1c[tr_lev].push_back(prod_t1c_l.back());
+	}
+	prod_t1c_l.pop_back();
+	if (use_derivs) {
+	  RealMatrixArray& prod_t2c_l = e2_it->second[tr_lev];
+	  if (save_data) {
+	    RealMatrixDequeArray& pop_prod_t2c = p2_it->second;
+	    if (pop_prod_t2c.size() <= tr_lev) pop_prod_t2c.resize(tr_lev+1);
+	    pop_prod_t2c[tr_lev].push_back(prod_t2c_l.back());
+	  }
+	  prod_t2c_l.pop_back();
+	}
+      }
     }
     break;
   }
@@ -296,7 +348,7 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	  pop_t1c_l.insert(pop_t1c_l.end(), rv_it, exp_t1c_l.end());
 	}
 	exp_t1c_l.resize(start_set);
-	if (data_rep->basisConfigOptions.useDerivs) {
+	if (use_derivs) {
 	  RealMatrixArray& exp_t2c_l = exp_t2c[lev];
 	  if (save_data) {
 	    RealMatrixDeque& pop_t2c_l = pop_t2c[lev];
@@ -316,6 +368,53 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	exp_t1cg_l.resize(start_set);
       }
     }
+
+    // decrement expProdType{1,2}Coeffs if in use
+    if (!expProdType1Coeffs.empty()) {
+      std::map<PolynomialApproximation*, RealVector2DArray>::iterator e1_it;
+      std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator e2_it;
+      std::map<PolynomialApproximation*, RealVector2DArray>& prod_t1c
+	= expProdType1Coeffs[key];// = *expProdT1CoeffsIter;
+      if (use_derivs)
+	e2_it = expProdType2Coeffs[key].begin();//expProdT2CoeffsIter->begin();
+      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
+      std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
+      if (save_data) {
+	p1_it = poppedProdType1Coeffs[key].begin();
+	if (use_derivs) p2_it = poppedProdType2Coeffs[key].begin();
+      }
+      for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it) {
+	if (save_data) {
+	  if (p1_it->second.size() <= num_lev) p1_it->second.resize(num_lev+1);
+	  if (use_derivs && p2_it->second.size() <= num_lev)
+	    p2_it->second.resize(num_lev+1);
+	}
+	for (lev=0; lev<num_lev; ++lev) {
+	  start_set = incr_sets[lev];
+	  RealVectorArray& prod_t1c_l = e1_it->second[lev];
+	  if (save_data) {
+	    RealVectorDeque& pop_prod_t1c_l = p1_it->second[lev];
+	    rv_it = prod_t1c_l.end() + start_set;
+	    pop_prod_t1c_l.insert(pop_prod_t1c_l.end(), rv_it,
+				  prod_t1c_l.end());
+	    ++p1_it;
+	  }
+	  prod_t1c_l.resize(start_set);
+	  if (use_derivs) {
+	    RealMatrixArray& prod_t2c_l = e2_it->second[lev];
+	    if (save_data) {
+	      RealMatrixDeque& pop_prod_t2c_l = p2_it->second[lev];
+	      rm_it = prod_t2c_l.end() + start_set;
+	      pop_prod_t2c_l.insert(pop_prod_t2c_l.end(), rm_it,
+				    prod_t2c_l.end());
+	      ++p2_it;
+	    }
+	    prod_t2c_l.resize(start_set);
+	    ++e2_it;
+	  }
+	}
+      }
+    }
     break;
   }
   }
@@ -332,7 +431,7 @@ void HierarchInterpPolyApproximation::push_coefficients()
   if (updated) clear_all_computed_bits();
   else         increment_current_from_reference();
 
-  switch (data_rep->expConfigOptions.refinementControl) {
+  switch (data_rep->expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     // Note: for both a restored or a selected candidate, trial set is pushed
     // to Driver and corresponds to sm_mi[lev].back(), but in the latter case,
@@ -349,25 +448,58 @@ void HierarchInterpPolyApproximation::push_coefficients()
     //size_t lev = l1_norm(tr_set);
     size_t tr_lev = data_rep->hsg_driver()->trial_level(),
           p_index = data_rep->push_index();
+    bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+    RealVectorDeque::iterator v_it;  RealMatrixDeque::iterator m_it;
     if (expansionCoeffFlag) {
       RealVectorDeque& pop_t1c_l = poppedExpT1Coeffs[key][tr_lev];
-      RealVectorDeque::iterator v_it = pop_t1c_l.begin() + p_index;
+      v_it = pop_t1c_l.begin() + p_index;
       expT1CoeffsIter->second[tr_lev].push_back(*v_it);
       pop_t1c_l.erase(v_it);
       SharedHierarchInterpPolyApproxData* data_rep
 	= (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	RealMatrixDeque& pop_t2c_l = poppedExpT2Coeffs[key][tr_lev];
-	RealMatrixDeque::iterator m_it = pop_t2c_l.begin() + p_index;
+        m_it = pop_t2c_l.begin() + p_index;
 	expT2CoeffsIter->second[tr_lev].push_back(*m_it);
 	pop_t2c_l.erase(m_it);
       }
     }
     if (expansionCoeffGradFlag) {
       RealMatrixDeque& pop_t1cg_l = poppedExpT1CoeffGrads[key][tr_lev];
-      RealMatrixDeque::iterator m_it = pop_t1cg_l.begin() + p_index;
+      m_it = pop_t1cg_l.begin() + p_index;
       expT1CoeffGradsIter->second[tr_lev].push_back(*m_it);
       pop_t1cg_l.erase(m_it);
+    }
+
+    // update expProdType{1,2}Coeffs if in use
+    if (!expProdType1Coeffs.empty()) {
+      std::map<PolynomialApproximation*, RealVector2DArray>&        prod_t1c
+	= expProdType1Coeffs[key];
+      std::map<PolynomialApproximation*, RealVectorDequeArray>& pop_prod_t1c
+	= poppedProdType1Coeffs[key];
+      std::map<PolynomialApproximation*, RealVector2DArray>::iterator    e1_it;
+      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
+      std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator    e2_it;
+      std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
+      if (use_derivs) {
+	e2_it =    expProdType2Coeffs[key].begin();
+	p2_it = poppedProdType2Coeffs[key].begin();
+      }
+      for (e1_it  = prod_t1c.begin(), p1_it  = pop_prod_t1c.begin();
+	   e1_it != prod_t1c.end() && p1_it != pop_prod_t1c.end();
+	   ++e1_it, ++p1_it) {
+	RealVectorDeque& pop_prod_t1c_l = p1_it->second[tr_lev];
+	v_it = pop_prod_t1c_l.begin() + p_index;
+	e1_it->second[tr_lev].push_back(*v_it);
+	pop_prod_t1c_l.erase(v_it);
+	if (use_derivs) {
+	  RealMatrixDeque& pop_prod_t2c_l = p2_it->second[tr_lev];
+	  m_it = pop_prod_t2c_l.begin() + p_index;
+	  e2_it->second[tr_lev].push_back(*m_it);
+	  pop_prod_t2c_l.erase(m_it);
+	  ++e2_it; ++p2_it;
+	}
+      }
     }
     break;
   }
@@ -408,13 +540,14 @@ void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
   RealMatrixDequeArray& pop_t2c  = poppedExpT2Coeffs[key];
   RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
   size_t lev, num_lev = std::max(exp_t1c.size(), exp_t1cg.size());
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
   for (lev=0; lev<num_lev; ++lev) {
     if (expansionCoeffFlag) {
       RealVectorArray& exp_t1c_l = exp_t1c[lev];
       RealVectorDeque& pop_t1c_l = pop_t1c[lev];
       exp_t1c_l.insert(exp_t1c_l.end(), pop_t1c_l.begin(), pop_t1c_l.end());
       pop_t1c_l.clear();
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	RealMatrixArray& exp_t2c_l = exp_t2c[lev];
 	RealMatrixDeque& pop_t2c_l = pop_t2c[lev];
 	exp_t2c_l.insert(exp_t2c_l.end(), pop_t2c_l.begin(), pop_t2c_l.end());
@@ -426,6 +559,41 @@ void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
       RealMatrixDeque& pop_t1cg_l = pop_t1cg[lev];
       exp_t1cg_l.insert(exp_t1cg_l.end(), pop_t1cg_l.begin(), pop_t1cg_l.end());
       pop_t1cg_l.clear();
+    }
+  }
+
+  // update expProdType{1,2}Coeffs if in use
+  if (!expProdType1Coeffs.empty()) {
+    std::map<PolynomialApproximation*, RealVector2DArray>&        prod_t1c
+      = expProdType1Coeffs[key];
+    std::map<PolynomialApproximation*, RealVectorDequeArray>& pop_prod_t1c
+      = poppedProdType1Coeffs[key];
+    std::map<PolynomialApproximation*, RealVector2DArray>::iterator    e1_it;
+    std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
+    std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator    e2_it;
+    std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
+    if (use_derivs) {
+      e2_it =    expProdType2Coeffs[key].begin();
+      p2_it = poppedProdType2Coeffs[key].begin();
+    }
+    for (e1_it  = prod_t1c.begin(), p1_it  = pop_prod_t1c.begin();
+	 e1_it != prod_t1c.end() && p1_it != pop_prod_t1c.end();
+	 ++e1_it, ++p1_it) {
+      for (lev=0; lev<num_lev; ++lev) {
+	RealVectorArray&     prod_t1c_l = e1_it->second[lev];
+	RealVectorDeque& pop_prod_t1c_l = p1_it->second[lev];
+	prod_t1c_l.insert(prod_t1c_l.end(), pop_prod_t1c_l.begin(),
+			  pop_prod_t1c_l.end());
+	pop_prod_t1c_l.clear();
+	if (use_derivs) {
+	  RealMatrixArray&     prod_t2c_l = e2_it->second[lev];
+	  RealMatrixDeque& pop_prod_t2c_l = p2_it->second[lev];
+	  prod_t2c_l.insert(prod_t2c_l.end(), pop_prod_t2c_l.begin(),
+			    pop_prod_t2c_l.end());
+	  pop_prod_t2c_l.clear();
+	}
+      }
+      if (use_derivs) { ++e2_it; ++p2_it; }
     }
   }
 }
@@ -584,6 +752,11 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
     expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;
   }
 
+  // clear accumulated (raw) product coefficients
+  // (used to accelerate delta covariance adaptations)
+  expProdType1Coeffs.clear();  poppedProdType1Coeffs.clear();
+  expProdType2Coeffs.clear();  poppedProdType2Coeffs.clear();
+
   clear_all_computed_bits();
 }
 
@@ -665,6 +838,39 @@ increment_coefficients(const UShortArray& index_set)
 	hier_grad[v] = data_grad[v] - prev_grad[v];
     }
   }
+}
+
+
+void HierarchInterpPolyApproximation::
+increment_products(const UShort2DArray& incr_key)
+{
+  // update coefficients of product interpolants needed for efficient delta
+  // covariance calculations
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& active_key = data_rep->activeKey;
+  std::map<PolynomialApproximation*, RealVector2DArray>& prod_t1c = 
+    expProdType1Coeffs[active_key];// = *expProdT1CoeffsIter;
+  std::map<PolynomialApproximation*, RealMatrix2DArray>& prod_t2c = 
+    expProdType2Coeffs[active_key];// = *expProdT2CoeffsIter;
+  std::map<PolynomialApproximation*, RealVector2DArray>::iterator it1;
+  std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator it2;
+  // loop over all PolynomialApproximation* instances previously initialized
+  // (including this pointer)
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
+    UShortArray lf_key;  paired_lf_key(active_key, lf_key);
+    for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
+	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
+      product_difference_interpolant(
+	(HierarchInterpPolyApproximation*)it1->first, it1->second, it2->second,
+	lf_key, incr_key);
+  }
+  else
+    for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
+	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
+      product_interpolant((HierarchInterpPolyApproximation*)it1->first,
+	it1->second, it2->second, incr_key);
 }
 
 
@@ -1582,14 +1788,14 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
     return deltaMoments[1];
 
   // delta-Variance can leverage modSurrData for computing product interpolant
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(this, r1r2_t1_coeffs, r1r2_t2_coeffs);//, incr_key);
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  product_interpolant(this, prod_t1c, prod_t2c, incr_key);
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var =
     delta_covariance(expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     expT1CoeffsIter->second, expT2CoeffsIter->second, true,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     prod_t1c, prod_t2c,
 		     hsg_driver->type1_hierarchical_weight_sets(),
 		     hsg_driver->type2_hierarchical_weight_sets(),
 		     ref_key, incr_key);
@@ -1611,14 +1817,14 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
     return deltaMoments[1];
 
   // delta-Variance can leverage modSurrData for computing product interpolant
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(this, r1r2_t1_coeffs, r1r2_t2_coeffs);//, incr_key);
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  product_interpolant(this, prod_t1c, prod_t2c, incr_key);
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var =
     delta_covariance(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     expT1CoeffsIter->second, expT2CoeffsIter->second, true,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     prod_t1c, prod_t2c,
 		     hsg_driver->smolyak_multi_index(),
 		     hsg_driver->collocation_key(), ref_key, incr_key);
   if (all_mode) {
@@ -1848,6 +2054,7 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& active_key = data_rep->activeKey;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
@@ -1868,21 +2075,31 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
+  /* Rebuild product interpolant from scratch:
   // delta_covariance() is for active expansion --> uses modSurrData
   // (containing model discrepancies) for computing product interpolants:
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
   // only need expectation of R1R2 on incr_key, but product interpolant is
   // nonlinear and we form hierarchical evaluations based on deltaR1R2
+  */
+
+  /* Update product interpolant for incr_key:
+  RealVector2DArray& prod_t1c = expProdType1Coeffs[active_key][poly_approx_2];
+  RealMatrix2DArray& prod_t2c = expProdType2Coeffs[active_key][poly_approx_2];
+  product_interpolant(hip_approx_2, prod_t1c, prod_t2c, incr_key);
+  */
 
   Real delta_covar =
     delta_covariance(expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     hip_approx_2->expT1CoeffsIter->second,
 		     hip_approx_2->expT2CoeffsIter->second, same,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     //prod_t1c, prod_t2c,
+		     expProdType1Coeffs[active_key][poly_approx_2],
+		     expProdType2Coeffs[active_key][poly_approx_2], // ***
 		     hsg_driver->type1_hierarchical_weight_sets(),
-		     hsg_driver->type2_hierarchical_weight_sets(),
-		     ref_key, incr_key);
+		     hsg_driver->type2_hierarchical_weight_sets(), ref_key,
+		     incr_key);
   if (same && data_rep->nonRandomIndices.empty()) // std mode
     { deltaMoments[1] = delta_covar; computedDeltaVariance |= 1; }
   return delta_covar;
@@ -1894,6 +2111,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& active_key = data_rep->activeKey;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
@@ -1910,29 +2128,29 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  /* Rebuild from scratch:
+  /* Rebuild product interpolant from scratch:
   // delta_covariance() is for active expansion --> uses modSurrData
   // (containing model discrepancies) for computing product interpolants:
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
   // only need expectation of R1R2 on incr_key, but product interpolant must
   // be constructed bottom-up from hierarchical surpluses
   */
 
-  std::pair<UShortArray, PolynomialApproximation*>
-    cov_key(data_rep->activeKey, poly_approx_2);
-  RealVector2DArray& prod_t1c = expProdType1Coeffs[cov_key];
-  RealMatrix2DArray& prod_t2c = expProdType2Coeffs[cov_key];
-  // update product interpolant for incr_key
-  // *** TO DO: will need to have a place in the code that promotes incr to ref
-  //            or else last set append may not be selected append
-  product_interpolant(hip_approx_2, prod_t1c, prod_t2c, incr_key);// *** NEW
+  /* Update product interpolant for incr_key:
+  RealVector2DArray& prod_t1c = expProdType1Coeffs[active_key][poly_approx_2];
+  RealMatrix2DArray& prod_t2c = expProdType2Coeffs[active_key][poly_approx_2];
+  product_interpolant(hip_approx_2, prod_t1c, prod_t2c, incr_key);
+  */
 
   Real delta_covar =
     delta_covariance(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     hip_approx_2->expT1CoeffsIter->second,
 		     hip_approx_2->expT2CoeffsIter->second, same,
-		     prod_t1c, prod_t2c, hsg_driver->smolyak_multi_index(),
+		     //prod_t1c, prod_t2c,
+		     expProdType1Coeffs[active_key][poly_approx_2],
+		     expProdType2Coeffs[active_key][poly_approx_2], // ***
+		     hsg_driver->smolyak_multi_index(),
 		     hsg_driver->collocation_key(), ref_key, incr_key);
 
   if (same && !data_rep->nonRandomIndices.empty()) { // all vars mode
@@ -1948,6 +2166,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& active_key = data_rep->activeKey;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   //UShort2DArray ref_key, incr_key;
   //hsg_driver->partition_keys(ref_key, incr_key);
@@ -1958,14 +2177,17 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
   
+  /* Rebuild active product interpolant from scratch:
+
   // Short cut: change in R^2 interpolant can be restricted to active expansion
   // since shifted reference point cancels out when interpolating R^2 via
   // hierarchical differences --> use original surrData (containing Q^l) to
   // compute hierarchical differences in product interpolant
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  UShortArray lf_key;  paired_lf_key(data_rep->activeKey, lf_key);
-  product_difference_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs,
-				 lf_key);
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  UShortArray lf_key;  paired_lf_key(active_key, lf_key);
+  product_difference_interpolant(hip_approx_2, prod_t1c, prod_t2c,
+				 lf_key, incr_key_map[key]);
+  */
 
   // For combined statistics, we utilize the full coefficient maps
   // (expansionType{1,2}Coeffs) for the expected values using ref_key_map,
@@ -1974,10 +2196,12 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   return delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
 			  hip_approx_2->expansionType1Coeffs,
 			  hip_approx_2->expansionType2Coeffs, same,
-			  r1r2_t1_coeffs, r1r2_t2_coeffs,// only active contribs
+			  //prod_t1c, prod_t2c, // only active contribs
+			  expProdType1Coeffs[active_key][poly_approx_2],
+			  expProdType2Coeffs[active_key][poly_approx_2], // ***
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(),
-			  data_rep->activeKey, ref_key_map, incr_key_map);
+			  active_key, ref_key_map, incr_key_map);
 }
 
 
@@ -1987,6 +2211,7 @@ delta_combined_covariance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& active_key = data_rep->activeKey;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   //UShort2DArray ref_key, incr_key;
   //hsg_driver->partition_keys(ref_key, incr_key);
@@ -1997,23 +2222,28 @@ delta_combined_covariance(const RealVector& x,
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
   
+  /* Rebuild active product interpolant from scratch:
+
   // Short cut: change in R^2 interpolant can be restricted to active expansion
   // since shifted reference point cancels out when interpolating R^2 via
   // hierarchical differences --> use original surrData (containing Q^l) to
   // compute these hierarchical differences in the product interpolant for the
   // active model key.
-  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  UShortArray lf_key;  paired_lf_key(data_rep->activeKey, lf_key);
-  product_difference_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs,
-				 lf_key);
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  UShortArray lf_key;  paired_lf_key(active_key, lf_key);
+  product_difference_interpolant(hip_approx_2, prod_t1c, prod_t2c,
+				 lf_key, incr_key_map[key]);
+  */
 
   return delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
 			  hip_approx_2->expansionType1Coeffs,
 			  hip_approx_2->expansionType2Coeffs, same,
-			  r1r2_t1_coeffs, r1r2_t2_coeffs,// only active contribs
+			  //prod_t1c, prod_t2c,	// only active contribs
+			  expProdType1Coeffs[active_key][poly_approx_2],
+			  expProdType2Coeffs[active_key][poly_approx_2], // ***
 			  hsg_driver->smolyak_multi_index_map(),
 			  hsg_driver->collocation_key_map(),
-			  data_rep->activeKey, ref_key_map, incr_key_map);
+			  active_key, ref_key_map, incr_key_map);
 }
 
 
@@ -2992,10 +3222,9 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	  PCout << "c_index = " << c_index << std::endl;
 	  Real r1 = sdr_array_1[c_index].response_function(),
 	       r2 = sdr_array_2[c_index].response_function(), r1r2 = r1*r2,
-	       r1r2_lm1 =
-	         value(sdv_array[c_index].continuous_variables(), sm_mi,
-		   colloc_key, prod_t1c, prod_t2c, lev-1),
-	        surplus = r1r2 - r1r2_lm1;
+	       r1r2_lm1 = value(sdv_array[c_index].continuous_variables(),
+		 sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1),
+	       surplus = r1r2 - r1r2_lm1;
 	  PCout << "Surplus components l" << lev << " s" << set << " p" << pt
 		<< ": r1r2 = " << r1r2 << " r1r2_lm1 = " << r1r2_lm1
 		<< " surplus = " << surplus << std::endl;

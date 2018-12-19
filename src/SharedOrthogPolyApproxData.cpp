@@ -141,7 +141,7 @@ allocate_component_sobol(const UShort2DArray& multi_index)
 
 bool SharedOrthogPolyApproxData::push_available()
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;

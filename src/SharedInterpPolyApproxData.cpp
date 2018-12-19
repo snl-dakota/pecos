@@ -170,7 +170,7 @@ void SharedInterpPolyApproxData::allocate_data()
 
 void SharedInterpPolyApproxData::increment_data()
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     const UShortArray& trial_set = sg_driver->trial_set();
@@ -254,7 +254,7 @@ void SharedInterpPolyApproxData::decrement_data()
   // ordered to precede grid pop (reverse order from increment grid +
   // update / push expansion)
   
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     //SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     //poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
@@ -274,7 +274,7 @@ void SharedInterpPolyApproxData::decrement_data()
 
 bool SharedInterpPolyApproxData::push_available()
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     return sg_driver->push_trial_available();
@@ -294,7 +294,7 @@ void SharedInterpPolyApproxData::pre_push_data()
 {
   // Note: pushIndex avoids need to recompute index f or each QoI approximation
 
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     //const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
     //pushIndex = candidate_index(activeKey, tr_set);
@@ -314,7 +314,7 @@ void SharedInterpPolyApproxData::post_push_data()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     //UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
     //popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
@@ -335,7 +335,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
 {
   // leave polynomialBasis as is (all previous increments are being restored)
 
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
     //poppedLevMultiIndex[activeKey].clear();
     break;

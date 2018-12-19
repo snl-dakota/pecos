@@ -180,7 +180,7 @@ void SharedNodalInterpPolyApproxData::increment_component_sobol()
   case INCREMENTAL_SPARSE_GRID: {
     IncrementalSparseGridDriver* isg_driver
       = (IncrementalSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       if (isg_driver->smolyak_coefficients().back()) {
 	reset_sobol_index_map_values();

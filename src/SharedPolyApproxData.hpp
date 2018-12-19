@@ -45,7 +45,8 @@ public:
 			 short combine_type, short discrep_type,
 			 short output_level, bool vbd_flag,
 			 unsigned short vbd_order, //short refine_type,
-			 short refine_cntl, int max_refine_iter,
+			 short refine_cntl, short refine_metric,
+			 short refine_stats, int max_refine_iter,
 			 int max_solver_iter, Real conv_tol,
 			 unsigned short sc_limit);
   /// copy constructor
@@ -79,10 +80,16 @@ public:
   unsigned short vbdOrderLimit;
 
   // type of refinement: {NO,P,H}_REFINEMENT
-  //short refinementType;
+  //short refineType;
   /// approach for control of refinement: {NO,UNIFORM,LOCAL_ADAPTIVE}_CONTROL
   /// or DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY,GENERALIZED}
-  short refinementControl;
+  short refineControl;
+  /// metric employed for controlling adaptive refinement: COVARIANCE_METRIC,
+  /// MIXED_STATS_METRIC, or LEVEL_STATS_METRIC
+  short refineMetric;
+  /// type of expansion statistics used in computing refinement metric:
+  /// ACTIVE_EXPANSION_STATS or COMBINED_EXPANSION_STATS
+  short refineStatsType;
 
   /// control for limiting the maximum number of refinement iterations
   /// in adapted approximation algorithms
@@ -102,7 +109,8 @@ inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
   combineType(NO_COMBINE), discrepancyType(NO_DISCREP),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
-  /*refinementType(NO_REFINEMENT),*/ refinementControl(NO_CONTROL),
+  /*refineType(NO_REFINEMENT),*/ refineControl(NO_CONTROL),
+  refineMetric(NO_METRIC), refineStatsType(NO_EXPANSION_STATS),
   maxRefineIterations(100), maxSolverIterations(100),
   convergenceTol(1.e-4), softConvLimit(3)
 { }
@@ -113,13 +121,15 @@ ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 		       short combine_type, short discrep_type,
 		       short output_level, bool vbd_flag,
 		       unsigned short vbd_order, //short refine_type,
-		       short refine_cntl, int max_refine_iter,
+		       short refine_cntl, short refine_metric,
+		       short refine_stats, int max_refine_iter,
 		       int max_solver_iter, Real conv_tol,
 		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
   combineType(combine_type), discrepancyType(discrep_type),
   outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
-  /*refinementType(refine_type),*/ refinementControl(refine_cntl),
+  /*refineType(refine_type),*/ refineControl(refine_cntl),
+  refineMetric(refine_metric), refineStatsType(refine_stats),
   maxRefineIterations(max_refine_iter), maxSolverIterations(max_solver_iter),
   convergenceTol(conv_tol), softConvLimit(sc_limit)
 { }
@@ -132,8 +142,10 @@ ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   discrepancyType(ec_options.discrepancyType),
   outputLevel(ec_options.outputLevel), vbdFlag(ec_options.vbdFlag),
   vbdOrderLimit(ec_options.vbdOrderLimit),
-  //refinementType(ec_options.refinementType),
-  refinementControl(ec_options.refinementControl),
+  //refineType(ec_options.refineType),
+  refineControl(ec_options.refineControl),
+  refineMetric(ec_options.refineMetric),
+  refineStatsType(ec_options.refineStatsType),
   maxRefineIterations(ec_options.maxRefineIterations),
   maxSolverIterations(ec_options.maxSolverIterations),
   convergenceTol(ec_options.convergenceTol),
@@ -368,14 +380,14 @@ public:
   /// get ExpansionConfigOptions::vbdOrderLimit
   unsigned short vbd_order_limit() const;
 
-  // set ExpansionConfigOptions::refinementType
+  // set ExpansionConfigOptions::refineType
   //void refinement_type(short refine_type);
-  // get ExpansionConfigOptions::refinementType
+  // get ExpansionConfigOptions::refineType
   //short refinement_type() const;
 
-  /// set ExpansionConfigOptions::refinementControl
+  /// set ExpansionConfigOptions::refineControl
   void refinement_control(short refine_cntl);
-  /// get ExpansionConfigOptions::refinementControl
+  /// get ExpansionConfigOptions::refineControl
   short refinement_control() const;
 
   /// set ExpansionConfigOptions::maxIterations
@@ -390,6 +402,8 @@ public:
   */
   /// get ExpansionConfigOptions::discrepancyType
   short discrepancy_type() const;
+  /// set ExpansionConfigOptions::refineStatsType
+  void refinement_statistics_type(short stats_type);
 
   /// return sobolIndexMap
   const BitArrayULongMap& sobol_index_map() const;
@@ -592,19 +606,19 @@ inline unsigned short SharedPolyApproxData::vbd_order_limit() const
 
 
 //inline void SharedPolyApproxData::refinement_type(short refine_type)
-//{ expConfigOptions.refinementType = refine_type; }
+//{ expConfigOptions.refineType = refine_type; }
 
 
 //inline short SharedPolyApproxData::refinement_type() const
-//{ return expConfigOptions.refinementType; }
+//{ return expConfigOptions.refineType; }
 
 
 inline void SharedPolyApproxData::refinement_control(short refine_cntl)
-{ expConfigOptions.refinementControl = refine_cntl; }
+{ expConfigOptions.refineControl = refine_cntl; }
 
 
 inline short SharedPolyApproxData::refinement_control() const
-{ return expConfigOptions.refinementControl; }
+{ return expConfigOptions.refineControl; }
 
 
 inline void SharedPolyApproxData::maximum_iterations(int max_iter)
@@ -626,6 +640,10 @@ inline Real SharedPolyApproxData::convergence_tolerance() const
 
 inline short SharedPolyApproxData::discrepancy_type() const
 { return expConfigOptions.discrepancyType; }
+
+
+inline void SharedPolyApproxData::refinement_statistics_type(short stats_type)
+{ expConfigOptions.refineStatsType = stats_type; }
 
 
 inline const BitArrayULongMap& SharedPolyApproxData::sobol_index_map() const
@@ -700,7 +718,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 inline size_t SharedPolyApproxData::
 push_index(const UShortArray& key, const UShortArray& tr_set)
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     return sg_driver->push_trial_index(key, tr_set);// lookup for incoming data
@@ -718,7 +736,7 @@ push_index(const UShortArray& key, const UShortArray& tr_set)
 
 inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     size_t p_index = sg_driver->push_index(key); // retrieve value (no lookup)
@@ -737,7 +755,7 @@ inline size_t SharedPolyApproxData::push_index()
 {
   //return push_index(activeKey); // induces unnecessary lookup(s)
 
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     size_t p_index = sg_driver->push_index(); // retrieve pushIndex (no lookup)
@@ -754,7 +772,7 @@ inline size_t SharedPolyApproxData::push_index()
 
 inline size_t SharedPolyApproxData::restore_index(const UShortArray& key)
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     // Option 1: default to be overridden by SharedHierarchPAD:
@@ -776,7 +794,7 @@ inline size_t SharedPolyApproxData::restore_index()
 inline size_t SharedPolyApproxData::
 finalize_index(size_t i, const UShortArray& key)
 {
-  switch (expConfigOptions.refinementControl) {
+  switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
     return sg_driver->finalize_index(i, key);  break;

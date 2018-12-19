@@ -42,7 +42,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case INCREMENTAL_SPARSE_GRID:
-    //if (data_rep->expConfigOptions.refinementControl) {
+    //if (data_rep->expConfigOptions.refineControl) {
       IncrementalSparseGridDriver* isg_driver
 	= (IncrementalSparseGridDriver*)data_rep->driver();
       size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
@@ -124,7 +124,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     size_t i, num_tensor_grids = tp_mi.size(); int coeff;
     SDVArray tp_data_vars; SDRArray tp_data_resp;
     RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
-    bool store_tp = (data_rep->expConfigOptions.refinementControl);
+    bool store_tp = (data_rep->expConfigOptions.refineControl);
     // loop over tensor-products, forming sub-expansions, and sum them up
     // Note: SharedOrthogPolyApproxData::allocate_data() uses
     // sparse_grid_multi_index() to build multiIndex with append_multi_index()
@@ -194,7 +194,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
     size_t start_append = tp_exp_coeffs.size();
     SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
 
-    switch (data_rep->expConfigOptions.refinementControl) {
+    switch (data_rep->expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       RealVector rv; tp_exp_coeffs.push_back(rv);
       RealMatrix rm; tp_exp_coeff_grads.push_back(rm);
@@ -255,7 +255,7 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
       RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
       RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
 
-      switch (data_rep->expConfigOptions.refinementControl) {
+      switch (data_rep->expConfigOptions.refineControl) {
       case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
 	// reset tensor-product bookkeeping and save restorable data
 	poppedExpCoeffs[key].push_back(tp_exp_coeffs.back());
@@ -316,7 +316,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
     size_t start_append = tp_exp_coeffs.size(); // before push_back
 
-    switch (data_rep->expConfigOptions.refinementControl) {
+    switch (data_rep->expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // move previous expansion data to current expansion
       size_t index_star = data_rep->push_index();

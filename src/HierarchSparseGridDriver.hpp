@@ -194,18 +194,26 @@ public:
   /// return collocIndices[key]
   const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
+  /// convert a one-sided increment as in incrementSets (assumes end is defined
+  /// by the total number of sets) to a two-sided key (with beginning and end)
+  void increment_sets_to_increment_key(const UShortArray& incr_sets,
+				       UShort2DArray& incr_key) const;
+  /// define portions of the active level-set hierarchy that are in the
+  /// current increment
+  void partition_increment_key(UShort2DArray& incr_key) const;
+  /// define portions of the active level-set hierarchy that are reference sets
+  void partition_reference_key(UShort2DArray& ref_key) const;
   /// discriminate portions of the active level-set hierarchy that are
   /// reference sets from those in the current increment
-  void partition_keys(UShort2DArray& reference_set_range,
-		      UShort2DArray& increment_set_range) const;
+  void partition_keys(UShort2DArray& ref_key, UShort2DArray& incr_key) const;
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
-  void partition_keys(std::map<UShortArray, UShort2DArray>& reference_range_map,
-    std::map<UShortArray, UShort2DArray>& increment_range_map) const;
+  void partition_keys(std::map<UShortArray, UShort2DArray>& ref_key_map,
+    std::map<UShortArray, UShort2DArray>& incr_key_map) const;
   /// discriminate portions of the active level-set-point hierarchy that are
   /// in the reference grid from those in the current increment
-  void partition_keys(UShort3DArray& reference_pt_range,
-		      UShort3DArray& increment_pt_range) const;
+  void partition_keys(UShort3DArray&  ref_pt_range,
+		      UShort3DArray& incr_pt_range) const;
 
   /// compute points and weights for all levels and sets of the hierarchical
   /// sparse grid indicated by Smolyak multi-index and collocation key
