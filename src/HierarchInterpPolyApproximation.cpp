@@ -297,31 +297,46 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	= prodT2CoeffsIter->second;
       std::map<PolynomialApproximation*, RealVector2DArray>::iterator e1_it;
       std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator e2_it;
-      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
-      std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
       if (save_data) {
-	p1_it = poppedProdType1Coeffs[key].begin();
-	if (use_derivs) p2_it = poppedProdType2Coeffs[key].begin();
-      }
-      for (e1_it  = prod_t1c.begin(), e2_it  = prod_t2c.begin();
-	   e1_it != prod_t1c.end() && e2_it != prod_t2c.end(); ++e1_it,++e2_it){
-	RealVectorArray& prod_t1c_l = e1_it->second[tr_lev];
-	if (save_data) {
+	std::map<PolynomialApproximation*,RealVectorDequeArray>& pop_prod_t1c
+	  = poppedProdType1Coeffs[key];
+	if (pop_prod_t1c.empty()) // sync pointer set with prod_t1c
+	  for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it)
+	    pop_prod_t1c.insert(std::pair<PolynomialApproximation*,
+	      RealVectorDequeArray>(e1_it->first, RealVectorDequeArray()));
+	std::map<PolynomialApproximation*,RealVectorDequeArray>::iterator p1_it
+	  = pop_prod_t1c.begin();
+	std::map<PolynomialApproximation*,RealMatrixDequeArray>::iterator p2_it;
+	if (use_derivs) {
+	  std::map<PolynomialApproximation*, RealMatrixDequeArray>& pop_prod_t2c
+	    = poppedProdType2Coeffs[key];
+	  if (pop_prod_t2c.empty()) // sync pointer set with prod_t2c
+	    for (e2_it = prod_t2c.begin(); e2_it != prod_t2c.end(); ++e2_it)
+	      pop_prod_t2c.insert(std::pair<PolynomialApproximation*,
+	        RealMatrixDequeArray>(e2_it->first, RealMatrixDequeArray()));
+	  e2_it = prod_t2c.begin(); p2_it = pop_prod_t2c.begin();
+	}
+	for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it) {
+	  PolynomialApproximation* poly_approx_2 = e1_it->first;
+	  RealVectorArray& prod_t1c_l = e1_it->second[tr_lev];
 	  RealVectorDequeArray& pop_prod_t1c = p1_it->second;
 	  if (pop_prod_t1c.size() <= tr_lev) pop_prod_t1c.resize(tr_lev+1);
-	  pop_prod_t1c[tr_lev].push_back(prod_t1c_l.back());
-	  ++p1_it;
-	}
-	prod_t1c_l.pop_back();
-	if (use_derivs) {
-	  RealMatrixArray& prod_t2c_l = e2_it->second[tr_lev];
-	  if (save_data) {
+	  pop_prod_t1c[tr_lev].push_back(prod_t1c_l.back());    ++p1_it;
+	  prod_t1c_l.pop_back();
+	  if (use_derivs) {
+	    RealMatrixArray& prod_t2c_l = e2_it->second[tr_lev];
 	    RealMatrixDequeArray& pop_prod_t2c = p2_it->second;
 	    if (pop_prod_t2c.size() <= tr_lev) pop_prod_t2c.resize(tr_lev+1);
-	    pop_prod_t2c[tr_lev].push_back(prod_t2c_l.back());
-	    ++p2_it;
+	    pop_prod_t2c[tr_lev].push_back(prod_t2c_l.back());  ++p2_it;
+	    prod_t2c_l.pop_back();                              ++e2_it;
 	  }
-	  prod_t2c_l.pop_back();
+	}
+      }
+      else {
+	if (use_derivs) e2_it = prod_t2c.begin();
+	for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it) {
+	  e1_it->second[tr_lev].pop_back();
+	  if (use_derivs) { e2_it->second[tr_lev].pop_back(); ++e2_it; }
 	}
       }
     }
@@ -384,40 +399,56 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	= prodT2CoeffsIter->second;
       std::map<PolynomialApproximation*, RealVector2DArray>::iterator e1_it;
       std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator e2_it;
-      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
-      std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
       if (save_data) {
-	p1_it = poppedProdType1Coeffs[key].begin();
-	if (use_derivs) p2_it = poppedProdType2Coeffs[key].begin();
-      }
-      for (e1_it  = prod_t1c.begin(), e2_it  = prod_t2c.begin();
-	   e1_it != prod_t1c.end() && e2_it != prod_t2c.end(); ++e1_it,++e2_it){
-	if (save_data) {
+	std::map<PolynomialApproximation*, RealVectorDequeArray>& pop_prod_t1c
+	  = poppedProdType1Coeffs[key];
+	if (pop_prod_t1c.empty()) // sync pointer set with prod_t1c
+	  for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it)
+	    pop_prod_t1c.insert(std::pair<PolynomialApproximation*,
+	      RealVectorDequeArray>(e1_it->first, RealVectorDequeArray()));
+	std::map<PolynomialApproximation*,RealVectorDequeArray>::iterator p1_it
+	  = pop_prod_t1c.begin();
+	std::map<PolynomialApproximation*,RealMatrixDequeArray>::iterator p2_it;
+	if (use_derivs) {
+	  std::map<PolynomialApproximation*, RealMatrixDequeArray>& pop_prod_t2c
+	    = poppedProdType2Coeffs[key];
+	  if (pop_prod_t2c.empty()) // sync pointer set with prod_t2c
+	    for (e2_it = prod_t2c.begin(); e2_it != prod_t2c.end(); ++e2_it)
+	      pop_prod_t2c.insert(std::pair<PolynomialApproximation*,
+	        RealMatrixDequeArray>(e2_it->first, RealMatrixDequeArray()));
+	  e2_it = prod_t2c.begin(); p2_it = pop_prod_t2c.begin();
+	}
+	for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it) {
 	  if (p1_it->second.size() <= num_lev) p1_it->second.resize(num_lev+1);
 	  if (use_derivs && p2_it->second.size() <= num_lev)
 	    p2_it->second.resize(num_lev+1);
-	}
-	for (lev=0; lev<num_lev; ++lev) {
-	  start_set = incr_sets[lev];
-	  RealVectorArray& prod_t1c_l = e1_it->second[lev];
-	  if (save_data) {
+	  for (lev=0; lev<num_lev; ++lev) {
+	    start_set = incr_sets[lev];
+	    RealVectorArray&     prod_t1c_l = e1_it->second[lev];
 	    RealVectorDeque& pop_prod_t1c_l = p1_it->second[lev];
-	    rv_it = prod_t1c_l.end() + start_set;
+	    rv_it = prod_t1c_l.begin() + start_set;
 	    pop_prod_t1c_l.insert(pop_prod_t1c_l.end(), rv_it,
 				  prod_t1c_l.end());
-	    ++p1_it;
-	  }
-	  prod_t1c_l.resize(start_set);
-	  if (use_derivs) {
-	    RealMatrixArray& prod_t2c_l = e2_it->second[lev];
-	    if (save_data) {
+	    prod_t1c_l.resize(start_set);
+	    if (use_derivs) {
+	      RealMatrixArray&     prod_t2c_l = e2_it->second[lev];
 	      RealMatrixDeque& pop_prod_t2c_l = p2_it->second[lev];
-	      rm_it = prod_t2c_l.end() + start_set;
+	      rm_it = prod_t2c_l.begin() + start_set;
 	      pop_prod_t2c_l.insert(pop_prod_t2c_l.end(), rm_it,
 				    prod_t2c_l.end());
-	      ++p2_it;
+	      prod_t2c_l.resize(start_set);
 	    }
-	    prod_t2c_l.resize(start_set);
+	  }
+	  ++p1_it; if (use_derivs) { ++p2_it; ++e2_it; }
+	}
+      }
+      else {
+	if (use_derivs) e2_it = prod_t2c.begin();
+	for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it) {
+	  for (lev=0; lev<num_lev; ++lev) {
+	    start_set = incr_sets[lev];
+	    e1_it->second[lev].resize(start_set);
+	    if (use_derivs) { e2_it->second[lev].resize(start_set); ++e2_it; }
 	  }
 	}
       }
@@ -485,10 +516,10 @@ void HierarchInterpPolyApproximation::push_coefficients()
       std::map<PolynomialApproximation*, RealVector2DArray>& prod_t1c
 	= prodT1CoeffsIter->second;
       std::map<PolynomialApproximation*, RealVectorDequeArray>& pop_prod_t1c
-	= poppedProdType1Coeffs[key];//= prodT2CoeffsIter->second;
+	= poppedProdType1Coeffs[key];
       std::map<PolynomialApproximation*, RealVector2DArray>::iterator    e1_it;
-      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
       std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator    e2_it;
+      std::map<PolynomialApproximation*, RealVectorDequeArray>::iterator p1_it;
       std::map<PolynomialApproximation*, RealMatrixDequeArray>::iterator p2_it;
       if (use_derivs) {
 	e2_it = prodT2CoeffsIter->second.begin();
