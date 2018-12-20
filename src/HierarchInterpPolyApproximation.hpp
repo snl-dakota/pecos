@@ -53,6 +53,11 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
+  /// initialize productType{1,2}Coeffs using pointers to other QoI
+  void initialize_covariance(PolynomialApproximation* poly_approx_2);
+  /// clear covariancePointers
+  void clear_covariance_pointers();
+
   void compute_coefficients();
 
   /// update the coefficients for the expansion of interpolation polynomials:
@@ -458,6 +463,10 @@ private:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
   void increment_coefficients(const UShortArray& index_set);
+
+  /// initialize product interpolant accumulators (prodType{1,2}Coeffs)
+  /// from covariancePointers
+  void initialize_products();
   /// increment coefficients of product interpolants
   void increment_products(const UShort2DArray& incr_key = UShort2DArray());
 
@@ -592,6 +601,9 @@ private:
   /// the type2 coefficients of the expansion for interpolating values
   std::map<UShortArray, std::map<PolynomialApproximation*,
     RealMatrixDequeArray> > poppedProdType2Coeffs;
+
+  /// array of pointers to the set of QoI used in covariance calculations
+  std::deque<PolynomialApproximation*> covariancePointers;
 };
 
 
@@ -647,6 +659,21 @@ update_active_iterators(const UShortArray& key)
   InterpPolyApproximation::update_active_iterators(key);
   return true;
 }
+
+
+inline void HierarchInterpPolyApproximation::
+initialize_covariance(PolynomialApproximation* poly_approx_2)
+{
+  // don't know all active (multilevel) keys at initialization time and don't
+  // know all pointers within a single approximation's compute_coefficients()
+  // --> cache pointers here for use in initializing productType{1,2}Coeffs
+  // within compute_coefficients() (which calls initialize_products())
+  covariancePointers.push_back(poly_approx_2);
+}
+
+
+inline void HierarchInterpPolyApproximation::clear_covariance_pointers()
+{ covariancePointers.clear(); }
 
 
 inline void HierarchInterpPolyApproximation::clear_reference_computed_bits()
