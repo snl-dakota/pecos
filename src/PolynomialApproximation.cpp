@@ -455,19 +455,19 @@ void PolynomialApproximation::allocate_total_sobol()
 
 void PolynomialApproximation::
 initialize_covariance(PolynomialApproximation* poly_approx_2)
-{
-  PCerr << "Error: initialize_covariance() not defined for this polynomial "
-	<< "approximation type." << std::endl;
-  abort_handler(-1);
-}
+{ } // default is no-op
 
 
 void PolynomialApproximation::clear_covariance_pointers()
-{
-  PCerr << "Error: clear_covariance_pointers() not defined for this polynomial "
-	<< "approximation type." << std::endl;
-  abort_handler(-1);
-}
+{ } // default is no-op
+
+
+void PolynomialApproximation::initialize_products()
+{ } // default is no-op
+
+
+bool PolynomialApproximation::product_interpolants()
+{ return false; } // default
 
 
 ULongULongMap PolynomialApproximation::sparse_sobol_index_map() const

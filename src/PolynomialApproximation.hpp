@@ -53,10 +53,14 @@ public:
   /// size component Sobol arrays
   virtual void allocate_component_sobol();
 
-  /// initialize covariance accumulators with pointers to other QoI
+  /// initialize product (covariance) accumulators with pointers to other QoI
   virtual void initialize_covariance(PolynomialApproximation* poly_approx_2);
   /// clear pointers to other QoI
   virtual void clear_covariance_pointers();
+  /// (re)initialize and update product accumulators
+  virtual void initialize_products();
+  /// query whether product interpolants are defined (non-empty)
+  virtual bool product_interpolants();
 
   /// Computes sensitivity indices according to VBD specification
   virtual void compute_component_sobol() = 0;

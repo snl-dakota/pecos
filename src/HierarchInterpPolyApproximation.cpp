@@ -166,10 +166,8 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 
   // if efficient deltas needed, compute coefficients of product interpolants
   short ref_metric = data_rep->expConfigOptions.refineMetric;
-  if (ref_metric == COVARIANCE_METRIC || ref_metric == MIXED_STATS_METRIC) {
-    initialize_products(); // init prodType{1,2}Coeffs using covariancePointers
-    increment_products();  // empty incr_key -> compute reference product interp
-  }
+  if (ref_metric == COVARIANCE_METRIC || ref_metric == MIXED_STATS_METRIC)
+    initialize_products(); // initialize/update prodType{1,2}Coeffs
 
 #ifdef INTERPOLATION_TEST
   test_interpolation();
@@ -888,23 +886,36 @@ void HierarchInterpPolyApproximation::initialize_products()
   std::map<PolynomialApproximation*, RealMatrix2DArray>& prod_t2c
     = prodT2CoeffsIter->second;
 
-  prod_t1c.clear();  prod_t2c.clear();
-  RealVector2DArray empty_rv2a;  RealMatrix2DArray empty_rm2a;
-  std::deque<PolynomialApproximation*>::iterator it;
-  for (it=covariancePointers.begin(); it!=covariancePointers.end(); ++it)
-    { prod_t1c[*it] = empty_rv2a;  prod_t2c[*it] = empty_rm2a; }
+  size_t num_cov_ptr = covariancePointers.size();
+  if (prod_t1c.size() == num_cov_ptr && prod_t2c.size() == num_cov_ptr) {
+    // already configured; only need to clear data
+    std::map<PolynomialApproximation*, RealVector2DArray>::iterator it1;
+    std::map<PolynomialApproximation*, RealMatrix2DArray>::iterator it2;
+    for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
+	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
+      { it1->second.clear(); it2->second.clear(); }
+  }
+  else { // build pointer mappings from sratch
+    prod_t1c.clear();  prod_t2c.clear();
+    RealVector2DArray empty_rv2a;  RealMatrix2DArray empty_rm2a;
+    std::set<PolynomialApproximation*>::iterator it;
+    for (it=covariancePointers.begin(); it!=covariancePointers.end(); ++it)
+      { prod_t1c[*it] = empty_rv2a;  prod_t2c[*it] = empty_rm2a; }
+  }
+
+  // synchronize product interpolants with current state of expType{1,2}Coeffs
+  increment_products(); // no set_partition -> compute all active terms
 }
 
 
 void HierarchInterpPolyApproximation::
-increment_products(const UShort2DArray& incr_key)
+increment_products(const UShort2DArray& set_partition)
 {
   // update coefficients of product interpolants needed for efficient delta
   // covariance calculations
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& active_key = data_rep->activeKey;
   std::map<PolynomialApproximation*, RealVector2DArray>& prod_t1c
     = prodT1CoeffsIter->second;
   std::map<PolynomialApproximation*, RealMatrix2DArray>& prod_t2c
@@ -914,17 +925,17 @@ increment_products(const UShort2DArray& incr_key)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    UShortArray lf_key;  paired_lf_key(active_key, lf_key);
+    UShortArray lf_key;  paired_lf_key(data_rep->activeKey, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
       product_difference_interpolant(it1->first, it1->second, it2->second,
-	lf_key, incr_key);
+	lf_key, set_partition);
     }
   }
   else
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
-      product_interpolant(it1->first, it1->second, it2->second, incr_key);
+      product_interpolant(it1->first, it1->second, it2->second, set_partition);
 }
 
 

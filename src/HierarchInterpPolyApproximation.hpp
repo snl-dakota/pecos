@@ -57,6 +57,11 @@ protected:
   void initialize_covariance(PolynomialApproximation* poly_approx_2);
   /// clear covariancePointers
   void clear_covariance_pointers();
+  /// initialize product interpolant accumulators (prodType{1,2}Coeffs)
+  /// from covariancePointers
+  void initialize_products();
+  /// check if prodType{1,2}Coeffs are defined (non-empty)
+  bool product_interpolants();
 
   void compute_coefficients();
 
@@ -464,11 +469,8 @@ private:
   /// for a single index_set
   void increment_coefficients(const UShortArray& index_set);
 
-  /// initialize product interpolant accumulators (prodType{1,2}Coeffs)
-  /// from covariancePointers
-  void initialize_products();
   /// increment coefficients of product interpolants
-  void increment_products(const UShort2DArray& incr_key = UShort2DArray());
+  void increment_products(const UShort2DArray& set_partition = UShort2DArray());
 
   /// move all coefficient sets from poppedExp{T1Coeffs,T2Coeffs,T1CoeffGrads}
   /// to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -603,7 +605,7 @@ private:
     RealMatrixDequeArray> > poppedProdType2Coeffs;
 
   /// array of pointers to the set of QoI used in covariance calculations
-  std::deque<PolynomialApproximation*> covariancePointers;
+  std::set<PolynomialApproximation*> covariancePointers;
 };
 
 
@@ -668,12 +670,16 @@ initialize_covariance(PolynomialApproximation* poly_approx_2)
   // know all pointers within a single approximation's compute_coefficients()
   // --> cache pointers here for use in initializing productType{1,2}Coeffs
   // within compute_coefficients() (which calls initialize_products())
-  covariancePointers.push_back(poly_approx_2);
+  covariancePointers.insert(poly_approx_2);
 }
 
 
 inline void HierarchInterpPolyApproximation::clear_covariance_pointers()
 { covariancePointers.clear(); }
+
+
+inline bool HierarchInterpPolyApproximation::product_interpolants()
+{ return (!productType1Coeffs.empty() || !productType2Coeffs.empty()); }
 
 
 inline void HierarchInterpPolyApproximation::clear_reference_computed_bits()
