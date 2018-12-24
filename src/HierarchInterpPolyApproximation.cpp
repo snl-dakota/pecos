@@ -263,6 +263,11 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	RealVectorDequeArray& pop_t1c = poppedExpT1Coeffs[key];
 	if (pop_t1c.size() <= tr_lev) pop_t1c.resize(tr_lev+1);
 	pop_t1c[tr_lev].push_back(exp_t1c_l.back());
+	// TO DO: Request a swap function in SerialDense{Vector,Matrix} ?
+	// (SerialDenseHelpers has insufficient access -> no values(ptr) and
+	// ptr-based ctor doesn't support a shallow copy without a View)
+	//pop_t1c[tr_lev].push_back(RealVector());
+	//Teuchos::swap(pop_t1c[tr_lev].back(), exp_t1c_l.back());
       }
       exp_t1c_l.pop_back();
       if (use_derivs) {
@@ -271,6 +276,8 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	  RealMatrixDequeArray& pop_t2c = poppedExpT2Coeffs[key];
 	  if (pop_t2c.size() <= tr_lev) pop_t2c.resize(tr_lev+1);
 	  pop_t2c[tr_lev].push_back(exp_t2c_l.back());
+	  //pop_t2c[tr_lev].push_back(RealMatrix());
+	  //Teuchos::swap(pop_t2c[tr_lev].back(), exp_t2c_l.back());
 	}
 	exp_t2c_l.pop_back();
       }
