@@ -19,6 +19,8 @@
 #include "SharedHierarchInterpPolyApproxData.hpp"
 #include "HierarchSparseGridDriver.hpp"
 
+//#define TEUCHOS_SWAP
+
 namespace Pecos {
 
 
@@ -476,6 +478,15 @@ private:
   /// to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void promote_all_popped_coefficients();
 
+  /// helper to manage deep versus shallow copy when pushing to end of deque
+  void push_to_deque(RealVector& rv, RealVectorDeque& rv_deque);
+  /// helper to manage deep versus shallow copy when pushing to end of deque
+  void push_to_deque(RealMatrix& rm, RealMatrixDeque& rm_deque);
+  /// helper to manage deep versus shallow copy when pushing to end of array
+  void push_to_array(RealVector& rv, RealVectorArray& rv_array);
+  /// helper to manage deep versus shallow copy when pushing to end of array
+  void push_to_array(RealMatrix& rm, RealMatrixArray& rm_array);
+
   /// helper function for common case where coefficients and modSurrData
   /// are synchronized
   void integrate_response_moments(size_t num_moments,
@@ -612,7 +623,9 @@ private:
 inline HierarchInterpPolyApproximation::
 HierarchInterpPolyApproximation(const SharedBasisApproxData& shared_data):
   InterpPolyApproximation(shared_data),
-  expT1CoeffsIter(expansionType1Coeffs.end())
+  expT1CoeffsIter(expansionType1Coeffs.end()),
+  prodT1CoeffsIter(productType1Coeffs.end()),
+  prodT2CoeffsIter(productType2Coeffs.end())
 { }
 
 
@@ -643,23 +656,37 @@ update_active_iterators(const UShortArray& key)
     std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
-  prodT1CoeffsIter = productType1Coeffs.find(key);
-  if (prodT1CoeffsIter == productType1Coeffs.end()) {
-    std::map<PolynomialApproximation*, RealVector2DArray> empty_rvm;
-    std::pair<UShortArray, std::map<PolynomialApproximation*,
-      RealVector2DArray> > prv_pair(key, empty_rvm);
-    prodT1CoeffsIter = productType1Coeffs.insert(prv_pair).first;
-  }
-  prodT2CoeffsIter = productType2Coeffs.find(key);
-  if (prodT2CoeffsIter == productType2Coeffs.end()) {
-    std::map<PolynomialApproximation*, RealMatrix2DArray> empty_rmm;
-    std::pair<UShortArray, std::map<PolynomialApproximation*,
-       RealMatrix2DArray> > prm_pair(key, empty_rmm);
-    prodT2CoeffsIter = productType2Coeffs.insert(prm_pair).first;
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.refineControl) {
+    prodT1CoeffsIter = productType1Coeffs.find(key);
+    if (prodT1CoeffsIter == productType1Coeffs.end()) {
+      std::map<PolynomialApproximation*, RealVector2DArray> empty_rvm;
+      std::pair<UShortArray, std::map<PolynomialApproximation*,
+	RealVector2DArray> > prv_pair(key, empty_rvm);
+      prodT1CoeffsIter = productType1Coeffs.insert(prv_pair).first;
+    }
+    prodT2CoeffsIter = productType2Coeffs.find(key);
+    if (prodT2CoeffsIter == productType2Coeffs.end()) {
+      std::map<PolynomialApproximation*, RealMatrix2DArray> empty_rmm;
+      std::pair<UShortArray, std::map<PolynomialApproximation*,
+        RealMatrix2DArray> > prm_pair(key, empty_rmm);
+      prodT2CoeffsIter = productType2Coeffs.insert(prm_pair).first;
+    }
   }
 
   InterpPolyApproximation::update_active_iterators(key);
   return true;
+}
+
+
+inline bool HierarchInterpPolyApproximation::product_interpolants()
+{
+  return ( ( prodT1CoeffsIter != productType1Coeffs.end() &&
+	    !prodT1CoeffsIter->second.empty() ) ||
+	   ( prodT2CoeffsIter != productType2Coeffs.end() &&
+	    !prodT2CoeffsIter->second.empty() ) );
 }
 
 
@@ -676,10 +703,6 @@ initialize_covariance(PolynomialApproximation* poly_approx_2)
 
 inline void HierarchInterpPolyApproximation::clear_covariance_pointers()
 { covariancePointers.clear(); }
-
-
-inline bool HierarchInterpPolyApproximation::product_interpolants()
-{ return (!productType1Coeffs.empty() || !productType2Coeffs.empty()); }
 
 
 inline void HierarchInterpPolyApproximation::clear_reference_computed_bits()
@@ -727,6 +750,58 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
     varianceGradient = varianceRefGradient;
 
   clear_delta_computed_bits(); // clear delta bits, but retain reference
+}
+
+
+inline void HierarchInterpPolyApproximation::
+push_to_deque(RealVector& rv, RealVectorDeque& rv_deque)
+{
+#ifdef TEUCHOS_SWAP
+  // avoid deep copy of potentially large vector
+  rv_deque.push_back(RealVector());
+  rv_deque.back().swap(rv); // alters rv (ok when where rv to be popped)
+#else
+  rv_deque.push_back(rv);   // rv unchanged
+#endif // TEUCHOS_SWAP
+}
+
+
+inline void HierarchInterpPolyApproximation::
+push_to_deque(RealMatrix& rm, RealMatrixDeque& rm_deque)
+{
+#ifdef TEUCHOS_SWAP
+  // avoid deep copy of potentially large matrix
+  rm_deque.push_back(RealMatrix());
+  rm_deque.back().swap(rm); // alters rm (ok when where rm to be popped)
+#else
+  rm_deque.push_back(rm);   // rm unchanged
+#endif // TEUCHOS_SWAP
+}
+
+
+inline void HierarchInterpPolyApproximation::
+push_to_array(RealVector& rv, RealVectorArray& rv_array)
+{
+#ifdef TEUCHOS_SWAP
+  // avoid deep copy of potentially large vector
+  rv_array.push_back(RealVector());
+  rv_array.back().swap(rv); // alters rv (ok when where rv to be popped)
+#else
+  rv_array.push_back(rv);   // rv unchanged
+#endif // TEUCHOS_SWAP
+}
+
+
+inline void HierarchInterpPolyApproximation::
+push_to_array(RealMatrix& rm, RealMatrixArray& rm_array)
+{
+#ifdef TEUCHOS_SWAP
+  // avoid deep copy of potentially large matrix
+  rm_array.push_back(RealMatrix());
+  rm_array.back().swap(rm); // alters rm (ok when where rm to be popped)
+#else
+  rm_array.push_back(rm);   // rm unchanged
+#endif // TEUCHOS_SWAP
 }
 
 
