@@ -19,8 +19,6 @@
 #include "SharedHierarchInterpPolyApproxData.hpp"
 #include "HierarchSparseGridDriver.hpp"
 
-//#define TEUCHOS_SWAP
-
 namespace Pecos {
 
 
@@ -478,27 +476,6 @@ private:
   /// to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void promote_all_popped_coefficients();
 
-  /// helper to manage deep versus shallow copy when pushing to end of deque
-  void push_to_deque(RealVector& rv, RealVectorDeque& rv_deque);
-  /// helper to manage deep versus shallow copy when pushing to end of deque
-  void push_to_deque(RealVectorArray::iterator itb,
-		     RealVectorArray::iterator ite, RealVectorDeque& rv_deque);
-  /// helper to manage deep versus shallow copy when pushing to end of deque
-  void push_to_deque(RealMatrix& rm, RealMatrixDeque& rm_deque);
-  /// helper to manage deep versus shallow copy when pushing to end of deque
-  void push_to_deque(RealMatrixArray::iterator itb,
-		     RealMatrixArray::iterator ite, RealMatrixDeque& rm_deque);
-  /// helper to manage deep versus shallow copy when pushing to end of array
-  void push_to_array(RealVector& rv, RealVectorArray& rv_array);
-  /// helper to manage deep versus shallow copy when pushing to end of array
-  void push_to_array(RealVectorDeque::iterator itb,
-		     RealVectorDeque::iterator ite, RealVectorArray& rv_array);
-  /// helper to manage deep versus shallow copy when pushing to end of array
-  void push_to_array(RealMatrix& rm, RealMatrixArray& rm_array);
-  /// helper to manage deep versus shallow copy when pushing to end of array
-  void push_to_array(RealMatrixDeque::iterator itb,
-		     RealMatrixDeque::iterator ite, RealMatrixArray& rm_array);
-
   /// helper function for common case where coefficients and modSurrData
   /// are synchronized
   void integrate_response_moments(size_t num_moments,
@@ -762,138 +739,6 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
     varianceGradient = varianceRefGradient;
 
   clear_delta_computed_bits(); // clear delta bits, but retain reference
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_deque(RealVector& rv, RealVectorDeque& rv_deque)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copy of potentially large vector
-  rv_deque.push_back(RealVector());
-  rv_deque.back().swap(rv); // alters rv (ok when where rv to be popped)
-#else
-  rv_deque.push_back(rv);   // rv unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_deque(RealVectorArray::iterator itb, RealVectorArray::iterator ite,
-	      RealVectorDeque& rv_deque)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copies of potentially large vectors
-  // Note: for RandomAccessIterators, complexity of std::distance() is constant,
-  //       so iterator-based API is more flexible and is not inefficient
-  size_t i, array_len = std::distance(itb, ite), deque_len = rv_deque.size(),
-    new_deque_len = array_len + deque_len;
-  RealVectorArray::iterator it;
-  rv_deque.resize(new_deque_len); // populates end with empty vectors
-  for (i=deque_len, it=itb; it!=ite; ++i, ++it)
-    rv_deque[i].swap(*it); // alters rv (ok since rv will be popped)
-#else
-  rv_deque.insert(rv_deque.end(), itb, ite); // incoming rv's unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_deque(RealMatrix& rm, RealMatrixDeque& rm_deque)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copy of potentially large matrix
-  rm_deque.push_back(RealMatrix());
-  rm_deque.back().swap(rm); // alters rm (ok since rm will be popped)
-#else
-  rm_deque.push_back(rm);   // rm unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_deque(RealMatrixArray::iterator itb, RealMatrixArray::iterator ite,
-	      RealMatrixDeque& rm_deque)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copies of potentially large vectors
-  // Note: for RandomAccessIterators, complexity of std::distance() is constant,
-  //       so iterator-based API is more flexible and is not inefficient
-  size_t i, array_len = std::distance(itb, ite), deque_len = rm_deque.size(),
-    new_deque_len = array_len + deque_len;
-  RealMatrixArray::iterator it;
-  rm_deque.resize(new_deque_len); // populates end with empty vectors
-  for (i=deque_len, it=itb; it!=ite; ++i, ++it)
-    rm_deque[i].swap(*it); // alters rm (ok since rm will be popped)
-#else
-  rm_deque.insert(rm_deque.end(), itb, ite); // incoming rm's unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_array(RealVector& rv, RealVectorArray& rv_array)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copy of potentially large vector
-  rv_array.push_back(RealVector());
-  rv_array.back().swap(rv); // alters rv (ok since rv will be popped)
-#else
-  rv_array.push_back(rv);   // rv unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_array(RealVectorDeque::iterator itb, RealVectorDeque::iterator ite,
-	      RealVectorArray& rv_array)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copies of potentially large vectors
-  // Note: for RandomAccessIterators, complexity of std::distance() is constant,
-  //       so iterator-based API is more flexible and is not inefficient
-  size_t i, deque_len = std::distance(itb, ite), array_len = rv_array.size(),
-    new_array_len = array_len + deque_len;
-  RealVectorDeque::iterator it;
-  rv_array.resize(new_array_len); // populates end with empty vectors
-  for (i=array_len, it=itb; it!=ite; ++i, ++it)
-    rv_array[i].swap(*it); // alters rv (ok since rv will be popped)
-#else
-  rv_array.insert(rv_array.end(), itb, ite); // incoming rv's unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_array(RealMatrix& rm, RealMatrixArray& rm_array)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copy of potentially large matrix
-  rm_array.push_back(RealMatrix());
-  rm_array.back().swap(rm); // alters rm (ok since rm will be popped)
-#else
-  rm_array.push_back(rm);   // rm unchanged
-#endif // TEUCHOS_SWAP
-}
-
-
-inline void HierarchInterpPolyApproximation::
-push_to_array(RealMatrixDeque::iterator itb, RealMatrixDeque::iterator ite,
-	      RealMatrixArray& rm_array)
-{
-#ifdef TEUCHOS_SWAP
-  // avoid deep copies of potentially large vectors
-  // Note: for RandomAccessIterators, complexity of std::distance() is constant,
-  //       so iterator-based API is more flexible and is not inefficient
-  size_t i, deque_len = std::distance(itb, ite), array_len = rm_array.size(),
-    new_array_len = array_len + deque_len;
-  RealMatrixDeque::iterator it;
-  rm_array.resize(new_array_len); // populates end with empty vectors
-  for (i=array_len, it=itb; it!=ite; ++i, ++it)
-    rm_array[i].swap(*it); // alters rm (ok since rm will be popped)
-#else
-  rm_array.insert(rm_array.end(), itb, ite); // incoming rm's unchanged
-#endif // TEUCHOS_SWAP
 }
 
 
