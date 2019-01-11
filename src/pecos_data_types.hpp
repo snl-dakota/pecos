@@ -641,6 +641,8 @@ void copy_row(const Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& sdm,
 }
 
 
+/* Since no options to manage, implement directly in operator<<
+
 /// std::ostream write for Teuchos::SerialDenseVector
 template <typename OrdinalType, typename ScalarType>
 void write_data(std::ostream& s,
@@ -652,13 +654,15 @@ void write_data(std::ostream& s,
     s << "                     " << std::setw(WRITE_PRECISION+7)
       << v[i] << '\n';
 }
+*/
 
 
 /// formatted ostream insertion operator for SerialDenseMatrix
 template <typename OrdinalType, typename ScalarType>
 void write_data(std::ostream& s,
                 const Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& m,
-                bool brackets, bool row_rtn, bool final_rtn)
+                bool brackets = true, bool row_rtn = true,
+		bool final_rtn = true)
 {
   OrdinalType i, j, nrows = m.numRows(), ncols = m.numCols();
   s << std::scientific << std::setprecision(WRITE_PRECISION);
@@ -678,7 +682,8 @@ void write_data(std::ostream& s,
 template <typename OrdinalType, typename ScalarType>
 void write_data(std::ostream& s,
                 const Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType>& m,
-                bool brackets, bool row_rtn, bool final_rtn)
+                bool brackets = true, bool row_rtn = true,
+		bool final_rtn = true)
 {
   OrdinalType i, j, nrows = m.numRows();
   s << std::scientific << std::setprecision(WRITE_PRECISION);
@@ -714,7 +719,38 @@ void write_data_trans(std::ostream& s,
 }
 
 
-/// global std::ostream insertion operator for std::vector
+/// std::ostream insertion operator for SerialDenseVector (Pecos namespace)
+template <typename OrdinalType, typename ScalarType>
+inline std::ostream& operator<<(std::ostream& s,
+  const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& data)
+{
+  //write_data(s, data); // not necessary since no additional options
+  //return s;
+
+  s << std::scientific << std::setprecision(WRITE_PRECISION);
+  OrdinalType len = data.length();
+  for (OrdinalType i=0; i<len; i++)
+    s << "                     " << std::setw(WRITE_PRECISION+7)
+      << data[i] << '\n';
+  return s;
+}
+
+
+/// std::ostream insertion operator for SerialDenseMatrix (Pecos namespace)
+template <typename OrdinalType, typename ScalarType>
+inline std::ostream& operator<<(std::ostream& s,
+  const Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& data)
+{ write_data(s, data, true, true, true); return s; }
+
+
+/// std::ostream insertion operator for SerialSymDenseMatrix (Pecos namespace)
+template <typename OrdinalType, typename ScalarType>
+inline std::ostream& operator<<(std::ostream& s,
+  const Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType>& data)
+{ write_data(s, data, true, true, true); return s; }
+
+
+/// std::ostream insertion operator for std::vector (Pecos namespace)
 template <typename T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 {
@@ -727,7 +763,7 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 }
 
 
-/// global std::ostream insertion operator for std::set
+/// std::ostream insertion operator for std::set (Pecos namespace)
 template <typename T>
 std::ostream& operator<<(std::ostream& s, const std::set<T>& data)
 {
