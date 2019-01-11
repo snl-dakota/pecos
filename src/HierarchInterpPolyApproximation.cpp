@@ -1859,10 +1859,9 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
   if (std_mode && (computedDeltaVariance & 1))
     return deltaMoments[1];
 
-  /* Update product interpolant for incr_key:
-  // delta-Variance can leverage modSurrData for computing product interpolant
+  /* Rebuild product interpolant from scratch:
   RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-  product_interpolant(this, prod_t1c, prod_t2c, incr_key);
+  product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
   */
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -1892,10 +1891,9 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar))
     return deltaMoments[1];
 
-  /* Update product interpolant for incr_key:
-  // delta-Variance can leverage modSurrData for computing product interpolant
+  /* Rebuild product interpolant from scratch:
   RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-  product_interpolant(this, prod_t1c, prod_t2c, incr_key);
+  product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
   */
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -2155,18 +2153,10 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
   }
 
   /* Rebuild product interpolant from scratch:
-  // delta_covariance() is for active expansion --> uses modSurrData
-  // (containing model discrepancies) for computing product interpolants:
   RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
   product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
-  // only need expectation of R1R2 on incr_key, but product interpolant is
-  // nonlinear and we form hierarchical evaluations based on deltaR1R2
-  */
-
-  /* Update product interpolant for incr_key:
-  RealVector2DArray& prod_t1c = prodT1CoeffsIter->second[poly_approx_2];
-  RealMatrix2DArray& prod_t2c = prodT2CoeffsIter->second[poly_approx_2];
-  product_interpolant(hip_approx_2, prod_t1c, prod_t2c, incr_key);
+  // only need expectation of R1R2 on incr_key, but product interpolant must
+  // be constructed bottom-up from hierarchical surpluses
   */
 
   Real delta_covar =
@@ -2207,18 +2197,10 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   }
 
   /* Rebuild product interpolant from scratch:
-  // delta_covariance() is for active expansion --> uses modSurrData
-  // (containing model discrepancies) for computing product interpolants:
   RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
   product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
   // only need expectation of R1R2 on incr_key, but product interpolant must
   // be constructed bottom-up from hierarchical surpluses
-  */
-
-  /* Update product interpolant for incr_key:
-  RealVector2DArray& prod_t1c = prodT1CoeffsIter->second[poly_approx_2];
-  RealMatrix2DArray& prod_t2c = prodT2CoeffsIter->second[poly_approx_2];
-  product_interpolant(hip_approx_2, prod_t1c, prod_t2c, incr_key);
   */
 
   Real delta_covar =
