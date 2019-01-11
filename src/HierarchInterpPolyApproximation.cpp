@@ -258,31 +258,28 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
     // trial_level() is less volatile / safer.
     unsigned short tr_lev = hsg_driver->trial_level();
     if (expansionCoeffFlag) {
-      RealVectorArray& exp_t1c_l = exp_t1c[tr_lev];
       if (save_data) {
 	RealVectorDequeArray& pop_t1c = poppedExpT1Coeffs[key];
 	if (pop_t1c.size() <= tr_lev) pop_t1c.resize(tr_lev+1);
-	push_to_deque(exp_t1c_l.back(), pop_t1c[tr_lev]);
+	push_back_to_back(exp_t1c[tr_lev], pop_t1c[tr_lev]);
       }
-      exp_t1c_l.pop_back();
+      else exp_t1c[tr_lev].pop_back();
       if (use_derivs) {
-	RealMatrixArray& exp_t2c_l = exp_t2c[tr_lev];
 	if (save_data) {
 	  RealMatrixDequeArray& pop_t2c = poppedExpT2Coeffs[key];
 	  if (pop_t2c.size() <= tr_lev) pop_t2c.resize(tr_lev+1);
-	  push_to_deque(exp_t2c_l.back(), pop_t2c[tr_lev]);
+	  push_back_to_back(exp_t2c[tr_lev], pop_t2c[tr_lev]);
 	}
-	exp_t2c_l.pop_back();
+	else exp_t2c[tr_lev].pop_back();
       }
     }
     if (expansionCoeffGradFlag) {
-      RealMatrixArray& exp_t1cg_l = exp_t1cg[tr_lev];
       if (save_data) {
 	RealMatrixDequeArray& pop_t1cg = poppedExpT1CoeffGrads[key];
 	if (pop_t1cg.size() <= tr_lev) pop_t1cg.resize(tr_lev+1);
-	push_to_deque(exp_t1cg_l.back(), pop_t1cg[tr_lev]);
+	push_back_to_back(exp_t1cg[tr_lev], pop_t1cg[tr_lev]);
       }
-      exp_t1cg_l.pop_back();
+      else exp_t1cg[tr_lev].pop_back();
     }
 
     // decrement productType{1,2}Coeffs if in use
@@ -316,17 +313,15 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	}
 	for (e1_it = prod_t1c.begin(); e1_it != prod_t1c.end(); ++e1_it) {
 	  PolynomialApproximation* poly_approx_2 = e1_it->first;
-	  RealVectorArray& prod_t1c_l = e1_it->second[tr_lev];
 	  RealVectorDequeArray& pop_prod_t1c = p1_it->second;
 	  if (pop_prod_t1c.size() <= tr_lev) pop_prod_t1c.resize(tr_lev+1);
-	  push_to_deque(prod_t1c_l.back(), pop_prod_t1c[tr_lev]);   ++p1_it;
-	  prod_t1c_l.pop_back();                                  //++e1_it;
+	  push_back_to_back(e1_it->second[tr_lev], pop_prod_t1c[tr_lev]);
+	  ++p1_it;  //++e1_it;
 	  if (use_derivs) {
-	    RealMatrixArray& prod_t2c_l = e2_it->second[tr_lev];
 	    RealMatrixDequeArray& pop_prod_t2c = p2_it->second;
 	    if (pop_prod_t2c.size() <= tr_lev) pop_prod_t2c.resize(tr_lev+1);
-	    push_to_deque(prod_t2c_l.back(), pop_prod_t2c[tr_lev]); ++p2_it;
-	    prod_t2c_l.pop_back();                                  ++e2_it;
+	    push_back_to_back(e2_it->second[tr_lev], pop_prod_t2c[tr_lev]);
+	    ++p2_it;  ++e2_it;
 	  }
 	}
       }
@@ -358,26 +353,22 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
       pop_t1cg.resize(num_lev+1);
     for (lev=0; lev<num_lev; ++lev) {
       start_set = incr_sets[lev];
-      if (expansionCoeffFlag) {
-	RealVectorArray& exp_t1c_l = exp_t1c[lev];
-	if (save_data)
-	  push_to_deque(exp_t1c_l.begin() + start_set, exp_t1c_l.end(),
-			pop_t1c[lev]);
-	exp_t1c_l.resize(start_set);
-	if (use_derivs) {
-	  RealMatrixArray& exp_t2c_l = exp_t2c[lev];
-	  if (save_data)
-	    push_to_deque(exp_t2c_l.begin() + start_set, exp_t2c_l.end(),
-			  pop_t2c[lev]);
-	  exp_t2c_l.resize(start_set);
+      if (save_data) {
+	if (expansionCoeffFlag) {
+	  push_range_to_back(exp_t1c[lev], start_set, pop_t1c[lev]);
+	  if (use_derivs)
+	    push_range_to_back(exp_t2c[lev], start_set, pop_t2c[lev]);
 	}
+	if (expansionCoeffGradFlag)
+	  push_range_to_back(exp_t1cg[lev], start_set, pop_t1cg[lev]);
       }
-      if (expansionCoeffGradFlag) {
-	RealMatrixArray& exp_t1cg_l = exp_t1cg[lev];
-	if (save_data)
-	  push_to_deque(exp_t1cg_l.begin() + start_set, exp_t1cg_l.end(),
-			pop_t1cg[lev]);
-	exp_t1cg_l.resize(start_set);
+      else {
+	if (expansionCoeffFlag) {
+	  exp_t1c[lev].resize(start_set);
+	  if (use_derivs) exp_t2c[lev].resize(start_set);
+	}
+	if (expansionCoeffGradFlag)
+	  exp_t1cg[lev].resize(start_set);
       }
     }
 
@@ -416,16 +407,11 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 	    p2_it->second.resize(num_lev+1);
 	  for (lev=0; lev<num_lev; ++lev) {
 	    start_set = incr_sets[lev];
-	    RealVectorArray& prod_t1c_l = e1_it->second[lev];
-	    push_to_deque(prod_t1c_l.begin() + start_set, prod_t1c_l.end(),
-			  p1_it->second[lev]);
-	    prod_t1c_l.resize(start_set);
-	    if (use_derivs) {
-	      RealMatrixArray& prod_t2c_l = e2_it->second[lev];
-	      push_to_deque(prod_t2c_l.begin() + start_set, prod_t2c_l.end(),
-			    p2_it->second[lev]);
-	      prod_t2c_l.resize(start_set);
-	    }
+	    push_range_to_back(e1_it->second[lev], start_set,
+			       p1_it->second[lev]);
+	    if (use_derivs)
+	      push_range_to_back(e2_it->second[lev], start_set,
+				 p2_it->second[lev]);
 	  }
 	  if (use_derivs) { ++p2_it; ++e2_it; }
 	}
@@ -477,25 +463,17 @@ void HierarchInterpPolyApproximation::push_coefficients()
     bool use_derivs = data_rep->basisConfigOptions.useDerivs;
     RealVectorDeque::iterator v_it;  RealMatrixDeque::iterator m_it;
     if (expansionCoeffFlag) {
-      RealVectorDeque& pop_t1c_l = poppedExpT1Coeffs[key][tr_lev];
-      v_it = pop_t1c_l.begin() + p_index;
-      push_to_array(*v_it, expT1CoeffsIter->second[tr_lev]);
-      pop_t1c_l.erase(v_it);
+      push_index_to_back(poppedExpT1Coeffs[key][tr_lev], p_index,
+			 expT1CoeffsIter->second[tr_lev]);
       SharedHierarchInterpPolyApproxData* data_rep
 	= (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-      if (use_derivs) {
-	RealMatrixDeque& pop_t2c_l = poppedExpT2Coeffs[key][tr_lev];
-        m_it = pop_t2c_l.begin() + p_index;
-	push_to_array(*m_it, expT2CoeffsIter->second[tr_lev]);
-	pop_t2c_l.erase(m_it);
-      }
+      if (use_derivs)
+	push_index_to_back(poppedExpT2Coeffs[key][tr_lev], p_index,
+			   expT2CoeffsIter->second[tr_lev]);
     }
-    if (expansionCoeffGradFlag) {
-      RealMatrixDeque& pop_t1cg_l = poppedExpT1CoeffGrads[key][tr_lev];
-      m_it = pop_t1cg_l.begin() + p_index;
-      push_to_array(*m_it, expT1CoeffGradsIter->second[tr_lev]);
-      pop_t1cg_l.erase(m_it);
-    }
+    if (expansionCoeffGradFlag)
+      push_index_to_back(poppedExpT1CoeffGrads[key][tr_lev], p_index,
+			 expT1CoeffGradsIter->second[tr_lev]);
 
     // update productType{1,2}Coeffs if in use
     if (product_interpolants()) {
@@ -516,15 +494,11 @@ void HierarchInterpPolyApproximation::push_coefficients()
       for (e1_it  = prod_t1c.begin(), p1_it  = pop_prod_t1c.begin();
 	   e1_it != prod_t1c.end() && p1_it != pop_prod_t1c.end();
 	   ++e1_it, ++p1_it) {
-	RealVectorDeque& pop_prod_t1c_l = p1_it->second[tr_lev];
-	v_it = pop_prod_t1c_l.begin() + p_index;
-	push_to_array(*v_it, e1_it->second[tr_lev]);
-	pop_prod_t1c_l.erase(v_it);
+	push_index_to_back(p1_it->second[tr_lev], p_index,
+			   e1_it->second[tr_lev]);
 	if (use_derivs) {
-	  RealMatrixDeque& pop_prod_t2c_l = p2_it->second[tr_lev];
-	  m_it = pop_prod_t2c_l.begin() + p_index;
-	  push_to_array(*m_it, e2_it->second[tr_lev]);
-	  pop_prod_t2c_l.erase(m_it);
+	  push_index_to_back(p2_it->second[tr_lev], p_index,
+			     e2_it->second[tr_lev]);
 	  ++e2_it; ++p2_it;
 	}
       }
@@ -571,20 +545,11 @@ void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
   for (lev=0; lev<num_lev; ++lev) {
     if (expansionCoeffFlag) {
-      RealVectorDeque& pop_t1c_l = pop_t1c[lev];
-      push_to_array(pop_t1c_l.begin(), pop_t1c_l.end(), exp_t1c[lev]);
-      pop_t1c_l.clear();
-      if (use_derivs) {
-	RealMatrixDeque& pop_t2c_l = pop_t2c[lev];
-	push_to_array(pop_t2c_l.begin(), pop_t2c_l.end(), exp_t2c[lev]);
-	pop_t2c_l.clear();
-      }
+      push_range_to_back(pop_t1c[lev], 0, exp_t1c[lev]);
+      if (use_derivs) push_range_to_back(pop_t2c[lev], 0, exp_t2c[lev]);
     }
-    if (expansionCoeffGradFlag) {
-      RealMatrixDeque& pop_t1cg_l = pop_t1cg[lev];
-      push_to_array(pop_t1cg_l.begin(), pop_t1cg_l.end(), exp_t1cg[lev]);
-      pop_t1cg_l.clear();
-    }
+    if (expansionCoeffGradFlag)
+      push_range_to_back(pop_t1cg[lev], 0, exp_t1cg[lev]);
   }
 
   // update productType{1,2}Coeffs if in use
@@ -605,16 +570,9 @@ void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
 	 e1_it != prod_t1c.end() && p1_it != pop_prod_t1c.end();
 	 ++e1_it, ++p1_it) {
       for (lev=0; lev<num_lev; ++lev) {
-	RealVectorDeque& pop_prod_t1c_l = p1_it->second[lev];
-	push_to_array(pop_prod_t1c_l.begin(), pop_prod_t1c_l.end(),
-		      e1_it->second[lev]);
-	pop_prod_t1c_l.clear();
-	if (use_derivs) {
-	  RealMatrixDeque& pop_prod_t2c_l = p2_it->second[lev];
-	  push_to_array(pop_prod_t2c_l.begin(), pop_prod_t2c_l.end(),
-			e2_it->second[lev]);
-	  pop_prod_t2c_l.clear();
-	}
+	push_range_to_back(p1_it->second[lev], 0, e1_it->second[lev]);
+	if (use_derivs)
+	  push_range_to_back(p2_it->second[lev], 0, e2_it->second[lev]);
       }
       if (use_derivs) { ++e2_it; ++p2_it; }
     }
