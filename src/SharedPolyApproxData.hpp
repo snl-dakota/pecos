@@ -496,9 +496,9 @@ protected:
   /// previous Smolyak sparse grid level;
   /// used for tracking need for expansion form updates
   unsigned short ssgLevelPrev;
-  /// previous Smolyak sparse grid anisotropic weighting;
+  /// previous anisotropic weighting;
   /// used for tracking need for expansion form updates
-  RealVector ssgAnisoWtsPrev;
+  RealVector anisoWtsPrev;
 
   /// array of bits identifying the random variable subset within the
   /// active variables (used in all_variables mode)

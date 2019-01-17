@@ -140,7 +140,7 @@ void SharedInterpPolyApproxData::allocate_data()
       update_tensor_interpolation_basis(tpq_driver->level_index());
     if (change_order) {
       allocate_component_sobol();
-      quadOrderPrev = quad_order;
+      quadOrderPrev = quad_order; //anisoWtsPrev = aniso_wts;
     }
     break;
   }
@@ -160,7 +160,7 @@ void SharedInterpPolyApproxData::allocate_data()
       update_sparse_interpolation_basis(ssg_level);
     if (change_lev) {
       allocate_component_sobol();
-      ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
+      ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
     }
     break;
   }
@@ -190,6 +190,7 @@ void SharedInterpPolyApproxData::increment_data()
       allocate_component_sobol();
       // For subsequent allocate_data():
       //quadOrderPrev = tpq_driver->quadrature_order();
+      //anisoWtsPrev = aniso_wts;
       break;
     }
     case INCREMENTAL_SPARSE_GRID: {
@@ -208,7 +209,7 @@ void SharedInterpPolyApproxData::increment_data()
 	  if (sm_mi_i[v] > max_set_index)
 	    max_set_index = sm_mi_i[v];
       }
-      //ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
+      //ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
       update_sparse_interpolation_basis(max_set_index);
       increment_component_sobol();
       break;
@@ -230,7 +231,7 @@ void SharedInterpPolyApproxData::increment_data()
 	}
       }
       // For subsequent allocate_data():
-      //ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
+      //ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
       update_sparse_interpolation_basis(max_set_index);
       increment_component_sobol();
       break;

@@ -32,9 +32,11 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray& quad_order = tpq_driver->quadrature_order();
+    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    // Note: unlike ssg_level, quad_order includes anisotropic weighting
     bool update_exp_form
-      = (quad_order != quadOrderPrev || activeKey != prevActiveKey);
+      = (expConfigOptions.refineControl || quad_order != quadOrderPrev ||
+	 activeKey  != prevActiveKey);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
@@ -49,8 +51,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       //precompute_maximal_rules(ao);
 
       allocate_component_sobol(mi);
-      quadOrderPrev = quad_order;
-      prevActiveKey = activeKey;
+      quadOrderPrev = quad_order;  prevActiveKey = activeKey;
     }
 
 #ifdef DEBUG
@@ -72,8 +73,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
   case CUBATURE: {
     CubatureDriver* cub_driver = (CubatureDriver*)driverRep;
     //unsigned short cub_int_order = cub_driver->integrand_order();
-    //bool update_exp_form
-    //  = (cub_int_order != cubIntOrderPrev || activeKey != prevActiveKey);
+    //bool update_exp_form = (expConfigOptions.refineControl ||
+    //  cub_int_order != cubIntOrderPrev || activeKey != prevActiveKey);
 
     //if (update_exp_form) {
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
@@ -86,8 +87,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       //precompute_maximal_rules(ao);
 
       allocate_component_sobol(mi);
-      //cubIntOrderPrev = cub_int_order; // update reference point
-      //prevActiveKey = activeKey;
+      //cubIntOrderPrev = cub_int_order;  prevActiveKey = activeKey;
     //}
 
     PCout << "Orthogonal polynomial approximation order = { ";
@@ -102,7 +102,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form
       = (expConfigOptions.refineControl || ssg_level != ssgLevelPrev ||
-	 aniso_wts != ssgAnisoWtsPrev   || activeKey != prevActiveKey );
+	 aniso_wts != anisoWtsPrev      || activeKey != prevActiveKey );
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     UShort2DArray& mi = multiIndexIter->second;
@@ -113,7 +113,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       //precompute_maximal_rules(multiIndex);
 
       allocate_component_sobol(mi);
-      ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
+      ssgLevelPrev  = ssg_level;  anisoWtsPrev = aniso_wts;
       prevActiveKey = activeKey;
     }
     PCout << "Orthogonal polynomial approximation level = " << ssg_level
