@@ -33,7 +33,8 @@
 #include <vector>
 #include <deque>
 
-#define TEUCHOS_SWAP
+// leave off by default until Teuchos accepts patch file(s)
+//#define TEUCHOS_SWAP
 
 
 namespace Pecos {
