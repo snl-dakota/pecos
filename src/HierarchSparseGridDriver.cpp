@@ -1055,7 +1055,7 @@ void HierarchSparseGridDriver::pop_set()
   if (computeType2Weights) {
     RealMatrixDequeArray& pop_t2w = poppedT2WtSets[activeKey];
     if (pop_t2w.size() <= tr_lev) pop_t2w.resize(tr_lev+1);
-    push_back_to_back(t2WtIter->second[tr_lev], pop_t1w[tr_lev]);
+    push_back_to_back(t2WtIter->second[tr_lev], pop_t2w[tr_lev]);
   }
 
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
