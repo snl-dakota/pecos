@@ -4291,10 +4291,9 @@ member_coefficients_weights(const BitArray& member_bits,
       }
 #ifdef VBD_DEBUG
       PCout << "member_bits: " << member_bits // MSB->LSB: order reversed
-	    << "\nmember_t1_coeffs[" << lev << "][" << set << "]:\n";
-      write_data(PCout, member_t1_coeffs[lev][set]);
-      PCout << "member_t1_wts[" << lev << "][" << set << "]:\n";
-      write_data(PCout, member_t1_wts[lev][set]);
+	    << "\nmember_t1_coeffs[" << lev << "][" << set << "]:\n"
+	    << member_t1_coeffs[lev][set] << "member_t1_wts[" << lev << "]["
+	    << set << "]:\n" << member_t1_wts[lev][set];
       if (data_rep->basisConfigOptions.useDerivs) {
 	PCout << "member_t2_coeffs[" << lev << "][" << set << "]:\n";
 	write_data(PCout, member_t2_coeffs[lev][set], false, true, true);
@@ -4386,9 +4385,9 @@ central_product_member_coefficients(const BitArray& m_bits,
 	    cprod_m_t2_coeffs_lsp[v] = 2. * h_val_mm * h_grad[v] - prev_grad[v];
 	}
 #ifdef VBD_DEBUG
-	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n";
-	write_data(PCout, cprod_m_t1_coeffs[lev][set]);
-	PCout << "cprod_m_t2_coeffs[" << lev << "][" << set << "]:\n";
+	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n"
+	      << cprod_m_t1_coeffs[lev][set]
+	      << "cprod_m_t2_coeffs[" << lev << "][" << set << "]:\n";
 	write_data(PCout, cprod_m_t2_coeffs[lev][set], false, true, true);
 	PCout << std::endl;
 #endif // VBD_DEBUG
@@ -4416,9 +4415,8 @@ central_product_member_coefficients(const BitArray& m_bits,
 		  cprod_m_t2_coeffs, lev-1, member_indices);
 	}
 #ifdef VBD_DEBUG
-	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n";
-	write_data(PCout, cprod_m_t1_coeffs[lev][set]);
-	PCout << std::endl;
+	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n"
+	      << cprod_m_t1_coeffs[lev][set] << std::endl;
 #endif // VBD_DEBUG
       }
     }

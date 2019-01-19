@@ -139,8 +139,7 @@ void OrthogPolyApproximation::combine_coefficients()
 	 ++ec_it, ++eg_it, ++i) {
 #ifdef DEBUG
       PCout << "\ni = " << i << " combinedMultiIndexMap:\n"
-	    << combined_mi_map[i] << "coeffs array:\n";
-      write_data(PCout, ec_it->second);
+	    << combined_mi_map[i] << "coeffs array:\n" << ec_it->second;
 #endif // DEBUG
       overlay_expansion(combined_mi_map[i], ec_it->second, eg_it->second, 1,
 			combinedExpCoeffs, combinedExpCoeffGrads);
@@ -1019,7 +1018,7 @@ void OrthogPolyApproximation::compute_component_sobol()
 
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_component_sobol(), "
-	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+	<< "sobolIndices =\n" << sobolIndices;
 #endif // DEBUG
 }
 
@@ -1069,7 +1068,7 @@ void OrthogPolyApproximation::compute_total_sobol()
 
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_total_sobol(), "
-	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+	<< "totalSobolIndices =\n" << totalSobolIndices;
 #endif // DEBUG
 }
 
@@ -1128,7 +1127,7 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 #ifdef DECAY_DEBUG
   PCout << "raw b_vectors:\n";
   for (i=0; i<num_v; ++i)
-    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
+    PCout << "Variable " << i+1 << '\n' << b_vectors[i];
 #endif // DECAY_DEBUG
 
   solve_decay_rates(A_vectors, b_vectors, max_orders);
@@ -1176,11 +1175,11 @@ solve_decay_rates(RealVectorArray& A_vectors, RealVectorArray& b_vectors,
   }
 
 #ifdef DECAY_DEBUG
-  PCout << "Intercept log(abs(coeff0)) = " << log_coeff0 << '\n';
-  PCout << "b_vectors after truncation & intercept subtraction:\n";
+  PCout << "Intercept log(abs(coeff0)) = " << log_coeff0
+	<< "\nb_vectors after truncation & intercept subtraction:\n";
   for (i=0; i<num_v; ++i)
-    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
-  PCout << "Individual approximation decay:\n"; write_data(PCout, decayRates);
+    PCout << "Variable " << i+1 << '\n' << b_vectors[i];
+  PCout << "Individual approximation decay:\n" << decayRates;
 #endif // DECAY_DEBUG
 }
 

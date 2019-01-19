@@ -270,8 +270,7 @@ void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	<< "uniqueIndexMapping:\n" << uniqIndMapIter->second << "\nvar_sets:\n";
   write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
-    PCout << "\ntype1WeightSets:\n";
-    write_data(PCout, type1WeightSets[activeKey]);
+    PCout << "\ntype1WeightSets:\n" << type1WeightSets[activeKey];
     if (computeType2Weights) {
       PCout << "\ntype2WeightSets:\n";
       write_data(PCout, type2WeightSets[activeKey], false, true, true);
@@ -728,7 +727,7 @@ void IncrementalSparseGridDriver::assign_sparse_weights()
   update_sparse_weights(0, a1T1WIter->second, a1T2WIter->second,
 			t1_wts, t2_wts);
 #ifdef DEBUG
-  PCout << "reference type1WeightSets:\n"; write_data(PCout, t1_wts);
+  PCout << "reference type1WeightSets:\n" << t1_wts;
   if (computeType2Weights) {
     PCout << "reference type2WeightSets:\n";
     write_data(PCout, t2_wts, false, true, true);
@@ -748,7 +747,7 @@ void IncrementalSparseGridDriver::update_sparse_weights(size_t start_index)
   update_sparse_weights(start_index, a2T1WIter->second, a2T2WIter->second,
 			t1_wts, t2_wts);
 #ifdef DEBUG
-  PCout << "updated type1WeightSets =\n"; write_data(PCout, t1_wts);
+  PCout << "updated type1WeightSets =\n" << t1_wts;
   if (computeType2Weights) {
     PCout << "updated type2WeightSets =\n";
     write_data(PCout, t2_wts, false, true, true);
@@ -891,9 +890,9 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
     }
   }
 #ifdef DEBUG
-    PCout << "Tensor product weights =\ntype1:\n"; write_data(PCout, t1_wts);
-    if (computeType2Weights)
-      { PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true); }
+  PCout << "Tensor product weights =\ntype1:\n" << t1_wts;
+  if (computeType2Weights)
+    { PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true); }
 #endif // DEBUG
 }
 

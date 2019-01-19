@@ -134,7 +134,7 @@ void InterpPolyApproximation::compute_component_sobol()
     sobolIndices = 0.;
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_component_sobol(), "
-	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+	<< "sobolIndices =\n" << sobolIndices;
 #endif // DEBUG
 }
 
@@ -167,7 +167,7 @@ void InterpPolyApproximation::compute_total_sobol()
 
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_total_sobol(), "
-	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+	<< "totalSobolIndices =\n" << totalSobolIndices;
 #endif // DEBUG
 }
 

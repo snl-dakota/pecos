@@ -778,10 +778,8 @@ inline void SurrogateDataResp::write(std::ostream& s) const
     s << "function gradient =\n";
     write_data_trans(s, sdrRep->responseGrad, true, true, true);
   }
-  if (sdrRep->activeBits & 4) {
-    s << "function Hessian  =\n";
-    write_data(s, sdrRep->responseHess, true, true, true);
-  }
+  if (sdrRep->activeBits & 4)
+    s << "function Hessian  =\n" << sdrRep->responseHess;
 }
 
 

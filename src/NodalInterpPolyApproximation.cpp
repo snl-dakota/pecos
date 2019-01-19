@@ -310,8 +310,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
   }
 
 #ifdef DEBUG
-  PCout << "Combined type1 expansion coefficients:\n";
-  write_data(PCout, combinedExpT1Coeffs);
+  PCout << "Combined type1 expansion coefficients:\n" << combinedExpT1Coeffs;
   if (data_rep->basisConfigOptions.useDerivs) {
     PCout << "Combined type2 expansion coefficients:\n";
     write_data(PCout, combinedExpT2Coeffs, false, true, true);
@@ -3517,10 +3516,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
     }
   }
 #ifdef DEBUG
-  PCout << "Expansion moments type 1 coefficients:\n";
-  write_data(PCout, t1_exp);
-  PCout << "Expansion moments:\n";
-  write_data(PCout, expansionMoments);
+  PCout << "Expansion moments type 1 coefficients:\n" << t1_exp
+	<< "Expansion moments:\n" << expansionMoments;
 #endif // DEBUG
 }
 
@@ -3828,9 +3825,9 @@ member_coefficients_weights(const BitArray& member_bits,
     }
   }
 #ifdef VBD_DEBUG
-  PCout << "member_bits: " << member_bits << '\n'; // MSB->LSB: order reversed
-  PCout << "member_t1_coeffs:\n"; write_data(PCout, member_t1_coeffs);
-  PCout << "member_t1_wts:\n";    write_data(PCout, member_t1_wts);
+  PCout << "member_bits: "         << member_bits // MSB->LSB: order reversed
+	<< "\nmember_t1_coeffs:\n" << member_t1_coeffs
+	<< "member_t1_wts:\n"      << member_t1_wts;
   if (data_rep->basisConfigOptions.useDerivs) {
     PCout << "member_t2_coeffs:\n";
     write_data(PCout, member_t2_coeffs, false, true, true);

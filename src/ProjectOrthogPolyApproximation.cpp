@@ -446,9 +446,9 @@ append_tensor_expansions(size_t start_tp_index)
 			tp_exp_coeff_grads[index], coeff, exp_coeffs,
 			exp_coeff_grads);
 #ifdef DEBUG
-    PCout << "Trial set sm_coeff = " << coeff << "\ntpExpansionCoeffs:\n";
-    write_data(PCout, tp_exp_coeffs[index]);
-    PCout << "\ntpMultiIndexMap:\n" << tp_mi_map[index] << '\n';
+    PCout << "Trial set sm_coeff = "  << coeff
+	  << "\ntpExpansionCoeffs:\n" << tp_exp_coeffs[index]
+	  << "\ntpMultiIndexMap:\n"   << tp_mi_map[index] << '\n';
 #endif // DEBUG
   }
   // update other expansion contributions with a changed smolyak coefficient
@@ -456,9 +456,9 @@ append_tensor_expansions(size_t start_tp_index)
     // add new, subtract previous
     delta_coeff = sm_coeffs[index] - sm_coeffs_ref[index];
 #ifdef DEBUG
-    PCout << "Old set delta_coeff = " << delta_coeff <<"\ntpExpansionCoeffs:\n";
-    write_data(PCout, tp_exp_coeffs[index]);
-    PCout << "\ntpMultiIndexMap:\n" << tp_mi_map[index] << '\n';
+    PCout << "Old set delta_coeff = " << delta_coeff
+	  << "\ntpExpansionCoeffs:\n" << tp_exp_coeffs[index]
+	  << "\ntpMultiIndexMap:\n"   << tp_mi_map[index] << '\n';
 #endif // DEBUG
     if (delta_coeff)
       overlay_expansion(tp_mi_map[index], tp_exp_coeffs[index],
@@ -592,11 +592,9 @@ integrate_expansion(const UShort2DArray& multi_index,
     }
   }
 #ifdef DEBUG
-  PCout << "expansion_coeffs:\n"; write_data(PCout, exp_coeffs);
-  if (exp_coeff_grads.numRows()) {
-    PCout << "expansion_coeff_grads:\n";
-    write_data(PCout, exp_coeff_grads, true, true, true);
-  }
+  PCout << "expansion_coeffs:\n" << exp_coeffs;
+  if (exp_coeff_grads.numRows())
+    PCout << "expansion_coeff_grads:\n" << exp_coeff_grads;
   PCout << "\n\n";
 #endif // DEBUG
 }

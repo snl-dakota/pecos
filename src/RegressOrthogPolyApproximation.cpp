@@ -2962,7 +2962,7 @@ void RegressOrthogPolyApproximation::compute_component_sobol()
 
 #ifdef DEBUG
   PCout << "In RegressOrthogPolyApproximation::compute_component_sobol(), "
-	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+	<< "sobolIndices =\n" << sobolIndices;
 #endif // DEBUG
 }
 
@@ -3023,7 +3023,7 @@ void RegressOrthogPolyApproximation::compute_total_sobol()
 
 #ifdef DEBUG
   PCout << "In RegressOrthogPolyApproximation::compute_total_sobol(), "
-	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+	<< "totalSobolIndices =\n" << totalSobolIndices;
 #endif // DEBUG
 }
 
@@ -3099,7 +3099,7 @@ const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
 #ifdef DECAY_DEBUG
   PCout << "raw b_vectors:\n";
   for (i=0; i<num_v; ++i)
-    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
+    PCout << "Variable " << i+1 << '\n' << b_vectors[i];
 #endif // DECAY_DEBUG
 
   solve_decay_rates(A_vectors, b_vectors, max_orders);

@@ -515,8 +515,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	<< "unique index mapping:\n" << unique_index_map << "\nvar_sets:\n";
   write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
-    PCout << "\ntype1WeightSets:\n";
-    write_data(PCout, type1WeightSets[activeKey]);
+    PCout << "\ntype1WeightSets:\n" << type1WeightSets[activeKey];
     if (computeType2Weights) {
       PCout << "\ntype2WeightSets:\n";
       write_data(PCout, type2WeightSets[activeKey], false, true, true);

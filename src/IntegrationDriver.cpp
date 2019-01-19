@@ -457,7 +457,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
 #ifdef DEBUG
   PCout << "\nvariable_sets:\n";
   write_data(PCout, variable_sets, false, true, true);
-  PCout << "\nt1_weight_sets:\n"; write_data(PCout, t1_weight_sets);
+  PCout << "\nt1_weight_sets:\n" << t1_weight_sets;
   if (computeType2Weights) {
     PCout << "\nt2_weight_sets:\n";
     write_data(PCout, t2_weight_sets, false, true, true);

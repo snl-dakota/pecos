@@ -70,9 +70,8 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
     webbur::sandia_sgmga_importance_to_aniso(num_pref, dim_pref.values(),
 					     aniso_wts.values());
 #ifdef DEBUG
-    PCout << "dimension preference:\n"; write_data(PCout, dim_pref);
-    PCout << "anisotropic weights after sandia_sgmga_importance_to_aniso():\n";
-    write_data(PCout, aniso_wts);
+    PCout << "dimension preference:\n" << dim_pref << "anisotropic weights "
+	  << "after sandia_sgmga_importance_to_aniso():\n" << aniso_wts;
 #endif
   }
   anisotropic_weights(aniso_wts);
@@ -120,8 +119,8 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       webbur::sandia_sgmga_aniso_normalize(option, numVars,
 					   curr_aniso_wts.values());
 #ifdef DEBUG
-      PCout << "anisoLevelWts after sandia_sgmga_aniso_normalize():\n";
-      write_data(PCout, curr_aniso_wts);
+      PCout << "anisoLevelWts after sandia_sgmga_aniso_normalize():\n"
+	    << curr_aniso_wts;
 #endif
       // enforce axis lower bounds, if present, for current ssgLevel.  An axis
       // lower bound defines a weight upper bound based on the current ssgLevel:
@@ -138,8 +137,8 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 	      ? std::min(wt_u_bnd, curr_aniso_wts[i]) : wt_u_bnd;
 	  }
 #ifdef DEBUG
-	PCout << "anisoLevelWts after axisLowerBounds enforcement:\n";
-	write_data(PCout, curr_aniso_wts);
+	PCout << "anisoLevelWts after axisLowerBounds enforcement:\n"
+	      << curr_aniso_wts;
 #endif
       }
       // indicate need for numCollocPts update

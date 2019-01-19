@@ -643,8 +643,7 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	  << "\nvar_sets:\n";
     write_data(PCout, varSetsIter->second, false, true, true);
     if (trackUniqueProdWeights) {
-      PCout << "\ntype1WeightSets:\n";
-      write_data(PCout, t1WtIter->second);
+      PCout << "\ntype1WeightSets:\n" << t1WtIter->second;
       if (computeType2Weights) {
 	PCout << "\ntype2WeightSets:\n";
 	write_data(PCout, t2WtIter->second, false, true, true);
@@ -932,7 +931,7 @@ compute_points_weights(const UShortArray& sm_index,
 
 #ifdef DEBUG
   PCout << "Tensor product points =\n"; write_data(PCout,pts,false,true,true);
-  PCout << "Tensor product weights =\ntype1:\n"; write_data(PCout, t1_wts);
+  PCout << "Tensor product weights =\ntype1:\n" << t1_wts;
   PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true);
 #endif // DEBUG
 }
