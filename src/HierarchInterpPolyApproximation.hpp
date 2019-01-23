@@ -331,12 +331,8 @@ private:
   void product_interpolant(PolynomialApproximation* poly_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
     const UShort2DArray& set_partition = UShort2DArray());
-  /// form type 1/2 coefficients for interpolation of R_1 R_2
-  void product_difference_interpolant(PolynomialApproximation* poly_approx_2,
-    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShortArray& lf_key,
-    const UShort2DArray& set_partition = UShort2DArray());
-  /* No current need to form product interpolants using combined coefficients
+  /// form type 1/2 coefficients for interpolation of R_1 R_2 when
+  /// corresponding surrData is not available
   void product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
     const RealVector2DArray& r1_t1_coeffs,
@@ -345,15 +341,23 @@ private:
     const RealMatrix2DArray& r2_t2_coeffs, bool same,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
     const UShort2DArray& set_partition = UShort2DArray());
-  */
+
+  /// form type 1/2 coefficients for interpolation of delta [ R_1 R_2 ] across
+  /// model levels/fidelities when corresponding surrData is available
+  void product_difference_interpolant(PolynomialApproximation* poly_approx_2,
+    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
+    const UShortArray& lf_key,
+    const UShort2DArray& set_partition = UShort2DArray());
 
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
+  /// when corresponding surrData is available
   void central_product_interpolant(
     PolynomialApproximation* poly_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, RealVector2DArray& cov_t1_coeffs,
     RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& set_partition = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
+  /// when corresponding surrData is not available
   void central_product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
     const RealVector2DArray& r1_t1_coeffs,
@@ -364,14 +368,16 @@ private:
     const UShort2DArray& set_partition = UShort2DArray());
 
   /// form type1 coefficient gradients for interpolation of 
-  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
+  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)] when corresponding surrData
+  /// is available
   void central_product_gradient_interpolant(
     PolynomialApproximation* poly_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, const RealVector& mean1_grad,
     const RealVector& mean2_grad, RealMatrix2DArray& cov_t1_coeff_grads,
     const UShort2DArray& set_partition = UShort2DArray());
   /// form type1 coefficient gradients for interpolation of 
-  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
+  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)] when corresponding surrData
+  /// is not available
   void central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
     const RealVector2DArray& r1_t1_coeffs,
@@ -384,6 +390,17 @@ private:
     RealMatrix2DArray& cov_t1_coeff_grads,
     const UShort2DArray& set_partition = UShort2DArray());
 
+  /// build the product interpolant, with or without corresponding surrData
+  void build_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
+    const UShort2DArray& set_partition = UShort2DArray());
+  /// build the central product interpolant, with or without corresponding
+  /// surrData
+  void build_central_product_interpolant(
+    HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+    RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
+    const UShort2DArray& set_partition = UShort2DArray());
+ 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
   Real expectation(const RealVector2DArray& t1_coeffs,
@@ -808,6 +825,56 @@ inline Real HierarchInterpPolyApproximation::combined_variance()
 inline Real HierarchInterpPolyApproximation::
 combined_variance(const RealVector& x)
 { return combined_covariance(x, this); }
+
+
+inline void HierarchInterpPolyApproximation::
+build_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+			  RealVector2DArray& prod_t1c,
+			  RealMatrix2DArray& prod_t2c,
+			  const UShort2DArray& set_partition)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  if (hsg_driver->track_collocation_indices() &&
+      hsg_driver->collocation_indices().empty()) { // invalidated by combination
+    bool same = (this == hip_approx_2);    
+    product_interpolant(hsg_driver->variable_sets(),
+      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
+      expT1CoeffsIter->second, expT2CoeffsIter->second,
+      hip_approx_2->expT1CoeffsIter->second,
+      hip_approx_2->expT2CoeffsIter->second, same, prod_t1c, prod_t2c,
+      set_partition);
+  }
+  else
+    product_interpolant(hip_approx_2, prod_t1c, prod_t2c, set_partition);
+}
+
+
+inline void HierarchInterpPolyApproximation::
+build_central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+				  Real mean_1, Real mean_2,
+				  RealVector2DArray& cov_t1_coeffs,
+				  RealMatrix2DArray& cov_t2_coeffs,
+				  const UShort2DArray& set_partition)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  if (hsg_driver->track_collocation_indices() &&
+      hsg_driver->collocation_indices().empty()) {// invalidated by combination
+    bool same = (this == hip_approx_2);
+    central_product_interpolant(hsg_driver->variable_sets(),
+      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
+      expT1CoeffsIter->second, expT2CoeffsIter->second,
+      hip_approx_2->expT1CoeffsIter->second,
+      hip_approx_2->expT2CoeffsIter->second, same, mean_1, mean_2,
+      cov_t1_coeffs, cov_t2_coeffs, set_partition);
+  }
+  else // use modSurrData & colloc_indices for forming central product interp
+    central_product_interpolant(hip_approx_2, true, mean_1, mean_2,
+      cov_t1_coeffs, cov_t2_coeffs, set_partition);
+}
 
 
 inline Real HierarchInterpPolyApproximation::
