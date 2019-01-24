@@ -1844,18 +1844,26 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 Real HierarchInterpPolyApproximation::
 delta_std_deviation(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
+  // Preserve precision by avoiding subtractive cancellation
   // delta-sigma = sqrt( var0 + delta-var ) - sigma0
   //             = [ sqrt(1 + delta_var / var0) - 1 ] * sigma0
   //             = sqrt1pm1(delta_var / var0) * sigma0
-  // where sqrt1pm1(x) = expm1[ log1p(x) / 2 ]
+  // where sqrt1pm1(x) = sqrt(1+x) - 1 = expm1[ log1p(x) / 2 ]
 
   Real delta_var = delta_variance(ref_key, incr_key),
        var0      = reference_variance(ref_key),
-       sigma0    = std::sqrt(var0);
+       sigma0    = (var0 > 0.) ? std::sqrt(var0) : 0.;
 
-  return (delta_var < var0) ?
-    bmth::sqrt1pm1(delta_var / var0) * sigma0 :            // preserve precision
-    std::sqrt(var0 + delta_var) - sigma0; // precision OK; prevent div by var0=0
+  // usual case: var0 and sigma0 are both positive, prefer sqrt1pm1
+  // unless 1+x could go negative
+  if ( sigma0 > 0. &&
+       ( delta_var >= 0. || std::abs(delta_var) < var0 / 2.) )
+    return bmth::sqrt1pm1(delta_var / var0) * sigma0;
+  // negative var0 only supported if var1 recovers to positive
+  else {
+    Real var1 = var0 + delta_var;
+    return (var1 > 0.) ? std::sqrt(var1) - sigma0 : 0.;
+  }
 }
 
 
@@ -1870,11 +1878,18 @@ delta_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
 
   Real delta_var = delta_variance(x, ref_key, incr_key),
        var0      = reference_variance(x, ref_key),
-       sigma0    = std::sqrt(var0);
+       sigma0    = (var0 > 0.) ? std::sqrt(var0) : 0.;
 
-  return (delta_var < var0) ?
-    bmth::sqrt1pm1(delta_var / var0) * sigma0 :            // preserve precision
-    std::sqrt(var0 + delta_var) - sigma0; // precision OK; prevent div by var0=0
+  // usual case: var0 and sigma0 are both positive, prefer sqrt1pm1
+  // unless 1+x could go negative
+  if ( sigma0 > 0. &&
+       ( delta_var >= 0. || std::abs(delta_var) < var0 / 2.) )
+    return bmth::sqrt1pm1(delta_var / var0) * sigma0;
+  // negative var0 only supported if var1 recovers to positive
+  else {
+    Real var1 = var0 + delta_var;
+    return (var1 > 0.) ? std::sqrt(var1) - sigma0 : 0.;
+  }
 }
 
 
@@ -1953,7 +1968,8 @@ delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
   // Error traps are needed for zero variance: a single point ref grid
   // (level=0 sparse or m=1 tensor) has zero variance.  Unchanged response
   // values along an index set could then cause sigma1 also = 0.
-  Real beta0, sigma0 = std::sqrt(var0), sigma1 = sigma0 + delta_sigma;
+  Real beta0, sigma0 = (var0 > 0.) ? std::sqrt(var0) : 0.,
+    sigma1  = sigma0 + delta_sigma;
   if (cdf_flag) {
     if (sigma0 > SMALL_NUMBER && sigma1 > SMALL_NUMBER) {
       beta0 = (mu0 - z_bar) / sigma0;
