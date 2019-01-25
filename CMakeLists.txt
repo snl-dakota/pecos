@@ -24,6 +24,13 @@ include(FortranCInterface)
 include(CTest)
 
 
+# Libraries from Pecos itself
+set(Pecos_LIBS)
+# Libraries from CMake-built packages required by Pecos
+set(Pecos_PKG_LIBS)
+# External third-party libraries installed on the system
+set(Pecos_TPL_LIBS)
+
 # --- Global options ---
 
 option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" ON)
@@ -140,14 +147,12 @@ endif() # NOT BUILD_IN_TRILINOS
 
 link_directories(${Teuchos_LIBRARY_DIRS})
 
+# Unconditional dependencies
+# (Teuchos is in TPL even if we're building it to avoid export issues
+# with Trilinos and Dakota)
+list(APPEND Pecos_TPL_LIBS
+  ${Teuchos_LIBRARIES} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 
-
-# --- Options for Pecos components
-##option(PECOS_ENABLE_SAMPLING "Enable sampling module" ON)
-option(PECOS_ENABLE_ORTHOGPOLY "Enable core pecos module" ON)
-option(PECOS_ENABLE_SURROGATES "Enable surrogates module" ON)
-option(PECOS_ENABLE_PYTHONAPI "Enable Python wrappers" OFF)
-option(PECOS_ENABLE_TESTS "Enable Pecos tests?" ON)
 
 # --- Potential locally included packages ---
 
@@ -162,27 +167,19 @@ option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
 
 add_subdirectory(packages)
 
-
 # --- Dependency configuration based on previously defined packages ---
-
-# Keep track of what libraries should be included in libpecos
-set(SUBLIBS pecos_util)
-
-if(PECOS_ENABLE_ORTHOGPOLY)
-  list(APPEND SUBLIBS pecos_src)
-endif()
 
 function(CheckPackage package)
   if(HAVE_${package})
     add_definitions("-DHAVE_${package}")
     string(TOLOWER ${package} package_lower)
-    set(SUBLIBS ${SUBLIBS} ${package_lower} PARENT_SCOPE)
+    set(Pecos_PKG_LIBS ${Pecos_PKG_LIBS} ${package_lower} PARENT_SCOPE)
   endif()
 endfunction(CheckPackage)
 
 CheckPackage(LHS)
 if(HAVE_LHS)
-  list(APPEND SUBLIBS lhs_mods lhs_mod)
+  list(APPEND Pecos_PKG_LIBS lhs_mods lhs_mod)
 endif(HAVE_LHS)
 
 if(HAVE_FFT)
@@ -191,7 +188,7 @@ if(HAVE_FFT)
   if(HAVE_FFTW)
     # BMA: I couldn't get this to work with the ExternalProject; commenting:
     #find_package(Fftw3)
-    list(APPEND SUBLIBS fftw3)
+    list(APPEND Pecos_PKG_LIBS fftw3)
     link_directories("${FFTW_BINARY_DIR}/.libs")
   endif(HAVE_FFTW)
 
@@ -199,19 +196,29 @@ endif(HAVE_FFT)
 
 if(HAVE_SPARSE_GRID)
   add_definitions("-DHAVE_SPARSE_GRID")
-  set(SUBLIBS ${SUBLIBS} sparsegrid)
+  list(APPEND Pecos_PKG_LIBS sparsegrid)
 endif(HAVE_SPARSE_GRID)
 
 
+# --- Options for Pecos components
+
+##option(PECOS_ENABLE_SAMPLING "Enable sampling module" ON)
+option(PECOS_ENABLE_ORTHOGPOLY "Enable core pecos module" ON)
+option(PECOS_ENABLE_SURROGATES "Enable surrogates module" ON)
+option(PECOS_ENABLE_PYTHONAPI "Enable Python wrappers" OFF)
+option(PECOS_ENABLE_TESTS "Enable Pecos tests?" ON)
 
 # Foundational utilities
 add_subdirectory(util)
+list(APPEND Pecos_LIBS pecos_util)
 
 # Core Pecos
 if(PECOS_ENABLE_ORTHOGPOLY)
   add_subdirectory(src)
+  list(APPEND Pecos_LIBS pecos_src)
 endif()
 
+# Tests for core Pecos
 if(BUILD_TESTING AND PECOS_ENABLE_TESTS AND PECOS_ENABLE_ORTHOGPOLY)
   add_subdirectory(test)
 endif()
@@ -224,15 +231,18 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
 )
 
 add_library(pecos empty.cxx)
-target_link_libraries(pecos ${SUBLIBS})
+target_link_libraries(pecos ${Pecos_PKG_LIBS})
 install(TARGETS pecos EXPORT ${ExportTarget} DESTINATION lib)
 
-set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
-
 # Modular surrogate model library
-# TODO: optionally depences on Pecos core (need tests with and without)
+# TODO: optionally depends on Pecos core (need tests with and without)
 if(PECOS_ENABLE_SURROGATES)
   add_subdirectory(surrogates)
+
+##  list(APPEND Pecos_LIBS models)
+##  if(PECOS_ENABLE_ORTHOGPOLY)
+##    list(APPEND Pecos_LIBS pecos_wrapper)
+##  endif()
 endif()
 
 # Python wrappers are optional; this approach is having CMake invoke
@@ -242,3 +252,6 @@ if(PECOS_ENABLE_PYTHONAPI)
   find_package(PythonInterp REQUIRED)
   add_subdirectory(python)
 endif()
+
+set(Pecos_LINK_LIBRARIES "${Pecos_LIBS};${Pecos_PKG_LIBS}" CACHE INTERNAL
+  "Pecos link libraries")

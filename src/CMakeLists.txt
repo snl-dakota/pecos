@@ -32,36 +32,26 @@ endif()
 
 if(HAVE_LHS)
   include_directories(${LHS_BINARY_DIR}/include)
-  list(APPEND Pecos_libs lhs lhs_mods lhs_mod)
 endif()
 
 if(HAVE_SPARSE_GRID)
   include_directories(${VPISparseGrid_SOURCE_DIR}/src)
-  list(APPEND Pecos_libs sparsegrid)
 endif()
 
 if(HAVE_FFT)
   if(HAVE_FFTW)
     include_directories("${FFTW_SOURCE_DIR}/api")
     link_directories("${FFTW_BINARY_DIR}/.libs")
-    list(APPEND Pecos_libs fftw3)
-  endif()
-  if(HAVE_DFFTPACK)
-    list(APPEND Pecos_libs dfftpack)
   endif()
 endif()
 
-# Unconditional dependencies.
-list(APPEND Pecos_libs ${Teuchos_LIBRARIES} ${TEUCHOS_LIBRARY}
-  ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS}
-)
 
 ## Pecos library sources.
 file(GLOB Pecos_src *.cpp)
 file(GLOB Pecos_hdr *.hpp)
 
 add_library(pecos_src ${Pecos_src})
-target_link_libraries(pecos_src pecos_util ${Pecos_libs})
+target_link_libraries(pecos_src pecos_util ${Pecos_PKG_LIBS} ${Pecos_TPL_LIBS})
 if (HAVE_FFTW)
   add_dependencies(pecos_src fftw)
 endif()

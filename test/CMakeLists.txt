@@ -37,42 +37,42 @@ endif(HAVE_SPARSE_GRID)
 # lhs library must come before lapack even though lhs does not link to
 # lapack.  This ensures that the linker prefers symbols from lhs over
 # conflicting symbols in lapack.
-set(pecos_libs pecos pecos_src lhs)
+set(pecos_test_libs pecos pecos_src lhs)
 
 # Complete these for each specific test.
 add_executable(pecos_ifft_g pecos_ifft_g.cpp)
-target_link_libraries(pecos_ifft_g ${pecos_libs})
+target_link_libraries(pecos_ifft_g ${pecos_test_libs})
 add_test(pecos_ifft_g pecos_ifft_g)
 
 # Complete these for each specific test.
 add_executable(pecos_ifft_sd pecos_ifft_sd.cpp)
-target_link_libraries(pecos_ifft_sd ${pecos_libs})
+target_link_libraries(pecos_ifft_sd ${pecos_test_libs})
 add_test(pecos_ifft_sd pecos_ifft_sd)
 set_tests_properties(pecos_ifft_sd PROPERTIES DEPENDS pecos_ifft_g)
 
 # Complete these for each specific test.
 add_executable(boost_test_dist boost_test_dist.cpp)
-target_link_libraries(boost_test_dist ${pecos_libs})
+target_link_libraries(boost_test_dist ${pecos_test_libs})
 add_test(boost_test_dist boost_test_dist)
 
 # Complete these for each specific test.
 add_executable(boost_test_rng boost_test_rng.cpp)
-target_link_libraries(boost_test_rng ${pecos_libs})
+target_link_libraries(boost_test_rng ${pecos_test_libs})
 add_test(boost_test_rng boost_test_rng)
 
 # Complete these for each specific test.
 add_executable(pecos_int_driver pecos_int_driver.cpp)
-target_link_libraries(pecos_int_driver ${pecos_libs})
+target_link_libraries(pecos_int_driver ${pecos_test_libs})
 add_test(pecos_int_driver pecos_int_driver)
 
 # Complete these for each specific test.
 add_executable(pecos_gsg_driver pecos_gsg_driver.cpp)
-target_link_libraries(pecos_gsg_driver ${pecos_libs})
+target_link_libraries(pecos_gsg_driver ${pecos_test_libs})
 add_test(pecos_gsg_driver pecos_gsg_driver)
 
 # Complete these for each specific test.
 add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
-target_link_libraries(pecos_lhs_driver ${pecos_libs})
+target_link_libraries(pecos_lhs_driver ${pecos_test_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
 
 set(pecos_teuchos_unit_tests_src
@@ -81,7 +81,7 @@ set(pecos_teuchos_unit_tests_src
   pecos_linear_solvers.cpp
   )
 add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
-target_link_libraries(pecos_teuchos_unit_tests ${pecos_libs} ${Teuchos_LIBRARIES})
+target_link_libraries(pecos_teuchos_unit_tests ${pecos_test_libs} ${Teuchos_LIBRARIES})
 add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
 
 install(TARGETS pecos_gsg_driver DESTINATION bin)
