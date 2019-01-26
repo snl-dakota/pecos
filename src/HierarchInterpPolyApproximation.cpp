@@ -1452,6 +1452,10 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
   const RealVector2DArray& comb_t1w = hsg_driver->combined_type1_weight_sets();
   const RealMatrix2DArray& comb_t2w = hsg_driver->combined_type2_weight_sets();
+  // *** TO DO: use combined_mean(); add status bits to prevent redundant calcs
+  // Note: before combined_to_active, mainly uses delta_combined_*();
+  //       after combined_to_active(), uses regular covariance()
+  // Where/when is this fn used?
   Real mean_1 = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 			    comb_t1w, comb_t2w),
        mean_2 = (same) ? mean_1 : expectation(comb_t1c_2, comb_t2c_2,
@@ -1500,6 +1504,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
+  // *** TO DO: use combined_mean(); add status bits to prevent redundant calcs
   Real mean_1 =
     expectation(x,combinedExpT1Coeffs,combinedExpT2Coeffs,comb_sm_mi,comb_key),
        mean_2 = (same) ? mean_1 :

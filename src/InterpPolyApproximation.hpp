@@ -141,15 +141,18 @@ update_active_iterators(const UShortArray& key)
 inline void InterpPolyApproximation::
 compute_moments(bool full_stats, bool combined_stats)
 {
-  // standard variables mode supports four moments using the collocation rules
-  // as integration rules
-  integrate_response_moments(4, combined_stats);
-
-  // do this second so that clearing any existing rules does not cause rework
-  if (full_stats) //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
+  if (full_stats) {
+    // std variables mode supports four moments using the collocation rules
+    // as integration rules
+    integrate_response_moments(4, combined_stats);
+    // do this second so that clearing any existing rules does not cause rework
+    //if (expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
     integrate_expansion_moments(4, combined_stats);
-  else
+  }
+  else { // only two moments required for incremental metrics
+    integrate_response_moments(2, combined_stats);
     expansionMoments.resize(0);
+  }
 }
 
 
