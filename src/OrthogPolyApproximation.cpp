@@ -701,6 +701,32 @@ covariance(PolynomialApproximation* poly_approx_2)
 }
 
 
+/** In this case, all expansion variables are random variables and the
+    mean of the expansion is simply the first chaos coefficient. */
+Real OrthogPolyApproximation::combined_mean()
+{ return combinedExpCoeffs[0]; }
+
+
+/** In this case, a subset of the expansion variables are random
+    variables and the mean of the expansion involves evaluating the
+    expectation over this subset. */
+Real OrthogPolyApproximation::combined_mean(const RealVector& x)
+{
+  Real mean = combinedExpCoeffs[0];
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& comb_mi = data_rep->combinedMultiIndex;
+  size_t i, num_exp_terms = comb_mi.size();
+  for (i=1; i<num_exp_terms; ++i)
+    // expectations are zero for expansion terms with nonzero random indices
+    if (data_rep->zero_random(comb_mi[i]))
+      mean += combinedExpCoeffs[i] * data_rep->
+	multivariate_polynomial(x, comb_mi[i], data_rep->nonRandomIndices);
+
+  return mean;
+}
+
+
 Real OrthogPolyApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
