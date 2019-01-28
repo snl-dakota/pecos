@@ -38,5 +38,10 @@ set(pce_approx_test
 )
 
 add_executable(pce_approx_test teuchos_unit_test_driver.cpp ${pce_approx_test} )
-target_link_libraries(pce_approx_test pecos_wrapper pecos_src models pecos_util ${Teuchos_LIBRARIES})
+target_link_libraries(pce_approx_test
+  pecos_wrapper pecos_src pecos_models pecos_util
+  ${Pecos_PKG_LIBS} ${Pecos_TPL_LIBS}
+  )
+
+
 add_test(pce_approx_test pce_approx_test)

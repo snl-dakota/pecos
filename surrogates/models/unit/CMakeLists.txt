@@ -36,5 +36,6 @@ set(polynomial_approx_test
 )
 
 add_executable(polynomial_approx_test teuchos_unit_test_driver.cpp ${polynomial_approx_test} )
-target_link_libraries(polynomial_approx_test models pecos_util ${Teuchos_LIBRARIES})
+target_link_libraries(polynomial_approx_test pecos_models pecos_util ${Pecos_TPL_LIBS})
+
 add_test(polynomial_approx_test polynomial_approx_test)

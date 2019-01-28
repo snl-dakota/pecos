@@ -24,5 +24,5 @@ if(HAVE_SPARSE_GRID)
 endif()
 
 
-target_link_libraries(pecos_wrapper pecos_src pecos_util
+target_link_libraries(pecos_wrapper pecos_src pecos_models pecos_util
   ${Pecos_PKG_LIBS} ${Pecos_TPL_LIBS})

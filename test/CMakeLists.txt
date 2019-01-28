@@ -31,13 +31,17 @@ if(HAVE_SPARSE_GRID)
   include_directories(${VPISparseGrid_SOURCE_DIR}/src)
 endif(HAVE_SPARSE_GRID)
 
+# BMA: Historical rationale, prior to removing libpecos (empty.cxx). Leaving
+# the explicit linkage to lhs to be safe, though removed libpecos. It seems
+# just linking ${Pecos_LINK_LIBRARIES} would suffice.
+#
 # Ideally the test executables need to link to only "pecos" because it
 # already links to its dependencies.  However, the lhs library defines
 # at least one symbol (SSPEV) that is also provided by lapack.  The
 # lhs library must come before lapack even though lhs does not link to
 # lapack.  This ensures that the linker prefers symbols from lhs over
 # conflicting symbols in lapack.
-set(pecos_test_libs pecos pecos_src lhs)
+set(pecos_test_libs pecos_src lhs)
 
 # Complete these for each specific test.
 add_executable(pecos_ifft_g pecos_ifft_g.cpp)

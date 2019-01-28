@@ -223,17 +223,6 @@ if(BUILD_TESTING AND PECOS_ENABLE_TESTS AND PECOS_ENABLE_ORTHOGPOLY)
   add_subdirectory(test)
 endif()
 
-# libpecos.la must be built PRIOR to the linkage of test executables
-# WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
-configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
-  "${Pecos_BINARY_DIR}/empty.cxx"
-  @ONLY
-)
-
-add_library(pecos empty.cxx)
-target_link_libraries(pecos ${Pecos_PKG_LIBS})
-install(TARGETS pecos EXPORT ${ExportTarget} DESTINATION lib)
-
 # Modular surrogate model library
 # TODO: optionally depends on Pecos core (need tests with and without)
 if(PECOS_ENABLE_SURROGATES)
