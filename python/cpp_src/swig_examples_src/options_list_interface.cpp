@@ -8,6 +8,8 @@
 
 #include "options_list_interface.hpp"
 
+using Pecos::util::OptionsList;
+
 #define TEST_FUNCS(TYPE, SNAME)					\
 								\
   OptionsList SNAME ## set_entry(OptionsList &opts,	\

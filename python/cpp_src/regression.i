@@ -47,6 +47,9 @@ This package provides tools for
   // Following needed to allow OptionsList to be used and function such as
   // pyDictToNewOptionsList to be found
   #include "python_helpers.hpp"
+
+
+using namespace Pecos;
 %}
 
 // We utilize very little of numpy.i, so some of the fragments
@@ -88,27 +91,27 @@ This package provides tools for
 
 %rename(extract_values_cpp) extract_values;
 // note following is applied to that class and all derived classes
-%rename(solve_cpp) Surrogates::LinearSystemSolver::solve;
-%rename(run_cpp) Surrogates::LinearSystemCrossValidationIterator::run;
+%rename(solve_cpp) Pecos::util::LinearSystemSolver::solve;
+%rename(run_cpp) Pecos::util::LinearSystemCrossValidationIterator::run;
 
 // importing math_tools.i avoids need to %include
 // Teuchos_SerialDenseVector?Matrix.i and data_Structures.i
 %import "math_tools.i"
 %import "OptionsList.i"
 
-%shared_ptr(Surrogates::LinearSystemSolver)
-%shared_ptr(Surrogates::SparseSolver)
-%shared_ptr(Surrogates::OMPSolver)
-%shared_ptr(Surrogates::LARSolver)
-%shared_ptr(Surrogates::LSQSolver)
-%shared_ptr(Surrogates::EqConstrainedLSQSolver)
-%shared_ptr(Surrogates::CrossValidatedSolver)
+%shared_ptr(Pecos::util::LinearSystemSolver)
+%shared_ptr(Pecos::util::SparseSolver)
+%shared_ptr(Pecos::util::OMPSolver)
+%shared_ptr(Pecos::util::LARSolver)
+%shared_ptr(Pecos::util::LSQSolver)
+%shared_ptr(Pecos::util::EqConstrainedLSQSolver)
+%shared_ptr(Pecos::util::CrossValidatedSolver)
 
-%shared_ptr(Surrogates::CrossValidatedSolver)
-%shared_ptr(Surrogates::CrossValidationIterator)
-%shared_ptr(Surrogates::LinearSystemCrossValidationIteratorBase)
-%shared_ptr(Surrogates::LinearSystemCrossValidationIterator)
-%shared_ptr(Surrogates::LSQCrossValidationIterator)
+%shared_ptr(Pecos::util::CrossValidatedSolver)
+%shared_ptr(Pecos::util::CrossValidationIterator)
+%shared_ptr(Pecos::util::LinearSystemCrossValidationIteratorBase)
+%shared_ptr(Pecos::util::LinearSystemCrossValidationIterator)
+%shared_ptr(Pecos::util::LSQCrossValidationIterator)
 
 // %%include of a base class needs to be called before %include for derived
 // classes. LinearSolver base also needed to get enums. perhaps move enums to a type definitions file
@@ -125,7 +128,7 @@ This package provides tools for
 %include "CrossValidatedSolver.hpp"
 %include "linear_solvers.hpp"
 
-%extend Surrogates::CrossValidationIterator {
+%extend Pecos::util::CrossValidationIterator {
   %pythoncode
     %{
     def extract_values( self, values, indices ):
@@ -135,7 +138,7 @@ This package provides tools for
     %}
 }
 
-%extend Surrogates::LinearSystemSolver {
+%extend Pecos::util::LinearSystemSolver {
   %pythoncode
     %{
      def solve( self, A, rhs, opts ):
@@ -145,7 +148,7 @@ This package provides tools for
     %}
 }
 
-%extend Surrogates::LinearSystemCrossValidationIterator {
+%extend Pecos::util::LinearSystemCrossValidationIterator {
   %pythoncode
     %{
      def run( self, A, rhs, opts ):

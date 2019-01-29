@@ -42,7 +42,7 @@ classes and training methods.
 #include "RegressionBuilder.hpp"
 #include "PCEFactory.hpp"
   //  using std::string;
-  //  using namespace Pecos;
+using namespace Pecos;
 
 #include "typedefs_for_python_wrapper.hpp"
 #include <vector> 

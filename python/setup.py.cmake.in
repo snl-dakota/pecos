@@ -26,6 +26,9 @@ cpp_src = join("@CMAKE_CURRENT_SOURCE_DIR@", "cpp_src")
 # semicolon-separated list of directories
 cmake_boost_inc_dirs = "@Boost_INCLUDE_DIRS@"
 
+vpisg_src = "@VPISparseGrid_SOURCE_DIR@/src"
+vpisg_build = "@VPISparseGrid_BINARY_DIR@/src"
+
 package_name="PyDakota"
 
 distutils.log.set_verbosity(1)
@@ -54,10 +57,12 @@ pecos_include_dirs=[
 ]
 
 
-# NOTE: This assumes teuchos is built as part of Pecos
+# NOTE: This assumes teuchos is built as part of Dakota or Pecos
 # TODO: Use Teuchos_INCLUDE_DIRS, Teuchos_LIBRARIES
-teuchos_src_dir = join(pecos_src,'packages','trilinos','packages','teuchos')
-teuchos_build_dir = join(pecos_build,'packages','trilinos','packages','teuchos')
+trilinos_src_dir = "@Trilinos_SOURCE_DIR@"
+trilinos_bin_dir = "@Trilinos_BINARY_DIR@"
+teuchos_src_dir = join(trilinos_src_dir, 'packages', 'teuchos')
+teuchos_build_dir = join(trilinos_bin_dir, 'packages', 'teuchos')
 
 teuchos_include_dirs = [
     join(teuchos_src_dir,'core','src'),
@@ -143,19 +148,19 @@ regression = Extension(
     language='c++',
     library_dirs = regression_library_dirs,
     runtime_library_dirs = regression_library_dirs,
-    libraries = ['models','pecos_util','teuchosnumerics','blas','lapack'],
+    libraries = ['pecos_models','pecos_util','teuchosnumerics','blas','lapack'],
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in regression_include_dirs])
 
 approximation_include_dirs=base_include_dirs+surrogates_include_dirs+\
   teuchos_include_dirs
 approximation_library_dirs = regression_library_dirs
-approximation_libraries = ['models','pecos_util','teuchosnumerics','blas','lapack']
+approximation_libraries = ['pecos_models','pecos_util','teuchosnumerics','blas','lapack']
 if include_pecos:
-    approximation_include_dirs+=[join(pecos_src,'surrogates','pecos_wrapper','src')]+pecos_include_dirs+[join(teuchos_src_dir,'numerics','src'),join(pecos_src,'packages','VPISparseGrid','src')]
+    approximation_include_dirs+=[join(pecos_src,'surrogates','pecos_wrapper','src')]+pecos_include_dirs+[join(teuchos_src_dir,'numerics','src'), vpisg_src]
     approximation_library_dirs += [
         join(pecos_build,'src'),
-        join(pecos_build,'packages','VPISparseGrid','src'),
+	vpisg_build,
         join(pecos_build,'surrogates','pecos_wrapper','src')]
 approximation_libraries = ['pecos_wrapper','pecos_src','sparsegrid']+approximation_libraries#order of libraries is important
 approximation_srcs=[join(cpp_src,'approximations.i')]+pydakota_srcs
@@ -177,7 +182,7 @@ univariate_polynomials_include_dirs=base_include_dirs+pecos_include_dirs+teuchos
 univariate_polynomials_library_dirs=[
     join(pecos_build,'src'),
     teuchos_numerics_lib_dir,
-    join(pecos_build,'packages','VPISparseGrid','src')]
+    vpisg_build]
 univariate_polynomials = Extension(
     '_univariate_polynomials',
     [join(cpp_src,'univariate_polynomials.i')]+pydakota_srcs,

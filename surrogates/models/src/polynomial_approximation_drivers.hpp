@@ -11,6 +11,7 @@
 
 #include "PolyApproximation.hpp"
 #include "RegressionBuilder.hpp"
+#include "linear_algebra.hpp"
 #include "math_tools.hpp"
 // TODO: to be removed
 #include <boost/random.hpp>
@@ -23,21 +24,21 @@ namespace surrogates {
   
 
 void regression_solve(const RealMatrix &matrix, const RealMatrix &rhs,
-		      const OptionsList &opts,
-		      RealMatrix &coeffs, OptionsList &status){
+		      const util::OptionsList &opts,
+		      RealMatrix &coeffs, util::OptionsList &status){
   switch (opts.get<int>("solver_type")){
     case QR_LSQ:
       //resize_if_needed(coeffs, matrix.numRows(), rhs.numRows());
-      qr_solve(matrix,rhs,coeffs,Teuchos::NO_TRANS);
+      util::qr_solve(matrix,rhs,coeffs,Teuchos::NO_TRANS);
       break;
     default:
-      error("Incorrect regression solver specified.");
+      util::error("Incorrect regression solver specified.");
       break;
     }
 }
 
 
-void regression_driver(Function &target_function, PolyApproximation &approx, OptionsList &opts ){
+void regression_driver(Function &target_function, PolyApproximation &approx, util::OptionsList &opts ){
 
   // Generate samples to build approximation
   int num_samples = opts.get<int>("num_samples");
@@ -61,7 +62,7 @@ void regression_driver(Function &target_function, PolyApproximation &approx, Opt
   approx.generate_basis_matrix(samples,basis_matrix);
 
   // Use regressiong to find coefficients
-  OptionsList regression_status;
+  util::OptionsList regression_status;
   RealMatrix coeffs;
   regression_solve(basis_matrix, values, opts, coeffs,
                    regression_status);

@@ -20,7 +20,7 @@
 #include "OptionsList.hpp"
 #include <memory>
 
-namespace Surrogates{
+namespace Pecos {
 
 /** \brief Copy a numpy ndarray into a Teuchos SerialDenseVector (SDV).
  * T is the scalar type of the SDV and S is the scalar type of the numpy array
@@ -42,30 +42,30 @@ void copyNumPyToTeuchosMatrix(PyObject * pyArray,
 template< typename T >
 PyObject * copyTeuchosMatrixToNumPy(Teuchos::SerialDenseMatrix< int,T > &tmat);
 
-bool setPythonParameter(OptionsList & opts_list,
+bool setPythonParameter(util::OptionsList & opts_list,
 			const std::string      & name,
 			PyObject               * value);
 
 bool updateOptionsListWithPyDict(PyObject    * dict,
-				   OptionsList & opts_list);
+				   util::OptionsList & opts_list);
 
-OptionsList * pyDictToNewOptionsList(PyObject* dict);
+util::OptionsList * pyDictToNewOptionsList(PyObject* dict);
 
-PyObject * getPythonParameter(const OptionsList & plist,
+PyObject * getPythonParameter(const util::OptionsList & plist,
 			      const std::string & name);
 
 
 bool updatePyDictWithOptionsList(PyObject          * dict,
-				 const OptionsList & opts_list);
+				 const util::OptionsList & opts_list);
 
-PyObject * optionsListToNewPyDict(const OptionsList & opts_list);
+PyObject * optionsListToNewPyDict(const util::OptionsList & opts_list);
 
 template< typename TYPE >
 int NumPy_TypeCode();
 
-void pyListToNewStdVector(PyObject *pylist, std::vector< OptionsList > &list);
+void pyListToNewStdVector(PyObject *pylist, std::vector< util::OptionsList > &list);
 
-PyObject * copyStdVectorToPyList(std::vector<OptionsList> &list);
+PyObject * copyStdVectorToPyList(std::vector<util::OptionsList> &list);
 
 bool PyListOfOptionsList_check(PyObject* pylist);
 
@@ -74,5 +74,5 @@ void print_pyobject_string_rep(PyObject * value);
   
 void print_PyType(PyObject *value);
 
-} //namespace Surrogates
+} //namespace Pecos
 #endif // PYTHON_HELPERS_HPP

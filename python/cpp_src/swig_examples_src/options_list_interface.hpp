@@ -13,14 +13,14 @@
 
 #define TEST_FUNC_PROTOS(TYPE, SNAME)				  \
 								  \
-  OptionsList SNAME ## set_entry(OptionsList &opts,	  \
+  Pecos::util::OptionsList SNAME ## set_entry(Pecos::util::OptionsList &opts, \
 		    const std::string &name, const TYPE & item);  \
 
 
 TEST_FUNC_PROTOS(int, int)
 TEST_FUNC_PROTOS(double, double)
 TEST_FUNC_PROTOS(std::string, string)
-TEST_FUNC_PROTOS(OptionsList, optionslist)
+TEST_FUNC_PROTOS(Pecos::util::OptionsList, optionslist)
 
 #endif // TEST_OPTIONS_LIST_HPP
 

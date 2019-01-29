@@ -35,6 +35,8 @@ needed for mainpulating operatring on matrices and vectors
 #include "math_tools.hpp"
 #include "linear_algebra.hpp"
 #include "teuchos_data_types.hpp"
+
+using namespace Pecos;
 %}
 
 // Global swig features
@@ -139,7 +141,8 @@ typedef Teuchos::SerialDenseMatrix<int,Complex> ComplexMatrix;
 %include "math_tools.hpp"
 %include "linear_algebra.hpp"
 
-namespace Surrogates{
+namespace Pecos {
+namespace util {
 %template(cartesian_product_int) cartesian_product<int,int>;
 %template(cartesian_product_double) cartesian_product<int,double>;
 %template(outer_product_int) outer_product<int,int>;
@@ -148,6 +151,7 @@ namespace Surrogates{
 %template(binary_search_int) binary_search<int,int>;
 %template(range_double) range<int,double>;
 %template(range_int) range<int,double>;
+}
 }
 
 
