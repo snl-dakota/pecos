@@ -115,12 +115,6 @@ protected:
   const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x,
 				  const SizetArray& dvv);
-
-  Real variance();
-  Real variance(const RealVector& x);
-  Real combined_variance();
-  Real combined_variance(const RealVector& x);
-
   const RealVector& variance_gradient();
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
@@ -167,6 +161,8 @@ protected:
   void compute_total_sobol_indices();
   void compute_partial_variance(const BitArray& set_value);
 
+  void clear_computed_bits();
+
 private:
 
   //
@@ -178,7 +174,7 @@ private:
   /// reset computedDelta* to zero
   void clear_delta_computed_bits();
   /// reset all computed bit states to zero
-  void clear_all_computed_bits();
+  void clear_current_computed_bits();
 
   /// compute the value at a point for a particular interpolation level
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
@@ -719,19 +715,25 @@ inline void HierarchInterpPolyApproximation::clear_delta_computed_bits()
 { computedDeltaMean = computedDeltaVariance = 0; } // clear delta current bits
 
 
-inline void HierarchInterpPolyApproximation::clear_all_computed_bits()
+inline void HierarchInterpPolyApproximation::clear_current_computed_bits()
+{ computedMean = computedVariance = 0; }
+
+
+inline void HierarchInterpPolyApproximation::clear_computed_bits()
 {
-  clear_computed_bits();
   clear_reference_computed_bits();
   clear_delta_computed_bits();
+  clear_current_computed_bits();
 }
 
 
 inline void HierarchInterpPolyApproximation::increment_current_from_reference()
 {
+  // update reference bits
   computedRefMean     = computedMean;
   computedRefVariance = computedVariance;
 
+  // update reference data
   if ( (computedMean & 1) || (computedVariance & 1) )
     referenceMoments = numericalMoments;
   if (computedMean & 2)
@@ -739,15 +741,17 @@ inline void HierarchInterpPolyApproximation::increment_current_from_reference()
   if (computedVariance & 2)
     varianceRefGradient = varianceGradient;
 
-  clear_computed_bits(); clear_delta_computed_bits(); // clear current and delta
+  clear_current_computed_bits(); clear_delta_computed_bits();
 }
 
 
 inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
 {
+  // update current bits
   computedMean     = computedRefMean;
   computedVariance = computedRefVariance;
 
+  // update current data
   if ( (computedRefMean & 1) || (computedRefVariance & 1) )
     numericalMoments = referenceMoments;
   if (computedRefMean & 2)
@@ -808,23 +812,6 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   //  > redefine HierarchSparseGridDriver::type1_weight_sets() to generate
   //    from 1D weights array in CSG-style approach (not simple concatenation)
 }
-
-
-inline Real HierarchInterpPolyApproximation::variance()
-{ return covariance(this); }
-
-
-inline Real HierarchInterpPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
-
-
-inline Real HierarchInterpPolyApproximation::combined_variance()
-{ return combined_covariance(this); }
-
-
-inline Real HierarchInterpPolyApproximation::
-combined_variance(const RealVector& x)
-{ return combined_covariance(x, this); }
 
 
 inline void HierarchInterpPolyApproximation::

@@ -701,64 +701,6 @@ covariance(PolynomialApproximation* poly_approx_2)
 }
 
 
-/** In this case, all expansion variables are random variables and the
-    mean of the expansion is simply the first chaos coefficient. */
-Real OrthogPolyApproximation::combined_mean()
-{ return combinedExpCoeffs[0]; }
-
-
-/** In this case, a subset of the expansion variables are random
-    variables and the mean of the expansion involves evaluating the
-    expectation over this subset. */
-Real OrthogPolyApproximation::combined_mean(const RealVector& x)
-{
-  Real mean = combinedExpCoeffs[0];
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& comb_mi = data_rep->combinedMultiIndex;
-  size_t i, num_exp_terms = comb_mi.size();
-  for (i=1; i<num_exp_terms; ++i)
-    // expectations are zero for expansion terms with nonzero random indices
-    if (data_rep->zero_random(comb_mi[i]))
-      mean += combinedExpCoeffs[i] * data_rep->
-	multivariate_polynomial(x, comb_mi[i], data_rep->nonRandomIndices);
-
-  return mean;
-}
-
-
-Real OrthogPolyApproximation::
-combined_covariance(PolynomialApproximation* poly_approx_2)
-{
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
-  bool same = (opa_2 == this), std_mode = data_rep->nonRandomIndices.empty();
-
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !opa_2->expansionCoeffFlag ) ) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::combined_covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  /*
-  if (same && std_mode && (computedVariance & 1))
-    return expansionMoments[1];
-  else {
-    Real covar = covariance(data_rep->multi_index(), expCoeffsIter->second,
-			    opa_2->expCoeffsIter->second);
-    if (same && std_mode)
-      { expansionMoments[1] = covar; computedVariance |= 1; }
-    return covar;
-  }
-  */
-  return covariance(data_rep->combinedMultiIndex, combinedExpCoeffs,
-		    opa_2->combinedExpCoeffs);
-}
-
-
 Real OrthogPolyApproximation::
 covariance(const RealVector& x, const UShort2DArray& mi,
 	   const RealVector& exp_coeffs, const RealVector& exp_coeffs_2)
@@ -824,6 +766,69 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
+/** In this case, all expansion variables are random variables and the
+    mean of the expansion is simply the first chaos coefficient. */
+Real OrthogPolyApproximation::combined_mean()
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return expansionMoments[0];
+
+  Real mean = combinedExpCoeffs[0];
+  if (std_mode)
+    { expansionMoments[0] = mean; computedMean |= 1; }
+  return mean;
+}
+
+
+/** In this case, a subset of the expansion variables are random
+    variables and the mean of the expansion involves evaluating the
+    expectation over this subset. */
+Real OrthogPolyApproximation::combined_mean(const RealVector& x)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean))
+    return expansionMoments[0];
+
+  Real mean = combinedExpCoeffs[0];
+  const UShort2DArray& comb_mi = data_rep->combinedMultiIndex;
+  size_t i, num_exp_terms = comb_mi.size();
+  for (i=1; i<num_exp_terms; ++i)
+    // expectations are zero for expansion terms with nonzero random indices
+    if (data_rep->zero_random(comb_mi[i]))
+      mean += combinedExpCoeffs[i] * data_rep->
+	multivariate_polynomial(x, comb_mi[i], data_rep->nonRandomIndices);
+
+  if (all_mode)
+    { expansionMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
+  return mean;
+}
+
+
+Real OrthogPolyApproximation::
+combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  bool same = (opa_2 == this), std_mode = data_rep->nonRandomIndices.empty();
+
+  if (same && std_mode && (computedVariance & 1))
+    return expansionMoments[1];
+
+  Real covar = covariance(data_rep->combinedMultiIndex, combinedExpCoeffs,
+			  opa_2->combinedExpCoeffs);
+  if (same && std_mode)
+    { expansionMoments[1] = covar; computedVariance |= 1; }
+  return covar;
+}
+
+
 Real OrthogPolyApproximation::
 combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
@@ -832,27 +837,15 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool same = (this == opa_2), all_mode = !data_rep->nonRandomIndices.empty();
 
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !opa_2->expansionCoeffFlag )) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::combined_covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  /*
   if ( same && all_mode && (computedVariance & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar) )
     return expansionMoments[1];
 
-  Real covar = covariance(x, data_rep->multi_index(), expCoeffsIter->second,
-			  opa_2->expCoeffsIter->second);
+  Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
+			  opa_2->combinedExpCoeffs);
   if (same && all_mode)
     { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
   return covar;
-  */
-  return covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
-		    opa_2->combinedExpCoeffs);
 }
 
 

@@ -173,7 +173,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   test_interpolation();
 #endif
 
-  clear_all_computed_bits();
+  clear_computed_bits();
 }
 
 
@@ -197,7 +197,7 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
 
   bool updated = update_active_iterators(data_rep->activeKey);
-  if (updated) clear_all_computed_bits();
+  if (updated) clear_computed_bits();
   else         increment_current_from_reference();
 
   switch (data_rep->expConfigOptions.refineControl) {
@@ -243,7 +243,7 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
   const UShortArray& key = data_rep->activeKey;
 
   bool updated = update_active_iterators(key);
-  if (updated) clear_all_computed_bits();
+  if (updated) clear_computed_bits();
   else         decrement_current_to_reference();
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -440,7 +440,7 @@ void HierarchInterpPolyApproximation::push_coefficients()
   const UShortArray& key = data_rep->activeKey;
 
   bool updated = update_active_iterators(key);
-  if (updated) clear_all_computed_bits();
+  if (updated) clear_computed_bits();
   else         increment_current_from_reference();
 
   switch (data_rep->expConfigOptions.refineControl) {
@@ -519,8 +519,8 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
   // synchronize expansionCoeff{s,Grads} and approxData
   bool updated = update_active_iterators(data_rep->activeKey);
-  if (updated) clear_all_computed_bits();
-  else         clear_computed_bits(); //clear_delta_computed_bits();
+  if (updated) clear_computed_bits();
+  else         clear_current_computed_bits(); //clear_delta_computed_bits();
 
   promote_all_popped_coefficients();
 }
@@ -607,7 +607,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 
   // Coefficient combination is not dependent on active state
   //bool updated = update_active_iterators(data_rep->activeKey);
-  //if (updated) clear_all_computed_bits();
+  //if (updated) clear_computed_bits();
   //else (combined stats managed separately)
 
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
@@ -739,7 +739,7 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   productType2Coeffs.clear();     prodT2CoeffsIter = productType2Coeffs.end();
   poppedProdType1Coeffs.clear();  poppedProdType2Coeffs.clear();
 
-  clear_all_computed_bits();
+  clear_computed_bits();
 }
 
 
@@ -1212,10 +1212,17 @@ Real HierarchInterpPolyApproximation::combined_mean()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return numericalMoments[0];
+
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  return expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-		     hsg_driver->combined_type1_weight_sets(),
-		     hsg_driver->combined_type2_weight_sets());
+  Real mean = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
+			  hsg_driver->combined_type1_weight_sets(),
+			  hsg_driver->combined_type2_weight_sets());
+  if (std_mode)
+    { numericalMoments[0] = mean; computedMean |= 1; }
+  return mean;
 }
 
 
@@ -1224,10 +1231,18 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean))
+    return numericalMoments[0];
+
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  return expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		     hsg_driver->combined_smolyak_multi_index(),
-		     hsg_driver->combined_collocation_key());
+  Real mean = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
+			  hsg_driver->combined_smolyak_multi_index(),
+			  hsg_driver->combined_collocation_key());
+  if (all_mode)
+    { numericalMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
+  return mean;
 }
 
 
@@ -1425,12 +1440,15 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool same = (this == hip_approx_2);
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool  same = (this == hip_approx_2),
+    std_mode = data_rep->nonRandomIndices.empty();
+
+  if (same && std_mode && (computedVariance & 1))
+    return numericalMoments[1];
 
   /*
   // combined_covariance() is for roll up of all expansion contributions -->
@@ -1446,43 +1464,48 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   //     map-based central_product_interpolant across all dimensions
   */
 
-  // *** TO DO ?
-
-  const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
-  const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  const RealVector2DArray& comb_t1w = hsg_driver->combined_type1_weight_sets();
-  const RealMatrix2DArray& comb_t2w = hsg_driver->combined_type2_weight_sets();
-  // *** TO DO: use combined_mean(); add status bits to prevent redundant calcs
+  // *** TO DO: incremental approach ?
   // Note: before combined_to_active, mainly uses delta_combined_*();
-  //       after combined_to_active(), uses regular covariance()
-  // Where/when is this fn used?
-  Real mean_1 = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-			    comb_t1w, comb_t2w),
-       mean_2 = (same) ? mean_1 : expectation(comb_t1c_2, comb_t2c_2,
-					      comb_t1w, comb_t2w);
+  //       after combined_to_active(), uses regular covariance().
+  //       Fn is mainly used immediately after switch from active to
+  //       combined stats to provide ref prior to greedy adaptation.
+
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  Real mean_1 = combined_mean(),
+       mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean();
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   central_product_interpolant(hsg_driver->combined_variable_sets(),
 			      hsg_driver->combined_smolyak_multi_index(),
 			      hsg_driver->combined_collocation_key(),
 			      combinedExpT1Coeffs, combinedExpT2Coeffs,
-			      comb_t1c_2, comb_t2c_2, same, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
+			      hip_approx_2->combinedExpT1Coeffs,
+			      hip_approx_2->combinedExpT2Coeffs, same,
+			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
-  return expectation(cov_t1_coeffs, cov_t2_coeffs, comb_t1w, comb_t2w);
+  Real covar = expectation(cov_t1_coeffs, cov_t2_coeffs,
+			   hsg_driver->combined_type1_weight_sets(),
+			   hsg_driver->combined_type2_weight_sets());
+
+  if (same && std_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; }
+  return covar;
 }
 
 
 Real HierarchInterpPolyApproximation::
 combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool same = (this == hip_approx_2);
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool  same = (this == hip_approx_2),
+    all_mode = !data_rep->nonRandomIndices.empty();
+  if ( same && all_mode && (computedVariance & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar) )
+    return numericalMoments[1];
 
   /*
   // combined_covariance() is for roll up of all expansion contributions -->
@@ -1498,26 +1521,33 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   //     map-based central_product_interpolant across all dimensions
   */
 
-  // *** TO DO ?
+  // *** TO DO incremental approach ?
+  // Note: before combined_to_active, mainly uses delta_combined_*();
+  //       after combined_to_active(), uses regular covariance()
+  //       Fn is mainly used immediately after switch from active to
+  //       combined stats to provide ref prior to greedy adaptation.
 
+  Real mean_1 = combined_mean(x),
+       mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean(x);
+
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& comb_sm_mi = hsg_driver->combined_smolyak_multi_index();
   const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
-  const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
-  const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  // *** TO DO: use combined_mean(); add status bits to prevent redundant calcs
-  Real mean_1 =
-    expectation(x,combinedExpT1Coeffs,combinedExpT2Coeffs,comb_sm_mi,comb_key),
-       mean_2 = (same) ? mean_1 :
-    expectation(x, comb_t1c_2, comb_t2c_2, comb_sm_mi, comb_key);
-
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(hsg_driver->combined_variable_sets(), comb_sm_mi,
-			      comb_key, combinedExpT1Coeffs,
-			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
+  central_product_interpolant(hsg_driver->combined_variable_sets(),
+			      comb_sm_mi, comb_key,
+			      combinedExpT1Coeffs, combinedExpT2Coeffs,
+			      hip_approx_2->combinedExpT1Coeffs,
+			      hip_approx_2->combinedExpT2Coeffs, same,
 			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
-  return expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);
+  Real covar
+    = expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);
+
+  if (same && all_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
 }
 
 
@@ -3816,7 +3846,7 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
 
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
-  Real& mean = numericalMoments[0];
+  Real& mean = numericalMoments[0]; // *** includes combined moments ***
   mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
 
   // size moment coefficient arrays

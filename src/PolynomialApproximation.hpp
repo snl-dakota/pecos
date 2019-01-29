@@ -61,6 +61,8 @@ public:
   virtual void initialize_products();
   /// query whether product interpolants are defined (non-empty)
   virtual bool product_interpolants();
+  /// clear bits indicating previously computed moment data
+  virtual void clear_computed_bits();
 
   /// Computes sensitivity indices according to VBD specification
   virtual void compute_component_sobol() = 0;
@@ -293,6 +295,10 @@ protected:
   const RealSymMatrix& hessian(const RealVector& x);
 
   //
+  //- Heading: New virtual functions
+  //
+
+  //
   //- Heading: Member functions
   //
 
@@ -307,9 +313,6 @@ protected:
 
   /// define a LF key corresponding to incoming HF key
   void paired_lf_key(const UShortArray& hf_key, UShortArray& lf_key) const;
-
-  /// clear bits for current moments (updated from reference)
-  void clear_computed_bits();
 
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,

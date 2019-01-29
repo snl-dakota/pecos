@@ -96,17 +96,18 @@ protected:
 
   Real mean();
   Real mean(const RealVector& x);
+
   const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
-
-  Real variance();
-  Real variance(const RealVector& x);
   const RealVector& variance_gradient();
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
 
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
+
+  Real combined_mean();
+  Real combined_mean(const RealVector& x);
 
   Real combined_covariance(PolynomialApproximation* poly_approx_2);
   Real combined_covariance(const RealVector& x,
@@ -551,19 +552,6 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
-/** In this case, all expansion variables are random variables and the
-    variance of the expansion uses an interpolation of response products. */
-inline Real NodalInterpPolyApproximation::variance()
-{ return covariance(this); }
-
-
-/** In this case, a subset of the expansion variables are random
-    variables and the variance of the expansion involves integration
-    over this subset and evaluation over the subset's complement. */
-inline Real NodalInterpPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
-
-
 inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
 {
   // Error check for required data
@@ -624,7 +612,6 @@ covariance(PolynomialApproximation* poly_approx_2)
     = (NodalInterpPolyApproximation*)poly_approx_2;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
   bool same  = (this == nip_approx_2),
     std_mode = data_rep->nonRandomIndices.empty();
 
@@ -636,6 +623,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   }
 
   // TO DO:
+  //IntegrationDriver* driver_rep = data_rep->driverRep;
   //if (!driver_rep->track_unique_product_weights()) {
   //  PCerr << "Error: unique product weights required in "
   //	    << "NodalInterpPolyApproximation::covariance()" << std::endl;
@@ -697,17 +685,60 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
+inline Real NodalInterpPolyApproximation::combined_mean()
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return numericalMoments[0];
+
+  Real mu = mean(combinedExpT1Coeffs, combinedExpT2Coeffs);
+  if (std_mode)
+    { numericalMoments[0] = mu; computedMean |= 1; }
+  return mu;
+}
+
+
+inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean))
+    return numericalMoments[0];
+
+  Real mu = mean(x, combinedExpT1Coeffs, combinedExpT2Coeffs);
+  if (all_mode)
+    { numericalMoments[0] = mu; computedMean |= 1; xPrevMean = x; }
+  return mu;
+}
+
+
 inline Real NodalInterpPolyApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  const RealVector& comb_t1c_2 = nip_approx_2->combinedExpT1Coeffs;
-  const RealMatrix& comb_t2c_2 = nip_approx_2->combinedExpT2Coeffs;
-  Real mean_1 = mean(combinedExpT1Coeffs, combinedExpT2Coeffs),
-    mean_2 = (this == nip_approx_2) ? mean_1 : mean(comb_t1c_2, comb_t2c_2);
-  return covariance(mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		    comb_t1c_2, comb_t2c_2);
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool same  = (this == nip_approx_2),
+    std_mode = data_rep->nonRandomIndices.empty();
+
+  if (same && std_mode && (computedVariance & 1))
+    return numericalMoments[1];
+
+  Real mean_1 = combined_mean(),
+       mean_2 = (this == nip_approx_2) ? mean_1 : nip_approx_2->combined_mean();
+  Real covar
+    = covariance(mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
+		 nip_approx_2->combinedExpT1Coeffs,
+		 nip_approx_2->combinedExpT2Coeffs);
+
+  if (same && std_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; }
+  return covar;
 }
 
 
@@ -718,17 +749,28 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     = (NodalInterpPolyApproximation*)poly_approx_2;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  const RealVector& comb_t1c_2 = nip_approx_2->combinedExpT1Coeffs;
-  const RealMatrix& comb_t2c_2 = nip_approx_2->combinedExpT2Coeffs;
+  bool same = (this == nip_approx_2),
+    all_mode = !data_rep->nonRandomIndices.empty();
+
+  if ( same && all_mode && (computedVariance & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar) )
+    return numericalMoments[1];
+
   Real mean_1, mean_2;
   if (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST)
     mean_1 = mean_2 = 0.; // don't compute exp mean since tensor means used
   else {
-    mean_1 = mean(x, combinedExpT1Coeffs, combinedExpT2Coeffs);
-    mean_2 = (this == nip_approx_2) ? mean_1 : mean(x, comb_t1c_2, comb_t2c_2);
+    mean_1 = combined_mean(x);
+    mean_2 = (this == nip_approx_2) ? mean_1 : nip_approx_2->combined_mean(x);
   }
-  return covariance(x, mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		    comb_t1c_2, comb_t2c_2);
+  Real covar
+    = covariance(x, mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
+		 nip_approx_2->combinedExpT1Coeffs,
+		 nip_approx_2->combinedExpT2Coeffs);
+
+  if (same && all_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
 }
 
 
