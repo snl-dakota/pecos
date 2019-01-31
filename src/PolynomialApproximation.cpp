@@ -483,6 +483,24 @@ size_t PolynomialApproximation::expansion_terms() const
 }
 
 
+Real PolynomialApproximation::combined_mean()
+{
+  PCerr << "Error: combined_mean() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::combined_mean(const RealVector& x)
+{
+  PCerr << "Error: combined_mean() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
@@ -559,6 +577,24 @@ Real PolynomialApproximation::delta_mean(const RealVector& x)
 }
 
 
+Real PolynomialApproximation::delta_combined_mean()
+{
+  PCerr << "Error: delta_combined_mean() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_mean(const RealVector& x)
+{
+  PCerr << "Error: delta_combined_mean(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::delta_std_deviation()
 {
   PCerr << "Error: delta_std_deviation() not available for this polynomial "
@@ -572,6 +608,24 @@ Real PolynomialApproximation::delta_std_deviation(const RealVector& x)
 {
   PCerr << "Error: delta_std_deviation(x) not available for this polynomial "
 	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_std_deviation()
+{
+  PCerr << "Error: delta_combined_std_deviation() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_std_deviation(const RealVector& x)
+{
+  PCerr << "Error: delta_combined_std_deviation(x) not available for this "
+	<< "polynomial approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
 }

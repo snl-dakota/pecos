@@ -210,7 +210,7 @@ void RegressOrthogPolyApproximation::increment_coefficients()
   update_active_iterators(data_rep->activeKey); // redundant but needed for
                                                 // prevExp prior to compute
 
-  // for use in decrement_coefficients()
+  // for use in pop_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
   prevExpCoeffGrads = expCoeffGradsIter->second; // copy
   prevSparseIndices = sparseIndIter->second;     // copy
@@ -219,7 +219,7 @@ void RegressOrthogPolyApproximation::increment_coefficients()
 }
 
 
-void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
+void RegressOrthogPolyApproximation::pop_coefficients(bool save_data)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -261,7 +261,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
   // all cases other than generalized sparse grids
   size_t p_index = data_rep->push_index();
 
-  // store current state for use in decrement_coefficients()
+  // store current state for use in pop_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
   prevExpCoeffGrads = expCoeffGradsIter->second; // copy
   prevSparseIndices = sparseIndIter->second;     // copy
@@ -309,6 +309,10 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
+
+  // Note: computed bits are also cleared when refineStatsType is changed
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    clear_computed_bits();
 
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -421,8 +425,6 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     break;
   }
   }
-
-  //clear_computed_bits(); // combined stats are managed separately
 }
 
 

@@ -70,7 +70,7 @@ protected:
   void increment_coefficients();
   /// restore the coefficients to their previous state prior to last increment:
   /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void decrement_coefficients(bool save_data);
+  void pop_coefficients(bool save_data);
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index:
   /// push expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -131,22 +131,22 @@ protected:
   Real combined_beta(bool cdf_flag, Real z_bar);
   Real combined_beta(const RealVector& x, bool cdf_flag, Real z_bar);
 
+  Real delta_mean();
+  Real delta_mean(const RealVector& x);
+  Real delta_combined_mean();
+  Real delta_combined_mean(const RealVector& x);
+
+  Real delta_std_deviation();
+  Real delta_std_deviation(const RealVector& x);
+  Real delta_combined_std_deviation();
+  Real delta_combined_std_deviation(const RealVector& x);
+
   Real delta_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_covariance(const RealVector& x,
 			PolynomialApproximation* poly_approx_2);
   Real delta_combined_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_combined_covariance(const RealVector& x,
 				 PolynomialApproximation* poly_approx_2);
-
-  Real delta_mean();
-  Real delta_mean(const RealVector& x);
-  //Real delta_combined_mean();
-  //Real delta_combined_mean(const RealVector& x);
-
-  Real delta_std_deviation();
-  Real delta_std_deviation(const RealVector& x);
-  //Real delta_combined_std_deviation();
-  //Real delta_combined_std_deviation(const RealVector& x);
 
   Real delta_beta(bool cdf_flag, Real z_bar);
   Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar);
@@ -226,7 +226,7 @@ private:
 
   /// update bookkeeping when adding a grid increment relative to the
   /// grid reference
-  void increment_current_from_reference();
+  void increment_reference_to_current();
   /// update bookkeeping when removing a grid increment and returning
   /// to the grid reference
   void decrement_current_to_reference();
@@ -237,12 +237,26 @@ private:
   /// compute the reference mean, excluding the current grid
   /// increment, using ref_key
   Real reference_mean(const RealVector& x, const UShort2DArray& ref_key);
+  /// compute the reference mean, excluding the current grid
+  /// increment, using ref_key
+  Real reference_combined_mean(const UShort2DArray& ref_key);
+  /// compute the reference mean, excluding the current grid
+  /// increment, using ref_key
+  Real reference_combined_mean(const RealVector& x,
+			       const UShort2DArray& ref_key);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_variance(const UShort2DArray& ref_key);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_variance(const RealVector& x, const UShort2DArray& ref_key);
+  /// compute the reference variance, excluding the current grid
+  /// increment, using ref_key
+  Real reference_combined_variance(const UShort2DArray& ref_key);
+  /// compute the reference variance, excluding the current grid
+  /// increment, using ref_key
+  Real reference_combined_variance(const RealVector& x,
+				   const UShort2DArray& ref_key);
 
   /// compute the covariance increment due to the current grid increment
   /// using the active coefficients and weights
@@ -292,30 +306,68 @@ private:
   Real delta_mean(const UShort2DArray& incr_key);
   /// compute the mean increment due to the current grid increment
   Real delta_mean(const RealVector& x, const UShort2DArray& incr_key);
+  /// compute the mean increment due to the current grid increment
+  Real delta_combined_mean(const UShort2DArray& incr_key);
+  /// compute the mean increment due to the current grid increment
+  Real delta_combined_mean(const RealVector& x, const UShort2DArray& incr_key);
+
   /// compute the variance increment due to the current grid increment
   Real delta_variance(const UShort2DArray& ref_key,
 		      const UShort2DArray& incr_key);
   /// compute the variance increment due to the current grid increment
   Real delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 		      const UShort2DArray& incr_key);
+  /// compute the variance increment due to the current grid increment
+  Real delta_combined_variance(const UShort2DArray& ref_key,
+			       const UShort2DArray& incr_key);
+  /// compute the variance increment due to the current grid increment
+  Real delta_combined_variance(const RealVector& x,
+			       const UShort2DArray& ref_key,
+			       const UShort2DArray& incr_key);
+
   /// compute the standard deviation increment due to the current grid increment
   Real delta_std_deviation(const UShort2DArray& ref_key,
 			   const UShort2DArray& incr_key);
   /// compute the standard deviation increment due to the current grid increment
   Real delta_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
 			   const UShort2DArray& incr_key);
+  /// compute the standard deviation increment due to the current grid increment
+  Real delta_combined_std_deviation(const UShort2DArray& ref_key,
+				    const UShort2DArray& incr_key);
+  /// compute the standard deviation increment due to the current grid increment
+  Real delta_combined_std_deviation(const RealVector& x,
+				    const UShort2DArray& ref_key,
+				    const UShort2DArray& incr_key);
+
   /// compute the reliability index increment due to the current grid increment
   Real delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
 		  const UShort2DArray& incr_key);
   /// compute the reliability index increment due to the current grid increment
   Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar,
 		  const UShort2DArray& ref_key, const UShort2DArray& incr_key);
+  /// compute the reliability index increment due to the current grid increment
+  Real delta_combined_beta(bool cdf_flag, Real z_bar,
+			   const UShort2DArray& ref_key,
+			   const UShort2DArray& incr_key);
+  /// compute the reliability index increment due to the current grid increment
+  Real delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar,
+			   const UShort2DArray& ref_key,
+			   const UShort2DArray& incr_key);
+
   /// compute the response level increment due to the current grid increment
   Real delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
 	       const UShort2DArray& incr_key);
   /// compute the response level increment due to the current grid increment
   Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar,
 	       const UShort2DArray& ref_key, const UShort2DArray& incr_key);
+  /// compute the response level increment due to the current grid increment
+  Real delta_combined_z(bool cdf_flag, Real beta_bar,
+			const UShort2DArray& ref_key,
+			const UShort2DArray& incr_key);
+  /// compute the response level increment due to the current grid increment
+  Real delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
+			const UShort2DArray& ref_key,
+			const UShort2DArray& incr_key);
 
   /// shared logic for handling exceptional cases
   Real beta_map(Real mu, Real var, bool cdf_flag, Real z_bar);
@@ -727,7 +779,7 @@ inline void HierarchInterpPolyApproximation::clear_computed_bits()
 }
 
 
-inline void HierarchInterpPolyApproximation::increment_current_from_reference()
+inline void HierarchInterpPolyApproximation::increment_reference_to_current()
 {
   // update reference bits
   computedRefMean     = computedMean;
@@ -896,34 +948,6 @@ combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 { return beta_map(combined_mean(x), combined_variance(x), cdf_flag, z_bar); }
 
 
-inline Real HierarchInterpPolyApproximation::delta_mean()
-{
-  if ( !(computedDeltaMean & 1) ) {
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    UShort2DArray ref_key, incr_key;
-    data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
-    return delta_mean(incr_key);
-  }
-  else
-    return deltaMoments[0];
-}
-
-
-inline Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
-{
-  if ( !(computedDeltaMean & 1) ) {
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    UShort2DArray ref_key, incr_key;
-    data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
-    return delta_mean(x, incr_key);
-  }
-  else
-    return deltaMoments[0];
-}
-
-
 inline Real HierarchInterpPolyApproximation::delta_std_deviation()
 {
   SharedHierarchInterpPolyApproxData* data_rep
@@ -944,6 +968,30 @@ delta_std_deviation(const RealVector& x)
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_std_deviation(x, ref_key, incr_key);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+delta_combined_std_deviation()
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  UShort2DArray ref_key, incr_key;
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+
+  return delta_combined_std_deviation(ref_key, incr_key);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+delta_combined_std_deviation(const RealVector& x)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  UShort2DArray ref_key, incr_key;
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+
+  return delta_combined_std_deviation(x, ref_key, incr_key);
 }
 
 
@@ -972,6 +1020,30 @@ delta_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 
 
 inline Real HierarchInterpPolyApproximation::
+delta_combined_beta(bool cdf_flag, Real z_bar)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  UShort2DArray ref_key, incr_key;
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+
+  return delta_combined_beta(cdf_flag, z_bar, ref_key, incr_key);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  UShort2DArray ref_key, incr_key;
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+
+  return delta_combined_beta(x, cdf_flag, z_bar, ref_key, incr_key);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
 delta_z(bool cdf_flag, Real beta_bar)
 {
   SharedHierarchInterpPolyApproxData* data_rep
@@ -992,6 +1064,30 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_z(x, cdf_flag, beta_bar, ref_key, incr_key);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+delta_combined_z(bool cdf_flag, Real beta_bar)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  UShort2DArray ref_key, incr_key;
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+
+  return delta_combined_z(cdf_flag, beta_bar, ref_key, incr_key);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  UShort2DArray ref_key, incr_key;
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+
+  return delta_combined_z(x, cdf_flag, beta_bar, ref_key, incr_key);
 }
 
 

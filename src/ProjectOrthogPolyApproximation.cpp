@@ -180,7 +180,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // (based on size of data_rep->sobolIndexMap)
   allocate_component_sobol();
 
-  // for use in decrement_coefficients()
+  // for use in pop_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
   prevExpCoeffGrads = expCoeffGradsIter->second; // copy
 
@@ -239,7 +239,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
 }
 
 
-void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
+void ProjectOrthogPolyApproximation::pop_coefficients(bool save_data)
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;

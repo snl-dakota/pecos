@@ -46,9 +46,9 @@ public:
   //
 
   void compute_coefficients();
-  void push_coefficients();
   void increment_coefficients();
-  void decrement_coefficients(bool save_data);
+  void pop_coefficients(bool save_data);
+  void push_coefficients();
   void finalize_coefficients();
 
   //

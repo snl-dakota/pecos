@@ -356,12 +356,12 @@ void BasisApproximation::increment_coefficients()
 }
 
 
-void BasisApproximation::decrement_coefficients(bool save_data)
+void BasisApproximation::pop_coefficients(bool save_data)
 {
   if (basisApproxRep)
-    basisApproxRep->decrement_coefficients(save_data); 
+    basisApproxRep->pop_coefficients(save_data); 
   else {
-    PCerr << "Error: decrement_coefficients() not available for this basis "
+    PCerr << "Error: pop_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }

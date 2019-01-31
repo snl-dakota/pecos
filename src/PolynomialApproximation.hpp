@@ -124,6 +124,14 @@ public:
   /// return the mean of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
   virtual Real mean(const RealVector& x) = 0;
+  /// return the covariance between two response expansions, treating
+  /// all variables as random
+  virtual Real covariance(PolynomialApproximation* poly_approx_2) = 0;
+  /// return the covariance between two response expansions for a given
+  /// parameter vector, treating a subset of the variables as random
+  virtual Real covariance(const RealVector& x,
+			  PolynomialApproximation* poly_approx_2) = 0;
+
   /// return the gradient of the expansion mean for a given parameter
   /// vector, treating all variables as random
   virtual const RealVector& mean_gradient() = 0;
@@ -131,12 +139,6 @@ public:
   /// and given DVV, treating a subset of the variables as random
   virtual const RealVector& mean_gradient(const RealVector& x,
 					  const SizetArray& dvv) = 0;
-
-  /// return the variance of the expansion, treating all variables as random
-  virtual Real variance() = 0;
-  /// return the variance of the expansion for a given parameter vector,
-  /// treating a subset of the variables as random
-  virtual Real variance(const RealVector& x) = 0;
   /// return the gradient of the expansion variance for a given parameter
   /// vector, treating all variables as random
   virtual const RealVector& variance_gradient() = 0;
@@ -145,13 +147,11 @@ public:
   virtual const RealVector& variance_gradient(const RealVector& x,
 					      const SizetArray& dvv) = 0;
 
-  /// return the covariance between two response expansions, treating
-  /// all variables as random
-  virtual Real covariance(PolynomialApproximation* poly_approx_2) = 0;
-  /// return the covariance between two response expansions for a given
-  /// parameter vector, treating a subset of the variables as random
-  virtual Real covariance(const RealVector& x,
-			  PolynomialApproximation* poly_approx_2) = 0;
+  /// return the mean of the expansion, treating all variables as random
+  virtual Real combined_mean();
+  /// return the mean of the expansion for a given parameter vector,
+  /// treating a subset of the variables as random
+  virtual Real combined_mean(const RealVector& x);
   /// return the covariance between two combined response expansions,
   /// treating all variables as random
   virtual Real combined_covariance(PolynomialApproximation* poly_approx_2);
@@ -179,12 +179,25 @@ public:
   /// return the change in mean resulting from expansion refinement,
   /// treating a subset of the variables as random
   virtual Real delta_mean(const RealVector& x);
+  /// return the change in mean resulting from combined expansion refinement,
+  /// treating all variables as random
+  virtual Real delta_combined_mean();
+  /// return the change in mean resulting from combined expansion refinement,
+  /// treating a subset of the variables as random
+  virtual Real delta_combined_mean(const RealVector& x);
+
   /// return the change in standard deviation resulting from expansion
   /// refinement, treating all variables as random
   virtual Real delta_std_deviation();
   /// return the change in standard deviation resulting from expansion
   /// refinement, treating a subset of the variables as random
   virtual Real delta_std_deviation(const RealVector& x);
+  /// return the change in standard deviation resulting from combined
+  /// expansion refinement, treating all variables as random
+  virtual Real delta_combined_std_deviation();
+  /// return the change in standard deviation resulting from combined
+  /// expansion refinement, treating a subset of the variables as random
+  virtual Real delta_combined_std_deviation(const RealVector& x);
 
   /// return the change in covariance between two response expansions,
   /// treating all variables as random
@@ -209,12 +222,6 @@ public:
   /// return the change in reliability index (mapped from z_bar) resulting
   /// from expansion refinement, treating a subset of the variables as random
   virtual Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar);
-  /// return the change in response level (mapped from beta_bar) resulting
-  /// from expansion refinement, treating all variables as random
-  virtual Real delta_z(bool cdf_flag, Real beta_bar);
-  /// return the change in response level (mapped from beta_bar) resulting
-  /// from expansion refinement, treating a subset of the variables as random
-  virtual Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar);
   /// return the change in reliability index (mapped from z_bar) resulting
   /// from expansion refinement, treating all variables as random
   virtual Real delta_combined_beta(bool cdf_flag, Real z_bar);
@@ -222,6 +229,13 @@ public:
   /// from expansion refinement, treating a subset of the variables as random
   virtual Real delta_combined_beta(const RealVector& x, bool cdf_flag,
 				   Real z_bar);
+
+  /// return the change in response level (mapped from beta_bar) resulting
+  /// from expansion refinement, treating all variables as random
+  virtual Real delta_z(bool cdf_flag, Real beta_bar);
+  /// return the change in response level (mapped from beta_bar) resulting
+  /// from expansion refinement, treating a subset of the variables as random
+  virtual Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar);
   /// return the change in response level (mapped from beta_bar) resulting
   /// from expansion refinement, treating all variables as random
   virtual Real delta_combined_z(bool cdf_flag, Real beta_bar);
@@ -250,10 +264,40 @@ public:
   /// return preferred response moments (either expansion or numerical
   /// integration, depending on approximation type)
   const RealVector& moments() const;
+  /// set preferred response moments (either expansion or numerical
+  /// integration, depending on approximation type); this is generally
+  /// used to restore previous values when popping an adaptation, without
+  /// having to recompute them
+  void moments(const RealVector& mom);
 
   /// standardize central moments 2-n and eliminate excess kurtosis
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
+
+  /// return the variance of the expansion, treating all variables as random
+  Real variance();
+  /// return the variance of the expansion for a given parameter vector,
+  /// treating a subset of the variables as random
+  Real variance(const RealVector& x);
+  /// return the variance of the combined expansion, treating all
+  /// variables as random
+  Real combined_variance();
+  /// return the variance of the combined expansion for a given parameter
+  /// vector, treating a subset of the variables as random
+  Real combined_variance(const RealVector& x);
+
+  /// return the change in the variance of the expansion, treating all
+  /// variables as random
+  Real delta_variance();
+  /// return the change in the variance of the expansion for a given
+  /// parameter vector, treating a subset of the variables as random
+  Real delta_variance(const RealVector& x);
+  /// return the change in the variance of the combined expansion,
+  /// treating all variables as random
+  Real delta_combined_variance();
+  /// return the change in the variance of the combined expansion for a
+  /// given parameter vector, treating a subset of the variables as random
+  Real delta_combined_variance(const RealVector& x);
 
   // number of data points to remove in a decrement
   //size_t pop_count();
@@ -464,7 +508,7 @@ numerical_integration_moments() const
 { return numericalMoments; }
 
 
-/** All current cases prefer expansionMoments (with the distinction
+/** All current cases should prefer expansionMoments (with the distinction
     drawn between interpolation and integration rules, we prefer Gauss
     integration rules on interpolant expansions). */
 inline const RealVector& PolynomialApproximation::moments() const
@@ -479,6 +523,54 @@ inline const RealVector& PolynomialApproximation::moments() const
   return (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
     ? numericalMoments : expansionMoments;
 }
+
+
+inline void PolynomialApproximation::moments(const RealVector& mom)
+{
+  // see discussion above regarding future consolidation
+
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  short exp_type = data_rep->expConfigOptions.expBasisType;
+  if (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
+    numericalMoments = mom;//copy_data_partial(mom, numericalMoments, 0);
+  else
+    expansionMoments = mom;//copy_data_partial(mom, expansionMoments, 0);
+
+  computedMean |= 1;  computedVariance |= 1; // assume mom length >= 2
+}
+
+
+inline Real PolynomialApproximation::variance()
+{ return covariance(this); }
+
+
+inline Real PolynomialApproximation::variance(const RealVector& x)
+{ return covariance(x, this); }
+
+
+inline Real PolynomialApproximation::combined_variance()
+{ return combined_covariance(this); }
+
+
+inline Real PolynomialApproximation::combined_variance(const RealVector& x)
+{ return combined_covariance(x, this); }
+
+
+inline Real PolynomialApproximation::delta_variance()
+{ return delta_covariance(this); }
+
+
+inline Real PolynomialApproximation::delta_variance(const RealVector& x)
+{ return delta_covariance(x, this); }
+
+
+inline Real PolynomialApproximation::delta_combined_variance()
+{ return delta_combined_covariance(this); }
+
+
+inline Real PolynomialApproximation::
+delta_combined_variance(const RealVector& x)
+{ return delta_combined_covariance(x, this); }
 
 
 //inline size_t PolynomialApproximation::pop_count()

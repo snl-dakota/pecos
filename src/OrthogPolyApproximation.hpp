@@ -127,22 +127,17 @@ protected:
 
   Real mean();
   Real mean(const RealVector& x);
+  Real covariance(PolynomialApproximation* poly_approx_2);
+  Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
+
   const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
-
-  Real variance();
-  Real variance(const RealVector& x);
   const RealVector& variance_gradient();
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
 
-  Real covariance(PolynomialApproximation* poly_approx_2);
-  Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
-
   Real combined_mean();
   Real combined_mean(const RealVector& x);
-  Real combined_variance();
-  Real combined_variance(const RealVector& x);
   Real combined_covariance(PolynomialApproximation* poly_approx_2);
   Real combined_covariance(const RealVector& x,
 			   PolynomialApproximation* poly_approx_2);
@@ -455,34 +450,6 @@ stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
   return hessian_basis_variables(x, data_rep->multi_index(key),
 				 expansionCoeffs[key]);
 }
-
-  
-/** In this case, all expansion variables are random variables and the
-    variance of the expansion is the sum over all but the first term
-    of the coefficients squared times the polynomial norms squared. */
-inline Real OrthogPolyApproximation::variance()
-{ return covariance(this); }
-
-
-/** In this case, a subset of the expansion variables are random variables
-    and the variance of the expansion involves summations over this subset. */
-inline Real OrthogPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
-
-  
-/** In this case, all expansion variables are random variables and the
-    variance of the combined expansion is the sum over all but the
-    first term of the combined coefficients squared times the
-    polynomial norms squared. */
-inline Real OrthogPolyApproximation::combined_variance()
-{ return combined_covariance(this); }
-
-
-/** In this case, a subset of the expansion variables are random
-    variables and the variance of the combined expansion involves
-    summations over this subset. */
-inline Real OrthogPolyApproximation::combined_variance(const RealVector& x)
-{ return combined_covariance(x, this); }
 
 
 inline void OrthogPolyApproximation::

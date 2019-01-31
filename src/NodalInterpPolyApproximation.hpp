@@ -57,8 +57,8 @@ protected:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void increment_coefficients();
   /// restore the coefficients to their previous state prior to last increment:
-  /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void decrement_coefficients(bool save_data);
+  /// prune expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void pop_coefficients(bool save_data);
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index:
   /// push expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -96,6 +96,8 @@ protected:
 
   Real mean();
   Real mean(const RealVector& x);
+  Real covariance(PolynomialApproximation* poly_approx_2);
+  Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
   const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
@@ -103,12 +105,8 @@ protected:
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
 
-  Real covariance(PolynomialApproximation* poly_approx_2);
-  Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
-
   Real combined_mean();
   Real combined_mean(const RealVector& x);
-
   Real combined_covariance(PolynomialApproximation* poly_approx_2);
   Real combined_covariance(const RealVector& x,
 			   PolynomialApproximation* poly_approx_2);

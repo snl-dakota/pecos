@@ -69,9 +69,13 @@ void OrthogPolyApproximation::combine_coefficients()
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
+
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
-  //clear_computed_bits(); // combined stats are managed separately
+
+  // Note: computed bits are also cleared when refineStatsType is changed
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    clear_computed_bits();
 
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -172,15 +176,39 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
 
   // Note: no swap() available for Real{Vector,Matrix}
   if (expansionCoeffFlag) {
-    expCoeffsIter->second = combinedExpCoeffs; // copy
-    if (clear_combined) combinedExpCoeffs.resize(0);
+    if (clear_combined) {
+#ifdef TEUCHOS_SWAP
+      expCoeffsIter->second.swap(combinedExpCoeffs); // shallow
+#else
+      expCoeffsIter->second = combinedExpCoeffs;     // deep
+#endif
+      combinedExpCoeffs.resize(0);
+    }
+    else // redundant copy
+      expCoeffsIter->second = combinedExpCoeffs;     // deep
   }
   if (expansionCoeffGradFlag) {
-    expCoeffGradsIter->second = combinedExpCoeffGrads; // copy
-    if (clear_combined) combinedExpCoeffGrads.reshape(0, 0);
+    if (clear_combined) {
+#ifdef TEUCHOS_SWAP
+      expCoeffGradsIter->second.swap(combinedExpCoeffGrads); // shallow
+#else
+      expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep
+#endif
+      combinedExpCoeffGrads.reshape(0, 0);
+    }
+    else // redundant copy
+      expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep
   }
 
-  clear_computed_bits();
+  // if outgoing stats type is combined, then can carry over current moment
+  // stats from combined to active.  But if the outgoing stats type was already
+  // active (seems unlikely), then the previous active stats are invalidated.  
+  // To avoid introducing an order dependency on the updating of stats type,
+  // assume the former case: stats type is similarly changing from COMBINED_
+  // to ACTIVE_ stats such that previous combined moments can be preserved as
+  // new active moments.
+  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS){
+  //  clear_computed_bits();
 }
 
 

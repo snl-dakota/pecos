@@ -85,24 +85,12 @@ protected:
   virtual void integrate_expansion_moments(size_t num_moments,
 					   bool combined_stats) = 0;
 
-  virtual Real combined_mean() = 0;
-  virtual Real combined_mean(const RealVector& x) = 0;
-
   virtual void compute_total_sobol_indices() = 0;
   virtual void compute_partial_variance(const BitArray& set_value);
 
   //
   //- Heading: Convenience functions
   //
-
-  /// invoke covariance() using this pointer
-  Real variance();
-  /// invoke covariance(x) using this pointer
-  Real variance(const RealVector& x);
-  /// invoke combined_covariance() using this pointer
-  Real combined_variance();
-  /// invoke combined_covariance(x) using this pointer
-  Real combined_variance(const RealVector& x);
 
   /// test accuracy of the interpolants
   void test_interpolation();
@@ -150,22 +138,6 @@ update_active_iterators(const UShortArray& key)
 }
 
 
-inline Real InterpPolyApproximation::variance()
-{ return covariance(this); }
-
-
-inline Real InterpPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
-
-
-inline Real InterpPolyApproximation::combined_variance()
-{ return combined_covariance(this); }
-
-
-inline Real InterpPolyApproximation::combined_variance(const RealVector& x)
-{ return combined_covariance(x, this); }
-
-
 inline void InterpPolyApproximation::
 compute_moments(bool full_stats, bool combined_stats)
 {
@@ -178,7 +150,13 @@ compute_moments(bool full_stats, bool combined_stats)
     integrate_expansion_moments(4, combined_stats);
   }
   else { // only two moments required for incremental metrics
-    integrate_response_moments(2, combined_stats);
+    //integrate_response_moments(2, combined_stats);
+
+    // this approach queries/activates bit trackers:
+    if (combined_stats)
+      { combined_mean(); combined_variance(); }
+    else
+      {          mean();          variance(); }
     expansionMoments.resize(0);
   }
 }
@@ -190,10 +168,8 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
   // all variables mode only supports first two moments
   if (combined_stats)
     { combined_mean(x); combined_variance(x); }
-  else {
-    mean(x); variance(x);
-    //standardize_moments(numericalMoments);
-  }
+  else
+    {          mean(x);          variance(x); }
 
   //if (full_stats) integrate_expansion_moments(4, x, combined_stats);
   //else            expansionMoments.resize(0);

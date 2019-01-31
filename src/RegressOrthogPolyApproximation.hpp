@@ -91,7 +91,7 @@ protected:
 
   void compute_coefficients();
   void increment_coefficients();
-  void decrement_coefficients(bool save_data);
+  void pop_coefficients(bool save_data);
   void push_coefficients();
 
   /*
@@ -398,13 +398,13 @@ private:
   Real cvErrorRef;
 
   /// previous expansionCoeffs (aggregated total) prior to increment/push
-  /// that allow efficient return/pop in decrement_coefficients()
+  /// that allow efficient return in pop_coefficients()
   RealVector prevExpCoeffs;
   /// previous expansionCoeffGrads (aggregated total) prior to increment/push
-  /// that allow efficient return/pop in decrement_coefficients()
+  /// that allow efficient return in pop_coefficients()
   RealMatrix prevExpCoeffGrads;
   /// previous sparseIndices prior to increment/push that allow efficient
-  /// return/pop in decrement_coefficients()
+  /// return in pop_coefficients()
   SizetSet prevSparseIndices;
 
   /// popped instances of expansionCoeffs (computed but not yet selected)

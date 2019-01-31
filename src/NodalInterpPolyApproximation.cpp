@@ -101,7 +101,7 @@ void NodalInterpPolyApproximation::compute_coefficients()
 }
 
 
-void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
+void NodalInterpPolyApproximation::pop_coefficients(bool save_data)
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
@@ -191,14 +191,15 @@ void NodalInterpPolyApproximation::combine_coefficients()
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
 
   // Coefficient combination is not dependent on active state, but active
-  // iterators used below to avoid additional key lookups in stored_*()
-  bool updated = update_active_iterators(key);
-  if (updated) clear_computed_bits();
-  //else don't clear (combined stats are managed separately)
+  // iterators are used below to avoid additional key lookups in stored_*()
+  update_active_iterators(data_rep->activeKey);
 
+  // Note: computed bits are also cleared when refineStatsType is changed
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    clear_computed_bits();
+  
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   short combine_type = data_rep->expConfigOptions.combineType;
@@ -331,24 +332,56 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   // > swap() not available for Real{Vector,Matrix}
 
   if (expansionCoeffFlag) {
-    expT1CoeffsIter->second = combinedExpT1Coeffs; // copy
-    if (clear_combined) combinedExpT1Coeffs.resize(0);
+    if (clear_combined) {
+#ifdef TEUCHOS_SWAP
+      expT1CoeffsIter->second.swap(combinedExpT1Coeffs); // shallow
+#else
+      expT1CoeffsIter->second = combinedExpT1Coeffs;     // deep
+#endif
+      combinedExpT1Coeffs.resize(0);
+    }
+    else // redundant copy
+      expT1CoeffsIter->second = combinedExpT1Coeffs;     // deep
     SharedNodalInterpPolyApproxData* data_rep
       = (SharedNodalInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
-      expT2CoeffsIter->second = combinedExpT2Coeffs; // copy
-      if (clear_combined) combinedExpT2Coeffs.reshape(0, 0);
+      if (clear_combined) {
+#ifdef TEUCHOS_SWAP
+	expT2CoeffsIter->second.swap(combinedExpT2Coeffs); // shallow
+#else
+	expT2CoeffsIter->second = combinedExpT2Coeffs;     // deep
+#endif
+	combinedExpT2Coeffs.reshape(0, 0);
+      }
+      else // redundant copy
+	expT2CoeffsIter->second = combinedExpT2Coeffs;     // deep
     }
   }
   if (expansionCoeffGradFlag) {
-    expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;
-    if (clear_combined) combinedExpT1CoeffGrads.reshape(0, 0);
+    if (clear_combined) {
+#ifdef TEUCHOS_SWAP
+      expT1CoeffGradsIter->second.swap(combinedExpT1CoeffGrads); // shallow
+#else
+      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep
+#endif
+      combinedExpT1CoeffGrads.reshape(0, 0);
+    }
+    else // redundant copy
+      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep
   }
 
   // resize sobolIndices to sync with resize of sobolIndexMap
   allocate_component_sobol();
 
-  clear_computed_bits();
+  // if outgoing stats type is combined, then can carry over current moment
+  // stats from combined to active.  But if the outgoing stats type was already
+  // active (seems unlikely), then the previous active stats are invalidated.  
+  // To avoid introducing an order dependency on the updating of stats type,
+  // assume the former case: stats type is similarly changing from COMBINED_
+  // to ACTIVE_ stats such that previous combined moments can be preserved as
+  // new active moments.
+  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS){
+  //  clear_computed_bits();
 }
 
 
