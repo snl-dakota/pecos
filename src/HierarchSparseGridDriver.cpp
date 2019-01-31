@@ -1192,8 +1192,8 @@ partition_increment_key(UShort2DArray& incr_key) const
   incr_key.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
     UShortArray& incr_l = incr_key[lev]; incr_l.resize(2);
-    const UShort2DArray& sm_mi_l = sm_mi[lev];  num_sets = sm_mi_l.size();
-    incr_l[1] = num_sets;
+    const UShort2DArray& sm_mi_l = sm_mi[lev];
+    incr_l[1] = num_sets = sm_mi_l.size();
     if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED)
       incr_l[0] = (lev == trial_lev) ? num_sets - 1 : num_sets;
     else
@@ -1211,9 +1211,9 @@ partition_reference_key(UShort2DArray& ref_key) const
   size_t lev, num_lev = sm_mi.size(), num_sets;
   ref_key.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
-    UShortArray&  ref_l = ref_key[lev];  ref_l.resize(2);
+    UShortArray&  ref_l = ref_key[lev];  ref_l.resize(2);  ref_l[0] = 0;
     const UShort2DArray& sm_mi_l = sm_mi[lev];
-    num_sets = sm_mi_l.size(); ref_l[0] = 0;
+    num_sets = sm_mi_l.size();
     if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED)
       ref_l[1] = (lev == trial_lev) ? num_sets - 1 : num_sets;
     else
@@ -1233,14 +1233,73 @@ partition_keys(UShort2DArray& ref_key, UShort2DArray& incr_key) const
   for (lev=0; lev<num_lev; ++lev) {
     UShortArray&  ref_l =  ref_key[lev];  ref_l.resize(2);
     UShortArray& incr_l = incr_key[lev]; incr_l.resize(2);
-    const UShort2DArray& sm_mi_l = sm_mi[lev];  num_sets = sm_mi_l.size();
-    ref_l[0] = 0; incr_l[1] = num_sets;
+    const UShort2DArray& sm_mi_l = sm_mi[lev];
+    ref_l[0] = 0; incr_l[1] = num_sets = sm_mi_l.size();
     if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
       if (lev == trial_lev) ref_l[1] = incr_l[0] = num_sets - 1;
       else                  ref_l[1] = incr_l[0] = num_sets;
     }
     else
       ref_l[1] = incr_l[0] = incr_sets[lev];
+  }
+}
+
+
+void HierarchSparseGridDriver::
+partition_increment_key(std::map<UShortArray, UShort2DArray>& incr_key_map)
+  const
+{
+  unsigned short     active_trial_lev = trialLevIter->second;
+  const UShortArray& active_incr_sets = incrSetsIter->second;
+
+  incr_key_map.clear();
+  std::map<UShortArray, UShort3DArray>::const_iterator cit;
+  size_t lev, num_lev, num_sets;
+  UShort2DArray incr_key;
+  for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
+    const UShort3DArray& sm_mi_i = cit->second;
+    num_lev = sm_mi_i.size();  incr_key.resize(num_lev);
+    for (lev=0; lev<num_lev; ++lev) {
+      UShortArray& incr_l = incr_key[lev];  incr_l.resize(2);
+      const UShort2DArray& sm_mi_il = sm_mi_i[lev];
+      incr_l[1] = num_sets = sm_mi_il.size();
+      if (cit != smolMIIter) // not the active key (no increment)
+	incr_l[0] = num_sets;
+      else if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED)
+	incr_l[0] = (lev == active_trial_lev) ? num_sets - 1 : num_sets;
+      else
+	incr_l[0] = active_incr_sets[lev];
+    }
+    incr_key_map[cit->first] = incr_key;
+  }
+}
+
+
+void HierarchSparseGridDriver::
+partition_reference_key(std::map<UShortArray, UShort2DArray>& ref_key_map) const
+{
+  unsigned short     active_trial_lev = trialLevIter->second;
+  const UShortArray& active_incr_sets = incrSetsIter->second;
+
+  ref_key_map.clear();
+  std::map<UShortArray, UShort3DArray>::const_iterator cit;
+  size_t lev, num_lev, num_sets;
+  UShort2DArray ref_key;
+  for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
+    const UShort3DArray& sm_mi_i = cit->second;
+    num_lev = sm_mi_i.size();  ref_key.resize(num_lev);
+    for (lev=0; lev<num_lev; ++lev) {
+      UShortArray& ref_l = ref_key[lev];  ref_l.resize(2);  ref_l[0] = 0;
+      const UShort2DArray& sm_mi_il = sm_mi_i[lev];
+      num_sets = sm_mi_il.size();
+      if (cit != smolMIIter) // not the active key (no increment)
+	ref_l[1] = num_sets;
+      else if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED)
+	ref_l[1] = (lev == active_trial_lev) ? num_sets - 1 : num_sets;
+      else
+	ref_l[1] = active_incr_sets[lev];
+    }
+    ref_key_map[cit->first]  =  ref_key;
   }
 }
 
@@ -1258,13 +1317,12 @@ partition_keys(std::map<UShortArray, UShort2DArray>&  ref_key_map,
   UShort2DArray ref_key, incr_key;
   for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
     const UShort3DArray& sm_mi_i = cit->second;
-    num_lev = sm_mi_i.size();
-    ref_key.resize(num_lev); incr_key.resize(num_lev);
+    num_lev = sm_mi_i.size(); ref_key.resize(num_lev); incr_key.resize(num_lev);
     for (lev=0; lev<num_lev; ++lev) {
       UShortArray&  ref_l =  ref_key[lev];  ref_l.resize(2);
       UShortArray& incr_l = incr_key[lev]; incr_l.resize(2);
       const UShort2DArray& sm_mi_il = sm_mi_i[lev];
-      num_sets = sm_mi_il.size(); ref_l[0] = 0; incr_l[1] = num_sets;
+      ref_l[0] = 0; incr_l[1] = num_sets = sm_mi_il.size();
       if (cit != smolMIIter) // not the active key (no increment)
 	ref_l[1] = incr_l[0] = num_sets;
       else if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
@@ -1275,8 +1333,7 @@ partition_keys(std::map<UShortArray, UShort2DArray>&  ref_key_map,
 	ref_l[1] = incr_l[0] = active_incr_sets[lev];
     }
     const UShortArray& key = cit->first;
-    ref_key_map[key]  =  ref_key;
-    incr_key_map[key] = incr_key;
+    ref_key_map[key] = ref_key;  incr_key_map[key] = incr_key;
   }
 }
 

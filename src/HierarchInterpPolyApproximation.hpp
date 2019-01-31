@@ -239,11 +239,12 @@ private:
   Real reference_mean(const RealVector& x, const UShort2DArray& ref_key);
   /// compute the reference mean, excluding the current grid
   /// increment, using ref_key
-  Real reference_combined_mean(const UShort2DArray& ref_key);
+  Real reference_combined_mean(
+    const std::map<UShortArray, UShort2DArray>& ref_key_map);
   /// compute the reference mean, excluding the current grid
   /// increment, using ref_key
   Real reference_combined_mean(const RealVector& x,
-			       const UShort2DArray& ref_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_variance(const UShort2DArray& ref_key);
@@ -252,11 +253,12 @@ private:
   Real reference_variance(const RealVector& x, const UShort2DArray& ref_key);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
-  Real reference_combined_variance(const UShort2DArray& ref_key);
+  Real reference_combined_variance(
+    const std::map<UShortArray, UShort2DArray>& ref_key_map);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_combined_variance(const RealVector& x,
-				   const UShort2DArray& ref_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map);
 
   /// compute the covariance increment due to the current grid increment
   /// using the active coefficients and weights
@@ -307,9 +309,11 @@ private:
   /// compute the mean increment due to the current grid increment
   Real delta_mean(const RealVector& x, const UShort2DArray& incr_key);
   /// compute the mean increment due to the current grid increment
-  Real delta_combined_mean(const UShort2DArray& incr_key);
+  Real delta_combined_mean(
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
   /// compute the mean increment due to the current grid increment
-  Real delta_combined_mean(const RealVector& x, const UShort2DArray& incr_key);
+  Real delta_combined_mean(const RealVector& x,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
 
   /// compute the variance increment due to the current grid increment
   Real delta_variance(const UShort2DArray& ref_key,
@@ -318,12 +322,13 @@ private:
   Real delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 		      const UShort2DArray& incr_key);
   /// compute the variance increment due to the current grid increment
-  Real delta_combined_variance(const UShort2DArray& ref_key,
-			       const UShort2DArray& incr_key);
+  Real delta_combined_variance(
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
   /// compute the variance increment due to the current grid increment
   Real delta_combined_variance(const RealVector& x,
-			       const UShort2DArray& ref_key,
-			       const UShort2DArray& incr_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
 
   /// compute the standard deviation increment due to the current grid increment
   Real delta_std_deviation(const UShort2DArray& ref_key,
@@ -332,12 +337,13 @@ private:
   Real delta_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
 			   const UShort2DArray& incr_key);
   /// compute the standard deviation increment due to the current grid increment
-  Real delta_combined_std_deviation(const UShort2DArray& ref_key,
-				    const UShort2DArray& incr_key);
+  Real delta_combined_std_deviation(
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
   /// compute the standard deviation increment due to the current grid increment
   Real delta_combined_std_deviation(const RealVector& x,
-				    const UShort2DArray& ref_key,
-				    const UShort2DArray& incr_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
 
   /// compute the reliability index increment due to the current grid increment
   Real delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
@@ -347,12 +353,12 @@ private:
 		  const UShort2DArray& ref_key, const UShort2DArray& incr_key);
   /// compute the reliability index increment due to the current grid increment
   Real delta_combined_beta(bool cdf_flag, Real z_bar,
-			   const UShort2DArray& ref_key,
-			   const UShort2DArray& incr_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
   /// compute the reliability index increment due to the current grid increment
   Real delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar,
-			   const UShort2DArray& ref_key,
-			   const UShort2DArray& incr_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
 
   /// compute the response level increment due to the current grid increment
   Real delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
@@ -362,12 +368,12 @@ private:
 	       const UShort2DArray& ref_key, const UShort2DArray& incr_key);
   /// compute the response level increment due to the current grid increment
   Real delta_combined_z(bool cdf_flag, Real beta_bar,
-			const UShort2DArray& ref_key,
-			const UShort2DArray& incr_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
   /// compute the response level increment due to the current grid increment
   Real delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
-			const UShort2DArray& ref_key,
-			const UShort2DArray& incr_key);
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
 
   /// shared logic for handling exceptional cases
   Real beta_map(Real mu, Real var, bool cdf_flag, Real z_bar);
@@ -976,10 +982,12 @@ delta_combined_std_deviation()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
+  // Note: these keys are for partition of active expansion and should not be
+  //       used for partitioning a combined expansion (see {ref,incr}_key_map)
 
-  return delta_combined_std_deviation(ref_key, incr_key);
+  return delta_combined_std_deviation(ref_key_map, incr_key_map);
 }
 
 
@@ -988,10 +996,12 @@ delta_combined_std_deviation(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
+  // Note: these keys are for partition of active expansion and should not be
+  //       used for partitioning a combined expansion (see {ref,incr}_key_map)
 
-  return delta_combined_std_deviation(x, ref_key, incr_key);
+  return delta_combined_std_deviation(x, ref_key_map, incr_key_map);
 }
 
 
@@ -1024,10 +1034,12 @@ delta_combined_beta(bool cdf_flag, Real z_bar)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
+  // Note: these keys are for partition of active expansion and should not be
+  //       used for partitioning a combined expansion (see {ref,incr}_key_map)
 
-  return delta_combined_beta(cdf_flag, z_bar, ref_key, incr_key);
+  return delta_combined_beta(cdf_flag, z_bar, ref_key_map, incr_key_map);
 }
 
 
@@ -1036,10 +1048,12 @@ delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
+  // Note: these keys are for partition of active expansion and should not be
+  //       used for partitioning a combined expansion (see {ref,incr}_key_map)
 
-  return delta_combined_beta(x, cdf_flag, z_bar, ref_key, incr_key);
+  return delta_combined_beta(x, cdf_flag, z_bar, ref_key_map, incr_key_map);
 }
 
 
@@ -1072,10 +1086,12 @@ delta_combined_z(bool cdf_flag, Real beta_bar)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
+  // Note: these keys are for partition of active expansion and should not be
+  //       used for partitioning a combined expansion (see {ref,incr}_key_map)
 
-  return delta_combined_z(cdf_flag, beta_bar, ref_key, incr_key);
+  return delta_combined_z(cdf_flag, beta_bar, ref_key_map, incr_key_map);
 }
 
 
@@ -1084,10 +1100,12 @@ delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
+  // Note: these keys are for partition of active expansion and should not be
+  //       used for partitioning a combined expansion (see {ref,incr}_key_map)
 
-  return delta_combined_z(x, cdf_flag, beta_bar, ref_key, incr_key);
+  return delta_combined_z(x, cdf_flag, beta_bar, ref_key_map, incr_key_map);
 }
 
 

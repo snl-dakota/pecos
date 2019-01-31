@@ -206,10 +206,20 @@ public:
   /// discriminate portions of the active level-set hierarchy that are
   /// reference sets from those in the current increment
   void partition_keys(UShort2DArray& ref_key, UShort2DArray& incr_key) const;
-  /// discriminate portions of the level-set hierarchy that are
-  /// reference sets from those in the current increment
+
+  /// discriminate portions of the level-set hierarchy that are in the
+  /// current increment for each model key
+  void partition_increment_key(
+    std::map<UShortArray, UShort2DArray>& incr_key_map) const;
+  /// discriminate portions of the level-set hierarchy that are reference sets
+  /// for each model key
+  void partition_reference_key(
+    std::map<UShortArray, UShort2DArray>& ref_key_map) const;
+  /// discriminate portions of the level-set hierarchy that are reference sets
+  /// from those in the current increment for each model key
   void partition_keys(std::map<UShortArray, UShort2DArray>& ref_key_map,
     std::map<UShortArray, UShort2DArray>& incr_key_map) const;
+
   /// discriminate portions of the active level-set-point hierarchy that are
   /// in the reference grid from those in the current increment
   void partition_keys(UShort3DArray&  ref_pt_range,

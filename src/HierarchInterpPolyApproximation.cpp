@@ -1735,8 +1735,10 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 }
 
 
+/** requires combinedExpT{1,2}Coeffs, corresponding weights, and a
+    corresponding partition
 Real HierarchInterpPolyApproximation::
-reference_combined_mean(const UShort2DArray& ref_key)
+reference_combined_mean(const UShort2DArray& comb_ref_key) // ***
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -1748,15 +1750,42 @@ reference_combined_mean(const UShort2DArray& ref_key)
   Real ref_mean
     = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 		  hsg_driver->combined_type1_weight_sets(),
-		  hsg_driver->combined_type2_weight_sets(), ref_key);
+		  hsg_driver->combined_type2_weight_sets(), comb_ref_key);// ***
+
+  if (std_mode)
+    { referenceMoments[0] = ref_mean; computedRefMean |= 1; }
+  return ref_mean;
+}
+*/
+
+
+/** does not require combinedExpT{1,2}Coeffs as works from full maps */
+Real HierarchInterpPolyApproximation::
+reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedRefMean & 1))
+    return referenceMoments[0];
+
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  Real ref_mean
+    = expectation(expansionType1Coeffs, expansionType2Coeffs,
+		  hsg_driver->type1_weight_sets_map(),
+		  hsg_driver->type2_weight_sets_map(), ref_key_map);
+
   if (std_mode)
     { referenceMoments[0] = ref_mean; computedRefMean |= 1; }
   return ref_mean;
 }
 
 
+/** requires combinedExpT{1,2}Coeffs, corresponding weights, and a
+    corresponding partition
 Real HierarchInterpPolyApproximation::
-reference_combined_mean(const RealVector& x, const UShort2DArray& ref_key)
+reference_combined_mean(const RealVector& x,
+			const UShort2DArray& comb_ref_key) // ***
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -1769,7 +1798,31 @@ reference_combined_mean(const RealVector& x, const UShort2DArray& ref_key)
   Real ref_mean
     = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 		  hsg_driver->combined_smolyak_multi_index(),
-		  hsg_driver->combined_collocation_key(), ref_key);
+		  hsg_driver->combined_collocation_key(), comb_ref_key); // ***
+  if (all_mode)
+    { referenceMoments[0] = ref_mean; computedRefMean |= 1; xPrevRefMean = x; }
+  return ref_mean;
+}
+*/
+
+
+/** does not require combinedExpT{1,2}Coeffs as works from full maps */
+Real HierarchInterpPolyApproximation::
+reference_combined_mean(const RealVector& x,
+			const std::map<UShortArray, UShort2DArray>& ref_key_map)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if (all_mode && (computedRefMean & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevRefMean))
+    return referenceMoments[0];
+
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  Real ref_mean
+    = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
+		  hsg_driver->smolyak_multi_index_map(),
+		  hsg_driver->collocation_key_map(), ref_key_map);
   if (all_mode)
     { referenceMoments[0] = ref_mean; computedRefMean |= 1; xPrevRefMean = x; }
   return ref_mean;
@@ -1835,8 +1888,8 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 }
 
 
-Real HierarchInterpPolyApproximation::
-reference_combined_variance(const UShort2DArray& ref_key)
+Real HierarchInterpPolyApproximation::reference_combined_variance(
+  const std::map<UShortArray, UShort2DArray>& ref_key_map)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -1844,7 +1897,7 @@ reference_combined_variance(const UShort2DArray& ref_key)
   if (std_mode && (computedRefVariance & 1))
     return referenceMoments[1];
 
-  Real ref_var, ref_mean = reference_combined_mean(ref_key);
+  Real ref_var, ref_mean = reference_combined_mean(ref_key_map);
   /* TO DO
   if (product_interpolants())
     // uncentered raw moment available (accept loss of precision)
@@ -1866,7 +1919,8 @@ reference_combined_variance(const UShort2DArray& ref_key)
 
 
 Real HierarchInterpPolyApproximation::
-reference_combined_variance(const RealVector& x, const UShort2DArray& ref_key)
+reference_combined_variance(const RealVector& x,
+  const std::map<UShortArray, UShort2DArray>& ref_key_map)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -1875,7 +1929,7 @@ reference_combined_variance(const RealVector& x, const UShort2DArray& ref_key)
       data_rep->match_nonrandom_vars(x, xPrevRefVar))
     return referenceMoments[1];
 
-  Real ref_var, ref_mean = reference_combined_mean(x, ref_key);
+  Real ref_var, ref_mean = reference_combined_mean(x, ref_key_map);
   /* TO DO
   if (product_interpolants())
     // uncentered raw moment available (accept loss of precision)
@@ -1906,8 +1960,8 @@ Real HierarchInterpPolyApproximation::delta_mean()
   if (std_mode && (computedDeltaMean & 1))
     return deltaMoments[0];
 
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  UShort2DArray incr_key;
+  data_rep->hsg_driver()->partition_increment_key(incr_key);
 
   Real delta_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
@@ -1943,8 +1997,8 @@ Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean))
     return deltaMoments[0];
 
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  UShort2DArray incr_key;
+  data_rep->hsg_driver()->partition_increment_key(incr_key);
 
   Real delta_mean =
     expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
@@ -1975,6 +2029,12 @@ delta_mean(const RealVector& x, const UShort2DArray& incr_key)
 
 Real HierarchInterpPolyApproximation::delta_combined_mean()
 {
+  // combined increment is the same as the active increment
+  //return delta_mean();
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
@@ -1982,23 +2042,29 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
     return deltaMoments[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> incr_key_map;
+  hsg_driver->partition_increment_key(incr_key_map);
 
   Real delta_mean
-    = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-		  hsg_driver->combined_type1_weight_sets(),
-		  hsg_driver->combined_type2_weight_sets(), incr_key);
+    = expectation(expansionType1Coeffs, expansionType2Coeffs,
+		  hsg_driver->type1_weight_sets_map(),
+		  hsg_driver->type2_weight_sets_map(), incr_key_map);
   if (std_mode)
     { deltaMoments[0] = delta_mean; computedDeltaMean |= 1; }
   return delta_mean;
 }
 
 
-/** This helper avoids recomputing incr_key. */
+/** This helper avoids recomputing incr_key_map. */
 Real HierarchInterpPolyApproximation::
-delta_combined_mean(const UShort2DArray& incr_key)
+delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
+  // combined increment is the same as the active increment
+  //return delta_mean(incr_key);
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
@@ -2007,9 +2073,9 @@ delta_combined_mean(const UShort2DArray& incr_key)
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_mean
-    = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-		  hsg_driver->combined_type1_weight_sets(),
-		  hsg_driver->combined_type2_weight_sets(), incr_key);
+    = expectation(expansionType1Coeffs, expansionType2Coeffs,
+		  hsg_driver->type1_weight_sets_map(),
+		  hsg_driver->type2_weight_sets_map(), incr_key_map);
   if (std_mode)
     { deltaMoments[0] = delta_mean; computedDeltaMean |= 1; }
   return delta_mean;
@@ -2019,6 +2085,12 @@ delta_combined_mean(const UShort2DArray& incr_key)
 Real HierarchInterpPolyApproximation::
 delta_combined_mean(const RealVector& x)
 {
+  // TO DO: equivalence for all_vars mode ?
+  //return delta_mean(x);
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool all_mode = !data_rep->nonRandomIndices.empty();
@@ -2027,23 +2099,30 @@ delta_combined_mean(const RealVector& x)
     return deltaMoments[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  std::map<UShortArray, UShort2DArray> incr_key_map;
+  hsg_driver->partition_increment_key(incr_key_map);
 
   Real delta_mean
-    = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		  hsg_driver->combined_smolyak_multi_index(),
-		  hsg_driver->combined_collocation_key(), incr_key);
+    = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
+		  hsg_driver->smolyak_multi_index_map(),
+		  hsg_driver->collocation_key_map(), incr_key_map);
   if (all_mode)
     { deltaMoments[0] = delta_mean; computedDeltaMean |= 1; xPrevDeltaMean = x;}
   return delta_mean;
 }
 
 
-/** This helper avoids recomputing incr_key. */
+/** This helper avoids recomputing incr_key_map. */
 Real HierarchInterpPolyApproximation::
-delta_combined_mean(const RealVector& x, const UShort2DArray& incr_key)
+delta_combined_mean(const RealVector& x,
+		    const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
+  // TO DO: equivalence for all_vars mode ?
+  //return delta_mean(x, incr_key);
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool all_mode = !data_rep->nonRandomIndices.empty();
@@ -2053,9 +2132,9 @@ delta_combined_mean(const RealVector& x, const UShort2DArray& incr_key)
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_mean
-    = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		  hsg_driver->combined_smolyak_multi_index(),
-		  hsg_driver->combined_collocation_key(), incr_key);
+    = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
+		  hsg_driver->smolyak_multi_index_map(),
+		  hsg_driver->collocation_key_map(), incr_key_map);
   if (all_mode)
     { deltaMoments[0] = delta_mean; computedDeltaMean |= 1; xPrevDeltaMean = x;}
   return delta_mean;
@@ -2134,8 +2213,9 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 
 /** This helper avoids recomputing ref_key and incr_key. */
 Real HierarchInterpPolyApproximation::
-delta_combined_variance(const UShort2DArray& ref_key,
-			const UShort2DArray& incr_key)
+delta_combined_variance(
+  const std::map<UShortArray, UShort2DArray>& ref_key_map,
+  const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -2146,20 +2226,12 @@ delta_combined_variance(const UShort2DArray& ref_key,
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   /* TO DO
-  if (product_interpolants())
-    delta_var = delta_covariance(expT1CoeffsIter->second,
-      expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
-      true, prodT1CoeffsIter->second[this], prodT2CoeffsIter->second[this],
-      hsg_driver->type1_hierarchical_weight_sets(),
-      hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
-  else { // rebuild product interpolant from scratch
-    RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(this, prod_t1c, prod_t2c);
-    delta_var = delta_covariance(expT1CoeffsIter->second,
-      expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
-      true, prod_t1c, prod_t2c, hsg_driver->type1_hierarchical_weight_sets(),
-      hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
-  }
+  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+  build_product_interpolant(this, prod_t1c, prod_t2c);
+  delta_var = delta_covariance(expT1CoeffsIter->second,
+    expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
+    true, prod_t1c, prod_t2c, hsg_driver->type1_hierarchical_weight_sets(),
+    hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   */
 
   if (std_mode)
@@ -2170,8 +2242,9 @@ delta_combined_variance(const UShort2DArray& ref_key,
 
 /** This helper avoids recomputing ref_key and incr_key. */
 Real HierarchInterpPolyApproximation::
-delta_combined_variance(const RealVector& x, const UShort2DArray& ref_key,
-			const UShort2DArray& incr_key)
+delta_combined_variance(const RealVector& x,
+  const std::map<UShortArray, UShort2DArray>& ref_key_map,
+  const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -2260,8 +2333,9 @@ delta_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
 
 
 Real HierarchInterpPolyApproximation::
-delta_combined_std_deviation(const UShort2DArray& ref_key,
-			     const UShort2DArray& incr_key)
+delta_combined_std_deviation(
+  const std::map<UShortArray, UShort2DArray>& ref_key_map,
+  const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   // Preserve precision by avoiding subtractive cancellation
   // delta-sigma = sqrt( var0 + delta-var ) - sigma0
@@ -2269,8 +2343,8 @@ delta_combined_std_deviation(const UShort2DArray& ref_key,
   //             = sqrt1pm1(delta_var / var0) * sigma0
   // where sqrt1pm1(x) = sqrt(1+x) - 1 = expm1[ log1p(x) / 2 ]
 
-  Real delta_var = delta_combined_variance(ref_key, incr_key),
-       var0      = reference_combined_variance(ref_key),
+  Real delta_var = delta_combined_variance(ref_key_map, incr_key_map),
+       var0      = reference_combined_variance(ref_key_map),
        sigma0    = (var0 > 0.) ? std::sqrt(var0) : 0.;
 
   // usual case: var0 and sigma0 are both positive, prefer sqrt1pm1
@@ -2287,16 +2361,17 @@ delta_combined_std_deviation(const UShort2DArray& ref_key,
 
 
 Real HierarchInterpPolyApproximation::
-delta_combined_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
-			     const UShort2DArray& incr_key)
+delta_combined_std_deviation(const RealVector& x,
+  const std::map<UShortArray, UShort2DArray>& ref_key_map,
+  const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   // delta-sigma = sqrt( var0 + delta-var ) - sigma0
   //             = [ sqrt(1 + delta_var / var0) - 1 ] * sigma0
   //             = sqrt1pm1(delta_var / var0) * sigma0
   // where sqrt1pm1(x) = expm1[ log1p(x) / 2 ]
 
-  Real delta_var = delta_combined_variance(x, ref_key, incr_key),
-       var0      = reference_combined_variance(x, ref_key),
+  Real delta_var = delta_combined_variance(x, ref_key_map, incr_key_map),
+       var0      = reference_combined_variance(x, ref_key_map),
        sigma0    = (var0 > 0.) ? std::sqrt(var0) : 0.;
 
   // usual case: var0 and sigma0 are both positive, prefer sqrt1pm1
@@ -2318,7 +2393,7 @@ delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
 {
   Real mu0      = reference_mean(ref_key),
     delta_mu    = delta_mean(incr_key),
-    var0        = reference_variance(ref_key), 
+    var0        = reference_variance(ref_key),
     delta_sigma = delta_std_deviation(ref_key, incr_key);
   return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
 }
@@ -2330,32 +2405,34 @@ delta_beta(const RealVector& x, bool cdf_flag, Real z_bar,
 {
   Real mu0      = reference_mean(x, ref_key),
     delta_mu    = delta_mean(x, incr_key),
-    var0        = reference_variance(x, ref_key), 
+    var0        = reference_variance(x, ref_key),
     delta_sigma = delta_std_deviation(x, ref_key, incr_key);
   return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
 }
 
 
 Real HierarchInterpPolyApproximation::
-delta_combined_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
-		    const UShort2DArray& incr_key)
+delta_combined_beta(bool cdf_flag, Real z_bar,
+		    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+		    const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
-  Real mu0      = reference_combined_mean(ref_key),
-    delta_mu    = delta_combined_mean(incr_key),
-    var0        = reference_combined_variance(ref_key), 
-    delta_sigma = delta_combined_std_deviation(ref_key, incr_key);
+  Real mu0      = reference_combined_mean(ref_key_map),
+    delta_mu    = delta_combined_mean(incr_key_map),
+    var0        = reference_combined_variance(ref_key_map),
+    delta_sigma = delta_combined_std_deviation(ref_key_map, incr_key_map);
   return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
 }
 
 
 Real HierarchInterpPolyApproximation::
 delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar,
-		    const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+		    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+		    const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
-  Real mu0      = reference_combined_mean(x, ref_key),
-    delta_mu    = delta_combined_mean(x, incr_key),
-    var0        = reference_combined_variance(x, ref_key), 
-    delta_sigma = delta_combined_std_deviation(x, ref_key, incr_key);
+  Real mu0      = reference_combined_mean(x, ref_key_map),
+    delta_mu    = delta_combined_mean(x, incr_key_map),
+    var0        = reference_combined_variance(x, ref_key_map),
+    delta_sigma = delta_combined_std_deviation(x, ref_key_map, incr_key_map);
   return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
 }
 
@@ -2439,16 +2516,17 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar,
 
 
 Real HierarchInterpPolyApproximation::
-delta_combined_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
-		 const UShort2DArray& incr_key)
+delta_combined_z(bool cdf_flag, Real beta_bar,
+		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
+		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
   //              = delta-mu - delta-sigma * beta-bar
   // CCDF delta-z = (mu1 + sigma1 beta-bar) - (mu0 + sigma0 beta-bar)
   //              = delta-mu + delta-sigma * beta-bar
 
-  Real delta_mu = delta_combined_mean(incr_key),
-    delta_sigma = delta_combined_std_deviation(ref_key, incr_key);
+  Real delta_mu = delta_combined_mean(incr_key_map),
+    delta_sigma = delta_combined_std_deviation(ref_key_map, incr_key_map);
   return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
                       delta_mu + delta_sigma * beta_bar;
 }
@@ -2456,15 +2534,16 @@ delta_combined_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
 
 Real HierarchInterpPolyApproximation::
 delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
-		 const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
+		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
   //              = delta-mu - delta-sigma * beta-bar
   // CCDF delta-z = (mu1 + sigma1 beta-bar) - (mu0 + sigma0 beta-bar)
   //              = delta-mu + delta-sigma * beta-bar
 
-  Real delta_mu = delta_combined_mean(x, incr_key),
-    delta_sigma = delta_combined_std_deviation(x, ref_key, incr_key);
+  Real delta_mu = delta_combined_mean(x, incr_key_map),
+    delta_sigma = delta_combined_std_deviation(x, ref_key_map, incr_key_map);
   return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
                       delta_mu + delta_sigma * beta_bar;
 }
