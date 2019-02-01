@@ -1735,31 +1735,6 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 }
 
 
-/** requires combinedExpT{1,2}Coeffs, corresponding weights, and a
-    corresponding partition
-Real HierarchInterpPolyApproximation::
-reference_combined_mean(const UShort2DArray& comb_ref_key)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (computedRefMean & 1))
-    return referenceMoments[0];
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  Real ref_mean
-    = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-		  hsg_driver->combined_type1_weight_sets(),
-		  hsg_driver->combined_type2_weight_sets(),
-		  comb_ref_key); // *** not the active ref key
-
-  if (std_mode)
-    { referenceMoments[0] = ref_mean; computedRefMean |= 1; }
-  return ref_mean;
-}
-*/
-
-
 /** does not require combinedExpT{1,2}Coeffs as works from full maps */
 Real HierarchInterpPolyApproximation::
 reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
@@ -1780,32 +1755,6 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
     { referenceMoments[0] = ref_mean; computedRefMean |= 1; }
   return ref_mean;
 }
-
-
-/** requires combinedExpT{1,2}Coeffs, corresponding weights, and a
-    corresponding partition
-Real HierarchInterpPolyApproximation::
-reference_combined_mean(const RealVector& x,
-			const UShort2DArray& comb_ref_key)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  if (all_mode && (computedRefMean & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevRefMean))
-    return referenceMoments[0];
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  Real ref_mean
-    = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
-		  hsg_driver->combined_smolyak_multi_index(),
-		  hsg_driver->combined_collocation_key(),
-		  comb_ref_key); // *** not the active ref key
-  if (all_mode)
-    { referenceMoments[0] = ref_mean; computedRefMean |= 1; xPrevRefMean = x; }
-  return ref_mean;
-}
-*/
 
 
 /** does not require combinedExpT{1,2}Coeffs as works from full maps */
@@ -1908,11 +1857,13 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 			  hsg_driver->type2_weight_sets_map(), ref_key_map)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch
-    std::map<UShortArray, RealVector2DArray> cov_t1_coeffs_map;
-    std::map<UShortArray, RealMatrix2DArray> cov_t2_coeffs_map;
-    //build_central_product_interpolant(this, ref_mean, ref_mean,
-    //  cov_t1_coeffs_map, cov_t2_coeffs_map, ref_key_map); // *** TO DO
-    ref_var = expectation(cov_t1_coeffs_map, cov_t2_coeffs_map,
+    std::map<UShortArray, RealVector2DArray> cov_t1c_map;
+    std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
+    // *** TO DO: verify roll up with global mean works in place of roll up
+    //            of product_interpolant - mean^2
+    build_central_product_interpolant(this, ref_mean, ref_mean,
+				      cov_t1c_map, cov_t2c_map, ref_key_map);
+    ref_var = expectation(cov_t1c_map, cov_t2c_map,
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(), ref_key_map);
   }
@@ -1943,11 +1894,13 @@ reference_combined_variance(const RealVector& x,
 			  hsg_driver->collocation_key_map(), ref_key_map)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch
-    std::map<UShortArray, RealVector2DArray> cov_t1_coeffs_map;
-    std::map<UShortArray, RealMatrix2DArray> cov_t2_coeffs_map;
-    //build_central_product_interpolant(this, ref_mean, ref_mean,
-    //  cov_t1_coeffs_map, cov_t2_coeffs_map, ref_key_map); // *** TO DO
-    ref_var = expectation(x, cov_t1_coeffs_map, cov_t2_coeffs_map,
+    std::map<UShortArray, RealVector2DArray> cov_t1c_map;
+    std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
+    // *** TO DO: verify roll up with global mean works in place of roll up
+    //            of product_interpolant - mean^2
+    build_central_product_interpolant(this, ref_mean, ref_mean,
+				      cov_t1c_map, cov_t2c_map, ref_key_map);
+    ref_var = expectation(x, cov_t1c_map, cov_t2c_map,
 			  hsg_driver->smolyak_multi_index_map(),
 			  hsg_driver->collocation_key_map(), ref_key_map);
   }
@@ -3881,33 +3834,26 @@ product_interpolant(const RealMatrix2DArray& var_sets,
     nonlinearity (only end point can be controlled).  Note: could consider 
     computing deltaR1R2 = R1 deltaR2 + R2 deltaR1 + deltaR1 deltaR2. */
 void HierarchInterpPolyApproximation::
-central_product_interpolant(PolynomialApproximation* poly_approx_2,
-			    bool mod_surr_data, Real mean_1, Real mean_2,
+central_product_interpolant(const SDVArray& sdv_array,
+			    const SDRArray& sdr_array_1,
+			    const SDRArray& sdr_array_2, Real mean_1,
+			    Real mean_2, const UShort3DArray& sm_mi,
+			    const UShort4DArray& colloc_key,
+			    const Sizet3DArray&  colloc_index,
 			    RealVector2DArray& cov_t1c,
 			    RealMatrix2DArray& cov_t2c,
 			    const UShort2DArray& set_partition)
 {
   // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
+
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
   Real data_fn1_mm1, data_fn2_mm2;
-
-  // Support original (R) or modified (DeltaR) data for product interpolants
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : surrData;
-  const SDVArray& sdv_array   = surr_data.variables_data();
-  const SDRArray& sdr_array_1 = surr_data.response_data();
-  const SDRArray& sdr_array_2 = (mod_surr_data) ?
-    hip_approx_2->modSurrData.response_data() :
-    hip_approx_2->surrData.response_data();
 
   // level 0 (no surplus)
   cov_t1c.resize(num_lev);  cov_t2c.resize(num_lev);
@@ -4290,6 +4236,63 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
   PCout << "Central product gradient interpolant type1 coeff grads:\n"
 	<< cov_t1_coeff_grads << std::endl;
 #endif // DEBUG
+}
+
+
+void HierarchInterpPolyApproximation::
+build_central_product_interpolant(
+  HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+  std::map<UShortArray, RealVector2DArray>& cov_t1c_map,
+  std::map<UShortArray, RealMatrix2DArray>& cov_t2c_map,
+  const std::map<UShortArray, UShort2DArray>& set_partition_map)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+
+  std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit1, t1c_cit2;
+  std::map<UShortArray, RealMatrix2DArray>::const_iterator
+    t2c_cit1, t2c_cit2, v_cit;
+  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
+  std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
+  std::map<UShortArray,  Sizet3DArray>::const_iterator ci_cit;
+  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+  std::map<UShortArray, SDVArray>::const_iterator sdv_cit;
+  std::map<UShortArray, SDRArray>::const_iterator sdr1_cit, sdr2_cit;
+
+  bool same = (this == hip_approx_2),
+    track_c_index = hsg_driver->track_collocation_indices();
+
+  for (t1c_cit1  = expansionType1Coeffs.begin(),
+       t1c_cit2  = hip_approx_2->expansionType1Coeffs.begin(),
+       t2c_cit1  = expansionType2Coeffs.begin(),
+       t2c_cit2  = hip_approx_2->expansionType2Coeffs.begin(),
+       sdv_cit   = modSurrData.variables_data_map().begin(),
+       sdr1_cit  = modSurrData.response_data_map().begin(),
+       sdr2_cit  = hip_approx_2->modSurrData.response_data_map().begin(),
+       v_cit     = hsg_driver->variable_sets_map().begin(),
+       sm_cit    = hsg_driver->smolyak_multi_index_map().begin(),
+       ck_cit    = hsg_driver->collocation_key_map().begin(),
+       ci_cit    = hsg_driver->collocation_indices_map().begin(),
+       p_cit     = set_partition_map.begin();
+       t1c_cit1 != expansionType1Coeffs.end();
+       ++t1c_cit1, ++t1c_cit2, ++t2c_cit1, ++t2c_cit2, ++sdv_cit, ++sdr1_cit,
+       ++sdr2_cit, ++v_cit, ++sm_cit, ++ck_cit, ++ci_cit, ++p_cit) {
+    //build_central_product_interpolant(...); // not modular enough
+
+    const UShortArray& key     = t1c_cit1->first;
+    RealVector2DArray& cov_t1c = cov_t1c_map[key]; // update in place
+    RealMatrix2DArray& cov_t2c = cov_t2c_map[key]; // update in place
+
+    if (track_c_index && ci_cit->second.empty())// active invalidated by combine
+      central_product_interpolant(v_cit->second, sm_cit->second, ck_cit->second,
+	t1c_cit1->second, t2c_cit1->second, t1c_cit2->second, t2c_cit2->second,
+	same, mean_1, mean_2, cov_t1c, cov_t2c, p_cit->second);
+    else // use modSurrData & colloc_indices for forming central product interp
+      central_product_interpolant(sdv_cit->second, sdr1_cit->second,
+	sdr2_cit->second, mean_1, mean_2, sm_cit->second, ck_cit->second,
+	ci_cit->second, cov_t1c, cov_t2c, p_cit->second);
+  }
 }
 
 

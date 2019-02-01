@@ -193,6 +193,8 @@ public:
   void collocation_indices(const Sizet3DArray& indices);
   /// return collocIndices[key]
   const Sizet3DArray& collocation_indices(const UShortArray& key) const;
+  /// return collocIndices
+  const std::map<UShortArray, Sizet3DArray>& collocation_indices_map() const;
 
   /// convert a one-sided increment as in incrementSets (assumes end is defined
   /// by the total number of sets) to a two-sided key (with beginning and end)
@@ -786,6 +788,11 @@ collocation_indices(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline const std::map<UShortArray, Sizet3DArray>& HierarchSparseGridDriver::
+collocation_indices_map() const
+{ return collocIndices; }
 
 
 inline void HierarchSparseGridDriver::

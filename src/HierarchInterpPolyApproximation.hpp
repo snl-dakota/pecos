@@ -411,6 +411,14 @@ private:
     RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& set_partition = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
+  /// using the surrogate data and collocation indices provided
+  void central_product_interpolant(const SDVArray& sdv_array,
+    const SDRArray& sdr_array_1, const SDRArray& sdr_array_2, Real mean_1,
+    Real mean_2, const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
+    const Sizet3DArray&  colloc_index, RealVector2DArray& cov_t1c,
+    RealMatrix2DArray& cov_t2c,
+    const UShort2DArray& set_partition = UShort2DArray());
+  /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   /// when corresponding surrData is not available
   void central_product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
@@ -444,16 +452,24 @@ private:
     RealMatrix2DArray& cov_t1_coeff_grads,
     const UShort2DArray& set_partition = UShort2DArray());
 
-  /// build the product interpolant, with or without corresponding surrData
+  /// build the active product interpolant, with or without
+  /// corresponding surrData
   void build_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
     const UShort2DArray& set_partition = UShort2DArray());
-  /// build the central product interpolant, with or without corresponding
-  /// surrData
+  /// build the active central product interpolant, with or without
+  /// corresponding surrData
   void build_central_product_interpolant(
     HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& set_partition = UShort2DArray());
+  /// build the central product interpolant map, with or without
+  /// corresponding surrData
+  void build_central_product_interpolant(
+    HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+    std::map<UShortArray, RealVector2DArray>& cov_t1c_map,
+    std::map<UShortArray, RealMatrix2DArray>& cov_t2c_map,
+    const std::map<UShortArray, UShort2DArray>& set_partition_map);
  
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
@@ -892,6 +908,35 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   //  > promote Nodal implementation of this function to base class
   //  > redefine HierarchSparseGridDriver::type1_weight_sets() to generate
   //    from 1D weights array in CSG-style approach (not simple concatenation)
+}
+
+
+inline void HierarchInterpPolyApproximation::
+central_product_interpolant(PolynomialApproximation* poly_approx_2,
+			    bool mod_surr_data, Real mean_1, Real mean_2,
+			    RealVector2DArray& cov_t1c,
+			    RealMatrix2DArray& cov_t2c,
+			    const UShort2DArray& set_partition)
+{
+  // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
+  const SDVArray& sdv_array = (mod_surr_data) ?
+    modSurrData.variables_data() : surrData.variables_data();
+  const SDRArray& sdr_array_1 = (mod_surr_data) ?
+    modSurrData.response_data() : surrData.response_data();
+  const SDRArray& sdr_array_2 = (mod_surr_data) ?
+    hip_approx_2->modSurrData.response_data() :
+    hip_approx_2->surrData.response_data();
+
+  central_product_interpolant(sdv_array, sdr_array_1, sdr_array_2, mean_1,
+			      mean_2, hsg_driver->smolyak_multi_index(),
+			      hsg_driver->collocation_key(),
+			      hsg_driver->collocation_indices(),
+			      cov_t1c, cov_t2c, set_partition);
 }
 
 
