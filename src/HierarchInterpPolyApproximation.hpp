@@ -924,19 +924,19 @@ central_product_interpolant(PolynomialApproximation* poly_approx_2,
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  const SDVArray& sdv_array = (mod_surr_data) ?
-    modSurrData.variables_data() : surrData.variables_data();
-  const SDRArray& sdr_array_1 = (mod_surr_data) ?
-    modSurrData.response_data() : surrData.response_data();
-  const SDRArray& sdr_array_2 = (mod_surr_data) ?
-    hip_approx_2->modSurrData.response_data() :
-    hip_approx_2->surrData.response_data();
 
-  central_product_interpolant(sdv_array, sdr_array_1, sdr_array_2, mean_1,
-			      mean_2, hsg_driver->smolyak_multi_index(),
-			      hsg_driver->collocation_key(),
-			      hsg_driver->collocation_indices(),
-			      cov_t1c, cov_t2c, set_partition);
+  if (mod_surr_data)
+    central_product_interpolant(modSurrData.variables_data(),
+      modSurrData.response_data(), hip_approx_2->modSurrData.response_data(),
+      mean_1, mean_2, hsg_driver->smolyak_multi_index(),
+      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
+      cov_t1c, cov_t2c, set_partition);
+  else
+    central_product_interpolant(surrData.variables_data(),
+      surrData.response_data(), hip_approx_2->surrData.response_data(),
+      mean_1, mean_2, hsg_driver->smolyak_multi_index(),
+      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
+      cov_t1c, cov_t2c, set_partition);
 }
 
 
