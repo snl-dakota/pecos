@@ -1738,7 +1738,7 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 /** requires combinedExpT{1,2}Coeffs, corresponding weights, and a
     corresponding partition
 Real HierarchInterpPolyApproximation::
-reference_combined_mean(const UShort2DArray& comb_ref_key) // ***
+reference_combined_mean(const UShort2DArray& comb_ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -1750,7 +1750,8 @@ reference_combined_mean(const UShort2DArray& comb_ref_key) // ***
   Real ref_mean
     = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 		  hsg_driver->combined_type1_weight_sets(),
-		  hsg_driver->combined_type2_weight_sets(), comb_ref_key);// ***
+		  hsg_driver->combined_type2_weight_sets(),
+		  comb_ref_key); // *** not the active ref key
 
   if (std_mode)
     { referenceMoments[0] = ref_mean; computedRefMean |= 1; }
@@ -1785,7 +1786,7 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
     corresponding partition
 Real HierarchInterpPolyApproximation::
 reference_combined_mean(const RealVector& x,
-			const UShort2DArray& comb_ref_key) // ***
+			const UShort2DArray& comb_ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -1798,7 +1799,8 @@ reference_combined_mean(const RealVector& x,
   Real ref_mean
     = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 		  hsg_driver->combined_smolyak_multi_index(),
-		  hsg_driver->combined_collocation_key(), comb_ref_key); // ***
+		  hsg_driver->combined_collocation_key(),
+		  comb_ref_key); // *** not the active ref key
   if (all_mode)
     { referenceMoments[0] = ref_mean; computedRefMean |= 1; xPrevRefMean = x; }
   return ref_mean;
@@ -1897,20 +1899,23 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
   if (std_mode && (computedRefVariance & 1))
     return referenceMoments[1];
 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(ref_key_map);
-  /* TO DO
   if (product_interpolants())
     // uncentered raw moment available (accept loss of precision)
-    ref_var = expectation(prodT1CoeffsIter->second[this],
-			  prodT2CoeffsIter->second[this], ref_key)
+    ref_var = expectation(productType1Coeffs, productType2Coeffs, this,
+			  hsg_driver->type1_weight_sets_map(),
+			  hsg_driver->type2_weight_sets_map(), ref_key_map)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch
-    RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    build_central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
-				      cov_t2_coeffs, ref_key);
-    ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
+    std::map<UShortArray, RealVector2DArray> cov_t1_coeffs_map;
+    std::map<UShortArray, RealMatrix2DArray> cov_t2_coeffs_map;
+    //build_central_product_interpolant(this, ref_mean, ref_mean,
+    //  cov_t1_coeffs_map, cov_t2_coeffs_map, ref_key_map); // *** TO DO
+    ref_var = expectation(cov_t1_coeffs_map, cov_t2_coeffs_map,
+			  hsg_driver->type1_weight_sets_map(),
+			  hsg_driver->type2_weight_sets_map(), ref_key_map);
   }
-  */
 
   if (std_mode)
     { referenceMoments[1] = ref_var; computedRefVariance |= 1; }
@@ -1929,20 +1934,23 @@ reference_combined_variance(const RealVector& x,
       data_rep->match_nonrandom_vars(x, xPrevRefVar))
     return referenceMoments[1];
 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(x, ref_key_map);
-  /* TO DO
   if (product_interpolants())
     // uncentered raw moment available (accept loss of precision)
-    ref_var = expectation(x, prodT1CoeffsIter->second[this],
-			     prodT2CoeffsIter->second[this], ref_key)
+    ref_var = expectation(x, productType1Coeffs, productType2Coeffs, this,
+			  hsg_driver->smolyak_multi_index_map(),
+			  hsg_driver->collocation_key_map(), ref_key_map)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch
-    RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    build_central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
-				      cov_t2_coeffs, ref_key);
-    ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
+    std::map<UShortArray, RealVector2DArray> cov_t1_coeffs_map;
+    std::map<UShortArray, RealMatrix2DArray> cov_t2_coeffs_map;
+    //build_central_product_interpolant(this, ref_mean, ref_mean,
+    //  cov_t1_coeffs_map, cov_t2_coeffs_map, ref_key_map); // *** TO DO
+    ref_var = expectation(x, cov_t1_coeffs_map, cov_t2_coeffs_map,
+			  hsg_driver->smolyak_multi_index_map(),
+			  hsg_driver->collocation_key_map(), ref_key_map);
   }
-  */
 
   if (all_mode) {
     referenceMoments[1] = ref_var;
@@ -2032,14 +2040,14 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
   // combined increment is the same as the active increment
   //return delta_mean();
 
-  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
-  // by employing incr_key_map on expansionType{1,2}Coeffs
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
   if (std_mode && (computedDeltaMean & 1))
     return deltaMoments[0];
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> incr_key_map;
@@ -2062,14 +2070,14 @@ delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
   // combined increment is the same as the active increment
   //return delta_mean(incr_key);
 
-  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
-  // by employing incr_key_map on expansionType{1,2}Coeffs
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
   if (std_mode && (computedDeltaMean & 1))
     return deltaMoments[0];
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_mean
@@ -2085,11 +2093,8 @@ delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
 Real HierarchInterpPolyApproximation::
 delta_combined_mean(const RealVector& x)
 {
-  // TO DO: equivalence for all_vars mode ?
+  // Potentially equivalent for all_vars mode as well, but use key maps
   //return delta_mean(x);
-
-  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
-  // by employing incr_key_map on expansionType{1,2}Coeffs
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -2097,6 +2102,9 @@ delta_combined_mean(const RealVector& x)
   if (all_mode && (computedDeltaMean & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean))
     return deltaMoments[0];
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> incr_key_map;
@@ -2120,15 +2128,15 @@ delta_combined_mean(const RealVector& x,
   // TO DO: equivalence for all_vars mode ?
   //return delta_mean(x, incr_key);
 
-  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
-  // by employing incr_key_map on expansionType{1,2}Coeffs
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool all_mode = !data_rep->nonRandomIndices.empty();
   if (all_mode && (computedDeltaMean & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean))
     return deltaMoments[0];
+
+  // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
+  // by employing incr_key_map on expansionType{1,2}Coeffs
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_mean
@@ -2141,7 +2149,8 @@ delta_combined_mean(const RealVector& x,
 }
 
 
-/** This helper avoids recomputing ref_key and incr_key. */
+/** This helper avoids recomputing ref_key and incr_key (and also
+    eliminates poly_approx_2 from delta_covariance()). */
 Real HierarchInterpPolyApproximation::
 delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
@@ -2174,7 +2183,8 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 }
 
 
-/** This helper avoids recomputing ref_key and incr_key. */
+/** This helper avoids recomputing ref_key and incr_key (and also
+    eliminates poly_approx_2 from delta_covariance()). */
 Real HierarchInterpPolyApproximation::
 delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 	       const UShort2DArray& incr_key)
@@ -2211,7 +2221,8 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 }
 
 
-/** This helper avoids recomputing ref_key and incr_key. */
+/** This helper avoids recomputing ref_key_map and incr_key_map (and
+    also eliminates poly_approx_2 from delta_combined_covariance()). */
 Real HierarchInterpPolyApproximation::
 delta_combined_variance(
   const std::map<UShortArray, UShort2DArray>& ref_key_map,
@@ -2225,14 +2236,23 @@ delta_combined_variance(
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var;
-  /* TO DO
-  RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-  build_product_interpolant(this, prod_t1c, prod_t2c);
-  delta_var = delta_covariance(expT1CoeffsIter->second,
-    expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
-    true, prod_t1c, prod_t2c, hsg_driver->type1_hierarchical_weight_sets(),
-    hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
-  */
+  if (product_interpolants())
+    delta_var = delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
+      expansionType1Coeffs, expansionType2Coeffs, true,
+      prodT1CoeffsIter->second[this], prodT2CoeffsIter->second[this],
+      hsg_driver->type1_weight_sets_map(), hsg_driver->type2_weight_sets_map(),
+      data_rep->activeKey, ref_key_map, incr_key_map);
+  else {
+    // rebuild product interpolant from scratch for all active sets (only need
+    // expectation of R1R2 on active incr_key, but depends on active ref_key
+    // since product interp is constructed bottom-up from hierarch surpluses)
+    RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
+    build_product_interpolant(this, prod_t1c, prod_t2c);
+    delta_var = delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
+      expansionType1Coeffs, expansionType2Coeffs, true, prod_t1c, prod_t2c,
+      hsg_driver->type1_weight_sets_map(), hsg_driver->type2_weight_sets_map(),
+      data_rep->activeKey, ref_key_map, incr_key_map);
+  }
 
   if (std_mode)
     { deltaMoments[1] = delta_var; computedDeltaVariance |= 1; }
@@ -2240,7 +2260,8 @@ delta_combined_variance(
 }
 
 
-/** This helper avoids recomputing ref_key and incr_key. */
+/** This helper avoids recomputing ref_key_map and incr_key_map (and
+    also eliminates poly_approx_2 from delta_combined_covariance()). */
 Real HierarchInterpPolyApproximation::
 delta_combined_variance(const RealVector& x,
   const std::map<UShortArray, UShort2DArray>& ref_key_map,
@@ -2255,22 +2276,23 @@ delta_combined_variance(const RealVector& x,
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var;
-  /* TO DO
   if (product_interpolants())
-    delta_var = delta_covariance(x, expT1CoeffsIter->second,
-      expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
-      true, prodT1CoeffsIter->second[this], prodT2CoeffsIter->second[this],
-      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
-      ref_key, incr_key);
-  else { // rebuild product interpolant from scratch
+    delta_var = delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
+      expansionType1Coeffs, expansionType2Coeffs, true,
+      prodT1CoeffsIter->second[this], prodT2CoeffsIter->second[this],
+      hsg_driver->smolyak_multi_index_map(), hsg_driver->collocation_key_map(),
+      data_rep->activeKey, ref_key_map, incr_key_map);
+  else {
+    // rebuild product interpolant from scratch for all active sets (only need
+    // expectation of R1R2 on active incr_key, but depends on active ref_key
+    // since product interp is constructed bottom-up from hierarch surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
     build_product_interpolant(this, prod_t1c, prod_t2c);
-    delta_var = delta_covariance(x, expT1CoeffsIter->second,
-      expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
-      true, prod_t1c, prod_t2c, hsg_driver->smolyak_multi_index(),
-      hsg_driver->collocation_key(), ref_key, incr_key);
+    delta_var = delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
+      expansionType1Coeffs, expansionType2Coeffs, true, prod_t1c, prod_t2c,
+      hsg_driver->smolyak_multi_index_map(), hsg_driver->collocation_key_map(),
+      data_rep->activeKey, ref_key_map, incr_key_map);
   }
-  */
 
   if (all_mode) {
     deltaMoments[1] = delta_var;
@@ -2675,8 +2697,6 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
     return deltaMoments[1];
   
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  //UShort2DArray ref_key, incr_key;
-  //hsg_driver->partition_keys(ref_key, incr_key);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
   
@@ -2727,8 +2747,6 @@ delta_combined_covariance(const RealVector& x,
     return deltaMoments[1];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  //UShort2DArray ref_key, incr_key;
-  //hsg_driver->partition_keys(ref_key, incr_key);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
 
@@ -3011,46 +3029,50 @@ expectation(const RealVector2DArray& t1_coeffs,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   Real integral = 0.;
-  size_t lev, set, pt, num_levels = t1_coeffs.size(), set_start = 0, set_end,
-    num_tp_pts;
+  size_t lev, set, pt, num_lev = t1_coeffs.size(),
+    set_start = 0, set_end, num_tp_pts;
   bool partial = !set_partition.empty();
   if (data_rep->basisConfigOptions.useDerivs) {
     size_t v, num_v = sharedDataRep->numVars;
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1c_l = t1_coeffs[lev];
+      const RealMatrixArray& t2c_l = t2_coeffs[lev];
+      const RealVectorArray& t1w_l = t1_wts[lev];
+      const RealMatrixArray& t2w_l = t2_wts[lev];
       if (partial)
 	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
       else
-	set_end = t1_coeffs_l.size();
+	set_end = t1c_l.size();
       for (set=set_start; set<set_end; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const RealMatrix& t2_coeffs_ls = t2_coeffs[lev][set];
-	const RealVector&    t1_wts_ls = t1_wts[lev][set];
-	const RealMatrix&    t2_wts_ls = t2_wts[lev][set];
-	num_tp_pts = t1_coeffs_ls.length();
+	const RealVector& t1c_ls = t1c_l[set];
+	const RealMatrix& t2c_ls = t2c_l[set];
+	const RealVector& t1w_ls = t1w_l[set];
+	const RealMatrix& t2w_ls = t2w_l[set];
+	num_tp_pts = t1c_ls.length();
 	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	  integral += t1_coeffs_ls[pt] * t1_wts_ls[pt];
-	  const Real* t2_coeffs_lsp = t2_coeffs_ls[pt];
-	  const Real* t2_wts_lsp    = t2_wts_ls[pt];
+	  integral += t1c_ls[pt] * t1w_ls[pt];
+	  const Real* t2c_lsp = t2c_ls[pt];
+	  const Real* t2w_lsp = t2w_ls[pt];
 	  for (v=0; v<num_v; ++v)
-	    integral += t2_coeffs_lsp[v] * t2_wts_lsp[v];
+	    integral += t2c_lsp[v] * t2w_lsp[v];
 	}
       }
     }
   }
   else {
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1c_l = t1_coeffs[lev];
+      const RealVectorArray& t1w_l = t1_wts[lev];
       if (partial)
 	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
       else
-	set_end = t1_coeffs_l.size();
+	set_end = t1c_l.size();
       for (set=set_start; set<set_end; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const RealVector&    t1_wts_ls = t1_wts[lev][set];
-	num_tp_pts = t1_coeffs_ls.length();
+	const RealVector& t1c_ls = t1c_l[set];
+	const RealVector& t1w_ls = t1w_l[set];
+	num_tp_pts = t1c_ls.length();
 	for (pt=0; pt<num_tp_pts; ++pt) // omitted if empty surplus vector
-	  integral += t1_coeffs_ls[pt] * t1_wts_ls[pt];
+	  integral += t1c_ls[pt] * t1w_ls[pt];
       }
     }
   }
@@ -3070,25 +3092,25 @@ expectation(const RealVector2DArray& t1_coeffs,
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const RealVector2DArray& t1_wts
     = hsg_driver->type1_hierarchical_weight_sets();
-  size_t lev, set, pt, num_levels = t1_coeffs.size(), num_sets,
+  size_t lev, set, pt, num_lev = t1_coeffs.size(), num_sets,
     tp_pt_start = 0, tp_pt_end;
   bool partial = !pt_partition.empty();
   switch (data_rep->basisConfigOptions.useDerivs) {
   case false:
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
-      num_sets = t1_coeffs_l.size();
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1c_l = t1_coeffs[lev];
+      num_sets = t1c_l.size();
       for (set=0; set<num_sets; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const RealVector&    t1_wts_ls = t1_wts[lev][set];
+	const RealVector& t1c_ls = t1c_l[set];
+	const RealVector& t1w_ls = t1_wts[lev][set];
 	if (partial) {
 	  tp_pt_start = pt_partition[lev][set][0];
 	  tp_pt_end   = pt_partition[lev][set][1];
 	}
 	else
-	  tp_pt_end   = t1_coeffs_ls.length();
+	  tp_pt_end   = t1c_ls.length();
 	for (pt=tp_pt_start; pt<tp_pt_end; ++pt)
-	  integral += t1_coeffs_ls[pt] * t1_wts_ls[pt];
+	  integral += t1c_ls[pt] * t1w_ls[pt];
       }
     }
     break;
@@ -3096,26 +3118,26 @@ expectation(const RealVector2DArray& t1_coeffs,
     const RealMatrix2DArray& t2_wts
       = hsg_driver->type2_hierarchical_weight_sets();
     size_t v, num_v = sharedDataRep->numVars;
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
-      num_sets = t1_coeffs_l.size();
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1c_l = t1_coeffs[lev];
+      num_sets = t1c_l.size();
       for (set=0; set<num_sets; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const RealMatrix& t2_coeffs_ls = t2_coeffs[lev][set];
-	const RealVector&    t1_wts_ls = t1_wts[lev][set];
-	const RealMatrix&    t2_wts_ls = t2_wts[lev][set];
+	const RealVector& t1c_ls = t1c_l[set];
+	const RealMatrix& t2c_ls = t2_coeffs[lev][set];
+	const RealVector& t1w_ls = t1_wts[lev][set];
+	const RealMatrix& t2w_ls = t2_wts[lev][set];
 	if (partial) {
 	  tp_pt_start = pt_partition[lev][set][0];
 	  tp_pt_end   = pt_partition[lev][set][1];
 	}
 	else
-	  tp_pt_end   = t1_coeffs_ls.length();
+	  tp_pt_end   = t1c_ls.length();
 	for (pt=tp_pt_start; pt<tp_pt_end; ++pt) {
-	  integral += t1_coeffs_ls[pt] * t1_wts_ls[pt];
-	  const Real* t2_coeffs_lsp = t2_coeffs_ls[pt];
-	  const Real* t2_wts_lsp    = t2_wts_ls[pt];
+	  integral += t1c_ls[pt] * t1w_ls[pt];
+	  const Real* t2c_lsp = t2c_ls[pt];
+	  const Real* t2w_lsp = t2w_ls[pt];
 	  for (v=0; v<num_v; ++v)
-	    integral += t2_coeffs_lsp[v] * t2_wts_lsp[v];
+	    integral += t2c_lsp[v] * t2w_lsp[v];
 	}
       }
     }
@@ -3129,70 +3151,6 @@ expectation(const RealVector2DArray& t1_coeffs,
 
 
 Real HierarchInterpPolyApproximation::
-expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
-	    const RealMatrix2DArray& t2_coeffs, const UShort3DArray& sm_mi,
-	    const UShort4DArray& colloc_key, const UShort2DArray& set_partition)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  Real integral = 0.;
-  size_t lev, set, pt, num_levels = t1_coeffs.size(), set_start = 0, set_end,
-    num_tp_pts;
-  bool partial = !set_partition.empty();
-  const SizetList&  r_ind = data_rep->randomIndices;
-  const SizetList& nr_ind = data_rep->nonRandomIndices;
-  if (data_rep->basisConfigOptions.useDerivs) {
-    size_t v, num_v = sharedDataRep->numVars;
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
-      if (partial)
-	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-      else
-	set_end = t1_coeffs_l.size();
-      for (set=set_start; set<set_end; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const RealMatrix& t2_coeffs_ls = t2_coeffs[lev][set];
-	const UShortArray&    sm_mi_ls = sm_mi[lev][set];
-	num_tp_pts = t1_coeffs_ls.length();
-	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
-	  integral += t1_coeffs_ls[pt]
-	    * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls, nr_ind)
-	    * data_rep->type1_weight(key_lsp, sm_mi_ls, r_ind);
-	  const Real* t2_coeffs_lsp = t2_coeffs_ls[pt];
-	  for (v=0; v<num_v; ++v)
-	    integral += t2_coeffs_lsp[v]
-	      * data_rep->type2_interpolant_value(x, v, key_lsp,sm_mi_ls,nr_ind)
-	      * data_rep->type2_weight(v, key_lsp, sm_mi_ls, r_ind);
-	}
-      }
-    }
-  }
-  else {
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
-      if (partial)
-	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-      else
-	set_end = t1_coeffs_l.size();
-      for (set=set_start; set<set_end; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const UShortArray&    sm_mi_ls = sm_mi[lev][set];
-	num_tp_pts = t1_coeffs_ls.length();
-	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
-	  integral += t1_coeffs_ls[pt]
-	    * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls, nr_ind)
-	    * data_rep->type1_weight(key_lsp, sm_mi_ls, r_ind);
-	}
-      }
-    }
-  }
-  return integral;
-}
-
-
-Real HierarchInterpPolyApproximation::
 expectation(const std::map<UShortArray, RealVector2DArray>& t1_coeffs_map,
 	    const std::map<UShortArray, RealMatrix2DArray>& t2_coeffs_map,
 	    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
@@ -3201,55 +3159,112 @@ expectation(const std::map<UShortArray, RealVector2DArray>& t1_coeffs_map,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  Real integral = 0.;
-  size_t lev, set, pt, num_lev, start, end, num_tp_pts, v,
-    num_v = sharedDataRep->numVars;
   std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit, t1w_cit;
   std::map<UShortArray, RealMatrix2DArray>::const_iterator t2c_cit, t2w_cit;
   std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
-  bool partial, use_derivs = data_rep->basisConfigOptions.useDerivs;
+
+  Real integral = 0.;
   for (t1c_cit = t1_coeffs_map.begin(),      t2c_cit  = t2_coeffs_map.begin(),
        t1w_cit = t1_wts_map.begin(),         t2w_cit  = t2_wts_map.begin(),
        p_cit   = set_partition_map.begin();  t1c_cit != t1_coeffs_map.end();
-       ++t1c_cit, ++t2c_cit, ++t1w_cit, ++t2w_cit, ++p_cit) {
-    const RealVector2DArray&  t1c = t1c_cit->second;
-    const RealMatrix2DArray&  t2c = t2c_cit->second;
-    const RealVector2DArray&  t1w = t1w_cit->second;
-    const RealMatrix2DArray&  t2w = t2w_cit->second;
-    const UShort2DArray& set_part = p_cit->second;
-    num_lev = t1c.size();  partial = !set_part.empty();
-    if (use_derivs) {
-      for (lev=0; lev<num_lev; ++lev) {
-	const RealVectorArray& t1c_l = t1c[lev];
-	if (partial)  { start = set_part[lev][0]; end = set_part[lev][1]; }
-	else          { start = 0;                end = t1c_l.size(); }
-	for (set=start; set<end; ++set) {
-	  const RealVector& t1c_ls = t1c_l[set];
-	  const RealMatrix& t2c_ls = t2c[lev][set];
-	  const RealVector& t1w_ls = t1w[lev][set];
-	  const RealMatrix& t2w_ls = t2w[lev][set];
-	  num_tp_pts = t1c_ls.length();
-	  for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	    integral += t1c_ls[pt] * t1w_ls[pt];
-	    const Real* t2c_lsp = t2c_ls[pt];
-	    const Real* t2w_lsp = t2w_ls[pt];
-	    for (v=0; v<num_v; ++v)
-	      integral += t2c_lsp[v] * t2w_lsp[v];
-	  }
+       ++t1c_cit, ++t2c_cit, ++t1w_cit, ++t2w_cit, ++p_cit)
+    integral += expectation(t1c_cit->second, t2c_cit->second, t1w_cit->second,
+			    t2w_cit->second, p_cit->second);
+  return integral;
+}
+
+
+Real HierarchInterpPolyApproximation::
+expectation(const std::map<UShortArray, std::map<PolynomialApproximation*,
+	      RealVector2DArray> >& prod_t1c_map,
+	    const std::map<UShortArray, std::map<PolynomialApproximation*,
+	      RealMatrix2DArray> >& prod_t2c_map,
+	    PolynomialApproximation* poly_approx_2,
+	    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
+	    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
+	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
+{
+  std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
+    ::const_iterator p1c_cit;
+  std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
+    ::const_iterator p2c_cit;
+  std::map<PolynomialApproximation*, RealVector2DArray>::const_iterator t1c_cit;
+  std::map<PolynomialApproximation*, RealMatrix2DArray>::const_iterator t2c_cit;
+  std::map<UShortArray, RealVector2DArray>::const_iterator t1w_cit;
+  std::map<UShortArray, RealMatrix2DArray>::const_iterator t2w_cit;
+  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+
+  Real integral = 0.;
+  for (p1c_cit = prod_t1c_map.begin(),       p2c_cit  = prod_t2c_map.begin(),
+       t1w_cit = t1_wts_map.begin(),         t2w_cit  = t2_wts_map.begin(),
+       p_cit   = set_partition_map.begin();  p1c_cit != prod_t1c_map.end();
+       ++p1c_cit, ++p2c_cit, ++t1w_cit, ++t2w_cit, ++p_cit) {
+    t1c_cit = p1c_cit->second.find(poly_approx_2);
+    t2c_cit = p2c_cit->second.find(poly_approx_2);
+    integral += expectation(t1c_cit->second, t2c_cit->second, t1w_cit->second,
+			    t2w_cit->second, p_cit->second);
+  }
+  return integral;
+}
+
+
+Real HierarchInterpPolyApproximation::
+expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
+	    const RealMatrix2DArray& t2_coeffs, const UShort3DArray& sm_mi,
+	    const UShort4DArray& colloc_key, const UShort2DArray& set_partition)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  Real integral = 0.;
+  size_t lev, set, pt, num_lev = t1_coeffs.size(), set_start = 0, set_end,
+    num_tp_pts;
+  bool partial = !set_partition.empty();
+  const SizetList&  r_ind = data_rep->randomIndices;
+  const SizetList& nr_ind = data_rep->nonRandomIndices;
+  if (data_rep->basisConfigOptions.useDerivs) {
+    size_t v, num_v = sharedDataRep->numVars;
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1c_l = t1_coeffs[lev];
+      const RealMatrixArray& t2c_l = t2_coeffs[lev];
+     if (partial)
+	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+      else
+	set_end = t1c_l.size();
+      for (set=set_start; set<set_end; ++set) {
+	const RealVector&    t1c_ls = t1c_l[set];
+	const RealMatrix&    t2c_ls = t2c_l[set];
+	const UShortArray& sm_mi_ls = sm_mi[lev][set];
+	num_tp_pts = t1c_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	  integral += t1c_ls[pt]
+	    * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls, nr_ind)
+	    * data_rep->type1_weight(key_lsp, sm_mi_ls, r_ind);
+	  const Real* t2c_lsp = t2c_ls[pt];
+	  for (v=0; v<num_v; ++v)
+	    integral += t2c_lsp[v]
+	      * data_rep->type2_interpolant_value(x, v, key_lsp,sm_mi_ls,nr_ind)
+	      * data_rep->type2_weight(v, key_lsp, sm_mi_ls, r_ind);
 	}
       }
     }
-    else {
-      for (lev=0; lev<num_lev; ++lev) {
-	const RealVectorArray& t1c_l = t1c[lev];
-	if (partial)  { start = set_part[lev][0]; end = set_part[lev][1]; }
-	else          { start = 0;                end = t1c_l.size(); }
-	for (set=start; set<end; ++set) {
-	  const RealVector& t1c_ls = t1c_l[set];
-	  const RealVector& t1w_ls = t1w[lev][set];
-	  num_tp_pts = t1c_ls.length();
-	  for (pt=0; pt<num_tp_pts; ++pt) // omitted if empty surplus vector
-	    integral += t1c_ls[pt] * t1w_ls[pt];
+  }
+  else {
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1c_l = t1_coeffs[lev];
+      if (partial)
+	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+      else
+	set_end = t1c_l.size();
+      for (set=set_start; set<set_end; ++set) {
+	const RealVector&    t1c_ls = t1c_l[set];
+	const UShortArray& sm_mi_ls = sm_mi[lev][set];
+	num_tp_pts = t1c_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	  integral += t1c_ls[pt]
+	    * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls, nr_ind)
+	    * data_rep->type1_weight(key_lsp, sm_mi_ls, r_ind);
 	}
       }
     }
@@ -3266,71 +3281,53 @@ expectation(const RealVector& x,
 	    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
 	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  Real integral = 0.;
-  size_t lev, set, pt, num_lev, start, end, num_tp_pts, v,
-    num_v = sharedDataRep->numVars;
   std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit;
   std::map<UShortArray, RealMatrix2DArray>::const_iterator t2c_cit;
   std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
   std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
   std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
-  bool partial, use_derivs = data_rep->basisConfigOptions.useDerivs;
-  const SizetList&  r_ind = data_rep->randomIndices;
-  const SizetList& nr_ind = data_rep->nonRandomIndices;
-  for (t1c_cit = t1_coeffs_map.begin(),      t2c_cit  = t2_coeffs_map.begin(),
-       sm_cit  = sm_mi_map.begin(),           ck_cit  = colloc_key_map.begin(),
-       p_cit   = set_partition_map.begin();  t1c_cit != t1_coeffs_map.end();
-       ++t1c_cit, ++t2c_cit, ++sm_cit, ++ck_cit, ++p_cit) {
-    const RealVector2DArray&    t1c = t1c_cit->second;
-    const RealMatrix2DArray&    t2c = t2c_cit->second;
-    const UShort3DArray&      sm_mi =  sm_cit->second;
-    const UShort4DArray& colloc_key =  ck_cit->second;
-    const UShort2DArray&   set_part =   p_cit->second;
-    num_lev = t1c.size();  partial = !set_part.empty();
-    if (use_derivs) {
-      for (lev=0; lev<num_lev; ++lev) {
-	const RealVectorArray& t1c_l = t1c[lev];
-	if (partial)  { start = set_part[lev][0]; end = set_part[lev][1]; }
-	else          { start = 0;                end = t1c_l.size(); }
-	for (set=start; set<end; ++set) {
-	  const RealVector&    t1c_ls = t1c_l[set];
-	  const RealMatrix&    t2c_ls = t2c[lev][set];
-	  const UShortArray& sm_mi_ls = sm_mi[lev][set];
-	  num_tp_pts = t1c_ls.length();
-	  for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	    const UShortArray& key_lsp = colloc_key[lev][set][pt];
-	    integral += t1c_ls[pt]
-	      * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls, nr_ind)
-	      * data_rep->type1_weight(key_lsp, sm_mi_ls, r_ind);
-	    const Real* t2c_lsp = t2c_ls[pt];
-	    for (v=0; v<num_v; ++v)
-	      integral += t2c_lsp[v]
-		* data_rep->type2_interpolant_value(x,v,key_lsp,sm_mi_ls,nr_ind)
-		* data_rep->type2_weight(v, key_lsp, sm_mi_ls, r_ind);
-	  }
-	}
-      }
-    }
-    else {
-      for (lev=0; lev<num_lev; ++lev) {
-	const RealVectorArray& t1c_l = t1c[lev];
-	if (partial)  { start = set_part[lev][0]; end = set_part[lev][1]; }
-	else          { start = 0;                end = t1c_l.size(); }
-	for (set=start; set<end; ++set) {
-	  const RealVector&    t1c_ls = t1c_l[set];
-	  const UShortArray& sm_mi_ls = sm_mi[lev][set];
-	  num_tp_pts = t1c_ls.length();
-	  for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	    const UShortArray& key_lsp = colloc_key[lev][set][pt];
-	    integral += t1c_ls[pt]
-	      * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls, nr_ind)
-	      * data_rep->type1_weight(key_lsp, sm_mi_ls, r_ind);
-	  }
-	}
-      }
-    }
+
+  Real integral = 0.;
+  for (t1c_cit = t1_coeffs_map.begin(),     t2c_cit  = t2_coeffs_map.begin(),
+       sm_cit  = sm_mi_map.begin(),          ck_cit  = colloc_key_map.begin(),
+       p_cit   = set_partition_map.begin(); t1c_cit != t1_coeffs_map.end();
+       ++t1c_cit, ++t2c_cit, ++sm_cit, ++ck_cit, ++p_cit)
+    integral += expectation(x, t1c_cit->second, t2c_cit->second, sm_cit->second,
+			    ck_cit->second, p_cit->second);
+  return integral;
+}
+
+
+Real HierarchInterpPolyApproximation::
+expectation(const RealVector& x,
+	    const std::map<UShortArray, std::map<PolynomialApproximation*,
+	      RealVector2DArray> >& prod_t1c_map,
+	    const std::map<UShortArray, std::map<PolynomialApproximation*,
+	      RealMatrix2DArray> >& prod_t2c_map,
+	    PolynomialApproximation* poly_approx_2,
+	    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
+	    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
+	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
+{
+  std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
+    ::const_iterator p1c_cit;
+  std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
+    ::const_iterator p2c_cit;
+  std::map<PolynomialApproximation*, RealVector2DArray>::const_iterator t1c_cit;
+  std::map<PolynomialApproximation*, RealMatrix2DArray>::const_iterator t2c_cit;
+  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
+  std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
+  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+  
+  Real integral = 0.;
+  for (p1c_cit = prod_t1c_map.begin(),      p2c_cit  = prod_t2c_map.begin(),
+       sm_cit  = sm_mi_map.begin(),          ck_cit  = colloc_key_map.begin(),
+       p_cit   = set_partition_map.begin(); p1c_cit != prod_t1c_map.end();
+       ++p1c_cit, ++p2c_cit, ++sm_cit, ++ck_cit, ++p_cit) {
+    t1c_cit = p1c_cit->second.find(poly_approx_2);
+    t2c_cit = p2c_cit->second.find(poly_approx_2);
+    integral += expectation(x, t1c_cit->second, t2c_cit->second, sm_cit->second,
+			    ck_cit->second, p_cit->second);
   }
   return integral;
 }
@@ -3341,13 +3338,13 @@ const RealVector& HierarchInterpPolyApproximation::
 expectation_gradient(const RealMatrix2DArray& t1_coeff_grads,
 		     const RealVector2DArray& t1_wts)
 {
-  size_t lev, num_levels = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts,
+  size_t lev, num_lev = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts,
     v, num_deriv_vars = t1_coeff_grads[0][0].numRows();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
   approxGradient = 0.;
 
-  for (lev=0; lev<num_levels; ++lev) {
+  for (lev=0; lev<num_lev; ++lev) {
     const RealMatrixArray& t1_coeff_grads_l = t1_coeff_grads[lev];
     num_sets = t1_coeff_grads_l.size();
     for (set=0; set<num_sets; ++set) {
@@ -3375,12 +3372,12 @@ expectation_gradient(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, num_levels = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts;
+  size_t lev, num_lev = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts;
   const SizetList&  r_ind = data_rep->randomIndices;
   const SizetList& nr_ind = data_rep->nonRandomIndices;
 
   Real grad = 0.;
-  for (lev=0; lev<num_levels; ++lev) {
+  for (lev=0; lev<num_lev; ++lev) {
     const RealMatrixArray& t1_coeff_grads_l = t1_coeff_grads[lev];
     num_sets = t1_coeff_grads_l.size();
     for (set=0; set<num_sets; ++set) {
@@ -3408,13 +3405,13 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, num_levels = t1_coeffs.size(), set, num_sets, pt, num_tp_pts, v,
+  size_t lev, num_lev = t1_coeffs.size(), set, num_sets, pt, num_tp_pts, v,
     num_v = sharedDataRep->numVars;
   const SizetList&  r_ind = data_rep->randomIndices;
   const SizetList& nr_ind = data_rep->nonRandomIndices;
 
   Real grad = 0.;
-  for (lev=0; lev<num_levels; ++lev) {
+  for (lev=0; lev<num_lev; ++lev) {
     const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
     num_sets = t1_coeffs_l.size();
     for (set=0; set<num_sets; ++set) {
@@ -3480,7 +3477,7 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = colloc_key.size(), set_start = 0, set_end,
+  size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
@@ -3503,7 +3500,7 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
 
   // level 0 (no surplus)
-  prod_t1c.resize(num_levels);  prod_t2c.resize(num_levels);
+  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     prod_t1c[0].resize(1);  prod_t2c[0].resize(1);
     prod_t1c[0][0].sizeUninitialized(1);
@@ -3542,7 +3539,7 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
   ++cntr;
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -3651,7 +3648,7 @@ product_interpolant(PolynomialApproximation* poly_approx_2,
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = colloc_key.size(), set_start = 0, set_end,
+  size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
   Real data_fn1, data_fn2;
@@ -3668,7 +3665,7 @@ product_interpolant(PolynomialApproximation* poly_approx_2,
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
 
   // level 0 (no surplus)
-  prod_t1c.resize(num_levels);  prod_t2c.resize(num_levels);
+  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     prod_t1c[0].resize(1);  prod_t2c[0].resize(1);
     prod_t1c[0][0].sizeUninitialized(1);
@@ -3695,7 +3692,7 @@ product_interpolant(PolynomialApproximation* poly_approx_2,
   ++cntr;
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -3784,7 +3781,7 @@ product_interpolant(const RealMatrix2DArray& var_sets,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, set, pt, num_levels = r1_t1c.size(), set_start = 0, set_end,
+  size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty();
   Real r1_val, r2_val;
@@ -3792,7 +3789,7 @@ product_interpolant(const RealMatrix2DArray& var_sets,
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
 
   // level 0 (no surplus)
-  prod_t1c.resize(num_levels);  prod_t2c.resize(num_levels);
+  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     prod_t1c[0].resize(1); prod_t2c[0].resize(1);
     prod_t1c[0][0].sizeUninitialized(1);
@@ -3816,7 +3813,7 @@ product_interpolant(const RealMatrix2DArray& var_sets,
   }
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -3897,7 +3894,7 @@ central_product_interpolant(PolynomialApproximation* poly_approx_2,
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = colloc_key.size(), set_start = 0, set_end,
+  size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
   Real data_fn1_mm1, data_fn2_mm2;
@@ -3913,7 +3910,7 @@ central_product_interpolant(PolynomialApproximation* poly_approx_2,
     hip_approx_2->surrData.response_data();
 
   // level 0 (no surplus)
-  cov_t1c.resize(num_levels);  cov_t2c.resize(num_levels);
+  cov_t1c.resize(num_lev);  cov_t2c.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     cov_t1c[0].resize(1);  cov_t2c[0].resize(1);
     cov_t1c[0][0].sizeUninitialized(1);
@@ -3938,7 +3935,7 @@ central_product_interpolant(PolynomialApproximation* poly_approx_2,
   ++cntr;
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -4022,13 +4019,13 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
   // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, set, pt, num_levels = r1_t1c.size(), set_start = 0, set_end,
+  size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty();
   Real r1_val_mm1, r2_val_mm2;
 
   // level 0 (no surplus)
-  cov_t1c.resize(num_levels);  cov_t2c.resize(num_levels);
+  cov_t1c.resize(num_lev);  cov_t2c.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     cov_t1c[0].resize(1);  cov_t2c[0].resize(1);
     cov_t1c[0][0].sizeUninitialized(1);
@@ -4053,7 +4050,7 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
   }
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -4131,7 +4128,7 @@ central_product_gradient_interpolant(PolynomialApproximation* poly_approx_2,
   const UShort3DArray&           sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
   const Sizet3DArray&     colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = colloc_key.size(), set_start = 0, set_end,
+  size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v,
     num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
@@ -4148,7 +4145,7 @@ central_product_gradient_interpolant(PolynomialApproximation* poly_approx_2,
     hip_approx_2->surrData.response_data();
 
   // level 0 (no surplus)
-  cov_t1_coeff_grads.resize(num_levels);
+  cov_t1_coeff_grads.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     cov_t1_coeff_grads[0].resize(1);
     cov_t1_coeff_grads[0][0].shapeUninitialized(num_deriv_vars, 1);
@@ -4167,7 +4164,7 @@ central_product_gradient_interpolant(PolynomialApproximation* poly_approx_2,
   ++cntr;
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -4227,14 +4224,14 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
   // form hierarchical t1 coeff grads for (R_1 - \mu_1) (R_2 - \mu_2)
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, set, pt, num_levels = colloc_key.size(),
+  size_t lev, set, pt, num_lev = colloc_key.size(),
     num_sets, set_start = 0, set_end, num_tp_pts,
     v, num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !set_partition.empty();
   Real r1_mm, r2_mm;
 
   // level 0 (no surplus)
-  cov_t1_coeff_grads.resize(num_levels);
+  cov_t1_coeff_grads.resize(num_lev);
   if (!partial || set_partition[0][0] == 0) { // partition includes level 0
     cov_t1_coeff_grads[0].resize(1);
     cov_t1_coeff_grads[0][0].shapeUninitialized(num_deriv_vars, 1);
@@ -4255,7 +4252,7 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
   }
 
   // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
     if (partial)
       { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
@@ -4314,7 +4311,7 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, set, pt, num_levels = colloc_key.size(), num_sets, num_tp_pts,
+  size_t lev, set, pt, num_lev = colloc_key.size(), num_sets, num_tp_pts,
     cntr, c_index, v, num_v = sharedDataRep->numVars;
   int m_index, moment;
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
@@ -4326,9 +4323,9 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
   mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
 
   // size moment coefficient arrays
-  RealVector2DArray mom_t1_coeffs(num_levels);
-  RealMatrix2DArray mom_t2_coeffs(num_levels);
-  for (lev=0; lev<num_levels; ++lev) {
+  RealVector2DArray mom_t1_coeffs(num_lev);
+  RealMatrix2DArray mom_t2_coeffs(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
     num_sets = colloc_key[lev].size();
     mom_t1_coeffs[lev].resize(num_sets);
     mom_t2_coeffs[lev].resize(num_sets);
@@ -4355,7 +4352,7 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
 	mom_t2_coeffs_000[v] = deriv * data_grad[v];
       ++cntr;
       // levels 1:w
-      for (lev=1; lev<num_levels; ++lev) {
+      for (lev=1; lev<num_lev; ++lev) {
 	num_sets = colloc_key[lev].size();
 	for (set=0; set<num_sets; ++set) {
 	  num_tp_pts = colloc_key[lev][set].size();
@@ -4392,7 +4389,7 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
 	= std::pow(sdr_array[c_index].response_function() - mean, moment);
       ++cntr;
       // levels 1:w
-      for (lev=1; lev<num_levels; ++lev) {
+      for (lev=1; lev<num_lev; ++lev) {
 	num_sets = colloc_key[lev].size();
 	for (set=0; set<num_sets; ++set) {
 	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
@@ -4452,7 +4449,7 @@ integrate_response_moments(size_t num_moments,
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, set, pt, num_levels = colloc_key.size(), num_sets, num_tp_pts,
+  size_t lev, set, pt, num_lev = colloc_key.size(), num_sets, num_tp_pts,
     v, num_v = sharedDataRep->numVars;
   int m_index, moment;
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
@@ -4463,9 +4460,9 @@ integrate_response_moments(size_t num_moments,
   mean = expectation(t1_coeffs, t2_coeffs, t1_wts, t2_wts);
 
   // size moment coefficient arrays
-  RealVector2DArray mom_t1_coeffs(num_levels),  r_vals(num_levels);
-  RealMatrix2DArray mom_t2_coeffs(num_levels), r_grads(num_levels);
-  for (lev=0; lev<num_levels; ++lev) {
+  RealVector2DArray mom_t1_coeffs(num_lev),  r_vals(num_lev);
+  RealMatrix2DArray mom_t2_coeffs(num_lev), r_grads(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
     num_sets = colloc_key[lev].size();
     mom_t1_coeffs[lev].resize(num_sets);  r_vals[lev].resize(num_sets);
     mom_t2_coeffs[lev].resize(num_sets);  r_grads[lev].resize(num_sets);
@@ -4488,7 +4485,7 @@ integrate_response_moments(size_t num_moments,
   if (use_derivs)
     Teuchos::setCol(gradient_basis_variables(c_vars, sm_mi, colloc_key,
       t1_coeffs, t2_coeffs, 0), 0, r_grads[0][0]);
-  for (lev=1; lev<num_levels; ++lev) {
+  for (lev=1; lev<num_lev; ++lev) {
     num_sets = colloc_key[lev].size();
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = colloc_key[lev][set].size();
@@ -4524,7 +4521,7 @@ integrate_response_moments(size_t num_moments,
 	mom_t2_coeffs_000[v] = deriv * r_grad[v];
     
       // levels 1:w
-      for (lev=1; lev<num_levels; ++lev) {
+      for (lev=1; lev<num_lev; ++lev) {
 	num_sets = colloc_key[lev].size();
 	for (set=0; set<num_sets; ++set) {
 	  num_tp_pts = colloc_key[lev][set].size();
@@ -4555,7 +4552,7 @@ integrate_response_moments(size_t num_moments,
     }
     else {
       // levels 1:w
-      for (lev=1; lev<num_levels; ++lev) {
+      for (lev=1; lev<num_lev; ++lev) {
 	num_sets = colloc_key[lev].size();
 	for (set=0; set<num_sets; ++set) {
 	  RealVector&  mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
@@ -4706,15 +4703,15 @@ member_coefficients_weights(const BitArray& member_bits,
   // Perform inner integral over complementary set u' (non-member vars) to
   // form new weighted expansion coefficients h (stored as member_t1_coeffs)
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
-    num_levels = exp_t1_coeffs.size(), num_sets, num_tp_pts,
+    num_lev = exp_t1_coeffs.size(), num_sets, num_tp_pts,
     num_member_coeffs, v_cntr, p_cntr = 0, m_index;
   Real member_wt, nonmember_wt;
   SizetArray indexing_factor; // for indexing member coeffs,wts
   UShortArray delta_sizes; UShort2DArray delta_keys;
-  member_t1_coeffs.resize(num_levels);  member_t1_wts.resize(num_levels);
-  member_t2_coeffs.resize(num_levels);  member_t2_wts.resize(num_levels);
-  member_colloc_key.resize(num_levels); member_colloc_index.resize(num_levels);
-  for (lev=0; lev<num_levels; ++lev) {
+  member_t1_coeffs.resize(num_lev);  member_t1_wts.resize(num_lev);
+  member_t2_coeffs.resize(num_lev);  member_t2_wts.resize(num_lev);
+  member_colloc_key.resize(num_lev); member_colloc_index.resize(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
     const RealVectorArray& t1_coeffs_l = exp_t1_coeffs[lev];
     num_sets = t1_coeffs_l.size();
     member_t1_coeffs[lev].resize(num_sets); member_t1_wts[lev].resize(num_sets);
@@ -4827,16 +4824,16 @@ central_product_member_coefficients(const BitArray& m_bits,
   const SDVArray& sdv_array = surrData.variables_data();
 
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
-    num_levels = m_t1_coeffs.size(), num_sets, num_tp_pts, c_index,
-    h_level = num_levels - 1;
+    num_lev = m_t1_coeffs.size(), num_sets, num_tp_pts, c_index,
+    h_level = num_lev - 1;
   SizetList member_indices;
   for (v=0; v<num_v; ++v)
     if (m_bits[v])
       member_indices.push_back(v);
 
   // form hierarchical t1/t2 coeffs for (h - mean)^2
-  cprod_m_t1_coeffs.resize(num_levels); cprod_m_t1_coeffs[0].resize(1);
-  cprod_m_t2_coeffs.resize(num_levels); cprod_m_t2_coeffs[0].resize(1);
+  cprod_m_t1_coeffs.resize(num_lev); cprod_m_t1_coeffs[0].resize(1);
+  cprod_m_t2_coeffs.resize(num_lev); cprod_m_t2_coeffs[0].resize(1);
   // level 0 type1
   cprod_m_t1_coeffs[0][0].sizeUninitialized(1);
   c_index = m_colloc_index[0][0][0];
@@ -4853,7 +4850,7 @@ central_product_member_coefficients(const BitArray& m_bits,
     for (v=0; v<num_v; ++v)
       cprod_m_t2_coeffs_000[v] = 2. * h_val_mm * h_grad_000[v];
     // levels 1:w type1 and type2
-    for (lev=1; lev<num_levels; ++lev) {
+    for (lev=1; lev<num_lev; ++lev) {
       num_sets = m_colloc_key[lev].size();
       cprod_m_t1_coeffs[lev].resize(num_sets);
       cprod_m_t2_coeffs[lev].resize(num_sets);
@@ -4896,7 +4893,7 @@ central_product_member_coefficients(const BitArray& m_bits,
   }
   else {
     // levels 1:w type1
-    for (lev=1; lev<num_levels; ++lev) {
+    for (lev=1; lev<num_lev; ++lev) {
       num_sets = m_colloc_key[lev].size();
       cprod_m_t1_coeffs[lev].resize(num_sets);
       cprod_m_t2_coeffs[lev].resize(num_sets);

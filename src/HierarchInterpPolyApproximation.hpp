@@ -479,6 +479,17 @@ private:
 		   const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
 		   const std::map<UShortArray, UShort2DArray>&
 		     set_partition_map);
+  /// compute the expected value of the interpolant given by maps of t{1,2}
+  /// coefficients and weights
+  Real expectation(
+    const std::map<UShortArray, std::map<PolynomialApproximation*,
+      RealVector2DArray> >& prod_t1c_map,
+    const std::map<UShortArray, std::map<PolynomialApproximation*,
+      RealMatrix2DArray> >& prod_t2c_map,
+    PolynomialApproximation* poly_approx_2,
+    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
+    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
+    const std::map<UShortArray, UShort2DArray>& set_partition_map);
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
@@ -501,6 +512,18 @@ private:
 		   const std::map<UShortArray, UShort4DArray>& colloc_key_map,
 		   const std::map<UShortArray, UShort2DArray>&
 		     set_partition_map);
+  /// compute the expected value of the interpolant given by maps of t{1,2}
+  /// coefficients using partial weights determined from Smolyak multi-index
+  /// and collocation key maps
+  Real expectation(const RealVector& x,
+    const std::map<UShortArray, std::map<PolynomialApproximation*,
+      RealVector2DArray> >& prod_t1c_map,
+    const std::map<UShortArray, std::map<PolynomialApproximation*,
+      RealMatrix2DArray> >& prod_t2c_map,
+    PolynomialApproximation* poly_approx_2,
+    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
+    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
+    const std::map<UShortArray, UShort2DArray>& set_partition_map);
 
   /// compute the expected value of the gradient interpolant given by
   /// t1_coeff_grads using weights from the HierarchSparseGridDriver
