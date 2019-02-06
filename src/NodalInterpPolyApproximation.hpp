@@ -391,11 +391,7 @@ update_active_iterators(const UShortArray& key)
 
 inline void NodalInterpPolyApproximation::increment_coefficients()
 {
-  // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
-  synchronize_surrogate_data();
-
   update_expansion_coefficients(); // updates iterators, clears computed bits
-
   allocate_component_sobol();
 }
 

@@ -270,6 +270,15 @@ public:
   /// having to recompute them
   void moments(const RealVector& mom);
 
+  /// return preferred response moments (either expansion or numerical
+  /// integration, depending on approximation type)
+  Real moment(size_t i) const;
+  /// set preferred response moments (either expansion or numerical
+  /// integration, depending on approximation type); this is generally
+  /// used to restore previous values when popping an adaptation, without
+  /// having to recompute them
+  void moment(Real mom, size_t i);
+
   /// standardize central moments 2-n and eliminate excess kurtosis
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
@@ -516,12 +525,14 @@ inline const RealVector& PolynomialApproximation::moments() const
   // TO DO: return to this (will require activation of exp moments for all view)
   //return expansionMoments;
 
-  // TO DO: remove this temp hack
-  // (avoids returning to derived class specialization)
+  // TO DO: remove temporary approach (avoids derived class specialization)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  short exp_type = data_rep->expConfigOptions.expBasisType;
-  return (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
-    ? numericalMoments : expansionMoments;
+  switch (data_rep->expConfigOptions.expBasisType) {
+  case NODAL_INTERPOLANT: case HIERARCHICAL_INTERPOLANT:
+    return numericalMoments; break;
+  default:
+    return expansionMoments; break;
+  }
 }
 
 
@@ -530,13 +541,62 @@ inline void PolynomialApproximation::moments(const RealVector& mom)
   // see discussion above regarding future consolidation
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  short exp_type = data_rep->expConfigOptions.expBasisType;
-  if (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
-    numericalMoments = mom;//copy_data_partial(mom, numericalMoments, 0);
-  else
-    expansionMoments = mom;//copy_data_partial(mom, expansionMoments, 0);
+  switch (data_rep->expConfigOptions.expBasisType) {
+  case NODAL_INTERPOLANT: case HIERARCHICAL_INTERPOLANT:
+    numericalMoments = mom; break;//copy_data_partial(mom, numericalMoments, 0);
+  default:
+    expansionMoments = mom; break;//copy_data_partial(mom, expansionMoments, 0);
+  }
 
-  computedMean |= 1;  computedVariance |= 1; // assume mom length >= 2
+  // activate bit trackers for moment set (a truncated array _does_ invalidate
+  // other moments as this is assumed to be the available moment set)
+  size_t num_mom = mom.length();
+  switch (num_mom) {
+  case 0:  computedMean &= ~1;  computedVariance &= ~1; break;
+  case 1:  computedMean |=  1;  computedVariance &= ~1; break;
+  default: computedMean |=  1;  computedVariance |=  1; break; // normal case
+  }
+}
+
+
+inline Real PolynomialApproximation::moment(size_t i) const
+{
+  // see discussion above regarding future consolidation
+
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  short exp_type = data_rep->expConfigOptions.expBasisType;
+  const RealVector& moments = (exp_type == NODAL_INTERPOLANT ||
+    exp_type == HIERARCHICAL_INTERPOLANT) ? numericalMoments : expansionMoments;
+  if (moments.length() <= i) {
+    PCerr << "Error: index (" << i << ") out of bounds in "
+	  << "PolynomialApproximation::moment()." << std::endl;
+    abort_handler(-1);
+  }
+  return moments[i];
+}
+
+
+inline void PolynomialApproximation::moment(Real mom, size_t i)
+{
+  // see discussion above regarding future consolidation
+
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  short exp_type = data_rep->expConfigOptions.expBasisType;
+  RealVector& moments = (exp_type == NODAL_INTERPOLANT ||
+    exp_type == HIERARCHICAL_INTERPOLANT) ? numericalMoments : expansionMoments;
+  if (moments.length() <= i) {
+    PCerr << "Error: index (" << i << ") out of bounds in "
+	  << "PolynomialApproximation::moment()." << std::endl;
+    abort_handler(-1);
+  }
+  moments[i] = mom;
+
+  // activate bit tracker for i-th moment (does _not_ invalidate other moments)
+  switch (i) {
+  case 0: computedMean     |= 1; break;
+  case 1: computedVariance |= 1; break;
+  //default: other indices do not have trackers
+  }
 }
 
 

@@ -152,7 +152,8 @@ compute_moments(bool full_stats, bool combined_stats)
   else { // only two moments required for incremental metrics
     //integrate_response_moments(2, combined_stats);
 
-    // this approach queries/activates bit trackers:
+    // this approach utilizes bit trackers for computed moments:
+    numericalMoments.resize(2);
     if (combined_stats)
       { combined_mean(); combined_variance(); }
     else
@@ -166,13 +167,15 @@ inline void InterpPolyApproximation::
 compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode only supports first two moments
+  numericalMoments.resize(2);
   if (combined_stats)
     { combined_mean(x); combined_variance(x); }
   else
     {          mean(x);          variance(x); }
 
   //if (full_stats) integrate_expansion_moments(4, x, combined_stats);
-  //else            expansionMoments.resize(0);
+  //else
+    expansionMoments.resize(0);
   // Note: it would be feasible to implement an all_variables version of
   // integrate_expansion_moments() by evaluating the combined expansion at
   // {design/epistemic=initialPtU,aleatory=Gauss points}

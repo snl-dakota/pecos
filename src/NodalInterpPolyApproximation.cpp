@@ -131,6 +131,9 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
 
+  // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
+  synchronize_surrogate_data(); // modSurrData updates required
+
   size_t old_colloc_pts, new_colloc_pts = modSurrData.points();
   const SDRArray& sdr_array = modSurrData.response_data();
   bool append

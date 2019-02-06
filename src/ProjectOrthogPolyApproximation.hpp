@@ -152,6 +152,7 @@ compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
 
+  if (expansionMoments.length() != 2) expansionMoments.resize(2);
   if (combined_stats)
     { combined_mean(); combined_variance(); } // for combinedExpCoeffs
   else {
@@ -192,6 +193,7 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode currently supports two expansion moments
 
+  if (expansionMoments.length() != 2) expansionMoments.resize(2);
   if (combined_stats)
     { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
   else {
