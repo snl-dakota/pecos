@@ -66,6 +66,13 @@ public:
   /// collocation points
   int grid_size();
 
+  const RealVector& type1_weight_sets() const;
+  const RealMatrix& type2_weight_sets() const;
+  const RealVector& type1_weight_sets(const UShortArray& key) const;
+  const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+  const RealVector& combined_type1_weight_sets();
+  const RealMatrix& combined_type2_weight_sets();
+
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
 
@@ -76,7 +83,7 @@ public:
   void clear_inactive();
   void clear_keys();
 
-  const UShortArray& maximal_grid() const;
+  const UShortArray& maximal_grid();
 
   void print_smolyak_multi_index() const;
 
@@ -136,11 +143,6 @@ public:
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
-  /// return type1WeightSets
-  const RealVector& type1_weight_sets() const;
-  /// return type2WeightSets
-  const RealMatrix& type2_weight_sets() const;
-
 protected:
 
   //
@@ -196,9 +198,13 @@ protected:
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each unique point in the sparse grid
   std::map<UShortArray, RealVector> type1WeightSets;
+  /// iterator for active entry within type1WeightSets
+  std::map<UShortArray, RealVector>::iterator t1WtIter;
   /// the set of type2 weights (for integration of gradient interpolants) for
   /// each derivative component and for each unique point in the sparse grid
   std::map<UShortArray, RealMatrix> type2WeightSets;
+  /// iterator for active entry within type2WeightSets
+  std::map<UShortArray, RealMatrix>::iterator t2WtIter;
 
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
@@ -246,6 +252,9 @@ private:
 
   /// array of pointers to webbur::level_to_growth functions
   std::vector<LevGrwOrdFnPtr> levelGrowthToOrder;
+
+  /// store the key identified in the last call to maximal_grid()
+  UShortArray maximalKey;
 };
 
 
@@ -294,6 +303,16 @@ inline void CombinedSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, Sizet2DArray> s2a_pair(activeKey, Sizet2DArray());
     collocIndIter = collocIndices.insert(s2a_pair).first;
   }
+  t1WtIter = type1WeightSets.find(activeKey);
+  if (t1WtIter == type1WeightSets.end()) {
+    std::pair<UShortArray, RealVector> rv_pair(activeKey, RealVector());
+    t1WtIter = type1WeightSets.insert(rv_pair).first;
+  }
+  t2WtIter = type2WeightSets.find(activeKey);
+  if (t2WtIter == type2WeightSets.end()) {
+    std::pair<UShortArray, RealMatrix> rm_pair(activeKey, RealMatrix());
+    t2WtIter = type2WeightSets.insert(rm_pair).first;
+  }
 
   SparseGridDriver::update_active_iterators();
 }
@@ -304,12 +323,13 @@ inline void CombinedSparseGridDriver::clear_keys()
   SparseGridDriver::clear_keys();
 
   smolyakMultiIndex.clear();  smolMIIter = smolyakMultiIndex.end();
-  smolyakCoeffs.clear();  smolCoeffsIter = smolyakCoeffs.end();
+  smolyakCoeffs.clear();      smolCoeffsIter = smolyakCoeffs.end();
 
-  collocKey.clear();       collocKeyIter = collocKey.end();
-  collocIndices.clear();   collocIndIter = collocIndices.end();
+  collocKey.clear();          collocKeyIter = collocKey.end();
+  collocIndices.clear();      collocIndIter = collocIndices.end();
 
-  type1WeightSets.clear();    type2WeightSets.clear();
+  type1WeightSets.clear();    t1WtIter = type1WeightSets.end();
+  type2WeightSets.clear();    t2WtIter = type2WeightSets.end();
 }
 
 
@@ -431,11 +451,16 @@ inline void CombinedSparseGridDriver::assign_smolyak_arrays()
 
 
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const
+{ return t1WtIter->second; }
+
+
+inline const RealVector& CombinedSparseGridDriver::
+type1_weight_sets(const UShortArray& key) const
 {
   std::map<UShortArray, RealVector>::const_iterator cit
-    = type1WeightSets.find(activeKey);
+    = type1WeightSets.find(key);
   if (cit == type1WeightSets.end()) {
-    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
 	  << "type1_weight_sets()." << std::endl;
     abort_handler(-1);
   }
@@ -444,16 +469,29 @@ inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const
 
 
 inline const RealMatrix& CombinedSparseGridDriver::type2_weight_sets() const
+{ return t2WtIter->second; }
+
+
+inline const RealMatrix& CombinedSparseGridDriver::
+type2_weight_sets(const UShortArray& key) const
 {
   std::map<UShortArray, RealMatrix>::const_iterator cit
-    = type2WeightSets.find(activeKey);
+    = type2WeightSets.find(key);
   if (cit == type2WeightSets.end()) {
-    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
 	  << "type2_weight_sets()." << std::endl;
     abort_handler(-1);
   }
   return cit->second;
 }
+
+
+inline const RealVector& CombinedSparseGridDriver::combined_type1_weight_sets()
+{ return type1_weight_sets(maximalKey); }
+
+
+inline const RealMatrix& CombinedSparseGridDriver::combined_type2_weight_sets()
+{ return type1_weight_sets(maximalKey); }
 
 
 inline void CombinedSparseGridDriver::

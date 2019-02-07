@@ -270,10 +270,10 @@ void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	<< "uniqueIndexMapping:\n" << uniqIndMapIter->second << "\nvar_sets:\n";
   write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
-    PCout << "\ntype1WeightSets:\n" << type1WeightSets[activeKey];
+    PCout << "\ntype1WeightSets:\n" << t1WtIter->second;
     if (computeType2Weights) {
       PCout << "\ntype2WeightSets:\n";
-      write_data(PCout, type2WeightSets[activeKey], false, true, true);
+      write_data(PCout, t2WtIter->second, false, true, true);
     }
   }
 #endif
@@ -349,12 +349,8 @@ void IncrementalSparseGridDriver::pop_increment()
   // pruning of uniqueIndexMapping is not strictly required (it is updated on
   // demand prior to updating collocation indices), but good for completeness
   uniqIndMapIter->second.resize(a1PIter->second.numCols()); // all ref points
-
-  if (trackUniqueProdWeights) {  // update type{1,2}WeightSets
-    type1WeightSets[activeKey] = type1WeightSetsRef[activeKey];
-    if (computeType2Weights)
-      type2WeightSets[activeKey] = type2WeightSetsRef[activeKey];
-  }
+  // restore reference weights
+  pop_weights();
 }
 
 
@@ -441,6 +437,8 @@ void IncrementalSparseGridDriver::pop_set()
   // pruning of uniqueIndexMapping is not strictly required (it is updated on
   // demand prior to updating collocation indices), but good for completeness
   uniqIndMapIter->second.resize(a1PIter->second.numCols()); // all ref points
+  // restore reference weights
+  pop_weights();
 }
 
 
@@ -721,8 +719,8 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 void IncrementalSparseGridDriver::assign_sparse_weights()
 {
   // update type{1,2}WeightSets
-  RealVector& t1_wts = type1WeightSets[activeKey];
-  RealMatrix& t2_wts = type2WeightSets[activeKey];
+  RealVector& t1_wts = t1WtIter->second;
+  RealMatrix& t2_wts = t2WtIter->second;
   t1_wts = 0.; if (computeType2Weights) t2_wts = 0.;
   update_sparse_weights(0, a1T1WIter->second, a1T2WIter->second,
 			t1_wts, t2_wts);
@@ -739,8 +737,8 @@ void IncrementalSparseGridDriver::assign_sparse_weights()
 void IncrementalSparseGridDriver::update_sparse_weights(size_t start_index)
 {
   // update type{1,2}WeightSets
-  RealVector& t1_wts = type1WeightSets[activeKey];
-  RealMatrix& t2_wts = type2WeightSets[activeKey];
+  RealVector& t1_wts = t1WtIter->second;
+  RealMatrix& t2_wts = t2WtIter->second;
   t1_wts = type1WeightSetsRef[activeKey]; // to be augmented
   if (computeType2Weights)
     t2_wts = type2WeightSetsRef[activeKey]; // to be augmented

@@ -163,6 +163,8 @@ private:
   void assign_sparse_weights();
   /// update type{1,2}WeightSets based on a grid increment
   void update_sparse_weights(size_t start_index);
+  /// restore type{1,2}WeightSets to reference values
+  void pop_weights();
 
   /// aggregate point and weight sets across one or more tensor products
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
@@ -500,9 +502,21 @@ inline void IncrementalSparseGridDriver::update_reference()
 {
   smolyakCoeffsRef[activeKey] = smolCoeffsIter->second;
   if (trackUniqueProdWeights) {
-    type1WeightSetsRef[activeKey] = type1WeightSets[activeKey];
+    type1WeightSetsRef[activeKey] = t1WtIter->second;
     if (computeType2Weights)
-      type2WeightSetsRef[activeKey] = type2WeightSets[activeKey];
+      type2WeightSetsRef[activeKey] = t2WtIter->second;
+  }
+}
+
+
+inline void IncrementalSparseGridDriver::pop_weights()
+{
+  // restore type{1,2}WeightSets to reference values
+  // (update_sparse_weights() involves overlays so nontrivial to back out)
+  if (trackUniqueProdWeights) {
+    t1WtIter->second = type1WeightSetsRef[activeKey];
+    if (computeType2Weights)
+      t2WtIter->second = type2WeightSetsRef[activeKey];
   }
 }
 

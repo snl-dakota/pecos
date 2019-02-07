@@ -86,14 +86,26 @@ public:
 
   /// return the index of the maximal stored grid state (_NPOS if the
   /// current unstored grid state)
-  virtual const UShortArray& maximal_grid() const;
+  virtual const UShortArray& maximal_grid();
 
-  /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
-  /// or concatenate type1WeightSets in HierarchSparseGrid
+  /// return active type1WeightSets from Cubature/TensorProduct/
+  /// CombinedSparseGrid or concatenate type1WeightSets in HierarchSparseGrid
   virtual const RealVector& type1_weight_sets() const;
-  /// return type2WeightSets from Cubature/TensorProduct/CombinedSparseGrid
-  /// or concatenate type2WeightSets in HierarchSparseGrid
+  /// return active type2WeightSets from Cubature/TensorProduct/
+  /// CombinedSparseGrid or concatenate type2WeightSets in HierarchSparseGrid
   virtual const RealMatrix& type2_weight_sets() const;
+  /// return type1WeightSets[key] from Cubature/TensorProduct/CombinedSparseGrid
+  /// or concatenate type1WeightSets in HierarchSparseGrid
+  virtual const RealVector& type1_weight_sets(const UShortArray& key) const;
+  /// return type2WeightSets[key] from Cubature/TensorProduct/CombinedSparseGrid
+  /// or concatenate type2WeightSets in HierarchSparseGrid
+  virtual const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+  /// return type1WeightSets[maximal_grid()] for Cubature/TensorProduct/
+  /// CombinedSparseGrid
+  virtual const RealVector& combined_type1_weight_sets();
+  /// return type2WeightSets[maximal_grid()] for Cubature/TensorProduct/
+  /// CombinedSparseGrid
+  virtual const RealMatrix& combined_type2_weight_sets();
 
   //
   //- Heading: Member functions
@@ -120,11 +132,6 @@ public:
   void mode(short driver_mode);
   /// get driverMode
   short mode() const;
-
-  // append to end of type1WeightSets
-  //void append_type1_weight_sets(const RealVector& t1_wts);
-  // append to end of type2WeightSets
-  //void append_type2_weight_sets(const RealMatrix& t2_wts);
 
   /// return collocPts1D
   const Real3DArray& collocation_points_1d()  const;
@@ -205,13 +212,6 @@ protected:
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
 
-  // the set of type1 weights (for integration of value interpolants)
-  // associated with each point in the {TPQ,SSG,Cub} grid
-  //RealVector type1WeightSets;
-  // the set of type2 weights (for integration of gradient interpolants)
-  // for each derivative component and for each point in the {TPQ,SSG} grid
-  //RealMatrix type2WeightSets;
-
   /// num_levels_per_var x numVars sets of 1D collocation points
   Real3DArray collocPts1D;
   /// num_levels_per_var x numVars sets of 1D type1 collocation weights
@@ -276,44 +276,6 @@ inline void IntegrationDriver::mode(short driver_mode)
 
 inline short IntegrationDriver::mode() const
 { return (driverRep) ? driverRep->driverMode : driverMode; }
-
-
-/*
-inline void IntegrationDriver::
-append_type1_weight_sets(const RealVector& t1_wts)
-{
-  if (driverRep)
-    driverRep->append_type1_weight_sets(t1_wts);
-  else {
-    size_t i, num_curr_t1_wts = type1WeightSets.length(),
-      num_new_t1_wts = t1_wts.length(),
-      num_total_t1_wts = num_curr_t1_wts + num_new_t1_wts;
-    type1WeightSets.resize(num_total_t1_wts);
-    for (i=0; i<num_new_t1_wts; ++i)
-      type1WeightSets[num_curr_t1_wts+i] = t1_wts[i];
-  }
-}
-
-
-inline void IntegrationDriver::
-append_type2_weight_sets(const RealMatrix& t2_wts)
-{
-  if (driverRep)
-    driverRep->append_type2_weight_sets(t2_wts);
-  else {
-    size_t i, j, num_curr_t2_wts = type2WeightSets.numCols(),
-      num_new_t2_wts = t2_wts.numCols(),
-      num_total_t2_wts = num_curr_t2_wts + num_new_t2_wts;
-    type2WeightSets.reshape(numVars, num_total_t2_wts);
-    for (i=0; i<num_new_t2_wts; ++i) {
-      Real*      curr_t2_i = type2WeightSets[num_curr_t2_wts+i];
-      const Real* new_t2_i = t2_wts[i];
-      for (j=0; j<numVars; ++j)
-	curr_t2_i[j] = new_t2_i[j];
-    }
-  }
-}
-*/
 
 
 inline const Real3DArray& IntegrationDriver::collocation_points_1d() const

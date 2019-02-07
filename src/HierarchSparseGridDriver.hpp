@@ -271,9 +271,9 @@ public:
   /// return combinedVarSets
   const RealMatrix2DArray& combined_variable_sets() const;
   /// return combinedT1WeightSets
-  const RealVector2DArray& combined_type1_weight_sets() const;
+  const RealVector2DArray& combined_type1_hierarchical_weight_sets() const;
   /// return combinedT2WeightSets
-  const RealMatrix2DArray& combined_type2_weight_sets() const;
+  const RealMatrix2DArray& combined_type2_hierarchical_weight_sets() const;
 
 private:
 
@@ -891,12 +891,12 @@ combined_variable_sets() const
 
 
 inline const RealVector2DArray& HierarchSparseGridDriver::
-combined_type1_weight_sets() const
+combined_type1_hierarchical_weight_sets() const
 { return combinedT1WeightSets; }
 
 
 inline const RealMatrix2DArray& HierarchSparseGridDriver::
-combined_type2_weight_sets() const
+combined_type2_hierarchical_weight_sets() const
 { return combinedT2WeightSets; }
 
 

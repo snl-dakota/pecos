@@ -128,14 +128,12 @@ private:
   /// changes to surrogate data
   void update_expansion_coefficients();
 
-  /// compute the expected value of the interpolant given by t{1,2}_coeffs
-  /// using weights from the CombinedSparseGridDriver
-  Real mean(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs);
   /// helper function to evaluate mean(x) for passed coefficients
   Real mean(const RealVector& x, const RealVector& exp_t1_coeffs, 
 	    const RealMatrix& exp_t2_coeffs);
   /// helper function to evaluate mean_gradient() for passed coefficient grads
-  const RealVector& mean_gradient(const RealMatrix& exp_t1_coeff_grads);
+  const RealVector& mean_gradient(const RealMatrix& exp_t1_coeff_grads,
+				  const RealVector& t1_wts);
   /// helper function to evaluate mean_gradient(x) for passed coefficients
   const RealVector& mean_gradient(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
@@ -143,7 +141,8 @@ private:
   /// helper function to evaluate covariance() for passed coefficients
   Real covariance(Real mean_1, Real mean_2,    const RealVector& exp_t1c_1,
 		  const RealMatrix& exp_t2c_1, const RealVector& exp_t1c_2,
-		  const RealMatrix& exp_t2c_2);
+		  const RealMatrix& exp_t2c_2, const RealVector& t1_wts,
+		  const RealMatrix& t2_wts);
   /// helper function to evaluate covariance(x) for passed coefficients
   Real covariance(const RealVector& x, Real mean_1, Real mean_2,
 		  const RealVector& exp_t1c_1, const RealMatrix& exp_t2c_1,
@@ -151,7 +150,8 @@ private:
   /// helper function to evaluate variance_gradient() for passed coefficients
   const RealVector& variance_gradient(Real mean,
 				      const RealVector& exp_t1_coeffs,
-				      const RealMatrix& exp_t1_coeff_grads);
+				      const RealMatrix& exp_t1_coeff_grads,
+				      const RealVector& t1_wts);
   /// helper function to evaluate variance_gradient(x) for passed coefficients
   const RealVector& variance_gradient(const RealVector& x, Real mean,
     const RealVector& mean_grad,      const RealVector& exp_t1_coeffs,
@@ -287,8 +287,8 @@ private:
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using t{1,2}_wts
-  Real expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
-		   const RealMatrix& t2_coeffs, const RealMatrix& t2_wts);
+  Real expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs,
+		   const RealVector& t1_wts,    const RealMatrix& t2_wts);
 
   /// computes higher-order grid for tensor reinterpolation of the
   /// covariance fn for non-integrated dimensions in all_variables mode
@@ -471,7 +471,10 @@ inline Real NodalInterpPolyApproximation::mean()
   if (std_mode && (computedMean & 1))
     return numericalMoments[0];
 
-  Real mu = mean(expT1CoeffsIter->second, expT2CoeffsIter->second);
+  IntegrationDriver* driver_rep = data_rep->driverRep;
+  Real mu = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second,
+			driver_rep->type1_weight_sets(),
+			driver_rep->type2_weight_sets());
   if (std_mode)
     { numericalMoments[0] = mu; computedMean |= 1; }
   return mu;
@@ -518,7 +521,8 @@ inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
 
   if (std_mode) computedMean |=  2; //   activate 2-bit
   else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
-  return mean_gradient(expT1CoeffGradsIter->second);
+  return mean_gradient(expT1CoeffGradsIter->second,
+		       data_rep->driverRep->type1_weight_sets());
 }
 
 
@@ -543,59 +547,6 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   return mean_gradient(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
 		       expT1CoeffGradsIter->second, dvv);
-}
-
-
-inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
-{
-  // Error check for required data
-  if (!expansionCoeffFlag || !expansionCoeffGradFlag) {
-    PCerr << "Error: insufficient expansion coefficient data in NodalInterp"
-	  << "PolyApproximation::variance_gradient()." << std::endl;
-    abort_handler(-1);
-  }
-
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (computedVariance & 2))
-    return varianceGradient;
-
-  if (std_mode) computedVariance |=  2;
-  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
-  return variance_gradient(mean(), expT1CoeffsIter->second,
-			   expT1CoeffGradsIter->second);
-}
-
-
-inline const RealVector& NodalInterpPolyApproximation::
-variance_gradient(const RealVector& x, const SizetArray& dvv)
-{
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  // if already computed, return previous result
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  if ( all_mode && (computedVariance & 2) &&
-       data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
-    switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-    case QUADRATURE:
-      return tpVarianceGrad;   break;
-    case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
-      return varianceGradient; break;
-    }
-
-  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
-  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
-  // don't compute expansion mean/mean_grad for case where tensor
-  // means/mean_grads will be used
-  return (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST) ?
-    variance_gradient(x, 0., meanGradient, // dummy values (not used)
-		      expT1CoeffsIter->second, expT2CoeffsIter->second,
-		      expT1CoeffGradsIter->second, dvv) :
-    variance_gradient(x, mean(x), mean_gradient(x, dvv),
-		      expT1CoeffsIter->second, expT2CoeffsIter->second,
-		      expT1CoeffGradsIter->second,dvv);
 }
 
 
@@ -627,11 +578,14 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (same && std_mode && (computedVariance & 1))
     return numericalMoments[1];
 
+  IntegrationDriver* driver_rep = data_rep->driverRep;
   Real mean_1 = mean(), mean_2 = (same) ? mean_1 : nip_approx_2->mean(),
     covar = covariance(mean_1, mean_2, expT1CoeffsIter->second,
 		       expT2CoeffsIter->second,
 		       nip_approx_2->expT1CoeffsIter->second,
-		       nip_approx_2->expT2CoeffsIter->second);
+		       nip_approx_2->expT2CoeffsIter->second,
+		       driver_rep->type1_weight_sets(),
+		       driver_rep->type2_weight_sets());
   if (same && std_mode)
     { numericalMoments[1] = covar; computedVariance |= 1; }
   return covar;
@@ -679,6 +633,59 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
+inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
+{
+  // Error check for required data
+  if (!expansionCoeffFlag || !expansionCoeffGradFlag) {
+    PCerr << "Error: insufficient expansion coefficient data in NodalInterp"
+	  << "PolyApproximation::variance_gradient()." << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedVariance & 2))
+    return varianceGradient;
+
+  if (std_mode) computedVariance |=  2;
+  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
+  return variance_gradient(mean(), expT1CoeffsIter->second,
+			   expT1CoeffGradsIter->second,
+			   data_rep->driverRep->type1_weight_sets());
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::
+variance_gradient(const RealVector& x, const SizetArray& dvv)
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  // if already computed, return previous result
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if ( all_mode && (computedVariance & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
+    switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE:
+      return tpVarianceGrad;   break;
+    case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+      return varianceGradient; break;
+    }
+
+  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
+  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
+  // don't compute expansion mean/mean_grad for case where tensor
+  // means/mean_grads will be used
+  return (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST) ?
+    variance_gradient(x, 0., meanGradient, // dummy values (not used)
+		      expT1CoeffsIter->second, expT2CoeffsIter->second,
+		      expT1CoeffGradsIter->second, dvv) :
+    variance_gradient(x, mean(x), mean_gradient(x, dvv),
+		      expT1CoeffsIter->second, expT2CoeffsIter->second,
+		      expT1CoeffGradsIter->second,dvv);
+}
+
+
 inline Real NodalInterpPolyApproximation::combined_mean()
 {
   SharedNodalInterpPolyApproxData* data_rep
@@ -687,7 +694,10 @@ inline Real NodalInterpPolyApproximation::combined_mean()
   if (std_mode && (computedMean & 1))
     return numericalMoments[0];
 
-  Real mu = mean(combinedExpT1Coeffs, combinedExpT2Coeffs);
+  IntegrationDriver* driver_rep = data_rep->driverRep;
+  Real mu = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
+			driver_rep->combined_type1_weight_sets(),
+			driver_rep->combined_type2_weight_sets());
   if (std_mode)
     { numericalMoments[0] = mu; computedMean |= 1; }
   return mu;
@@ -703,6 +713,9 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
       data_rep->match_nonrandom_vars(x, xPrevMean))
     return numericalMoments[0];
 
+  // *** Important: active key must be set at maximal grid so that
+  //                combined coeffs and active grid data are consistent
+  //                (more involved than weight sync in std mode case above)
   Real mu = mean(x, combinedExpT1Coeffs, combinedExpT2Coeffs);
   if (all_mode)
     { numericalMoments[0] = mu; computedMean |= 1; xPrevMean = x; }
@@ -725,10 +738,13 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   Real mean_1 = combined_mean(),
        mean_2 = (this == nip_approx_2) ? mean_1 : nip_approx_2->combined_mean();
+  IntegrationDriver* driver_rep = data_rep->driverRep;
   Real covar
     = covariance(mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
 		 nip_approx_2->combinedExpT1Coeffs,
-		 nip_approx_2->combinedExpT2Coeffs);
+		 nip_approx_2->combinedExpT2Coeffs,
+		 driver_rep->combined_type1_weight_sets(),
+		 driver_rep->combined_type2_weight_sets());
 
   if (same && std_mode)
     { numericalMoments[1] = covar; computedVariance |= 1; }
@@ -750,6 +766,9 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
        data_rep->match_nonrandom_vars(x, xPrevVar) )
     return numericalMoments[1];
 
+  // *** Important: active key must be set at maximal grid so that
+  //                combined coeffs and active grid data are consistent
+  //                (more involved than weight sync in std mode case above)
   Real mean_1, mean_2;
   if (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST)
     mean_1 = mean_2 = 0.; // don't compute exp mean since tensor means used

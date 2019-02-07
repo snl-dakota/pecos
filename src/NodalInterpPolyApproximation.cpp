@@ -212,17 +212,24 @@ void NodalInterpPolyApproximation::combine_coefficients()
   const SDVArray& sdv_array = modSurrData.variables_data();
   size_t p, v, num_pts = modSurrData.points(),
     num_t2v = ec2_it->second.numRows(), num_t1v = eg1_it->second.numRows();
-  if (combinedExpT1Coeffs.length() != num_pts)
-    combinedExpT1Coeffs.size(num_pts);
-  else combinedExpT1Coeffs = 0.;
-  if (combinedExpT2Coeffs.numRows() != num_pts ||
-      combinedExpT2Coeffs.numCols() != num_t2v)
-    combinedExpT2Coeffs.shape(num_t2v, num_pts);
-  else combinedExpT2Coeffs = 0.;
-  if (combinedExpT1CoeffGrads.numRows() != num_pts ||
-      combinedExpT1CoeffGrads.numCols() != num_t1v)
-    combinedExpT1CoeffGrads.shape(num_t1v, num_pts);
-  else combinedExpT1CoeffGrads = 0.;
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+  if (expansionCoeffFlag) {
+    if (combinedExpT1Coeffs.length() != num_pts)
+      combinedExpT1Coeffs.size(num_pts);
+    else combinedExpT1Coeffs = 0.;
+    if (use_derivs) {
+      if (combinedExpT2Coeffs.numRows() != num_pts ||
+	  combinedExpT2Coeffs.numCols() != num_t2v)
+	combinedExpT2Coeffs.shape(num_t2v, num_pts);
+      else combinedExpT2Coeffs = 0.;
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    if (combinedExpT1CoeffGrads.numRows() != num_pts ||
+	combinedExpT1CoeffGrads.numCols() != num_t1v)
+      combinedExpT1CoeffGrads.shape(num_t1v, num_pts);
+    else combinedExpT1CoeffGrads = 0.;
+  }
 
   switch (combine_type) {
   case MULT_COMBINE: { // multiplication of current and stored expansions
@@ -242,7 +249,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
 	combined_t1c_p = t1c_vals[0];
 	for (l=1; l<num_lev; ++l)
 	  combined_t1c_p *= t1c_vals[l];
-	if (data_rep->basisConfigOptions.useDerivs) {
+	if (use_derivs) {
 	  Real* combined_t2c_p = combinedExpT2Coeffs[p];
 	  // hf = curr*stored --> dhf/dx = dcurr/dx*stored + curr*dstored/dx
 	  for (ec2_it =expansionType2Coeffs.begin(), l=0;
@@ -286,7 +293,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
 	     ec1_it != expansionType1Coeffs.end(); ++ec1_it)
 	  combinedExpT1Coeffs[p] += (ec1_it == expT1CoeffsIter) ?
 	    value(c_vars) : stored_value(c_vars, ec1_it->first);
-	if (data_rep->basisConfigOptions.useDerivs) {
+	if (use_derivs) {
 	  Real* combined_t2c_p = combinedExpT2Coeffs[p];
 	  for (ec2_it  = expansionType2Coeffs.begin();
 	       ec2_it != expansionType2Coeffs.end(); ++ec2_it) {
@@ -315,7 +322,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
 
 #ifdef DEBUG
   PCout << "Combined type1 expansion coefficients:\n" << combinedExpT1Coeffs;
-  if (data_rep->basisConfigOptions.useDerivs) {
+  if (use_derivs) {
     PCout << "Combined type2 expansion coefficients:\n";
     write_data(PCout, combinedExpT2Coeffs, false, true, true);
   }
@@ -2855,17 +2862,6 @@ stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 }
 
 
-Real NodalInterpPolyApproximation::
-mean(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
-{
-  // This version defaults to type1/2 weights from CombinedSparseGridDriver
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
-  return expectation(t1_coeffs, driver_rep->type1_weight_sets(),
-		     t2_coeffs, driver_rep->type2_weight_sets());
-}
-
-
 /** In this case, a subset of the expansion variables are random
     variables and the mean of the expansion involves integration over
     this subset and evaluation over the subset's complement.  For the
@@ -2915,14 +2911,11 @@ mean(const RealVector& x, const RealVector& exp_t1_coeffs,
     the derivative.  The mixed derivative case (some design variables
     are inserted and some are augmented) requires no special treatment. */
 const RealVector& NodalInterpPolyApproximation::
-mean_gradient(const RealMatrix& exp_t1_coeff_grads)
+mean_gradient(const RealMatrix& exp_t1_coeff_grads,
+	      const RealVector& t1_wts)
 {
   // d/ds <R> = <dR/ds>
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
-  const RealVector& t1_wts = driver_rep->type1_weight_sets();
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (meanGradient.length() == num_deriv_vars) meanGradient = 0.;
@@ -3005,12 +2998,10 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
 Real NodalInterpPolyApproximation::
 covariance(Real mean_1, Real mean_2,    const RealVector& exp_t1c_1,
 	   const RealMatrix& exp_t2c_1, const RealVector& exp_t1c_2,
-	   const RealMatrix& exp_t2c_2)
+	   const RealMatrix& exp_t2c_2, const RealVector& t1_wts,
+	   const RealMatrix& t2_wts)
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
-  const RealVector& t1_wts = driver_rep->type1_weight_sets();
-  const RealMatrix& t2_wts = driver_rep->type2_weight_sets();
   // compute mean_1,mean_2 first, then compute covariance as
   // wt_prod*(coeff1-mean_1)*(coeff2-mean_2) in order to avoid precision
   // loss from computing covariance as <R_i R_j> - \mu_i \mu_j
@@ -3156,8 +3147,7 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
 	    tensor_product_mean(x, exp_t1c_2, exp_t2c_2, sm_mi_i,
 				key_i, c_index_i);
 	  covar += sm_coeffs[i] *
-	    // *** TO DO 10/2018: if not coeff^2, then more like
-	    //                    INTERPOLATION_OF_PRODUCTS !!
+	    // 10/2018: if not coeff^2, then more like INTERP_OF_PRODUCTS !!
 	    product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1,
 	      exp_t1c_2, exp_t2c_2, sm_mi_i, key_i, c_index_i);
 	    // short-cut tensor_product_covariance(...)
@@ -3229,12 +3219,12 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
     simply involves a summation over the sparse integration weights. */
 const RealVector& NodalInterpPolyApproximation::
 variance_gradient(Real mean, const RealVector& exp_t1_coeffs,
-		  const RealMatrix& exp_t1_coeff_grads)
+		  const RealMatrix& exp_t1_coeff_grads,
+		  const RealVector& t1_wts)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   IntegrationDriver* driver_rep = data_rep->driverRep;
-  const RealVector& t1_wts = driver_rep->type1_weight_sets();
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
   if  (varianceGradient.length() == num_deriv_vars) varianceGradient = 0.;
@@ -3370,8 +3360,8 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
 
 
 Real NodalInterpPolyApproximation::
-expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
-	    const RealMatrix& t2_coeffs, const RealMatrix& t2_wts)
+expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs,
+	    const RealVector& t1_wts,    const RealMatrix& t2_wts)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
@@ -3442,16 +3432,22 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
   //   computes combinedExpT{1,2}Coeffs based on it, so
   //   driver_rep->type{1,2}_weight_sets() are synchronized/sufficient
   //   (no need for driver_rep->combined_type{1,2}_weight_sets()
-  RealVector& t1c = (combined_stats) ? combinedExpT1Coeffs :
-    expT1CoeffsIter->second;
   if (data_rep->basisConfigOptions.useDerivs) {
-    RealMatrix& t2c = (combined_stats) ? combinedExpT2Coeffs :
-      expT2CoeffsIter->second;
-    integrate_moments(t1c, t2c, driver_rep->type1_weight_sets(),
-		      driver_rep->type2_weight_sets(), numericalMoments);
+    if (combined_stats)
+      integrate_moments(combinedExpT1Coeffs, combinedExpT2Coeffs,
+	driver_rep->combined_type1_weight_sets(),
+	driver_rep->combined_type2_weight_sets(), numericalMoments);
+    else
+      integrate_moments(expT1CoeffsIter->second, expT2CoeffsIter->second,
+	driver_rep->type1_weight_sets(), driver_rep->type2_weight_sets(),
+	numericalMoments);
   }
+  else if (combined_stats)
+    integrate_moments(combinedExpT1Coeffs,
+      driver_rep->combined_type1_weight_sets(), numericalMoments);
   else
-    integrate_moments(t1c, driver_rep->type1_weight_sets(), numericalMoments);
+    integrate_moments(expT1CoeffsIter->second, driver_rep->type1_weight_sets(),
+      numericalMoments);
 }
 
 

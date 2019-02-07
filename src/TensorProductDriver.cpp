@@ -64,7 +64,7 @@ void TensorProductDriver::clear_inactive()
 }
 
 
-const UShortArray& TensorProductDriver::maximal_grid() const
+const UShortArray& TensorProductDriver::maximal_grid()
 {
   std::map<UShortArray, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
@@ -74,7 +74,8 @@ const UShortArray& TensorProductDriver::maximal_grid() const
     if (num_wts > max_wts)
       { max_wts = num_wts; max_cit = w_cit; }
   }
-  return max_cit->first;
+  maximalKey = max_cit->first;
+  return maximalKey;
 }
 
 
@@ -286,8 +287,7 @@ void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
   // Get collocation points and integration weights and update 1D arrays
   // -------------------------------------------------------------------
   compute_tensor_grid(quadOrder, levelIndIter->second, variable_sets,
-		      type1WeightSets[activeKey], type2WeightSets[activeKey],
-		      collocKeyIter->second);
+		      t1WtIter->second,t2WtIter->second,collocKeyIter->second);
 }
 
 } // namespace Pecos

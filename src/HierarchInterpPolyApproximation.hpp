@@ -876,9 +876,10 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
     integrate_response_moments(num_moments,
       hsg_driver->combined_variable_sets(),
       hsg_driver->combined_smolyak_multi_index(),
-      hsg_driver->combined_collocation_key(), combinedExpT1Coeffs,
-      combinedExpT2Coeffs, hsg_driver->combined_type1_weight_sets(),
-      hsg_driver->combined_type2_weight_sets());
+      hsg_driver->combined_collocation_key(),
+      combinedExpT1Coeffs, combinedExpT2Coeffs,
+      hsg_driver->combined_type1_hierarchical_weight_sets(),
+      hsg_driver->combined_type2_hierarchical_weight_sets());
   else { // compute response moments for active expansion
     const UShort3DArray&      sm_mi = hsg_driver->smolyak_multi_index();
     const UShort4DArray& colloc_key = hsg_driver->collocation_key();

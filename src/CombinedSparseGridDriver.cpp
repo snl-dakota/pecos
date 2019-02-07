@@ -94,7 +94,7 @@ void CombinedSparseGridDriver::clear_inactive()
 }
 
 
-const UShortArray& CombinedSparseGridDriver::maximal_grid() const
+const UShortArray& CombinedSparseGridDriver::maximal_grid()
 {
   std::map<UShortArray, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
@@ -104,7 +104,8 @@ const UShortArray& CombinedSparseGridDriver::maximal_grid() const
     if (num_wts > max_wts)
       { max_wts = num_wts; max_cit = w_cit; }
   }
-  return max_cit->first;
+  maximalKey = max_cit->first;
+  return maximalKey;
 }
 
 
@@ -424,8 +425,8 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // Get collocation points and integration weights
   // ----------------------------------------------
   var_sets.shapeUninitialized(numVars, num_colloc_pts);
-  RealVector& t1_wts = type1WeightSets[activeKey];
-  RealMatrix& t2_wts = type2WeightSets[activeKey];
+  RealVector& t1_wts = t1WtIter->second;
+  RealMatrix& t2_wts = t2WtIter->second;
   if (trackUniqueProdWeights) {
     t1_wts.sizeUninitialized(num_colloc_pts);
     if (computeType2Weights)
@@ -515,10 +516,10 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	<< "unique index mapping:\n" << unique_index_map << "\nvar_sets:\n";
   write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
-    PCout << "\ntype1WeightSets:\n" << type1WeightSets[activeKey];
+    PCout << "\ntype1WeightSets:\n" << t1WtIter->second;
     if (computeType2Weights) {
       PCout << "\ntype2WeightSets:\n";
-      write_data(PCout, type2WeightSets[activeKey], false, true, true);
+      write_data(PCout, t2WtIter->second, false, true, true);
     }
   }
 #endif

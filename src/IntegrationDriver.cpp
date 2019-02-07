@@ -305,6 +305,48 @@ const RealMatrix& IntegrationDriver::type2_weight_sets() const
 }
 
 
+const RealVector& IntegrationDriver::
+type1_weight_sets(const UShortArray& key) const
+{
+  if (!driverRep) {
+    PCerr << "Error: type1_weight_sets(key) not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->type1_weight_sets(key);
+}
+
+
+const RealMatrix& IntegrationDriver::
+type2_weight_sets(const UShortArray& key) const
+{
+  if (!driverRep) {
+    PCerr << "Error: type2_weight_sets(key) not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->type2_weight_sets(key);
+}
+
+
+const RealVector& IntegrationDriver::combined_type1_weight_sets()
+{
+  if (driverRep)
+    return driverRep->combined_type1_weight_sets();
+  else
+    return type1_weight_sets(maximal_grid());
+}
+
+
+const RealMatrix& IntegrationDriver::combined_type2_weight_sets()
+{
+  if (driverRep)
+    return driverRep->combined_type2_weight_sets();
+  else
+    return type2_weight_sets(maximal_grid());
+}
+
+
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_grid(const ShortArray& u_types,
@@ -397,7 +439,7 @@ void IntegrationDriver::clear_inactive()
 }
 
 
-const UShortArray& IntegrationDriver::maximal_grid() const
+const UShortArray& IntegrationDriver::maximal_grid()
 {
   if (!driverRep) {
     PCerr << "Error: maximal_grid() not available for this driver type."

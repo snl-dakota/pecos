@@ -1240,9 +1240,10 @@ Real HierarchInterpPolyApproximation::combined_mean()
     return numericalMoments[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  Real mean = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
-			  hsg_driver->combined_type1_weight_sets(),
-			  hsg_driver->combined_type2_weight_sets());
+  Real mean =
+    expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
+		hsg_driver->combined_type1_hierarchical_weight_sets(),
+		hsg_driver->combined_type2_hierarchical_weight_sets());
   if (std_mode)
     { numericalMoments[0] = mean; computedMean |= 1; }
   return mean;
@@ -1507,9 +1508,10 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
-  Real covar = expectation(cov_t1_coeffs, cov_t2_coeffs,
-			   hsg_driver->combined_type1_weight_sets(),
-			   hsg_driver->combined_type2_weight_sets());
+  Real covar =
+    expectation(cov_t1_coeffs, cov_t2_coeffs,
+		hsg_driver->combined_type1_hierarchical_weight_sets(),
+		hsg_driver->combined_type2_hierarchical_weight_sets());
 
   if (same && std_mode)
     { numericalMoments[1] = covar; computedVariance |= 1; }
