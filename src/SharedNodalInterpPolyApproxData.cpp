@@ -214,8 +214,17 @@ void SharedNodalInterpPolyApproxData::increment_component_sobol()
 
 void SharedNodalInterpPolyApproxData::pre_combine_data()
 {
-  // store active state prior to roll up (which activates the maximal expansion)
-  prevActiveKey = activeKey;
+  // store active state prior to activating the maximal grid
+  // > may be able to restrict this restoration to case of active expansion
+  //   stats (if combined stats are sufficiently independent of active key),
+  //   but for now a number of operations (e.g., SparseGridDriver::push,pop)
+  //   still rely on the active key
+  // > for all variables mode, various routines currently pull active grid
+  //   data --> easier to ensure correct {active,maximal} key prior to
+  //   computing all vars stats than making all of these fns modular on
+  //   active vs. combined grid data inputs
+  //if (expConfigOptions.refineStatsType != COMBINED_EXPANSION_STATS)
+    prevActiveKey = activeKey;
 
   /*
   // retrieve the most refined from the existing grids (from sequence
@@ -243,9 +252,10 @@ void SharedNodalInterpPolyApproxData::pre_combine_data()
 
 void SharedNodalInterpPolyApproxData::post_combine_data()
 {
-  // now that combined arrays have been updated, restore the active state
-  // that existed prior to roll up
-  active_key(prevActiveKey);
+  // restore the active state that existed prior to activating the maximal grid
+  // (see notes in pre_combine_data() above)
+  //if (expConfigOptions.refineStatsType != COMBINED_EXPANSION_STATS)
+    active_key(prevActiveKey);
 }
 
 

@@ -24,8 +24,8 @@ namespace Pecos {
 
 void SharedOrthogPolyApproxData::allocate_data()
 {
-  UShortArray&   approx_order =  approxOrdIter->second;
-  UShort2DArray& multi_index  = multiIndexIter->second;
+  UShortArray&  approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index = multiIndexIter->second;
 
   // detect changes since previous construction
   // *** TO DO: replace with a flag updated in set functions, once sobol

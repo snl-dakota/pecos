@@ -491,7 +491,7 @@ inline const RealVector& CombinedSparseGridDriver::combined_type1_weight_sets()
 
 
 inline const RealMatrix& CombinedSparseGridDriver::combined_type2_weight_sets()
-{ return type1_weight_sets(maximalKey); }
+{ return type2_weight_sets(maximalKey); }
 
 
 inline void CombinedSparseGridDriver::

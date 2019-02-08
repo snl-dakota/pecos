@@ -354,7 +354,7 @@ inline const RealVector& TensorProductDriver::combined_type1_weight_sets()
 
 
 inline const RealMatrix& TensorProductDriver::combined_type2_weight_sets()
-{ return type1_weight_sets(maximalKey); }
+{ return type2_weight_sets(maximalKey); }
 
 
 inline const UShortArray& TensorProductDriver::level_index() const
