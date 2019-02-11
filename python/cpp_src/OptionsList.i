@@ -115,7 +115,7 @@ options to functions."
 {
   if (PyDict_Check($input))
   {
-    tempshared = std::shared_ptr<OptionsList>(Pecos::pyDictToNewOptionsList($input));
+    tempshared = std::shared_ptr<Pecos::util::OptionsList>(Pecos::pyDictToNewOptionsList($input));
     if (!tempshared) SWIG_fail;
     $1 = &tempshared;
   }
@@ -143,10 +143,10 @@ options to functions."
 }
 %enddef
 
-%pydict_overrides(SWIGEMPTYHACK, OptionsList)
-%pydict_overrides(const        , OptionsList)
+%pydict_overrides(SWIGEMPTYHACK, Pecos::util::OptionsList)
+%pydict_overrides(const        , Pecos::util::OptionsList)
 
-%rename(_print) OptionsList::print() const;
+%rename(_print) Pecos::util::OptionsList::print() const;
 
 %include "OptionsList.hpp"
  //%include "test_options_list.hpp"

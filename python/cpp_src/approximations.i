@@ -102,16 +102,16 @@ using namespace Pecos;
 %shared_ptr(std::basic_ostream)
 %shared_ptr(std::ostream)
 
-%shared_ptr(Surrogates::Function)
-%shared_ptr(Surrogates::CppFunction)
-%shared_ptr(Surrogates::Approximation)
-%shared_ptr(Surrogates::PolyApproximation)
-%shared_ptr(Surrogates::Monomial)
-%shared_ptr(Surrogates::PolynomialChaosExpansion)
-%shared_ptr(Surrogates::Variables)
-%shared_ptr(Surrogates::BoundedVariables)
-%shared_ptr(Surrogates::VariableTransformation)
-%shared_ptr(Surrogates::AffineVariableTransformation)
+%shared_ptr(Pecos::surrogates::Function)
+%shared_ptr(Pecos::surrogates::CppFunction)
+%shared_ptr(Pecos::surrogates::Approximation)
+%shared_ptr(Pecos::surrogates::PolyApproximation)
+%shared_ptr(Pecos::surrogates::Monomial)
+%shared_ptr(Pecos::surrogates::PolynomialChaosExpansion)
+%shared_ptr(Pecos::surrogates::Variables)
+%shared_ptr(Pecos::surrogates::BoundedVariables)
+%shared_ptr(Pecos::surrogates::VariableTransformation)
+%shared_ptr(Pecos::surrogates::AffineVariableTransformation)
 
 // importing math_tools.i avoids need to %include
 // Teuchos_SerialDenseVector?Matrix.i and data_Structures.i
@@ -140,7 +140,7 @@ using namespace Pecos;
 %include "polynomial_approximation_drivers.hpp"
 %include "PCEFactory.hpp"
 
-%extend Surrogates::Function{
+%extend Pecos::surrogates::Function{
 %pythoncode %{
 def __reduce__(self):
     return (type(self), (None, ))
