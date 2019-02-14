@@ -525,7 +525,7 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
       delta_key_i[3] =  5; delta_key_i[4] =  7; delta_key_i[5] = 11;
       delta_key_i[6] = 13; delta_key_i[7] = 15; delta_key_i[8] = 17;
       delta_key_i[9] = 18;
-      break; // 19 pt rule reusing 
+      break; // 19 pt rule reusing 2, 4, 6, 8, 9 (center), 10, 12, 14, 16
     case 16:
       delta_key_i[0]  =  0; delta_key_i[1]  =  1; delta_key_i[2]  =  2;
       delta_key_i[3]  =  4; delta_key_i[4]  =  6; delta_key_i[5]  =  8;
@@ -533,10 +533,12 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
       delta_key_i[9]  = 22; delta_key_i[10] = 26; delta_key_i[11] = 28;
       delta_key_i[12] = 30; delta_key_i[13] = 32; delta_key_i[14] = 33;
       delta_key_i[15] = 34;
-      break; // 35 pt rule reusing
-      // 3,5,7,9,10,11,13,14,15,17,19,20,21,23,24,25,27,29,31
-    //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
-    //  break; // disallow for hierarchical interpolation
+      break; // 35 pt rule reusing 3,5,7,9,10,11,13,14,15,17(center),
+             //                    19,20,21,23,24,25,27,29,31
+    // 43 pt rule augments 19 pt rule, not 35 pt rule; that is, 35 and 43 are
+    // alternate nested refinements of the 19 point rule and do not define a
+    // nested sequence together (see also description in sandia_rules.cpp)
+    //case 5: break; // disallow for hierarchical interpolation
     default:
       PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
 	    << "HierarchSparseGridDriver::level_to_delta_key()"

@@ -83,6 +83,68 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 }
 
 
+void HierarchInterpPolyApproximation::
+create_surrogate_data(SurrogateData& surr_data)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+
+  // HierarchSparseGridDriver::combined_to_active() transfers all data except
+  // collocation indices, which are invalidated by the combination.  In support
+  // of the synthetic data to be created, define corresponding colloc indices
+  // (default indexing progression is assigned and then adhered to below). 
+  hsg_driver->assign_collocation_indices();
+
+  // we are augmenting the active key of surr_data based on the active data
+  // from hsg_driver
+  const RealMatrix2DArray& var_sets = hsg_driver->variable_sets();
+  const UShort3DArray&        sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&   colloc_key = hsg_driver->collocation_key();
+  const Sizet3DArray&  colloc_index = hsg_driver->collocation_indices();
+
+  // shallow copy vars array data using HierarchSparseGridDriver::variableSets
+  size_t num_colloc_pts = surr_data.points();
+  SDVArray& sdv_array = surr_data.variables_data(); 
+  SDRArray& sdr_array = surr_data.response_data();
+  sdv_array.resize(num_colloc_pts);  sdr_array.resize(num_colloc_pts);
+
+  RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
+  RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+
+  // use interpolant to produce data values that are being interpolated
+  size_t lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
+    c_index = colloc_index[0][0][0], num_v = var_sets[0][0].numRows();
+  RealVector v0(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),(int)num_v);
+  sdv_array[c_index].continuous_variables(v0); // DEFAULT_COPY assumes view
+  SurrogateDataResp& sdr0 = sdr_array[c_index];  //sdr0.clear();
+  sdr0.response_function(value(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
+  if (use_derivs)
+    sdr0.response_gradient(
+      gradient_basis_variables(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
+  for (lev=1; lev<num_lev; ++lev) {
+    num_sets = colloc_key[lev].size();
+    for (set=0; set<num_sets; ++set) {
+      num_tp_pts = colloc_key[lev][set].size();
+      const RealMatrix& var_sets_ls = var_sets[lev][set];
+      for (pt=0; pt<num_tp_pts; ++pt) {
+	c_index = colloc_index[lev][set][pt];
+	RealVector v_lsp(Teuchos::View, const_cast<Real*>(var_sets_ls[pt]),
+			 (int)num_v);
+	sdv_array[c_index].continuous_variables(v_lsp);
+	SurrogateDataResp& sdr_lsp = sdr_array[c_index];
+	sdr_lsp.response_function(
+	  value(v_lsp, sm_mi, colloc_key, t1_coeffs, t2_coeffs, lev));
+	if (use_derivs)
+	  sdr_lsp.response_gradient(gradient_basis_variables(v_lsp, sm_mi,
+	    colloc_key, t1_coeffs, t2_coeffs, lev));
+      }
+    }
+  }
+}
+
+
 void HierarchInterpPolyApproximation::compute_coefficients()
 {
   PolynomialApproximation::compute_coefficients();
@@ -740,6 +802,10 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   productType1Coeffs.clear();     prodT1CoeffsIter = productType1Coeffs.end();
   productType2Coeffs.clear();     prodT2CoeffsIter = productType2Coeffs.end();
   poppedProdType1Coeffs.clear();  poppedProdType2Coeffs.clear();
+
+  // Create a dummy modSurrData for the combined-now-active coeffs, for
+  // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
+  create_surrogate_data(modSurrData); // overwrite data for activeKey
 
   // if outgoing stats type is combined, then can carry over current moment
   // stats from combined to active.  But if the outgoing stats type was already

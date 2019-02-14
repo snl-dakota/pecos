@@ -42,6 +42,18 @@ IntegrationDriver::IntegrationDriver(BaseConstructor):
   driverMode(DEFAULT_MODE), computeType2Weights(false),
   activeReinterpIndex(0), driverRep(NULL), referenceCount(1)
 {
+  // As noted in VPISparseGrid sandia_rules.cpp, there is a sequence of five
+  // nested rules, where the 5th rule has several options (35, 37, 41, or 43
+  // points) that define different nested augmentations of the 19 point rule.
+  // In the code below, we choose to employ a more fine-grained sequence that
+  // includes _both_ the 35 and 43 point rules, such that the last two rules
+  // are not nested with each other.  This is a debatable choice [could be
+  // preferable to use the 43 point rule w/o the 35 point step to provide the
+  // greatest range while preserving nesting], and current uses that require
+  // nesting (e.g., HierarchSparseGridDriver) must exclude the 6th rule.  Of
+  // course, this is only an issue at high precisions (e.g., visited by
+  // dimension-adaptive algorithms).
+
   /* Standard 5 step sequence is fully nested (1+2+6+10+16 = 1, 3, 9, 19, 35)
   if (orderGenzKeister.empty()) {
     orderGenzKeister.resize(5); //orderGenzKeister = { 1, 3, 9, 19, 35 };

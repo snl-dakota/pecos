@@ -169,6 +169,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// emulate new surrogate data and corresponding collocation indices,
+  /// following promotion of combined expansion to active (simplifies
+  /// stats computation (e.g., VBD) for FINAL_RESULTS)
+  void create_surrogate_data(SurrogateData& surr_data);
+
   /// reset computedRef* to zero
   void clear_reference_computed_bits();
   /// reset computedDelta* to zero
