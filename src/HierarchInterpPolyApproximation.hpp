@@ -435,12 +435,21 @@ private:
     const UShort2DArray& set_partition = UShort2DArray());
 
   /// form type1 coefficient gradients for interpolation of 
-  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)] when corresponding surrData
+  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)] when corresponding {modS,s}urrData
   /// is available
   void central_product_gradient_interpolant(
     PolynomialApproximation* poly_approx_2, bool mod_surr_data,
     Real mean_1, Real mean_2, const RealVector& mean1_grad,
     const RealVector& mean2_grad, RealMatrix2DArray& cov_t1_coeff_grads,
+    const UShort2DArray& set_partition = UShort2DArray());
+  /// form type1 coefficient gradients for interpolation of 
+  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)] when corresponding surrogate data
+  /// is available
+  void central_product_gradient_interpolant(const SDVArray& sdv_array,
+    const SDRArray& sdr_array_1, const SDRArray& sdr_array_2, Real mean_r1,
+    Real mean_r2, const RealVector& mean1_grad, const RealVector& mean2_grad,
+    const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
+    const Sizet3DArray& colloc_index, RealMatrix2DArray& cov_t1_coeff_grads,
     const UShort2DArray& set_partition = UShort2DArray());
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)] when corresponding surrData
@@ -943,6 +952,34 @@ central_product_interpolant(PolynomialApproximation* poly_approx_2,
       mean_1, mean_2, hsg_driver->smolyak_multi_index(),
       hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
       cov_t1c, cov_t2c, set_partition);
+}
+
+
+inline void HierarchInterpPolyApproximation::
+central_product_gradient_interpolant(PolynomialApproximation* poly_approx_2,
+  bool mod_surr_data, Real mean_1, Real mean_2, const RealVector& mean1_grad,
+  const RealVector& mean2_grad, RealMatrix2DArray& cov_t1_coeff_grads,
+  const UShort2DArray& set_partition)
+{
+  // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
+
+  if (mod_surr_data)
+    central_product_gradient_interpolant(modSurrData.variables_data(),
+      modSurrData.response_data(), hip_approx_2->modSurrData.response_data(),
+      mean_1, mean_2, mean1_grad, mean2_grad, hsg_driver->smolyak_multi_index(),
+      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
+      cov_t1_coeff_grads, set_partition);
+  else
+    central_product_gradient_interpolant(surrData.variables_data(),
+      surrData.response_data(), hip_approx_2->surrData.response_data(),
+      mean_1, mean_2, mean1_grad, mean2_grad, hsg_driver->smolyak_multi_index(),
+      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
+      cov_t1_coeff_grads, set_partition);
 }
 
 

@@ -93,8 +93,10 @@ create_surrogate_data(SurrogateData& surr_data)
   // HierarchSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
   // of the synthetic data to be created, define corresponding colloc indices
-  // (default indexing progression is assigned and then adhered to below). 
-  hsg_driver->assign_collocation_indices();
+  // (default indexing progression is assigned and then adhered to below) and
+  // update active point count. 
+  hsg_driver->assign_collocation_indices(); // updates collocInd,numCollocPts
+  size_t num_colloc_pts = hsg_driver->collocation_points();
 
   // we are augmenting the active key of surr_data based on the active data
   // from hsg_driver
@@ -103,19 +105,21 @@ create_surrogate_data(SurrogateData& surr_data)
   const UShort4DArray&   colloc_key = hsg_driver->collocation_key();
   const Sizet3DArray&  colloc_index = hsg_driver->collocation_indices();
 
+  const RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
+  const RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;
+
   // shallow copy vars array data using HierarchSparseGridDriver::variableSets
-  size_t num_colloc_pts = surr_data.points();
+  surr_data.clear_all_active();
+  size_t num_v = var_sets[0][0].numRows();
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+  short bits = (use_derivs) ? 3 : 1;
+  surr_data.resize(num_colloc_pts, bits, num_v);
   SDVArray& sdv_array = surr_data.variables_data(); 
   SDRArray& sdr_array = surr_data.response_data();
-  sdv_array.resize(num_colloc_pts);  sdr_array.resize(num_colloc_pts);
-
-  RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
-  RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;
-  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   // use interpolant to produce data values that are being interpolated
   size_t lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
-    c_index = colloc_index[0][0][0], num_v = var_sets[0][0].numRows();
+    c_index = colloc_index[0][0][0];
   RealVector v0(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),(int)num_v);
   sdv_array[c_index].continuous_variables(v0); // DEFAULT_COPY assumes view
   SurrogateDataResp& sdr0 = sdr_array[c_index];  //sdr0.clear();
@@ -4128,35 +4132,23 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
 
 
 void HierarchInterpPolyApproximation::
-central_product_gradient_interpolant(PolynomialApproximation* poly_approx_2,
-				     bool mod_surr_data, Real mean_r1,
+central_product_gradient_interpolant(const SDVArray& sdv_array,
+				     const SDRArray& sdr_array_1,
+				     const SDRArray& sdr_array_2, Real mean_r1,
 				     Real mean_r2, const RealVector& mean1_grad,
 				     const RealVector& mean2_grad,
+				     const UShort3DArray& sm_mi,
+				     const UShort4DArray& colloc_key,
+				     const Sizet3DArray& colloc_index,
 				     RealMatrix2DArray& cov_t1_coeff_grads,
 				     const UShort2DArray& set_partition)
 {
   // form hierarchical t1 coeff grads for (R_1 - \mu_1) (R_2 - \mu_2)
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray&           sm_mi = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
-  const Sizet3DArray&     colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v,
     num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
   Real r1_mm, r2_mm;
-
-  // Support original (R) or modified (DeltaR) data for product interpolants
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  const SurrogateData& surr_data = (mod_surr_data) ? modSurrData : surrData;
-  const SDVArray& sdv_array   = surr_data.variables_data();
-  const SDRArray& sdr_array_1 = surr_data.response_data();
-  const SDRArray& sdr_array_2 = (mod_surr_data) ?
-    hip_approx_2->modSurrData.response_data() :
-    hip_approx_2->surrData.response_data();
 
   // level 0 (no surplus)
   cov_t1_coeff_grads.resize(num_lev);
@@ -4236,8 +4228,6 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
 				     const UShort2DArray& set_partition)
 {
   // form hierarchical t1 coeff grads for (R_1 - \mu_1) (R_2 - \mu_2)
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   size_t lev, set, pt, num_lev = colloc_key.size(),
     num_sets, set_start = 0, set_end, num_tp_pts,
     v, num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
@@ -4892,7 +4882,7 @@ central_product_member_coefficients(const BitArray& m_bits,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
-  const SDVArray& sdv_array = surrData.variables_data();
+  const SDVArray& sdv_array = modSurrData.variables_data();
 
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
     num_lev = m_t1_coeffs.size(), num_sets, num_tp_pts, c_index,

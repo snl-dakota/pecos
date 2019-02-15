@@ -174,6 +174,9 @@ public:
   //- Heading: member functions
   //
 
+  /// instantiate a sdvRep
+  void create_rep(size_t num_vars);
+
   /// return number of continuous variables
   size_t cv() const;
   /// return number of discrete integer variables
@@ -301,6 +304,10 @@ operator=(const SurrogateDataVars& sdv)
 //          sdvRep->discreteRealVars == sdv.sdvRep->discreteRealVars) ?
 //    true : false;
 //}
+
+
+inline void SurrogateDataVars::create_rep(size_t num_vars)
+{ sdvRep = new SurrogateDataVarsRep(num_vars); }
 
 
 /// deep copy of SurrogateDataVars instance
@@ -542,6 +549,9 @@ public:
   //- Heading: member functions
   //
 
+  /// instantiate a sdvRep
+  void create_rep(short bits, size_t num_vars);
+
   /// return deep copy of SurrogateDataResp instance
   SurrogateDataResp copy() const;
 
@@ -662,6 +672,10 @@ operator=(const SurrogateDataResp& sdr)
 //	     sdrRep->responseGrad == sdr.sdrRep->responseGrad &&
 //	     sdrRep->responseHess == sdr.sdrRep->responseHess ) ? true : false;
 //}
+
+
+inline void SurrogateDataResp::create_rep(short bits, size_t num_vars)
+{ sdrRep = new SurrogateDataRespRep(bits, num_vars); }
 
 
 /// deep copy of SurrogateDataResp instance
@@ -936,6 +950,9 @@ public:
   void size_active_sdr(const SurrogateData& sd) const;
   void copy_active_sdr(const SurrogateData& sd, short sdr_mode) const;
   void copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const;
+
+  /// resize {vars,resp}Data
+  void resize(size_t num_pts, short bits, size_t num_vars);
 
   /// augment {vars,resp}Data and define anchorIndex
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
@@ -2221,6 +2238,21 @@ copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const
   }
   else // shallow SDR copies based on operator=
     new_pop_sdr_array = sd.popped_response();
+}
+
+
+inline void SurrogateData::resize(size_t new_pts, short bits, size_t num_vars)
+{
+  size_t i, pts = points();
+  SDVArray& sdv_array = sdRep->varsDataIter->second;
+  SDRArray& sdr_array = sdRep->respDataIter->second;
+
+  sdv_array.resize(new_pts);  sdr_array.resize(new_pts);
+  for (i=pts; i<new_pts; ++i) {
+    // minimal ctors that define a rep and size arrays
+    sdv_array[i].create_rep(num_vars);
+    sdr_array[i].create_rep(bits, num_vars);
+  }
 }
 
 

@@ -138,6 +138,9 @@ public:
   //- Heading: Member functions
   //
 
+  /// return number of collocation points in active grid
+  int collocation_points() const;
+
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(unsigned short ssg_level,
     const RealVector& dim_pref, const ShortArray& u_types,
@@ -366,6 +369,10 @@ inline void SparseGridDriver::clear_keys()
 
   oldMultiIndex.clear();  activeMultiIndex.clear();  poppedTrialSets.clear();
 }
+
+
+inline int SparseGridDriver::collocation_points() const
+{ return numPtsIter->second; }
 
 
 inline void SparseGridDriver::clear_grid()
