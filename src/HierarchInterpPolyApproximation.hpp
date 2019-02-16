@@ -991,7 +991,6 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   }
   else // use modSurrData & colloc_indices for forming product interp
     product_interpolant(hip_approx_2, true, prod_t1c, prod_t2c, set_partition);
-  // *** TO DO: think through trackCollocIndices == false ...
 }
 
 
@@ -1059,7 +1058,6 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   else // use modSurrData & colloc_indices for forming central product interp
     central_product_interpolant(hip_approx_2, true, mean_1, mean_2,
       cov_t1_coeffs, cov_t2_coeffs, set_partition);
-  // *** TO DO: think through trackCollocIndices == false ...
 }
 
 
@@ -1112,7 +1110,6 @@ central_product_gradient_interpolant(
   else // use modSurrData & colloc_indices for forming central product interp
     central_product_gradient_interpolant(hip_approx_2, true, mean_1, mean_2,
       mean1_grad, mean2_grad, cov_t1c_grads, set_partition);
-  // *** TO DO: think through trackCollocIndices == false ...
 }
 
 

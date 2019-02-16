@@ -118,6 +118,8 @@ create_surrogate_data(SurrogateData& surr_data)
   SDRArray& sdr_array = surr_data.response_data();
 
   // use interpolant to produce data values that are being interpolated
+  // Note: for a nested hierarchical construction, we know that contributions
+  //       from level > l are zero for colloc pts that correspond to level l.
   size_t lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
     c_index = colloc_index[0][0][0];
   RealVector v0(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),(int)num_v);
@@ -4496,6 +4498,9 @@ integrate_response_moments(size_t num_moments,
   }
 
   // precompute all value() and gradient_basis_variables() for {t1,t2}_coeffs
+  // Note: this is essentially what create_surrogate_data() does, following
+  //       combined_to_active() (eliminating the need to exercise this
+  //       overloaded form of integrate_response_moments() for FINAL_RESULTS).
   RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),
 		    (int)num_v);
   r_vals[0][0][0] =
