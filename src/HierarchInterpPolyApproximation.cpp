@@ -1645,7 +1645,7 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 
   Real mean1 = mean(); const RealVector& mean1_grad = mean_gradient();
   RealMatrix2DArray cov_t1_coeff_grads;
-  central_product_gradient_interpolant(this, true, mean1, mean1, mean1_grad,
+  central_product_gradient_interpolant(this, mean1, mean1, mean1_grad,
 				       mean1_grad, cov_t1_coeff_grads);
   varianceGradient = expectation_gradient(cov_t1_coeff_grads);
   if (std_mode) computedVariance |=  2;
@@ -3672,13 +3672,14 @@ product_interpolant(const RealMatrix2DArray& var_sets,
     focus on combined covariance (we care about the effect of a level 
     increment on the combined QoI). */
 void HierarchInterpPolyApproximation::
-product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+product_difference_interpolant(const SurrogateData& surr_data_1,
+			       const SurrogateData& surr_data_2,
 			       const UShort3DArray& sm_mi,
 			       const UShort4DArray& colloc_key,
 			       const Sizet3DArray&  colloc_index,
-			       RealVector2DArray& prod_t1c,
-			       RealMatrix2DArray& prod_t2c,
-			       const UShortArray& lf_key,
+			       RealVector2DArray&   prod_t1c,
+			       RealMatrix2DArray&   prod_t2c,
+			       const UShortArray&   lf_key,
 			       const UShort2DArray& set_partition)
 {
   // Hierarchically interpolate R_1 * R_2 exactly as for R, i.e., hierarch
@@ -3695,11 +3696,9 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 
   // This case is _not_ modular on SurrogateData instance:
   // it must use surrData to access lower level data
-  const SDVArray& sdv_array      = surrData.variables_data();
-  const SDRArray& hf_sdr_array_1 = surrData.response_data();
-  bool same = (this == hip_approx_2);
-  const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
-    hip_approx_2->surrData.response_data();
+  const SDVArray& sdv_array      = surr_data_1.variables_data();
+  const SDRArray& hf_sdr_array_1 = surr_data_1.response_data();
+  const SDRArray& hf_sdr_array_2 = surr_data_2.response_data();
 
   // Accommodate level 0 --> lf_key is empty
   if (lf_key.empty()) {
@@ -3714,14 +3713,14 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
-       use_derivs = data_rep->basisConfigOptions.useDerivs;
+    use_derivs = data_rep->basisConfigOptions.useDerivs,
+    same = (surr_data_1.data_rep() == surr_data_2.data_rep());
   Real hf_fn1, lf_fn1, hf_fn2, lf_fn2, r1r2_l;
 
   // Support original (R) data for computing increments in R^2
   std::map<UShortArray, SDRArray>::const_iterator
-    r_cit_1 = surrData.response_data_map().find(lf_key),
-    r_cit_2 = (same) ? r_cit_1 :
-    hip_approx_2->surrData.response_data_map().find(lf_key);
+    r_cit_1 = surr_data_1.response_data_map().find(lf_key),
+    r_cit_2 = (same) ? r_cit_1 : surr_data_2.response_data_map().find(lf_key);
   const SDRArray& lf_sdr_array_1 = r_cit_1->second;
   const SDRArray& lf_sdr_array_2 = r_cit_2->second;
 
