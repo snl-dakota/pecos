@@ -174,6 +174,8 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, v, num_levels = colloc_key.size(), num_sets, num_tp_pts,
     cntr = 0, c_index, num_deriv_vars = modSurrData.num_derivative_variables();
+  bool empty_c_index = colloc_index.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -185,31 +187,31 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   const SDRArray& sdr_array = modSurrData.response_data();
 
   // level 0
-  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+  c_index = (empty_c_index) ? cntr++ : colloc_index[0][0][0];
   const SurrogateDataResp& sdr_0 = sdr_array[c_index];
   if (expansionCoeffFlag) {
     exp_t1_coeffs[0][0][0] = sdr_0.response_function();
-    if (data_rep->basisConfigOptions.useDerivs)
+    if (use_derivs)
       Teuchos::setCol(sdr_0.response_gradient(), 0, exp_t2_coeffs[0][0]);
   }
   if (expansionCoeffGradFlag)
     Teuchos::setCol(sdr_0.response_gradient(), 0, exp_t1_coeff_grads[0][0]);
-  ++cntr;
+
   // levels 1 to num_levels
   for (lev=1; lev<num_levels; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];
     num_sets = key_l.size();
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = key_l[set].size();
-      for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+      for (pt=0; pt<num_tp_pts; ++pt) {
+	c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
 	const RealVector& c_vars = sdv_array[c_index].continuous_variables();
 	const SurrogateDataResp& sdr = sdr_array[c_index];
 	// coefficients are hierarchical surpluses
 	if (expansionCoeffFlag) {
 	  exp_t1_coeffs[lev][set][pt] = sdr.response_function() -
 	    value(c_vars, sm_mi, colloc_key, exp_t1_coeffs,exp_t2_coeffs,lev-1);
-	  if (data_rep->basisConfigOptions.useDerivs) {
+	  if (use_derivs) {
 	    const RealVector& data_grad = sdr.response_gradient();
 	    const RealVector& prev_grad = gradient_basis_variables(c_vars,
 	      sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
@@ -870,9 +872,10 @@ increment_coefficients(const UShortArray& index_set)
   const UShort4DArray& colloc_key = hsg_driver->collocation_key();
   size_t index, num_trial_pts = colloc_key[lev][set].size(),
     v, num_deriv_vars = 0;
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
   if (expansionCoeffFlag) {
     t1_coeffs.sizeUninitialized(num_trial_pts);
-    if (data_rep->basisConfigOptions.useDerivs) {
+    if (use_derivs) {
       num_deriv_vars = exp_t2_coeffs[0][0].numRows();
       t2_coeffs.shapeUninitialized(num_deriv_vars, num_trial_pts);
     }
@@ -888,7 +891,7 @@ increment_coefficients(const UShortArray& index_set)
     if (expansionCoeffFlag) {
       t1_coeffs[pt] = sdr.response_function() -
 	value(c_vars, sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	const RealVector& data_grad = sdr.response_gradient();
 	const RealVector& prev_grad = gradient_basis_variables(c_vars, sm_mi,
 	  colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
@@ -958,14 +961,16 @@ increment_products(const UShort2DArray& set_partition)
     UShortArray lf_key;  paired_lf_key(data_rep->activeKey, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
-      product_difference_interpolant(it1->first, it1->second, it2->second,
-	lf_key, set_partition);
+      product_difference_interpolant(
+	(HierarchInterpPolyApproximation*)it1->first, it1->second,
+	it2->second, lf_key, set_partition);
     }
   }
   else
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
-      product_interpolant(it1->first, it1->second, it2->second, set_partition);
+      product_interpolant((HierarchInterpPolyApproximation*)it1->first,
+	it1->second, it2->second, set_partition);
 }
 
 
@@ -1476,8 +1481,8 @@ covariance(PolynomialApproximation* poly_approx_2)
           - mean_1 * mean_2;
   else { // form central product interp from scratch
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    build_central_product_interpolant(hip_approx_2, mean_1, mean_2,
-				      cov_t1_coeffs, cov_t2_coeffs);
+    central_product_interpolant(hip_approx_2, mean_1, mean_2,
+				cov_t1_coeffs, cov_t2_coeffs);
     // evaluate expectation of these t1/t2 coefficients
     covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
   }
@@ -1519,8 +1524,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
           - mean_1 * mean_2;
   else { // form central product interp from scratch
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    build_central_product_interpolant(hip_approx_2, mean_1, mean_2,
-				      cov_t1_coeffs, cov_t2_coeffs);
+    central_product_interpolant(hip_approx_2, mean_1, mean_2,
+				cov_t1_coeffs, cov_t2_coeffs);
     // evaluate expectation of these t1/t2 coefficients
     covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
   }
@@ -1544,31 +1549,16 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   if (same && std_mode && (computedVariance & 1))
     return numericalMoments[1];
 
-  /*
-  // combined_covariance() is for roll up of all expansion contributions -->
-  // uses surrData (containing response values) for computing central
-  // product interpolants:
-  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(hip_approx_2, false, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
-  // *** while surrData allows access to the raw Q^{HF} data, it corresponds
-  //     to only a few points on the HF grid and we need a central product
-  //     interpolant on the combined grid.
-  // *** to remove need for combinedExpT{1,2}Coeffs, would need to create a
-  //     map-based central_product_interpolant across all dimensions
-  */
-
-  // *** TO DO: incremental approach ?
-  // Note: before combined_to_active, mainly uses delta_combined_*();
-  //       after combined_to_active(), uses regular covariance().
-  //       Fn is mainly used immediately after switch from active to
-  //       combined stats to provide ref prior to greedy adaptation.
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real mean_1 = combined_mean(),
        mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean();
 
+  // Note: an incremental approach is not critical since we mainly use
+  //       delta_combined_*() prior to combined_to_active(), and use regular
+  //       covariance() after combined_to_active() --> this fn is mainly used
+  //       immediately after switch from active to combined stats to provide
+  //       reference prior to greedy adaptation.
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   central_product_interpolant(hsg_driver->combined_variable_sets(),
 			      hsg_driver->combined_smolyak_multi_index(),
 			      hsg_driver->combined_collocation_key(),
@@ -1577,7 +1567,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 			      hip_approx_2->combinedExpT2Coeffs, same,
 			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
-  // evaluate expectation of these t1/t2 coefficients
+  // evaluate expectation of these central product t1,t2 coefficients
   Real covar =
     expectation(cov_t1_coeffs, cov_t2_coeffs,
 		hsg_driver->combined_type1_hierarchical_weight_sets(),
@@ -1602,33 +1592,18 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
        data_rep->match_nonrandom_vars(x, xPrevVar) )
     return numericalMoments[1];
 
-  /*
-  // combined_covariance() is for roll up of all expansion contributions -->
-  // uses surrData (containing response values) for computing central
-  // product interpolants:
-  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(hip_approx_2, false, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
-  // *** while surrData allows access to the raw Q^{HF} data, it corresponds
-  //     to only a few points on the HF grid and we need a central product
-  //     interpolant on the combined grid.
-  // *** to remove need for combinedExpT{1,2}Coeffs, would need to create a
-  //     map-based central_product_interpolant across all dimensions
-  */
-
-  // *** TO DO incremental approach ?
-  // Note: before combined_to_active, mainly uses delta_combined_*();
-  //       after combined_to_active(), uses regular covariance()
-  //       Fn is mainly used immediately after switch from active to
-  //       combined stats to provide ref prior to greedy adaptation.
-
   Real mean_1 = combined_mean(x),
        mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean(x);
 
+  // Note: an incremental approach is not critical since we mainly use
+  //       delta_combined_*() prior to combined_to_active(), and use regular
+  //       covariance() after combined_to_active() --> this fn is mainly used
+  //       immediately after switch from active to combined stats to provide
+  //       reference prior to greedy adaptation.
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& comb_sm_mi = hsg_driver->combined_smolyak_multi_index();
   const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
-  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   central_product_interpolant(hsg_driver->combined_variable_sets(),
 			      comb_sm_mi, comb_key,
 			      combinedExpT1Coeffs, combinedExpT2Coeffs,
@@ -1636,7 +1611,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 			      hip_approx_2->combinedExpT2Coeffs, same,
 			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
-  // evaluate expectation of these t1/t2 coefficients
+  // evaluate expectation of these central product t1,t2 coefficients
   Real covar
     = expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);
 
@@ -1666,10 +1641,9 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  Real mean_1 = mean(); const RealVector& mean1_grad = mean_gradient();
+  Real mean1 = mean(); const RealVector& mean1_grad = mean_gradient();
   RealMatrix2DArray cov_t1_coeff_grads;
-  // *** TO DO: verify valid colloc_indices
-  central_product_gradient_interpolant(this, true, mean_1, mean_1, mean1_grad,
+  central_product_gradient_interpolant(this, true, mean1, mean1, mean1_grad,
 				       mean1_grad, cov_t1_coeff_grads);
   varianceGradient = expectation_gradient(cov_t1_coeff_grads);
   if (std_mode) computedVariance |=  2;
@@ -1716,18 +1690,16 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     else                                      augment = true;
   }
 
-  RealVector2DArray cov_t1_coeffs;
-  RealMatrix2DArray cov_t1_coeff_grads, cov_t2_coeffs;
+  RealVector2DArray cov_t1c;
+  RealMatrix2DArray cov_t1c_grads, cov_t2c;
   Real mean_1 = mean(x);
-  // *** TO DO: verify valid colloc_indices
   if (insert) {
     const RealVector& mean1_grad = mean_gradient(x, dvv);
-    central_product_gradient_interpolant(this, true, mean_1, mean_1, mean1_grad,
-					 mean1_grad, cov_t1_coeff_grads);
+    central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
+					 mean1_grad, cov_t1c_grads);
   }
   if (augment)
-    central_product_interpolant(this, true, mean_1, mean_1, cov_t1_coeffs,
-				cov_t2_coeffs);
+    central_product_interpolant(this, mean_1, mean_1, cov_t1c, cov_t2c);
 
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
@@ -1750,7 +1722,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 	      << "Approximation::variance_gradient()" << std::endl;
 	abort_handler(-1);
       }
-      varianceGradient[i] = expectation_gradient(x, cov_t1_coeff_grads, cntr);
+      varianceGradient[i] = expectation_gradient(x, cov_t1c_grads, cntr);
       ++cntr;
     }
     else {
@@ -1762,8 +1734,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 	      << "InterpPolyApproximation::variance_gradient()." << std::endl;
 	abort_handler(-1);
       }
-      varianceGradient[i] = expectation_gradient(x, cov_t1_coeffs,
-						 cov_t2_coeffs, deriv_index);
+      varianceGradient[i]
+	= expectation_gradient(x, cov_t1c, cov_t2c, deriv_index);
     }
   }
   if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
@@ -1869,8 +1841,8 @@ reference_variance(const UShort2DArray& ref_key)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    build_central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
-				      cov_t2_coeffs, ref_key);
+    central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
+				cov_t2_coeffs, ref_key);
     ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
   }
 
@@ -1898,8 +1870,8 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    build_central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
-				      cov_t2_coeffs, ref_key);
+    central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
+				cov_t2_coeffs, ref_key);
     ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
   }
 
@@ -1928,13 +1900,11 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(), ref_key_map)
             - ref_mean * ref_mean;
-  else { // form central product interp from scratch
+  else { // form central product interp from scratch (inactive)
     std::map<UShortArray, RealVector2DArray> cov_t1c_map;
     std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
-    // *** TO DO: verify roll up with global mean works in place of roll up
-    //            of product_interpolant - mean^2
-    build_central_product_interpolant(this, ref_mean, ref_mean,
-				      cov_t1c_map, cov_t2c_map, ref_key_map);
+    central_product_interpolant(this, ref_mean, ref_mean, cov_t1c_map,
+				cov_t2c_map, ref_key_map);
     ref_var = expectation(cov_t1c_map, cov_t2c_map,
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(), ref_key_map);
@@ -1965,13 +1935,11 @@ reference_combined_variance(const RealVector& x,
 			  hsg_driver->smolyak_multi_index_map(),
 			  hsg_driver->collocation_key_map(), ref_key_map)
             - ref_mean * ref_mean;
-  else { // form central product interp from scratch
+  else { // form central product interp from scratch (inactive)
     std::map<UShortArray, RealVector2DArray> cov_t1c_map;
     std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
-    // *** TO DO: verify roll up with global mean works in place of roll up
-    //            of product_interpolant - mean^2
-    build_central_product_interpolant(this, ref_mean, ref_mean,
-				      cov_t1c_map, cov_t2c_map, ref_key_map);
+    central_product_interpolant(this, ref_mean, ref_mean, cov_t1c_map,
+				cov_t2c_map, ref_key_map);
     ref_var = expectation(x, cov_t1c_map, cov_t2c_map,
 			  hsg_driver->smolyak_multi_index_map(),
 			  hsg_driver->collocation_key_map(), ref_key_map);
@@ -2195,7 +2163,7 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
       hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   else { // rebuild product interpolant from scratch
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(this, prod_t1c, prod_t2c);
+    product_interpolant(this, prod_t1c, prod_t2c);
     delta_var = delta_covariance(expT1CoeffsIter->second,
       expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
       true, prod_t1c, prod_t2c, hsg_driver->type1_hierarchical_weight_sets(),
@@ -2231,7 +2199,7 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
       ref_key, incr_key);
   else { // rebuild product interpolant from scratch
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(this, prod_t1c, prod_t2c);
+    product_interpolant(this, prod_t1c, prod_t2c);
     delta_var = delta_covariance(x, expT1CoeffsIter->second,
       expT2CoeffsIter->second, expT1CoeffsIter->second, expT2CoeffsIter->second,
       true, prod_t1c, prod_t2c, hsg_driver->smolyak_multi_index(),
@@ -2272,7 +2240,7 @@ delta_combined_variance(
     // expectation of R1R2 on active incr_key, but depends on active ref_key
     // since product interp is constructed bottom-up from hierarch surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(this, prod_t1c, prod_t2c);
+    product_interpolant(this, prod_t1c, prod_t2c);
     delta_var = delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
       expansionType1Coeffs, expansionType2Coeffs, true, prod_t1c, prod_t2c,
       hsg_driver->type1_weight_sets_map(), hsg_driver->type2_weight_sets_map(),
@@ -2312,7 +2280,7 @@ delta_combined_variance(const RealVector& x,
     // expectation of R1R2 on active incr_key, but depends on active ref_key
     // since product interp is constructed bottom-up from hierarch surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(this, prod_t1c, prod_t2c);
+    product_interpolant(this, prod_t1c, prod_t2c);
     delta_var = delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
       expansionType1Coeffs, expansionType2Coeffs, true, prod_t1c, prod_t2c,
       hsg_driver->smolyak_multi_index_map(), hsg_driver->collocation_key_map(),
@@ -2639,7 +2607,7 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
     // expectation of R1R2 on incr_key, but depends on ref_key since product
     // interpolant must be constructed bottom-up from hierarchical surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
+    product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
     delta_covar = delta_covariance(expT1CoeffsIter->second,
       expT2CoeffsIter->second, hip_approx_2->expT1CoeffsIter->second,
       hip_approx_2->expT2CoeffsIter->second, same, prod_t1c, prod_t2c,
@@ -2693,7 +2661,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     // expectation of R1R2 on incr_key, but depends on ref_key since product
     // interpolant must be constructed bottom-up from hierarchical surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
+    product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
     delta_covar = delta_covariance(x, expT1CoeffsIter->second,
       expT2CoeffsIter->second, hip_approx_2->expT1CoeffsIter->second,
       hip_approx_2->expT2CoeffsIter->second, same, prod_t1c, prod_t2c,
@@ -2742,7 +2710,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
     // expectation of R1R2 on active incr_key, but depends on active ref_key
     // since product interp is constructed bottom-up from hierarch surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
+    product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
     delta_covar = delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
       hip_approx_2->expansionType1Coeffs, hip_approx_2->expansionType2Coeffs,
       same, prod_t1c, prod_t2c, hsg_driver->type1_weight_sets_map(),
@@ -2789,7 +2757,7 @@ delta_combined_covariance(const RealVector& x,
     // expectation of R1R2 on active incr_key, but depends on active ref_key
     // since product interp is constructed bottom-up from hierarch surpluses)
     RealVector2DArray prod_t1c; RealMatrix2DArray prod_t2c;
-    build_product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
+    product_interpolant(hip_approx_2, prod_t1c, prod_t2c);
     delta_covar = delta_covariance(x, expansionType1Coeffs,
       expansionType2Coeffs, hip_approx_2->expansionType1Coeffs,
       hip_approx_2->expansionType2Coeffs, same, prod_t1c, prod_t2c,
@@ -3465,6 +3433,236 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
 }
 
 
+/** This version accesses the surrogate data for efficiency in cases where
+    the r1 and r2 interpolants correspond to the data and do not need to be
+    evaluated.  Note: could consider computing deltaR1R2 = R1 deltaR2 +
+    R2 deltaR1 + deltaR1 deltaR2. */
+void HierarchInterpPolyApproximation::
+product_interpolant(const SDVArray& sdv_array, const SDRArray& sdr_array_1,
+		    const SDRArray& sdr_array_2, const UShort3DArray& sm_mi,
+		    const UShort4DArray& colloc_key,
+		    const Sizet3DArray& colloc_index,
+		    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
+		    const UShort2DArray& set_partition)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
+    num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
+  bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
+  Real data_fn1, data_fn2;
+
+  // form hierarchical t1/t2 coeffs for raw moment R1 R2
+
+  // level 0 (no surplus)
+  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
+  if (!partial || set_partition[0][0] == 0) { // partition includes level 0
+    prod_t1c[0].resize(1);  prod_t2c[0].resize(1);
+    prod_t1c[0][0].sizeUninitialized(1);
+    c_index = (empty_c_index) ? cntr : colloc_index[0][0][0];
+    const SurrogateDataResp& sdr0_1 = sdr_array_1[c_index];
+    const SurrogateDataResp& sdr0_2 = sdr_array_2[c_index];
+    data_fn1 = sdr0_1.response_function();
+    data_fn2 = sdr0_2.response_function();
+    prod_t1c[0][0][0] = data_fn1 * data_fn2;
+    if (use_derivs) {
+      prod_t2c[0][0].shapeUninitialized(num_v, 1);
+      Real *prod_t2c_000 = prod_t2c[0][0][0];
+      const RealVector& data_grad1 = sdr0_1.response_gradient();
+      const RealVector& data_grad2 = sdr0_2.response_gradient();
+      for (v=0; v<num_v; ++v)
+	prod_t2c_000[v]
+	  = data_fn1 * data_grad2[v] + data_fn2 * data_grad1[v];
+    }
+#ifdef DEBUG
+    PCout << "Surplus components l0 s0 p0: r1r2 = " << prod_t1c[0][0][0]
+	  << std::endl;
+#endif // DEBUG
+  }
+  ++cntr;
+
+  // levels 1:w (subtract lev-1 for surplus estimation)
+  for (lev=1; lev<num_lev; ++lev) {
+    const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
+    if (partial)
+      { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+    else
+      set_end = num_sets;
+    prod_t1c[lev].resize(num_sets);  prod_t2c[lev].resize(num_sets);
+    if (empty_c_index)
+      for (set=0; set<set_start; ++set)
+	cntr += key_l[set].size();
+    for (set=set_start; set<set_end; ++set) {
+      num_tp_pts = key_l[set].size();
+      RealVector& prod_t1c_ls = prod_t1c[lev][set];
+      prod_t1c_ls.sizeUninitialized(num_tp_pts);
+      if (use_derivs) { // type{1,2} interpolation
+	RealMatrix& prod_t2c_ls = prod_t2c[lev][set];
+	prod_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
+	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	  const SurrogateDataResp& sdr_1 = sdr_array_1[c_index];
+	  const SurrogateDataResp& sdr_2 = sdr_array_2[c_index];
+	  // type1 hierarchical interpolation of R1 R2
+	  data_fn1 = sdr_1.response_function();
+	  data_fn2 = sdr_2.response_function();
+	  prod_t1c_ls[pt] = data_fn1 * data_fn2
+	    - value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	  // type2 hierarchical interpolation of R1 R2
+	  // --> interpolated grads are R1 * R2' + R2 * R1'
+	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
+	  const RealVector& data_grad1 = sdr_1.response_gradient();
+	  const RealVector& data_grad2 = sdr_2.response_gradient();
+	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
+	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	  for (v=0; v<num_v; ++v)
+	    prod_t2c_lsp[v] = data_fn1 * data_grad2[v]
+	      + data_fn2 * data_grad1[v] - prev_grad[v];
+	}
+      }
+      else // type1 hierarchical interpolation of R1 R2
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
+#ifdef DEBUG
+	  PCout << "c_index = " << c_index << std::endl;
+	  Real r1 = sdr_array_1[c_index].response_function(),
+	       r2 = sdr_array_2[c_index].response_function(), r1r2 = r1*r2,
+	       r1r2_lm1 = value(sdv_array[c_index].continuous_variables(),
+		 sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1),
+	       surplus = r1r2 - r1r2_lm1;
+	  PCout << "Surplus components l" << lev << " s" << set << " p" << pt
+		<< ": r1r2 = " << r1r2 << " r1r2_lm1 = " << r1r2_lm1
+		<< " surplus = " << surplus << std::endl;
+	  prod_t1c_ls[pt] = surplus;
+#else
+	  prod_t1c_ls[pt] = sdr_array_1[c_index].response_function()
+	    * sdr_array_2[c_index].response_function()
+	    - value(sdv_array[c_index].continuous_variables(), sm_mi,
+		    colloc_key, prod_t1c, prod_t2c, lev-1);
+#endif // DEBUG
+	}
+    }
+  }
+
+#ifdef DEBUG
+  PCout << "Product interpolant type1 coeffs:\n" << prod_t1c;
+  if (use_derivs)
+    PCout << "Product interpolant type2 coeffs:\n" << prod_t2c;
+#endif // DEBUG
+}
+
+
+/** This version evaluates the r1 and r2 interpolants for cases where
+    a particular key of the surrogate data does not correspond (e.g.,
+    after combine_coefficients).  Note: consider computing deltaR1R2 =
+    R1 deltaR2 + R2 deltaR1 + deltaR1 deltaR2. */
+void HierarchInterpPolyApproximation::
+product_interpolant(const RealMatrix2DArray& var_sets,
+		    const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
+		    const RealVector2DArray& r1_t1c,
+		    const RealMatrix2DArray& r1_t2c,
+		    const RealVector2DArray& r2_t1c,
+		    const RealMatrix2DArray& r2_t2c, bool same,
+		    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
+		    const UShort2DArray& set_partition)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
+    num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
+  bool partial = !set_partition.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
+  Real r1_val, r2_val;
+
+  // form hierarchical t1/t2 coeffs for raw moment R1 R2
+
+  // level 0 (no surplus)
+  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
+  if (!partial || set_partition[0][0] == 0) { // partition includes level 0
+    prod_t1c[0].resize(1); prod_t2c[0].resize(1);
+    prod_t1c[0][0].sizeUninitialized(1);
+    RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),
+		      (int)num_v);
+    // type1 hierarchical interpolation of R1 R2
+    r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, 0);
+    r2_val = (same) ? r1_val :
+      value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, 0);
+    prod_t1c[0][0][0] = r1_val * r2_val;
+    if (use_derivs) {
+      const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
+        colloc_key, r1_t1c, r1_t2c, 0);
+      const RealVector& r2_grad = (same) ? r1_grad : gradient_basis_variables(
+        c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, 0);
+      prod_t2c[0][0].shapeUninitialized(num_v, 1);
+      Real *prod_t2c_000 = prod_t2c[0][0][0];
+      for (v=0; v<num_v; ++v)
+	prod_t2c_000[v] = r1_val * r2_grad[v] + r2_val * r1_grad[v];
+    }
+  }
+
+  // levels 1:w (subtract lev-1 for surplus estimation)
+  for (lev=1; lev<num_lev; ++lev) {
+    const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
+    if (partial)
+      { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+    else
+      set_end = num_sets;
+    prod_t1c[lev].resize(num_sets);  prod_t2c[lev].resize(num_sets);
+    for (set=set_start; set<set_end; ++set) {
+      num_tp_pts = key_l[set].size();
+      RealVector& prod_t1c_ls = prod_t1c[lev][set];
+      prod_t1c_ls.sizeUninitialized(num_tp_pts);
+      if (use_derivs) {
+	RealMatrix& prod_t2c_ls = prod_t2c[lev][set];
+	prod_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
+	  // type1 hierarchical interpolation of R1 R2
+	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev);
+	  r2_val = (same) ? r1_val :
+	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev);
+	  prod_t1c_ls[pt] = r1_val * r2_val -
+	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	  // type2 hierarchical interpolation of R1 R2
+	  // --> interpolated grads are R1 * R2' + R2 * R1'
+	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
+	  const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
+	    colloc_key, r1_t1c, r1_t2c, lev);
+	  const RealVector& r2_grad = (same) ? r1_grad :
+	    gradient_basis_variables(c_vars, sm_mi, colloc_key, r2_t1c,
+	    r2_t2c, lev);
+	  const RealVector& prev_grad = gradient_basis_variables(c_vars,
+	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	  for (v=0; v<num_v; ++v)
+	    prod_t2c_lsp[v] = r1_val * r2_grad[v] + r2_val * r1_grad[v]
+	                    - prev_grad[v];
+	}
+      }
+      else // type1 hierarchical interpolation of R1 R2
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
+	  // type1 hierarchical interpolation of R1 R2
+	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev);
+	  r2_val = (same) ? r1_val :
+	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev);
+	  prod_t1c_ls[pt] = r1_val * r2_val -
+	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	}
+    }
+  }
+
+#ifdef DEBUG
+  PCout << "Product interpolant type1 coeffs:\n" << prod_t1c;
+  if (use_derivs)
+    PCout << "Product interpolant type2 coeffs:\n" << prod_t2c;
+#endif // DEBUG
+}
+
+
 /** This version accesses the raw surrogate data for Q^H and Q^L for two 
     QoI in order to hierarchically interpolate the difference of products
     Q^H_1 Q^H_2 - Q^L_1 Q^L_2.  The goal is to have the process for 
@@ -3472,7 +3670,10 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
     focus on combined covariance (we care about the effect of a level 
     increment on the combined QoI). */
 void HierarchInterpPolyApproximation::
-product_difference_interpolant(PolynomialApproximation* poly_approx_2,
+product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+			       const UShort3DArray& sm_mi,
+			       const UShort4DArray& colloc_key,
+			       const Sizet3DArray&  colloc_index,
 			       RealVector2DArray& prod_t1c,
 			       RealMatrix2DArray& prod_t2c,
 			       const UShortArray& lf_key,
@@ -3490,31 +3691,31 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
   // > only need to integrate terms in incr_key, but need to build up to them
   //   by evaluating all underlying contribs to the hierarchical interpolant
 
+  // This case is _not_ modular on SurrogateData instance:
+  // it must use surrData to access lower level data
+  const SDVArray& sdv_array      = surrData.variables_data();
+  const SDRArray& hf_sdr_array_1 = surrData.response_data();
+  bool same = (this == hip_approx_2);
+  const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
+    hip_approx_2->surrData.response_data();
+
   // Accommodate level 0 --> lf_key is empty
   if (lf_key.empty()) {
-    product_interpolant(poly_approx_2, prod_t1c, prod_t2c, set_partition);
+    product_interpolant(sdv_array, hf_sdr_array_1, hf_sdr_array_2, sm_mi,
+			colloc_key, colloc_index, prod_t1c, prod_t2c,
+			set_partition);
     return;
   }
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool partial = !set_partition.empty(), same = (this == hip_approx_2),
-       empty_c_index = colloc_index.empty();
+  bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
+       use_derivs = data_rep->basisConfigOptions.useDerivs;
   Real hf_fn1, lf_fn1, hf_fn2, lf_fn2, r1r2_l;
 
   // Support original (R) data for computing increments in R^2
-  const SDVArray& sdv_array      = surrData.variables_data();
-  const SDRArray& hf_sdr_array_1 = surrData.response_data();
-  const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
-    hip_approx_2->surrData.response_data();
   std::map<UShortArray, SDRArray>::const_iterator
     r_cit_1 = surrData.response_data_map().find(lf_key),
     r_cit_2 = (same) ? r_cit_1 :
@@ -3540,7 +3741,7 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
       lf_fn2 = lf_sdr_array_2[c_index].response_function();
       prod_t1c[0][0][0] = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
     }
-    if (data_rep->basisConfigOptions.useDerivs) {
+    if (use_derivs) {
       prod_t2c[0][0].shapeUninitialized(num_v, 1);
       Real *prod_t2c_000 = prod_t2c[0][0][0];
       const RealVector& hf_grad1 = hf_sdr_array_1[c_index].response_gradient();
@@ -3578,7 +3779,7 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
       num_tp_pts = key_l[set].size();
       RealVector& prod_t1c_ls = prod_t1c[lev][set];
       prod_t1c_ls.sizeUninitialized(num_tp_pts);
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	RealMatrix& prod_t2c_ls = prod_t2c[lev][set];
 	prod_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt) {
@@ -3652,247 +3853,7 @@ product_difference_interpolant(PolynomialApproximation* poly_approx_2,
 
 #ifdef DEBUG
   PCout << "Product interpolant type1 coeffs:\n" << prod_t1c;
-  if (data_rep->basisConfigOptions.useDerivs)
-    PCout << "Product interpolant type2 coeffs:\n" << prod_t2c;
-#endif // DEBUG
-}
-
-
-/** This version accesses the surrogate data for efficiency in cases where
-    the r1 and r2 interpolants correspond to the data and do not need to be
-    evaluated.  Note: could consider computing deltaR1R2 = R1 deltaR2 +
-    R2 deltaR1 + deltaR1 deltaR2. */
-void HierarchInterpPolyApproximation::
-product_interpolant(PolynomialApproximation* poly_approx_2,
-		    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
-		    const UShort2DArray& set_partition)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
-    num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
-  bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
-  Real data_fn1, data_fn2;
-
-  // This version computes product interpolant of each model level independent
-  // from the others (e.g., for individual adaptation of LF and discrepancies)
-  // --> modSurrData is used
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  const SDVArray& sdv_array   = modSurrData.variables_data();
-  const SDRArray& sdr_array_1 = modSurrData.response_data();
-  const SDRArray& sdr_array_2 = hip_approx_2->modSurrData.response_data();
-
-  // form hierarchical t1/t2 coeffs for raw moment R1 R2
-
-  // level 0 (no surplus)
-  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
-  if (!partial || set_partition[0][0] == 0) { // partition includes level 0
-    prod_t1c[0].resize(1);  prod_t2c[0].resize(1);
-    prod_t1c[0][0].sizeUninitialized(1);
-    c_index = (empty_c_index) ? cntr : colloc_index[0][0][0];
-    const SurrogateDataResp& sdr0_1 = sdr_array_1[c_index];
-    const SurrogateDataResp& sdr0_2 = sdr_array_2[c_index];
-    data_fn1 = sdr0_1.response_function();
-    data_fn2 = sdr0_2.response_function();
-    prod_t1c[0][0][0] = data_fn1 * data_fn2;
-    if (data_rep->basisConfigOptions.useDerivs) {
-      prod_t2c[0][0].shapeUninitialized(num_v, 1);
-      Real *prod_t2c_000 = prod_t2c[0][0][0];
-      const RealVector& data_grad1 = sdr0_1.response_gradient();
-      const RealVector& data_grad2 = sdr0_2.response_gradient();
-      for (v=0; v<num_v; ++v)
-	prod_t2c_000[v]
-	  = data_fn1 * data_grad2[v] + data_fn2 * data_grad1[v];
-    }
-#ifdef DEBUG
-    PCout << "Surplus components l0 s0 p0: r1r2 = " << prod_t1c[0][0][0]
-	  << std::endl;
-#endif // DEBUG
-  }
-  ++cntr;
-
-  // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_lev; ++lev) {
-    const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
-    if (partial)
-      { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-    else
-      set_end = num_sets;
-    prod_t1c[lev].resize(num_sets);  prod_t2c[lev].resize(num_sets);
-    if (empty_c_index)
-      for (set=0; set<set_start; ++set)
-	cntr += key_l[set].size();
-    for (set=set_start; set<set_end; ++set) {
-      num_tp_pts = key_l[set].size();
-      RealVector& prod_t1c_ls = prod_t1c[lev][set];
-      prod_t1c_ls.sizeUninitialized(num_tp_pts);
-      if (data_rep->basisConfigOptions.useDerivs) { // type{1,2} interpolation
-	RealMatrix& prod_t2c_ls = prod_t2c[lev][set];
-	prod_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
-	  const SurrogateDataResp& sdr_1 = sdr_array_1[c_index];
-	  const SurrogateDataResp& sdr_2 = sdr_array_2[c_index];
-	  // type1 hierarchical interpolation of R1 R2
-	  data_fn1 = sdr_1.response_function();
-	  data_fn2 = sdr_2.response_function();
-	  prod_t1c_ls[pt] = data_fn1 * data_fn2
-	    - value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
-	  // type2 hierarchical interpolation of R1 R2
-	  // --> interpolated grads are R1 * R2' + R2 * R1'
-	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
-	  const RealVector& data_grad1 = sdr_1.response_gradient();
-	  const RealVector& data_grad2 = sdr_2.response_gradient();
-	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
-	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
-	  for (v=0; v<num_v; ++v)
-	    prod_t2c_lsp[v] = data_fn1 * data_grad2[v]
-	      + data_fn2 * data_grad1[v] - prev_grad[v];
-	}
-      }
-      else // type1 hierarchical interpolation of R1 R2
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
-#ifdef DEBUG
-	  PCout << "c_index = " << c_index << std::endl;
-	  Real r1 = sdr_array_1[c_index].response_function(),
-	       r2 = sdr_array_2[c_index].response_function(), r1r2 = r1*r2,
-	       r1r2_lm1 = value(sdv_array[c_index].continuous_variables(),
-		 sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1),
-	       surplus = r1r2 - r1r2_lm1;
-	  PCout << "Surplus components l" << lev << " s" << set << " p" << pt
-		<< ": r1r2 = " << r1r2 << " r1r2_lm1 = " << r1r2_lm1
-		<< " surplus = " << surplus << std::endl;
-	  prod_t1c_ls[pt] = surplus;
-#else
-	  prod_t1c_ls[pt] = sdr_array_1[c_index].response_function()
-	    * sdr_array_2[c_index].response_function()
-	    - value(sdv_array[c_index].continuous_variables(), sm_mi,
-		    colloc_key, prod_t1c, prod_t2c, lev-1);
-#endif // DEBUG
-	}
-    }
-  }
-
-#ifdef DEBUG
-  PCout << "Product interpolant type1 coeffs:\n" << prod_t1c;
-  if (data_rep->basisConfigOptions.useDerivs)
-    PCout << "Product interpolant type2 coeffs:\n" << prod_t2c;
-#endif // DEBUG
-}
-
-
-/** This version evaluates the r1 and r2 interpolants for cases where
-    a particular key of the surrogate data does not correspond (e.g.,
-    after combine_coefficients).  Note: consider computing deltaR1R2 =
-    R1 deltaR2 + R2 deltaR1 + deltaR1 deltaR2. */
-void HierarchInterpPolyApproximation::
-product_interpolant(const RealMatrix2DArray& var_sets,
-		    const UShort3DArray&     sm_mi,
-		    const UShort4DArray&     colloc_key,
-		    const RealVector2DArray& r1_t1c,
-		    const RealMatrix2DArray& r1_t2c,
-		    const RealVector2DArray& r2_t1c,
-		    const RealMatrix2DArray& r2_t2c, bool same,
-		    RealVector2DArray& prod_t1c,
-		    RealMatrix2DArray& prod_t2c,
-		    const UShort2DArray& set_partition)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
-    num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
-  bool partial = !set_partition.empty();
-  Real r1_val, r2_val;
-
-  // form hierarchical t1/t2 coeffs for raw moment R1 R2
-
-  // level 0 (no surplus)
-  prod_t1c.resize(num_lev);  prod_t2c.resize(num_lev);
-  if (!partial || set_partition[0][0] == 0) { // partition includes level 0
-    prod_t1c[0].resize(1); prod_t2c[0].resize(1);
-    prod_t1c[0][0].sizeUninitialized(1);
-    RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),
-		      (int)num_v);
-    // type1 hierarchical interpolation of R1 R2
-    r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, 0);
-    r2_val = (same) ? r1_val :
-      value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, 0);
-    prod_t1c[0][0][0] = r1_val * r2_val;
-    if (data_rep->basisConfigOptions.useDerivs) {
-      const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
-        colloc_key, r1_t1c, r1_t2c, 0);
-      const RealVector& r2_grad = (same) ? r1_grad : gradient_basis_variables(
-        c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, 0);
-      prod_t2c[0][0].shapeUninitialized(num_v, 1);
-      Real *prod_t2c_000 = prod_t2c[0][0][0];
-      for (v=0; v<num_v; ++v)
-	prod_t2c_000[v] = r1_val * r2_grad[v] + r2_val * r1_grad[v];
-    }
-  }
-
-  // levels 1:w (subtract lev-1 for surplus estimation)
-  for (lev=1; lev<num_lev; ++lev) {
-    const UShort3DArray& key_l = colloc_key[lev];  num_sets = key_l.size();
-    if (partial)
-      { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-    else
-      set_end = num_sets;
-    prod_t1c[lev].resize(num_sets);  prod_t2c[lev].resize(num_sets);
-    for (set=set_start; set<set_end; ++set) {
-      num_tp_pts = key_l[set].size();
-      RealVector& prod_t1c_ls = prod_t1c[lev][set];
-      prod_t1c_ls.sizeUninitialized(num_tp_pts);
-      if (data_rep->basisConfigOptions.useDerivs) {
-	RealMatrix& prod_t2c_ls = prod_t2c[lev][set];
-	prod_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  RealVector c_vars(Teuchos::View,
-	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
-	  // type1 hierarchical interpolation of R1 R2
-	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev);
-	  r2_val = (same) ? r1_val :
-	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev);
-	  prod_t1c_ls[pt] = r1_val * r2_val -
-	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
-	  // type2 hierarchical interpolation of R1 R2
-	  // --> interpolated grads are R1 * R2' + R2 * R1'
-	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
-	  const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
-	    colloc_key, r1_t1c, r1_t2c, lev);
-	  const RealVector& r2_grad = (same) ? r1_grad :
-	    gradient_basis_variables(c_vars, sm_mi, colloc_key, r2_t1c,
-	    r2_t2c, lev);
-	  const RealVector& prev_grad = gradient_basis_variables(c_vars,
-	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
-	  for (v=0; v<num_v; ++v)
-	    prod_t2c_lsp[v] = r1_val * r2_grad[v] + r2_val * r1_grad[v]
-	                    - prev_grad[v];
-	}
-      }
-      else // type1 hierarchical interpolation of R1 R2
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  RealVector c_vars(Teuchos::View,
-	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
-	  // type1 hierarchical interpolation of R1 R2
-	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev);
-	  r2_val = (same) ? r1_val :
-	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev);
-	  prod_t1c_ls[pt] = r1_val * r2_val -
-	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
-	}
-    }
-  }
-
-#ifdef DEBUG
-  PCout << "Product interpolant type1 coeffs:\n" << prod_t1c;
-  if (data_rep->basisConfigOptions.useDerivs)
+  if (use_derivs)
     PCout << "Product interpolant type2 coeffs:\n" << prod_t2c;
 #endif // DEBUG
 }
@@ -3911,7 +3872,7 @@ central_product_interpolant(const SDVArray& sdv_array,
 			    const SDRArray& sdr_array_2, Real mean_1,
 			    Real mean_2, const UShort3DArray& sm_mi,
 			    const UShort4DArray& colloc_key,
-			    const Sizet3DArray&  colloc_index,
+			    const Sizet3DArray& colloc_index,
 			    RealVector2DArray& cov_t1c,
 			    RealMatrix2DArray& cov_t2c,
 			    const UShort2DArray& set_partition)
@@ -3920,11 +3881,11 @@ central_product_interpolant(const SDVArray& sdv_array,
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
 
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
-  bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty();
+  bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
   Real data_fn1_mm1, data_fn2_mm2;
 
   // level 0 (no surplus)
@@ -3938,7 +3899,7 @@ central_product_interpolant(const SDVArray& sdv_array,
     data_fn1_mm1 = sdr0_1.response_function() - mean_1;
     data_fn2_mm2 = sdr0_2.response_function() - mean_2;
     cov_t1c[0][0][0] = data_fn1_mm1 * data_fn2_mm2;
-    if (data_rep->basisConfigOptions.useDerivs) {
+    if (use_derivs) {
       cov_t2c[0][0].shapeUninitialized(num_v, 1);
       Real *cov_t2c_000 = cov_t2c[0][0][0];
       const RealVector& data_grad1 = sdr0_1.response_gradient();
@@ -3967,7 +3928,7 @@ central_product_interpolant(const SDVArray& sdv_array,
       num_tp_pts = key_l[set].size();
       RealVector& cov_t1c_ls = cov_t1c[lev][set];
       cov_t1c_ls.sizeUninitialized(num_tp_pts);
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	RealMatrix& cov_t2c_ls = cov_t2c[lev][set];
 	cov_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt) {
@@ -4008,7 +3969,7 @@ central_product_interpolant(const SDVArray& sdv_array,
 
 #ifdef DEBUG
   PCout << "Central product interpolant type1 coeffs:\n" << cov_t1c;
-  if (data_rep->basisConfigOptions.useDerivs)
+  if (use_derivs)
     PCout << "Central product interpolant type2 coeffs:\n" << cov_t2c;
 #endif // DEBUG
 }
@@ -4039,7 +4000,8 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
-  bool partial = !set_partition.empty();
+  bool partial = !set_partition.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
   Real r1_val_mm1, r2_val_mm2;
 
   // level 0 (no surplus)
@@ -4053,7 +4015,7 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
     r2_val_mm2 = (same) ? r1_val_mm1 :
       value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, 0) - mean_r2;
     cov_t1c[0][0][0] = r1_val_mm1 * r2_val_mm2;
-    if (data_rep->basisConfigOptions.useDerivs) {
+    if (use_derivs) {
       const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
         colloc_key, r1_t1c, r1_t2c, 0);
       const RealVector& r2_grad = (same) ? r1_grad : gradient_basis_variables(
@@ -4079,7 +4041,7 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
       num_tp_pts = key_l[set].size();
       RealVector& cov_t1c_ls = cov_t1c[lev][set];
       cov_t1c_ls.sizeUninitialized(num_tp_pts);
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	RealMatrix& cov_t2c_ls = cov_t2c[lev][set];
 	cov_t2c_ls.shapeUninitialized(num_v, num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt) {
@@ -4125,7 +4087,7 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
 
 #ifdef DEBUG
   PCout << "Central product interpolant type1 coeffs:\n" << cov_t1c;
-  if (data_rep->basisConfigOptions.useDerivs)
+  if (use_derivs)
     PCout << "Central product interpolant type2 coeffs:\n" << cov_t2c;
 #endif // DEBUG
 }
@@ -4298,8 +4260,8 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
 
 
 void HierarchInterpPolyApproximation::
-build_central_product_interpolant(
-  HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+  Real mean_1, Real mean_2,
   std::map<UShortArray, RealVector2DArray>& cov_t1c_map,
   std::map<UShortArray, RealMatrix2DArray>& cov_t2c_map,
   const std::map<UShortArray, UShort2DArray>& set_partition_map)
@@ -4336,8 +4298,6 @@ build_central_product_interpolant(
        t1c_cit1 != expansionType1Coeffs.end();
        ++t1c_cit1, ++t1c_cit2, ++t2c_cit1, ++t2c_cit2, ++sdv_cit, ++sdr1_cit,
        ++sdr2_cit, ++v_cit, ++sm_cit, ++ck_cit, ++ci_cit, ++p_cit) {
-    //build_central_product_interpolant(...); // not modular enough
-
     const UShortArray& key     = t1c_cit1->first;
     RealVector2DArray& cov_t1c = cov_t1c_map[key]; // update in place
     RealMatrix2DArray& cov_t2c = cov_t2c_map[key]; // update in place
@@ -4375,7 +4335,8 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
   size_t lev, set, pt, num_lev = colloc_key.size(), num_sets, num_tp_pts,
     cntr, c_index, v, num_v = sharedDataRep->numVars;
   int m_index, moment;
-  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+  bool empty_c_index = colloc_index.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
@@ -4402,7 +4363,7 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
     moment = m_index+1; cntr = 0;
     if (use_derivs) {
       // level 0
-      c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+      c_index = (empty_c_index) ? cntr++ : colloc_index[0][0][0];
       const SurrogateDataResp& sdr0 = sdr_array[c_index];
       Real data_fn_mm         = sdr0.response_function() - mean;
       mom_t1_coeffs[0][0][0]  = std::pow(data_fn_mm, moment);
@@ -4411,7 +4372,6 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
       const RealVector& data_grad = sdr0.response_gradient();
       for (v=0; v<num_v; ++v)
 	mom_t2_coeffs_000[v] = deriv * data_grad[v];
-      ++cntr;
       // levels 1:w
       for (lev=1; lev<num_lev; ++lev) {
 	num_sets = colloc_key[lev].size();
@@ -4419,9 +4379,8 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
 	  num_tp_pts = colloc_key[lev][set].size();
 	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
 	  RealMatrix& mom_t2_coeffs_ls = mom_t2_coeffs[lev][set];
-	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	    c_index = (colloc_index.empty()) ? cntr :
-	      colloc_index[lev][set][pt];
+	  for (pt=0; pt<num_tp_pts; ++pt) {
+	    c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
 	    const RealVector& c_vars
 	      = sdv_array[c_index].continuous_variables();
 	    const SurrogateDataResp& sdr = sdr_array[c_index];
@@ -4445,10 +4404,9 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
     }
     else {
       // level 0
-      c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+      c_index = (empty_c_index) ? cntr++ : colloc_index[0][0][0];
       mom_t1_coeffs[0][0][0]
 	= std::pow(sdr_array[c_index].response_function() - mean, moment);
-      ++cntr;
       // levels 1:w
       for (lev=1; lev<num_lev; ++lev) {
 	num_sets = colloc_key[lev].size();
@@ -4456,9 +4414,8 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
 	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
 	  num_tp_pts = colloc_key[lev][set].size();
 	  // type1 hierarchical interpolation of (R - \mu)^moment
-	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	    c_index = (colloc_index.empty()) ? cntr :
-	      colloc_index[lev][set][pt];
+	  for (pt=0; pt<num_tp_pts; ++pt) {
+	    c_index = (empty_c_index) ? cntr++ : colloc_index[lev][set][pt];
 	    mom_t1_coeffs_ls[pt]
 	      = std::pow(sdr_array[c_index].response_function() - mean, moment)
 	      - value(sdv_array[c_index].continuous_variables(), sm_mi,
@@ -4766,6 +4723,8 @@ member_coefficients_weights(const BitArray& member_bits,
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
     num_lev = exp_t1_coeffs.size(), num_sets, num_tp_pts,
     num_member_coeffs, v_cntr, p_cntr = 0, m_index;
+  bool empty_c_index = colloc_index.empty(),
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
   Real member_wt, nonmember_wt;
   SizetArray indexing_factor; // for indexing member coeffs,wts
   UShortArray delta_sizes; UShort2DArray delta_keys;
@@ -4803,7 +4762,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	  }
 	m_t1_coeffs_ls.size(num_member_coeffs);
 	m_t1_wts_ls.size(num_member_coeffs);
-	if (data_rep->basisConfigOptions.useDerivs) {
+	if (use_derivs) {
 	  m_t2_coeffs_ls.shape(num_v, num_member_coeffs);
 	  m_t2_wts_ls.shape(num_v, num_member_coeffs);
 	}
@@ -4811,7 +4770,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	m_index_ls.resize(num_member_coeffs);
       }
 
-      for (pt=0; pt<num_tp_pts; ++pt, ++p_cntr) {
+      for (pt=0; pt<num_tp_pts; ++pt) {
 	// convert key_lsp to a corresponding index on member_t1_{coeffs,wts}.
 	// We must also define a mapping to a member-variable collocation
 	// key/index (from collapsing non-members) for use downstream.
@@ -4830,12 +4789,12 @@ member_coefficients_weights(const BitArray& member_bits,
 	// Note: key and index->c_vars components are the same only for the
 	// member dimensions later used in value()/gradient_basis_variables().
 	m_t1_wts_ls[m_index] = member_wt;
-	m_index_ls[m_index]  = (colloc_index.empty()) ? p_cntr :
+	m_index_ls[m_index]  = (empty_c_index) ? p_cntr++ :
 	  colloc_index[lev][set][pt];   // links back to modSurrData c_vars
 	m_key_ls[m_index]    = key_lsp; // links back to interp polynomials
 
 	// now do the same for the type2 coeffs and weights
-	if (data_rep->basisConfigOptions.useDerivs) {
+	if (use_derivs) {
 	  Real     *m_t2_coeffs_lsp = m_t2_coeffs_ls[m_index],
 	              *m_t2_wts_lsp = m_t2_wts_ls[m_index];
 	  const Real *t2_coeffs_lsp = t2_coeffs_ls[pt];
@@ -4852,7 +4811,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	    << "\nmember_t1_coeffs[" << lev << "][" << set << "]:\n"
 	    << member_t1_coeffs[lev][set] << "member_t1_wts[" << lev << "]["
 	    << set << "]:\n" << member_t1_wts[lev][set];
-      if (data_rep->basisConfigOptions.useDerivs) {
+      if (use_derivs) {
 	PCout << "member_t2_coeffs[" << lev << "][" << set << "]:\n";
 	write_data(PCout, member_t2_coeffs[lev][set], false, true, true);
 	PCout << "member_t2_wts[" << lev << "][" << set << "]:\n";
@@ -4883,8 +4842,9 @@ central_product_member_coefficients(const BitArray& m_bits,
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
   const SDVArray& sdv_array = modSurrData.variables_data();
+  bool empty_c_index = m_colloc_index.empty();
 
-  size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
+  size_t v, num_v = sharedDataRep->numVars, lev, set, pt, cntr = 0,
     num_lev = m_t1_coeffs.size(), num_sets, num_tp_pts, c_index,
     h_level = num_lev - 1;
   SizetList member_indices;
@@ -4897,7 +4857,7 @@ central_product_member_coefficients(const BitArray& m_bits,
   cprod_m_t2_coeffs.resize(num_lev); cprod_m_t2_coeffs[0].resize(1);
   // level 0 type1
   cprod_m_t1_coeffs[0][0].sizeUninitialized(1);
-  c_index = m_colloc_index[0][0][0];
+  c_index = (empty_c_index) ? cntr++ : m_colloc_index[0][0][0];
   const RealVector& c_vars0 = sdv_array[c_index].continuous_variables();
   Real h_val_mm = value(c_vars0, sm_mi, m_colloc_key, m_t1_coeffs, m_t2_coeffs,
 			h_level, member_indices) - mean;
@@ -4922,7 +4882,7 @@ central_product_member_coefficients(const BitArray& m_bits,
 	cprod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	cprod_m_t2_coeffs_ls.shapeUninitialized(num_v,num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt) {
-	  c_index = m_colloc_index[lev][set][pt];
+	  c_index = (empty_c_index) ? cntr++ : m_colloc_index[lev][set][pt];
 	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
 	  // type1 hierarchical interpolation of h^2
 	  h_val_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs,
@@ -4964,7 +4924,7 @@ central_product_member_coefficients(const BitArray& m_bits,
 	cprod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	// type1 hierarchical interpolation of (h - mean)^2
 	for (pt=0; pt<num_tp_pts; ++pt) {
-	  c_index = m_colloc_index[lev][set][pt];
+	  c_index = (empty_c_index) ? cntr++ : m_colloc_index[lev][set][pt];
 	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
 	  h_val_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs,
 			   m_t2_coeffs, h_level, member_indices) - mean;
