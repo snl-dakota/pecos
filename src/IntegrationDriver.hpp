@@ -100,11 +100,12 @@ public:
   /// return type2WeightSets[key] from Cubature/TensorProduct/CombinedSparseGrid
   /// or concatenate type2WeightSets in HierarchSparseGrid
   virtual const RealMatrix& type2_weight_sets(const UShortArray& key) const;
-  /// return type1WeightSets[maximal_grid()] for Cubature/TensorProduct/
-  /// CombinedSparseGrid
+
+  /// return combinedVarSets for Cubature/TensorProduct/CombinedSparseGrid
+  virtual const RealMatrix& combined_variable_sets() const;
+  /// return combinedT1WeightSets for Cubature/TensorProduct/CombinedSparseGrid
   virtual const RealVector& combined_type1_weight_sets();
-  /// return type2WeightSets[maximal_grid()] for Cubature/TensorProduct/
-  /// CombinedSparseGrid
+  /// return combinedT2WeightSets for Cubature/TensorProduct/CombinedSparseGrid
   virtual const RealMatrix& combined_type2_weight_sets();
 
   //

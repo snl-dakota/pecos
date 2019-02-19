@@ -890,7 +890,7 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
   //   this moot / unused for HIPA
   if (combined_stats)
     integrate_response_moments(num_moments,
-      hsg_driver->combined_variable_sets(),
+      hsg_driver->combined_hierarchical_variable_sets(),
       hsg_driver->combined_smolyak_multi_index(),
       hsg_driver->combined_collocation_key(),
       combinedExpT1Coeffs, combinedExpT2Coeffs,

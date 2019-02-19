@@ -61,15 +61,19 @@ public:
   /// update {smolMI,smolCoeffs,collocKey,collocInd}Iter from activeKey
   void update_active_iterators();
 
-  void compute_grid(RealMatrix& variable_sets);
+  void compute_grid(RealMatrix& var_sets);
   /// compute (if update required) and return number of unique
   /// collocation points
   int grid_size();
 
+  const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
   const RealMatrix& type2_weight_sets() const;
+  const RealMatrix& variable_sets(const UShortArray& key) const;
   const RealVector& type1_weight_sets(const UShortArray& key) const;
   const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+
+  const RealMatrix& combined_variable_sets() const;
   const RealVector& combined_type1_weight_sets();
   const RealMatrix& combined_type2_weight_sets();
 
@@ -98,12 +102,19 @@ public:
     short growth_rate = MODERATE_RESTRICTED_GROWTH, bool track_colloc = false,
     bool track_uniq_prod_wts = true);
 
+  /// combine Smolyak data and points/weights
+  void combine_grid();
+  /// promote combined Smolyak data and points/weights to active data
+  void combined_to_active(bool clear_combined);
+
   /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
   void assign_smolyak_arrays();
   /// initialize collocKey from smolyakMultiIndex
   void assign_collocation_key();
   /// initialize collocIndices from collocKey and unique_index_map
-  void assign_collocation_indices(const IntArray& unique_index_map,
+  void assign_collocation_indices(const UShort3DArray& colloc_key,
+				  const IntArray& unique_index_map,
+				  Sizet2DArray& colloc_indices,
 				  size_t start_index = 0);
 
   /// set duplicateTol based on the content of collocRules: table lookups will
@@ -143,6 +154,13 @@ public:
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
+  /// return combinedSmolyakMultiIndex
+  const UShort2DArray& combined_smolyak_multi_index() const;
+  /// return combinedSmolyakMultiIndexMap
+  const Sizet2DArray& combined_smolyak_multi_index_map() const;
+  /// return combinedCollocKey
+  const UShort3DArray& combined_collocation_key() const;
+
 protected:
 
   //
@@ -155,6 +173,20 @@ protected:
   /// functions are used to compute index sets satisfying the anisotropic
   /// index set constraint, along with their corresponding coefficients.
   void assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
+  /// initialize a collocation key from a smolyak multi-index
+  void assign_collocation_key(const UShort2DArray& sm_mi,
+			      UShort3DArray& colloc_key);
+
+  /// 
+  void compute_points_weights(unsigned short ssg_lev,
+			      const RealVector& aniso_wts, int num_colloc_pts,
+			      IntArray& unique_index_map, RealMatrix& var_sets,
+			      RealVector& t1_wts, RealMatrix& t2_wts);
+  /// 
+  void compute_points_weights(const UShort2DArray& sm_mi,
+			      const UShort3DArray& colloc_key,
+			      RealMatrix& var_sets, RealVector& t1_wts,
+			      RealMatrix& t2_wts);
 
   //
   //- Heading: Data
@@ -176,10 +208,6 @@ protected:
   /// iterator for active entry within smolyakCoeffs
   std::map<UShortArray, IntArray>::iterator smolCoeffsIter;
 
-  /// flag indicating need to track {type1,type2}WeightSets (product weights for
-  /// each unique grid point) as opposed to relying on collections of 1D weights
-  bool trackUniqueProdWeights;
-
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   std::map<UShortArray, UShort3DArray> collocKey;
@@ -192,9 +220,18 @@ protected:
   /// iterator for active entry within collocIndices
   std::map<UShortArray, Sizet2DArray>::iterator collocIndIter;
 
+  /// flag indicating need to track {type1,type2}WeightSets (product weights for
+  /// each unique grid point) as opposed to relying on collections of 1D weights
+  bool trackUniqueProdWeights;
+  /// duplication tolerance used in sgmga routines
+  Real duplicateTol;
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
+  /// the set of unique collocation points in the sparse grid
+  std::map<UShortArray, RealMatrix> variableSets;
+  /// iterator for active entry within variableSets
+  std::map<UShortArray, RealMatrix>::iterator varSetsIter;
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each unique point in the sparse grid
   std::map<UShortArray, RealVector> type1WeightSets;
@@ -206,8 +243,26 @@ protected:
   /// iterator for active entry within type2WeightSets
   std::map<UShortArray, RealMatrix>::iterator t2WtIter;
 
-  /// duplication tolerance used in sgmga routines
-  Real duplicateTol;
+  /// multi-index for maximal grid that is the result of combining a set
+  /// of level expansions
+  UShort2DArray combinedSmolyakMultiIndex;
+  /// mapping of terms when aggregating CombinedSparseGridDriver::
+  /// smolyakMultiIndex into combinedSmolyakMultiIndex in pre_combine_data()
+  Sizet2DArray combinedSmolyakMultiIndexMap;
+  /// collocation key for maximal grid that is the result of combining a
+  /// set of level expansions (defined from combinedSmolyakMultiIndex)
+  UShort3DArray combinedCollocKey;
+
+  /// variable sets for maximal grid defined by overlaying level grids
+  /** Could also be managed within SurrogateData, but would require data
+      sharing per PolynomialApproximation instance. */
+  RealMatrix combinedVarSets;
+  /// combination of CombinedSparseGridDriver::type1WeightSets, consistent
+  /// with combination of level expansions
+  RealVector combinedT1WeightSets;
+  /// combination of CombinedSparseGridDriver::type2WeightSets, consistent
+  /// with combination of level expansions
+  RealMatrix combinedT2WeightSets;
 
 private:
 
@@ -253,8 +308,8 @@ private:
   /// array of pointers to webbur::level_to_growth functions
   std::vector<LevGrwOrdFnPtr> levelGrowthToOrder;
 
-  /// store the key identified in the last call to maximal_grid()
-  UShortArray maximalKey;
+  // store the key identified in the last call to maximal_grid()
+  //UShortArray maximalKey;
 };
 
 
@@ -303,6 +358,11 @@ inline void CombinedSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, Sizet2DArray> s2a_pair(activeKey, Sizet2DArray());
     collocIndIter = collocIndices.insert(s2a_pair).first;
   }
+  varSetsIter = variableSets.find(activeKey);
+  if (varSetsIter == variableSets.end()) {
+    std::pair<UShortArray, RealMatrix> rm_pair(activeKey, RealMatrix());
+    varSetsIter = variableSets.insert(rm_pair).first;
+  }
   t1WtIter = type1WeightSets.find(activeKey);
   if (t1WtIter == type1WeightSets.end()) {
     std::pair<UShortArray, RealVector> rv_pair(activeKey, RealVector());
@@ -328,6 +388,7 @@ inline void CombinedSparseGridDriver::clear_keys()
   collocKey.clear();          collocKeyIter = collocKey.end();
   collocIndices.clear();      collocIndIter = collocIndices.end();
 
+  variableSets.clear();       varSetsIter = variableSets.end();
   type1WeightSets.clear();    t1WtIter = type1WeightSets.end();
   type2WeightSets.clear();    t2WtIter = type2WeightSets.end();
 }
@@ -450,6 +511,28 @@ inline void CombinedSparseGridDriver::assign_smolyak_arrays()
 { assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
 
 
+inline void CombinedSparseGridDriver::assign_collocation_key()
+{ assign_collocation_key(smolMIIter->second, collocKeyIter->second); }
+
+
+inline const RealMatrix& CombinedSparseGridDriver::variable_sets() const
+{ return varSetsIter->second; }
+
+
+inline const RealMatrix& CombinedSparseGridDriver::
+variable_sets(const UShortArray& key) const
+{
+  std::map<UShortArray, RealMatrix>::const_iterator cit
+    = variableSets.find(key);
+  if (cit == variableSets.end()) {
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
+	  << "variable_sets()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
+
+
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const
 { return t1WtIter->second; }
 
@@ -486,12 +569,32 @@ type2_weight_sets(const UShortArray& key) const
 }
 
 
+inline const UShort2DArray& CombinedSparseGridDriver::
+combined_smolyak_multi_index() const
+{ return combinedSmolyakMultiIndex; }
+
+
+inline const Sizet2DArray& CombinedSparseGridDriver::
+combined_smolyak_multi_index_map() const
+{ return combinedSmolyakMultiIndexMap; }
+
+
+inline const UShort3DArray& CombinedSparseGridDriver::
+combined_collocation_key() const
+{ return combinedCollocKey; }
+
+
+inline const RealMatrix& CombinedSparseGridDriver::
+combined_variable_sets() const
+{ return combinedVarSets; }
+
+
 inline const RealVector& CombinedSparseGridDriver::combined_type1_weight_sets()
-{ return type1_weight_sets(maximalKey); }
+{ return combinedT1WeightSets; }//return type1_weight_sets(maximalKey);
 
 
 inline const RealMatrix& CombinedSparseGridDriver::combined_type2_weight_sets()
-{ return type2_weight_sets(maximalKey); }
+{ return combinedT2WeightSets; }//return type2_weight_sets(maximalKey);
 
 
 inline void CombinedSparseGridDriver::

@@ -136,6 +136,17 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// modular helper for public reference_unique(RealMatrix&)
+  void reference_unique(const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
+			const UShort3DArray& colloc_key,
+			Sizet2DArray& colloc_ind, RealMatrix& a1_pts,
+			RealVector& a1_t1w, RealMatrix& a1_t2w, RealVector& zv,
+			RealVector& r1v, IntArray& sind1, IntArray& uind1,
+			IntArray& uset1, int& num_u1, BitArray& isu1,
+			IntArray& unique_index_map, int& num_colloc_pts,
+			RealMatrix& var_sets, RealVector& t1_wts,
+			RealMatrix& t2_wts);
+
   /// updates sm_mi from sm_coeffs after uniform/isotropic refinement
   void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
   /// updates sm_mi from sm_coeffs after anisotropic refinement
@@ -155,9 +166,13 @@ private:
 				   IntArray& sm_coeffs);
 
   /// define the reference collocation indices
-  void assign_collocation_indices();
+  void assign_unique_indices(const BitArray& isu1, const IntArray& xdnu1,
+			     const IntArray& undx1, IntArray& unique_index_map);
   /// define an increment to the collocation indices
-  void update_collocation_indices(size_t start_index);
+  void update_unique_indices(size_t start_index, int num_uniq1,
+			     const IntArray& xdnu1, const IntArray& undx1,
+			     const BitArray& isu2,  const IntArray& xdnu2,
+			     const IntArray& undx2, IntArray& unique_index_map);
 
   /// define the reference type{1,2}WeightSets
   void assign_sparse_weights();
@@ -167,22 +182,49 @@ private:
   void pop_weights();
 
   /// aggregate point and weight sets across one or more tensor products
-  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
+  void compute_tensor_points_weights(const UShort2DArray& sm_mi,
+				     const UShort3DArray& colloc_key,
+				     size_t start_index, size_t num_indices,
 				     bool update_1d_pts_wts, RealMatrix& pts,
 				     RealVector& t1_wts, RealMatrix& t2_wts);
 
   /// convenience function for updating sparse points from a set of
   /// aggregated tensor points
-  void update_sparse_points(size_t start_index, const BitArray& is_unique,
-			    int index_offset, const RealMatrix& tensor_pts,
+  void update_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
+			    const BitArray& is_unique, int index_offset,
+			    const RealMatrix& tensor_pts,
 			    RealMatrix& unique_pts);
-  /// convenience function for updating sparse weights from a set of
-  /// aggregated tensor weights
+
+  /// convenience function for assigning sparse weights from a set of
+  /// tensor weights
+  void assign_sparse_weights(const UShort3DArray& colloc_key,
+			     const Sizet2DArray& colloc_ind, int num_colloc_pts,
+			     const IntArray& sm_coeffs,
+			     const RealVector& a1_t1_wts,
+			     const RealMatrix& a1_t2_wts,
+			     RealVector& unique_t1_wts,
+			     RealMatrix& unique_t2_wts);
+  /// convenience function for updating sparse weights from two sets of
+  /// tensor weights and updated coefficients
   void update_sparse_weights(size_t start_index,
-			     const RealVector& tensor_t1_wts,
-			     const RealMatrix& tensor_t2_wts,
-			     RealVector& updated_t1_wts,
-			     RealMatrix& updated_t2_wts);
+			     const UShort3DArray& colloc_key,
+			     const Sizet2DArray& colloc_ind, int num_colloc_pts,
+			     const IntArray& sm_coeffs,
+			     const IntArray& sm_coeffs_ref,
+			     const RealVector& a1_t1_wts,
+			     const RealMatrix& a1_t2_wts,
+			     const RealVector& a2_t1_wts,
+			     const RealMatrix& a2_t2_wts,
+			     RealVector& unique_t1_wts,
+			     RealMatrix& unique_t2_wts);
+  /// convenience function for updating sparse weights from overlaying
+  /// a set of tensor weights
+  void add_sparse_weights(size_t start_index, const UShort3DArray& colloc_key,
+			  const Sizet2DArray& colloc_ind,
+			  const IntArray& sm_coeffs,
+			  const RealVector& tensor_t1w,
+			  const RealMatrix& tensor_t2w,
+			  RealVector& unique_t1w, RealMatrix& unique_t2w);
 
   //
   //- Heading: Data
@@ -414,6 +456,19 @@ inline void IncrementalSparseGridDriver::clear_keys()
   isUnique2.clear();       isUniq2Iter  = isUnique2.end();
 
   uniqueIndexMapping.clear();  uniqIndMapIter = uniqueIndexMapping.end();
+}
+
+
+inline void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
+{
+  reference_unique(smolMIIter->second, smolCoeffsIter->second,
+    collocKeyIter->second, collocIndIter->second, a1PIter->second,
+    a1T1WIter->second, a1T2WIter->second, zVec[activeKey], r1Vec[activeKey],
+    sortIndex1[activeKey], uniqInd1Iter->second, uniqSet1Iter->second,
+    numUniq1Iter->second, isUniq1Iter->second, uniqIndMapIter->second,
+    numPtsIter->second, var_sets, t1WtIter->second, t2WtIter->second);
+
+  varSetsIter->second = var_sets; // copy
 }
 
 

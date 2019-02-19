@@ -62,8 +62,8 @@ public:
   const RealMatrix& type2_weight_sets() const;
   const RealVector& type1_weight_sets(const UShortArray& key) const;
   const RealMatrix& type2_weight_sets(const UShortArray& key) const;
-  const RealVector& combined_type1_weight_sets();
-  const RealMatrix& combined_type2_weight_sets();
+  const RealVector& combined_type1_weight_sets() const;
+  const RealMatrix& combined_type2_weight_sets() const;
 
   //
   //- Heading: Member functions
@@ -349,11 +349,11 @@ type2_weight_sets(const UShortArray& key) const
 }
 
 
-inline const RealVector& TensorProductDriver::combined_type1_weight_sets()
+inline const RealVector& TensorProductDriver::combined_type1_weight_sets() const
 { return type1_weight_sets(maximalKey); }
 
 
-inline const RealMatrix& TensorProductDriver::combined_type2_weight_sets()
+inline const RealMatrix& TensorProductDriver::combined_type2_weight_sets() const
 { return type2_weight_sets(maximalKey); }
 
 

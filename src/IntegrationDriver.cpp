@@ -341,6 +341,19 @@ type2_weight_sets(const UShortArray& key) const
 }
 
 
+const RealMatrix& IntegrationDriver::combined_variable_sets() const
+{
+  if (driverRep)
+    return driverRep->combined_variable_sets();
+  else {
+    //return variable_sets(maximal_grid());
+    PCerr << "Error: combined_variable_sets() not available for this driver "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 const RealVector& IntegrationDriver::combined_type1_weight_sets()
 {
   if (driverRep)

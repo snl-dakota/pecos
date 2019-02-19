@@ -1561,7 +1561,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   //       reference prior to greedy adaptation.
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  central_product_interpolant(hsg_driver->combined_variable_sets(),
+  central_product_interpolant(hsg_driver->combined_hierarchical_variable_sets(),
 			      hsg_driver->combined_smolyak_multi_index(),
 			      hsg_driver->combined_collocation_key(),
 			      combinedExpT1Coeffs, combinedExpT2Coeffs,
@@ -1606,7 +1606,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& comb_sm_mi = hsg_driver->combined_smolyak_multi_index();
   const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
-  central_product_interpolant(hsg_driver->combined_variable_sets(),
+  central_product_interpolant(hsg_driver->combined_hierarchical_variable_sets(),
 			      comb_sm_mi, comb_key,
 			      combinedExpT1Coeffs, combinedExpT2Coeffs,
 			      hip_approx_2->combinedExpT1Coeffs,
