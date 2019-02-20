@@ -67,7 +67,7 @@ protected:
   void increment_component_sobol();
 
   void pre_combine_data();
-  void post_combine_data();
+  //void post_combine_data();
   void combined_to_active(bool clear_combined = true);
 
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
@@ -158,10 +158,10 @@ private:
   /// rules on the interpolant
   IntegrationDriver expMomentIntDriver;
 
-  /// the active key to restore following the expansion combination process
-  /// (this process activates a maximal expansion to facilitate assembly of
-  /// combined multi-indices and coefficients)
-  UShortArray prevActiveKey;
+  // the active key to restore following the expansion combination process
+  // (this process activates a maximal expansion to facilitate assembly of
+  // combined multi-indices and coefficients)
+  //UShortArray prevActiveKey;
 
   /// map from random index to unique nonZerosMapArray
   SizetArray nonZerosMapIndices;

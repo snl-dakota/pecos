@@ -119,10 +119,6 @@ void SharedHierarchInterpPolyApproxData::combined_to_active(bool clear_combined)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   hsg_driver->combined_to_active(clear_combined);
-  // Note: grid combination is only currently required in the hierarchical
-  // interpolation case, so there is not currently support at higher levels
-  // for an abstract call to Driver::combine_grid().  For now, our hook is
-  // in SharedPolyApproxData::pre_combine_data().
 }
 
 

@@ -201,6 +201,8 @@ protected:
   /// approxOrder) when too expensive to compute on demand
   void precompute_maximal_rules(const UShortArray& approx_order);
 
+  /// allocate sobolIndexMap from active multi_index
+  void allocate_component_sobol();
   /// allocate sobolIndexMap from multi_index
   void allocate_component_sobol(const UShort2DArray& multi_index);
   /// update sobolIndexMap using new multi_index terms (from multifidelity
@@ -505,6 +507,10 @@ expansion_order(unsigned short new_order, bool one_sided)
 	approx_order[i] = new_order;
   }
 }
+
+
+inline void SharedOrthogPolyApproxData::allocate_component_sobol()
+{ allocate_component_sobol(multiIndexIter->second); }
 
 
 inline void SharedOrthogPolyApproxData::increment_order()

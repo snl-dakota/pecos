@@ -408,54 +408,21 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 }
 
 
-/*
-void SharedOrthogPolyApproxData::post_combine_data()
-{
-  // Leave combinedMultiIndex as separate book-keeping to support repeated
-  // combinations within adaptive refinement.
-  std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
-  combinedMultiIndex.clear();
-}
-*/
-
-
-void SharedOrthogPolyApproxData::
-product_multi_index(const UShort2DArray& multi_index_a,
-		    const UShort2DArray& multi_index_b,
-		    UShort2DArray& multi_index_c)
-{
-  // c = a * b
-
-  // Note: pareto set approach works when there is a conversion from sm_mi
-  // to tensor-product multi-index.  Working only with the multi-indices,
-  // we need to carry lower order (dominated) terms in order to fill in
-  // lower-order product terms.
-
-  size_t i, j, v, num_mi_a = multi_index_a.size(),
-    num_mi_b = multi_index_b.size();
-  UShortArray prod_mi(numVars); UShortArraySet prod_mi_sets;
-  for (i=0; i<num_mi_a; ++i)
-    for (j=0; j<num_mi_b; ++j) {
-      for (v=0; v<numVars; ++v)
-	prod_mi[v] = multi_index_a[i][v] + multi_index_b[j][v];
-      prod_mi_sets.insert(prod_mi); // sorted, unique
-    }
-
-  size_t num_mi_c = prod_mi_sets.size();
-  multi_index_c.resize(num_mi_c);
-  UShortArraySet::iterator mi_it;
-  for (i=0, mi_it=prod_mi_sets.begin(); i<num_mi_c; ++i, ++mi_it)
-    multi_index_c[i] = *mi_it;
-}
-
-
 void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
 {
-  allocate_component_sobol(combinedMultiIndex);
-
   // retrieve the most refined from the existing grids (from sequence
   // specification + any subsequent refinement)
-  active_key(maximal_expansion());
+  // *** This might still be a good idea (e.g., for not temporarily inflating
+  // *** memory footprint), though not strictly required...
+  //active_key(maximal_expansion());
+
+  // combine level data into combinedSmolyak{MultiIndex,Coeffs},
+  // combined{Var,T1Weight,T2Weight}Sets, et al.
+  // Note: unlike Nodal SC, PCE only requires grid combination at the end, so
+  //       incremental combined grid updates are not necessary for efficiency.
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  csg_driver->combine_grid();
+  csg_driver->combined_to_active(clear_combined);
 
   // Leave combinedMultiIndex as separate book-keeping to support repeated
   // combinations within adaptive refinement.
@@ -466,6 +433,8 @@ void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
   }
   else
     multiIndexIter->second = combinedMultiIndex; // copy
+
+  allocate_component_sobol();//(multiIndexIter->second);
 }
 
 
@@ -506,6 +475,36 @@ void SharedOrthogPolyApproxData::clear_inactive_data()
 	tpMultiIndexMapRef.erase(tp3_it++);
       }
     }
+}
+
+
+void SharedOrthogPolyApproxData::
+product_multi_index(const UShort2DArray& multi_index_a,
+		    const UShort2DArray& multi_index_b,
+		    UShort2DArray& multi_index_c)
+{
+  // c = a * b
+
+  // Note: pareto set approach works when there is a conversion from sm_mi
+  // to tensor-product multi-index.  Working only with the multi-indices,
+  // we need to carry lower order (dominated) terms in order to fill in
+  // lower-order product terms.
+
+  size_t i, j, v, num_mi_a = multi_index_a.size(),
+    num_mi_b = multi_index_b.size();
+  UShortArray prod_mi(numVars); UShortArraySet prod_mi_sets;
+  for (i=0; i<num_mi_a; ++i)
+    for (j=0; j<num_mi_b; ++j) {
+      for (v=0; v<numVars; ++v)
+	prod_mi[v] = multi_index_a[i][v] + multi_index_b[j][v];
+      prod_mi_sets.insert(prod_mi); // sorted, unique
+    }
+
+  size_t num_mi_c = prod_mi_sets.size();
+  multi_index_c.resize(num_mi_c);
+  UShortArraySet::iterator mi_it;
+  for (i=0, mi_it=prod_mi_sets.begin(); i<num_mi_c; ++i, ++mi_it)
+    multi_index_c[i] = *mi_it;
 }
 
 

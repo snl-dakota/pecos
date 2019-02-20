@@ -214,6 +214,13 @@ void SharedNodalInterpPolyApproxData::increment_component_sobol()
 
 void SharedNodalInterpPolyApproxData::pre_combine_data()
 {
+  // If we assume that multiIndex subsets are enforced across a hierarchy (e.g.,
+  // a fully-integrated MISC approximation), then the maximal grid is sufficient
+  // to allow reinterpolation of all data.  However, in a greedy ML construction
+  // that has separated level refinement candidates, this downward-closed
+  // requirement is not met and a grid overlay must be defined..
+
+  /*
   // store active state prior to activating the maximal grid
   // > may be able to restrict this restoration to case of active expansion
   //   stats (if combined stats are sufficiently independent of active key),
@@ -226,30 +233,23 @@ void SharedNodalInterpPolyApproxData::pre_combine_data()
   //if (expConfigOptions.refineStatsType != COMBINED_EXPANSION_STATS)
     prevActiveKey = activeKey;
 
-  /*
-  // retrieve the most refined from the existing grids (from sequence
-  // specification + any subsequent refinement).
-  // Note: if we assume that multiIndex subsets are enforced across a hierarchy,
-  // then the maximal grid is sufficient to allow reinterpolation of all data.
-  size_t max_index = driverRep->maximal_grid();
-  if (max_index != _NPOS)
-    { driverRep->swap_grid(max_index); allocate_component_sobol(); }
-
-  // Most general: overlay all grid refinement levels to create a new superset:
-  //size_t new_index = driverRep->overlay_maximal_grid();
-  //if (current_grid_index() != new_index) driverRep->swap_grid(new_index);
-
-  return max_index;
-  */
-
   active_key(driverRep->maximal_grid()); // update activeKey + active iterators
 
   // defer until combined_to_active()
   // (Sobol indices not currently computed for a combined expansion):
   //allocate_component_sobol();
+  */
+
+  // combine level data into combinedSmolyak{MultiIndex,Coeffs},
+  // combined{Var,T1Weight,T2Weight}Sets, et al.
+  // *** TO DO: consider incremental updates for efficiency, as expansion
+  //            combination is performed for every Nodal candidate evaluation
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  csg_driver->combine_grid();
 }
 
 
+/*
 void SharedNodalInterpPolyApproxData::post_combine_data()
 {
   // restore the active state that existed prior to activating the maximal grid
@@ -257,15 +257,21 @@ void SharedNodalInterpPolyApproxData::post_combine_data()
   //if (expConfigOptions.refineStatsType != COMBINED_EXPANSION_STATS)
     active_key(prevActiveKey);
 }
+*/
 
 
 void SharedNodalInterpPolyApproxData::combined_to_active(bool clear_combined)
 {
+  /*
   // Activate the most refined grid corresponding to the combined exp coeffs
   // Note: SharedInterpPolyApproxData::active_key() updates driverRep's key
   active_key(driverRep->maximal_grid());
+  */
 
-  // allocate Sobol interactions corresponding to maximal interpolant
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  csg_driver->combined_to_active(clear_combined);
+
+  // allocate Sobol interactions corresponding to interpolant on combined grid
   allocate_component_sobol();
 }
 
