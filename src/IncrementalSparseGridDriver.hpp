@@ -138,14 +138,33 @@ private:
 
   /// modular helper for public reference_unique(RealMatrix&)
   void reference_unique(const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
-			const UShort3DArray& colloc_key,
-			Sizet2DArray& colloc_ind, RealMatrix& a1_pts,
-			RealVector& a1_t1w, RealMatrix& a1_t2w, RealVector& zv,
-			RealVector& r1v, IntArray& sind1, IntArray& uind1,
-			IntArray& uset1, int& num_u1, BitArray& isu1,
-			IntArray& unique_index_map, int& num_colloc_pts,
-			RealMatrix& var_sets, RealVector& t1_wts,
-			RealMatrix& t2_wts);
+    const UShort3DArray& colloc_key, Sizet2DArray& colloc_ind,
+    int& num_colloc_pts, RealMatrix& a1_pts, RealVector& a1_t1w,
+    RealMatrix& a1_t2w, RealVector& zv, RealVector& r1v, IntArray& sind1,
+    BitArray& isu1, IntArray& uind1, IntArray& uset1, int& num_u1,
+    IntArray& unique_index_map, RealMatrix& var_sets, RealVector& t1_wts,
+    RealMatrix& t2_wts);
+  /// modular helper for public increment_unique(size_t, bool)
+  void increment_unique(size_t start_index, const UShort2DArray& sm_mi,
+    const IntArray& sm_coeffs, const IntArray& sm_coeffs_ref,
+    const UShort3DArray& colloc_key, Sizet2DArray& colloc_ind,
+    int& num_colloc_pts, RealMatrix& a1_pts, RealVector& a1_t1w,
+    RealMatrix& a1_t2w,  RealMatrix& a2_pts, RealVector& a2_t1w,
+    RealMatrix& a2_t2w, RealVector& zv, RealVector& r1v, RealVector& r2v,
+    IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
+    int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
+    IntArray& uset2, int& num_u2, IntArray& unique_index_map,
+    RealVector& t1_wts, RealMatrix& t2_wts, bool update_1d_pts_wts);
+  /// modular helper for public merge_unique()
+  void merge_unique(const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
+    const IntArray& sm_coeffs_ref, const UShort3DArray& colloc_key,
+    Sizet2DArray& colloc_ind, int& num_colloc_pts, RealMatrix& a1_pts,
+    RealVector& a1_t1w, RealMatrix& a1_t2w, RealMatrix& a2_pts,
+    RealVector& a2_t1w, RealMatrix& a2_t2w, RealVector& r1v, RealVector& r2v,
+    IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
+    int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
+    IntArray& uset2, int& num_u2, IntArray& unique_index_map,
+    RealVector& t1_wts, RealMatrix& t2_wts);
 
   /// updates sm_mi from sm_coeffs after uniform/isotropic refinement
   void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
@@ -462,13 +481,43 @@ inline void IncrementalSparseGridDriver::clear_keys()
 inline void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
 {
   reference_unique(smolMIIter->second, smolCoeffsIter->second,
-    collocKeyIter->second, collocIndIter->second, a1PIter->second,
-    a1T1WIter->second, a1T2WIter->second, zVec[activeKey], r1Vec[activeKey],
-    sortIndex1[activeKey], uniqInd1Iter->second, uniqSet1Iter->second,
-    numUniq1Iter->second, isUniq1Iter->second, uniqIndMapIter->second,
-    numPtsIter->second, var_sets, t1WtIter->second, t2WtIter->second);
+    collocKeyIter->second, collocIndIter->second, numPtsIter->second,
+    a1PIter->second, a1T1WIter->second, a1T2WIter->second, zVec[activeKey],
+    r1Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
+    uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
+    uniqIndMapIter->second, var_sets, t1WtIter->second, t2WtIter->second);
 
   varSetsIter->second = var_sets; // copy
+}
+
+
+inline void IncrementalSparseGridDriver::
+increment_unique(size_t start_index, bool update_1d_pts_wts)
+{
+  increment_unique(start_index, smolMIIter->second, smolCoeffsIter->second,
+    smolyakCoeffsRef[activeKey], collocKeyIter->second, collocIndIter->second,
+    numPtsIter->second, a1PIter->second, a1T1WIter->second, a1T2WIter->second,
+    a2PIter->second, a2T1WIter->second, a2T2WIter->second, zVec[activeKey],
+    r1Vec[activeKey], r2Vec[activeKey], sortIndex1[activeKey],
+    isUniq1Iter->second, uniqInd1Iter->second, uniqSet1Iter->second,
+    numUniq1Iter->second, sortIndex2[activeKey], isUniq2Iter->second,
+    uniqInd2Iter->second, uniqSet2Iter->second, numUniq2Iter->second,
+    uniqIndMapIter->second, t1WtIter->second, t2WtIter->second,
+    update_1d_pts_wts);
+}
+
+
+inline void IncrementalSparseGridDriver::merge_unique()
+{
+  merge_unique(smolMIIter->second, smolCoeffsIter->second,
+    smolyakCoeffsRef[activeKey], collocKeyIter->second, collocIndIter->second,
+    numPtsIter->second, a1PIter->second, a1T1WIter->second, a1T2WIter->second,
+    a2PIter->second, a2T1WIter->second, a2T2WIter->second, r1Vec[activeKey],
+    r2Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
+    uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
+    sortIndex2[activeKey], isUniq2Iter->second, uniqInd2Iter->second,
+    uniqSet2Iter->second, numUniq2Iter->second, uniqIndMapIter->second,
+    t1WtIter->second, t2WtIter->second);
 }
 
 

@@ -127,7 +127,7 @@ void CombinedSparseGridDriver::combine_grid()
   assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey);
   // Define combined points and weights to support expectation() calls
   compute_points_weights(combinedSmolyakMultiIndex, combinedCollocKey,
-    combinedVarSets, combinedT1WeightSets, combinedT2WeightSets); // *** TO DO
+    combinedVarSets, combinedT1WeightSets, combinedT2WeightSets);
   // Can't define collocation indices for combined grids, prior to creating
   // synthetic SurrogateData in the PolynomialApproximations.  
 }

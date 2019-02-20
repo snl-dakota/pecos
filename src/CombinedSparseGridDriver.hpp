@@ -177,12 +177,14 @@ protected:
   void assign_collocation_key(const UShort2DArray& sm_mi,
 			      UShort3DArray& colloc_key);
 
-  /// 
+  /// compute points and type1,2 integration weights for a sparse grid
+  /// defined by level and (optionally) anisotropic weights
   void compute_points_weights(unsigned short ssg_lev,
 			      const RealVector& aniso_wts, int num_colloc_pts,
 			      IntArray& unique_index_map, RealMatrix& var_sets,
 			      RealVector& t1_wts, RealMatrix& t2_wts);
-  /// 
+  /// compute points and type1,2 integration weights for a sparse grid defined
+  /// by an arbitrary multi-index (more general than level + aniso weights)
   void compute_points_weights(const UShort2DArray& sm_mi,
 			      const UShort3DArray& colloc_key,
 			      RealMatrix& var_sets, RealVector& t1_wts,
