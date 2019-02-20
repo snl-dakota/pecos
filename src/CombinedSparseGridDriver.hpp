@@ -177,18 +177,73 @@ protected:
   void assign_collocation_key(const UShort2DArray& sm_mi,
 			      UShort3DArray& colloc_key);
 
+  /// overloaded form updates smolyakCoeffs from smolyakMultiIndex
+  void update_smolyak_coefficients(size_t start_index);
+  /// update the coeffs array based on new trailing index sets within
+  /// multi_index for incrementally generated generalized sparse grids
+  void update_smolyak_coefficients(size_t start_index,
+				   const UShort2DArray& sm_mi,
+				   IntArray& sm_coeffs);
+
   /// compute points and type1,2 integration weights for a sparse grid
   /// defined by level and (optionally) anisotropic weights
-  void compute_points_weights(unsigned short ssg_lev,
-			      const RealVector& aniso_wts, int num_colloc_pts,
-			      IntArray& unique_index_map, RealMatrix& var_sets,
-			      RealVector& t1_wts, RealMatrix& t2_wts);
+  void compute_unique_points_weights(unsigned short ssg_lev,
+				     const RealVector& aniso_wts,
+				     int num_colloc_pts,
+				     IntArray& unique_index_map,
+				     RealMatrix& var_sets, RealVector& t1_wts,
+				     RealMatrix& t2_wts);
   /// compute points and type1,2 integration weights for a sparse grid defined
   /// by an arbitrary multi-index (more general than level + aniso weights)
-  void compute_points_weights(const UShort2DArray& sm_mi,
-			      const UShort3DArray& colloc_key,
-			      RealMatrix& var_sets, RealVector& t1_wts,
-			      RealMatrix& t2_wts);
+  void compute_unique_points_weights(const UShort2DArray& sm_mi,
+				     const IntArray& sm_coeffs,
+				     const UShort3DArray& colloc_key,
+				     RealMatrix& var_sets, RealVector& t1_wts,
+				     RealMatrix& t2_wts);
+  /// modular helper for public reference_unique(RealMatrix&)
+  void compute_unique_points_weights(const UShort2DArray& sm_mi,
+    const IntArray& sm_coeffs, const UShort3DArray& colloc_key,
+    Sizet2DArray& colloc_ind, int& num_colloc_pts, RealMatrix& a1_pts,
+    RealVector& a1_t1w, RealMatrix& a1_t2w, RealVector& zv, RealVector& r1v,
+    IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
+    int& num_u1, IntArray& unique_index_map, RealMatrix& var_sets,
+    RealVector& t1_wts, RealMatrix& t2_wts);
+
+  /// aggregate point and weight sets across one or more tensor products
+  void compute_tensor_points_weights(const UShort2DArray& sm_mi,
+				     const UShort3DArray& colloc_key,
+				     size_t start_index, size_t num_indices,
+				     bool update_1d_pts_wts, RealMatrix& pts,
+				     RealVector& t1_wts, RealMatrix& t2_wts);
+
+  /// define the reference collocation indices
+  void assign_unique_indices(const BitArray& isu1, const IntArray& xdnu1,
+			     const IntArray& undx1, IntArray& unique_index_map);
+
+  /// convenience function for updating sparse points from a set of
+  /// aggregated tensor points
+  void update_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
+			    const BitArray& is_unique, int index_offset,
+			    const RealMatrix& tensor_pts,
+			    RealMatrix& unique_pts);
+
+  /// convenience function for assigning sparse weights from a set of
+  /// tensor weights
+  void assign_sparse_weights(const UShort3DArray& colloc_key,
+			     const Sizet2DArray& colloc_ind, int num_colloc_pts,
+			     const IntArray& sm_coeffs,
+			     const RealVector& a1_t1_wts,
+			     const RealMatrix& a1_t2_wts,
+			     RealVector& unique_t1_wts,
+			     RealMatrix& unique_t2_wts);
+  /// convenience function for updating sparse weights from overlaying
+  /// a set of tensor weights
+  void add_sparse_weights(size_t start_index, const UShort3DArray& colloc_key,
+			  const Sizet2DArray& colloc_ind,
+			  const IntArray& sm_coeffs,
+			  const RealVector& tensor_t1w,
+			  const RealMatrix& tensor_t2w,
+			  RealVector& unique_t1w, RealMatrix& unique_t2w);
 
   //
   //- Heading: Data
@@ -251,6 +306,8 @@ protected:
   /// mapping of terms when aggregating CombinedSparseGridDriver::
   /// smolyakMultiIndex into combinedSmolyakMultiIndex in pre_combine_data()
   Sizet2DArray combinedSmolyakMultiIndexMap;
+  /// Smolyak coefficients corresponding to combinedSmolyakMultiIndex
+  IntArray combinedSmolyakCoeffs;
   /// collocation key for maximal grid that is the result of combining a
   /// set of level expansions (defined from combinedSmolyakMultiIndex)
   UShort3DArray combinedCollocKey;
@@ -513,8 +570,33 @@ inline void CombinedSparseGridDriver::assign_smolyak_arrays()
 { assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
 
 
+inline void CombinedSparseGridDriver::
+update_smolyak_coefficients(size_t start_index)
+{
+  update_smolyak_coefficients(start_index, smolMIIter->second,
+			      smolCoeffsIter->second);
+}
+
+
 inline void CombinedSparseGridDriver::assign_collocation_key()
 { assign_collocation_key(smolMIIter->second, collocKeyIter->second); }
+
+
+inline void CombinedSparseGridDriver::
+compute_unique_points_weights(const UShort2DArray& sm_mi,
+			      const IntArray& sm_coeffs,
+			      const UShort3DArray& colloc_key,
+			      RealMatrix& var_sets, RealVector& t1_wts,
+			      RealMatrix& t2_wts)
+{
+  RealMatrix a1_pts, a1_t2w;  RealVector a1_t1w, zv, r1v;
+  Sizet2DArray colloc_ind;    int num_colloc_pts, num_u1;
+  BitArray isu1;              IntArray sind1, uind1, uset1, unique_index_map;
+  compute_unique_points_weights(sm_mi, sm_coeffs, colloc_key, colloc_ind,
+				num_colloc_pts, a1_pts, a1_t1w, a1_t2w, zv, r1v,
+				sind1, isu1, uind1, uset1, num_u1,
+				unique_index_map, var_sets, t1_wts, t2_wts);
+}
 
 
 inline const RealMatrix& CombinedSparseGridDriver::variable_sets() const

@@ -115,8 +115,6 @@ public:
 
   /// update smolyakMultiIndex and smolyakCoeffs
   void update_smolyak_arrays();
-  /// overloaded form updates smolyakCoeffs from smolyakMultiIndex
-  void update_smolyak_coefficients(size_t start_index);
   /// update collocKey for the trailing index sets within smolyakMultiIndex
   void update_collocation_key();
 
@@ -136,31 +134,24 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// modular helper for public reference_unique(RealMatrix&)
-  void reference_unique(const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
-    const UShort3DArray& colloc_key, Sizet2DArray& colloc_ind,
-    int& num_colloc_pts, RealMatrix& a1_pts, RealVector& a1_t1w,
-    RealMatrix& a1_t2w, RealVector& zv, RealVector& r1v, IntArray& sind1,
-    BitArray& isu1, IntArray& uind1, IntArray& uset1, int& num_u1,
-    IntArray& unique_index_map, RealMatrix& var_sets, RealVector& t1_wts,
-    RealMatrix& t2_wts);
   /// modular helper for public increment_unique(size_t, bool)
-  void increment_unique(size_t start_index, const UShort2DArray& sm_mi,
+  void increment_unique_points_weights(size_t start_index,
+    const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
+    const IntArray& sm_coeffs_ref, const UShort3DArray& colloc_key,
+    Sizet2DArray& colloc_ind, int& num_colloc_pts, RealMatrix& a1_pts,
+    RealVector& a1_t1w, RealMatrix& a1_t2w,  RealMatrix& a2_pts,
+    RealVector& a2_t1w, RealMatrix& a2_t2w, RealVector& zv, RealVector& r1v,
+    RealVector& r2v, IntArray& sind1, BitArray& isu1, IntArray& uind1,
+    IntArray& uset1, int& num_u1, IntArray& sind2, BitArray& isu2,
+    IntArray& uind2, IntArray& uset2, int& num_u2, IntArray& unique_index_map,
+    RealVector& t1_wts, RealMatrix& t2_wts, bool update_1d_pts_wts);
+  /// modular helper for public merge_unique()
+  void merge_unique_points_weights(const UShort2DArray& sm_mi,
     const IntArray& sm_coeffs, const IntArray& sm_coeffs_ref,
     const UShort3DArray& colloc_key, Sizet2DArray& colloc_ind,
     int& num_colloc_pts, RealMatrix& a1_pts, RealVector& a1_t1w,
-    RealMatrix& a1_t2w,  RealMatrix& a2_pts, RealVector& a2_t1w,
-    RealMatrix& a2_t2w, RealVector& zv, RealVector& r1v, RealVector& r2v,
-    IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
-    int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
-    IntArray& uset2, int& num_u2, IntArray& unique_index_map,
-    RealVector& t1_wts, RealMatrix& t2_wts, bool update_1d_pts_wts);
-  /// modular helper for public merge_unique()
-  void merge_unique(const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
-    const IntArray& sm_coeffs_ref, const UShort3DArray& colloc_key,
-    Sizet2DArray& colloc_ind, int& num_colloc_pts, RealMatrix& a1_pts,
-    RealVector& a1_t1w, RealMatrix& a1_t2w, RealMatrix& a2_pts,
-    RealVector& a2_t1w, RealMatrix& a2_t2w, RealVector& r1v, RealVector& r2v,
+    RealMatrix& a1_t2w, RealMatrix& a2_pts, RealVector& a2_t1w,
+    RealMatrix& a2_t2w, RealVector& r1v, RealVector& r2v,
     IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
     int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
     IntArray& uset2, int& num_u2, IntArray& unique_index_map,
@@ -178,15 +169,7 @@ private:
   void decrement_smolyak_arrays(const UShort2DArray& new_sm_mi,
 				const IntArray& new_sm_coeffs,
 				UShort2DArray& sm_mi, IntArray& sm_coeffs);
-  /// update the coeffs array based on new trailing index sets within
-  /// multi_index for incrementally generated generalized sparse grids
-  void update_smolyak_coefficients(size_t start_index,
-				   const UShort2DArray& sm_mi,
-				   IntArray& sm_coeffs);
 
-  /// define the reference collocation indices
-  void assign_unique_indices(const BitArray& isu1, const IntArray& xdnu1,
-			     const IntArray& undx1, IntArray& unique_index_map);
   /// define an increment to the collocation indices
   void update_unique_indices(size_t start_index, int num_uniq1,
 			     const IntArray& xdnu1, const IntArray& undx1,
@@ -200,29 +183,6 @@ private:
   /// restore type{1,2}WeightSets to reference values
   void pop_weights();
 
-  /// aggregate point and weight sets across one or more tensor products
-  void compute_tensor_points_weights(const UShort2DArray& sm_mi,
-				     const UShort3DArray& colloc_key,
-				     size_t start_index, size_t num_indices,
-				     bool update_1d_pts_wts, RealMatrix& pts,
-				     RealVector& t1_wts, RealMatrix& t2_wts);
-
-  /// convenience function for updating sparse points from a set of
-  /// aggregated tensor points
-  void update_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
-			    const BitArray& is_unique, int index_offset,
-			    const RealMatrix& tensor_pts,
-			    RealMatrix& unique_pts);
-
-  /// convenience function for assigning sparse weights from a set of
-  /// tensor weights
-  void assign_sparse_weights(const UShort3DArray& colloc_key,
-			     const Sizet2DArray& colloc_ind, int num_colloc_pts,
-			     const IntArray& sm_coeffs,
-			     const RealVector& a1_t1_wts,
-			     const RealMatrix& a1_t2_wts,
-			     RealVector& unique_t1_wts,
-			     RealMatrix& unique_t2_wts);
   /// convenience function for updating sparse weights from two sets of
   /// tensor weights and updated coefficients
   void update_sparse_weights(size_t start_index,
@@ -236,14 +196,6 @@ private:
 			     const RealMatrix& a2_t2_wts,
 			     RealVector& unique_t1_wts,
 			     RealMatrix& unique_t2_wts);
-  /// convenience function for updating sparse weights from overlaying
-  /// a set of tensor weights
-  void add_sparse_weights(size_t start_index, const UShort3DArray& colloc_key,
-			  const Sizet2DArray& colloc_ind,
-			  const IntArray& sm_coeffs,
-			  const RealVector& tensor_t1w,
-			  const RealMatrix& tensor_t2w,
-			  RealVector& unique_t1w, RealMatrix& unique_t2w);
 
   //
   //- Heading: Data
@@ -480,7 +432,7 @@ inline void IncrementalSparseGridDriver::clear_keys()
 
 inline void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
 {
-  reference_unique(smolMIIter->second, smolCoeffsIter->second,
+  compute_unique_points_weights(smolMIIter->second, smolCoeffsIter->second,
     collocKeyIter->second, collocIndIter->second, numPtsIter->second,
     a1PIter->second, a1T1WIter->second, a1T2WIter->second, zVec[activeKey],
     r1Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
@@ -494,22 +446,22 @@ inline void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
 inline void IncrementalSparseGridDriver::
 increment_unique(size_t start_index, bool update_1d_pts_wts)
 {
-  increment_unique(start_index, smolMIIter->second, smolCoeffsIter->second,
-    smolyakCoeffsRef[activeKey], collocKeyIter->second, collocIndIter->second,
-    numPtsIter->second, a1PIter->second, a1T1WIter->second, a1T2WIter->second,
-    a2PIter->second, a2T1WIter->second, a2T2WIter->second, zVec[activeKey],
-    r1Vec[activeKey], r2Vec[activeKey], sortIndex1[activeKey],
-    isUniq1Iter->second, uniqInd1Iter->second, uniqSet1Iter->second,
-    numUniq1Iter->second, sortIndex2[activeKey], isUniq2Iter->second,
-    uniqInd2Iter->second, uniqSet2Iter->second, numUniq2Iter->second,
-    uniqIndMapIter->second, t1WtIter->second, t2WtIter->second,
-    update_1d_pts_wts);
+  increment_unique_points_weights(start_index, smolMIIter->second,
+    smolCoeffsIter->second, smolyakCoeffsRef[activeKey], collocKeyIter->second,
+    collocIndIter->second, numPtsIter->second, a1PIter->second,
+    a1T1WIter->second, a1T2WIter->second, a2PIter->second, a2T1WIter->second,
+    a2T2WIter->second, zVec[activeKey], r1Vec[activeKey], r2Vec[activeKey],
+    sortIndex1[activeKey], isUniq1Iter->second, uniqInd1Iter->second,
+    uniqSet1Iter->second, numUniq1Iter->second, sortIndex2[activeKey],
+    isUniq2Iter->second,  uniqInd2Iter->second, uniqSet2Iter->second,
+    numUniq2Iter->second, uniqIndMapIter->second, t1WtIter->second,
+    t2WtIter->second, update_1d_pts_wts);
 }
 
 
 inline void IncrementalSparseGridDriver::merge_unique()
 {
-  merge_unique(smolMIIter->second, smolCoeffsIter->second,
+  merge_unique_points_weights(smolMIIter->second, smolCoeffsIter->second,
     smolyakCoeffsRef[activeKey], collocKeyIter->second, collocIndIter->second,
     numPtsIter->second, a1PIter->second, a1T1WIter->second, a1T2WIter->second,
     a2PIter->second, a2T1WIter->second, a2T2WIter->second, r1Vec[activeKey],
@@ -519,6 +471,23 @@ inline void IncrementalSparseGridDriver::merge_unique()
     uniqSet2Iter->second, numUniq2Iter->second, uniqIndMapIter->second,
     t1WtIter->second, t2WtIter->second);
 }
+
+
+/*
+void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
+{
+  increment_unique(start_index, false);
+  merge_unique();
+
+  // *** TO DO ***: This doesn't address issue of potential point replication
+  // changes between initial trial set status and finalization.  Need an
+  // improved mechanism for point restore/finalize in Dakota::Approximation.
+  // Could add a virtual fn to interrogate collocation_indices() from the 
+  // Approximation level.  Perhaps run some performance tests first to verify
+  // that this condition is possible (or does structure of admissible indices
+  // prevent replication in trial sets that is not first detected in old sets).
+}
+*/
 
 
 inline const UShortArray& IncrementalSparseGridDriver::
@@ -650,14 +619,6 @@ inline void IncrementalSparseGridDriver::update_smolyak_arrays()
     update_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second);
   else
     update_smolyak_arrays_aniso(smolMIIter->second, smolCoeffsIter->second);
-}
-
-
-inline void IncrementalSparseGridDriver::
-update_smolyak_coefficients(size_t start_index)
-{
-  update_smolyak_coefficients(start_index, smolMIIter->second,
-			      smolCoeffsIter->second);
 }
 
 
