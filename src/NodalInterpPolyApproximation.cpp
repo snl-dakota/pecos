@@ -209,8 +209,10 @@ void NodalInterpPolyApproximation::combine_coefficients()
   std::map<UShortArray, RealVector>::iterator ec1_it;
   std::map<UShortArray, RealMatrix>::iterator ec2_it
     = expansionType2Coeffs.begin(), eg1_it = expansionType1CoeffGrads.begin();
-  const SDVArray& sdv_array = modSurrData.variables_data();
-  size_t p, v, num_pts = modSurrData.points(),
+  CombinedSparseGridDriver* csg_driver
+    = (CombinedSparseGridDriver*)data_rep->driver();
+  const RealMatrix& comb_var_sets = csg_driver->combined_variable_sets();
+  size_t p, v, num_pts = comb_var_sets.numCols(),
     num_t2v = ec2_it->second.numRows(), num_t1v = eg1_it->second.numRows();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
   if (expansionCoeffFlag) {
@@ -236,7 +238,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
     size_t l, ll, num_lev = expansionType1Coeffs.size();
     RealVector t1c_vals(num_lev, false);  Real t1c_prod;
     for (p=0; p<num_pts; ++p) {
-      const RealVector& c_vars = sdv_array[p].continuous_variables();
+      RealVector c_vars(Teuchos::getCol(Teuchos::View,
+	*const_cast<RealMatrix*>(&comb_var_sets), (int)p));
       // pre-compute stored vals once for both Coeffs/CoeffGrads
       for (ec1_it =expansionType1Coeffs.begin(), l=0;
 	   ec1_it!=expansionType1Coeffs.end(); ++ec1_it, ++l)
@@ -287,7 +290,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
   }
   default: //case ADD_COMBINE: // addition of current and stored expansions
     for (p=0; p<num_pts; ++p) {
-      const RealVector& c_vars = sdv_array[p].continuous_variables();
+      RealVector c_vars(Teuchos::getCol(Teuchos::View,
+	*const_cast<RealMatrix*>(&comb_var_sets), (int)p));
       if (expansionCoeffFlag) {
 	for (ec1_it  = expansionType1Coeffs.begin();
 	     ec1_it != expansionType1Coeffs.end(); ++ec1_it)
