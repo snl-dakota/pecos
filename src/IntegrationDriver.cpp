@@ -295,6 +295,18 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
 }
 
 
+const RealMatrix& IntegrationDriver::variable_sets() const
+{
+  if (driverRep)
+    return driverRep->variable_sets();
+  else {
+    PCerr << "Error: variable_sets() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 const RealVector& IntegrationDriver::type1_weight_sets() const
 {
   if (!driverRep) {

@@ -88,6 +88,8 @@ public:
   /// current unstored grid state)
   virtual const UShortArray& maximal_grid();
 
+  /// return active variableSets for .../CombinedSparseGrid
+  virtual const RealMatrix& variable_sets() const;
   /// return active type1WeightSets from Cubature/TensorProduct/
   /// CombinedSparseGrid or concatenate type1WeightSets in HierarchSparseGrid
   virtual const RealVector& type1_weight_sets() const;

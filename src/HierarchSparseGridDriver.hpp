@@ -243,9 +243,9 @@ public:
   //			     RealMatrix2DArray& comb_t2_wts);
 
   /// return active variableSets
-  const RealMatrix2DArray& variable_sets() const;
+  const RealMatrix2DArray& hierarchical_variable_sets() const;
   /// set active variableSets
-  void variable_sets(const RealMatrix2DArray& rm2);
+  void hierarchical_variable_sets(const RealMatrix2DArray& rm2);
   /// return active type1WeightSets
   const RealVector2DArray& type1_hierarchical_weight_sets() const;
   /// set active type1WeightSets
@@ -826,12 +826,13 @@ compute_points_weights(const UShort3DArray& sm_mi,
 }
 
 
-inline const RealMatrix2DArray& HierarchSparseGridDriver::variable_sets() const
+inline const RealMatrix2DArray& HierarchSparseGridDriver::
+hierarchical_variable_sets() const
 { return varSetsIter->second; }
 
 
 inline void HierarchSparseGridDriver::
-variable_sets(const RealMatrix2DArray& rm2)
+hierarchical_variable_sets(const RealMatrix2DArray& rm2)
 { varSetsIter->second = rm2; }
 
 

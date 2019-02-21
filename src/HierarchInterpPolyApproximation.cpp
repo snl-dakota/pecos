@@ -86,24 +86,23 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 void HierarchInterpPolyApproximation::
 create_surrogate_data(SurrogateData& surr_data)
 {
+  // Update the active key of surr_data with synthetic data based on the
+  // active grid from hsg_driver
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
 
   // HierarchSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
-  // of the synthetic data to be created, define corresponding colloc indices
-  // (default indexing progression is assigned and then adhered to below) and
-  // update active point count. 
-  hsg_driver->assign_collocation_indices(); // updates collocInd,numCollocPts
-  size_t num_colloc_pts = hsg_driver->collocation_points();
-
-  // we are augmenting the active key of surr_data based on the active data
-  // from hsg_driver
-  const RealMatrix2DArray& var_sets = hsg_driver->variable_sets();
+  // of the synthetic data to be created, new colloc point count and (default)
+  // colloc indices are defined at the end of HSGDriver::combined_to_active(),
+  // and this default colloc index sequence is employed below. 
+  const RealMatrix2DArray& var_sets = hsg_driver->hierarchical_variable_sets();
   const UShort3DArray&        sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray&   colloc_key = hsg_driver->collocation_key();
   const Sizet3DArray&  colloc_index = hsg_driver->collocation_indices();
+  size_t             num_colloc_pts = hsg_driver->collocation_points();
 
   const RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
   const RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;

@@ -902,8 +902,9 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
     const Sizet3DArray&  colloc_ind = hsg_driver->collocation_indices();
     // check for colloc indices that were invalidated by expansion combination
     if (hsg_driver->track_collocation_indices() && colloc_ind.empty())
-      integrate_response_moments(num_moments, hsg_driver->variable_sets(),
-        sm_mi, colloc_key, expT1CoeffsIter->second, expT2CoeffsIter->second,
+      integrate_response_moments(num_moments,
+	hsg_driver->hierarchical_variable_sets(), sm_mi, colloc_key,
+	expT1CoeffsIter->second, expT2CoeffsIter->second,
         hsg_driver->type1_hierarchical_weight_sets(),
         hsg_driver->type2_hierarchical_weight_sets());
     else // colloc_index is valid -> can pull from modSurrData vars/responses
@@ -939,7 +940,7 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) { // invalidated by combination
     bool same = (this == hip_approx_2);    
-    product_interpolant(hsg_driver->variable_sets(),
+    product_interpolant(hsg_driver->hierarchical_variable_sets(),
       hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
       expT1CoeffsIter->second, expT2CoeffsIter->second,
       hip_approx_2->expT1CoeffsIter->second,
@@ -988,7 +989,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) {// invalidated by combination
     bool same = (this == hip_approx_2);
-    central_product_interpolant(hsg_driver->variable_sets(),
+    central_product_interpolant(hsg_driver->hierarchical_variable_sets(),
       hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
       expT1CoeffsIter->second, expT2CoeffsIter->second,
       hip_approx_2->expT1CoeffsIter->second,
@@ -1023,7 +1024,8 @@ central_product_gradient_interpolant(
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) {// invalidated by combination
     bool same = (this == hip_approx_2);
-    central_product_gradient_interpolant(hsg_driver->variable_sets(),
+    central_product_gradient_interpolant(
+      hsg_driver->hierarchical_variable_sets(),
       hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
       expT1CoeffsIter->second, expT2CoeffsIter->second,
       expT1CoeffGradsIter->second, hip_approx_2->expT1CoeffsIter->second,

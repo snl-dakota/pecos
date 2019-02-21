@@ -519,27 +519,30 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
   // Note: inactive weight sets to be removed by clear_inactive()
 
   if (clear_combined) {
-    std::swap(smolMIIter->second,    combinedSmolyakMultiIndex);
-    std::swap(collocKeyIter->second, combinedCollocKey);
+    std::swap(smolMIIter->second,     combinedSmolyakMultiIndex);
     //std::swap(Iter->second, combinedSmolyakMultiIndexMap); // no corresponding
-    std::swap(varSetsIter->second,   combinedVarSets);
-    std::swap(t1WtIter->second,      combinedT1WeightSets);
-    std::swap(t2WtIter->second,      combinedT2WeightSets);
+    std::swap(smolCoeffsIter->second, combinedSmolyakCoeffs);
+    std::swap(collocKeyIter->second,  combinedCollocKey);
+    std::swap(varSetsIter->second,    combinedVarSets);
+    std::swap(t1WtIter->second,       combinedT1WeightSets);
+    std::swap(t2WtIter->second,       combinedT2WeightSets);
 
-    combinedCollocKey.clear();
     combinedSmolyakMultiIndex.clear();
     combinedSmolyakMultiIndexMap.clear();
+    combinedSmolyakCoeffs.clear();
+    combinedCollocKey.clear();
     combinedVarSets.shapeUninitialized(0,0);
     combinedT1WeightSets.sizeUninitialized(0);
     combinedT2WeightSets.shapeUninitialized(0,0);
   }
   else {
-    smolMIIter->second    = combinedSmolyakMultiIndex;
-    collocKeyIter->second = combinedCollocKey;
+    smolMIIter->second     = combinedSmolyakMultiIndex;
     //Iter->second = combinedSmolyakMultiIndexMap;// no corresponding active
-    varSetsIter->second   = combinedVarSets;
-    t1WtIter->second      = combinedT1WeightSets;
-    t2WtIter->second      = combinedT2WeightSets;
+    smolCoeffsIter->second = combinedSmolyakCoeffs;
+    collocKeyIter->second  = combinedCollocKey;
+    varSetsIter->second    = combinedVarSets;
+    t1WtIter->second       = combinedT1WeightSets;
+    t2WtIter->second       = combinedT2WeightSets;
   }
 
   // collocation indices are invalidated by expansion combination since the

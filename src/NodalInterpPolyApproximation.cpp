@@ -203,8 +203,6 @@ void NodalInterpPolyApproximation::combine_coefficients()
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
     clear_computed_bits();
   
-  allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
-
   short combine_type = data_rep->expConfigOptions.combineType;
   std::map<UShortArray, RealVector>::iterator ec1_it;
   std::map<UShortArray, RealMatrix>::iterator ec2_it
@@ -213,7 +211,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
     = (CombinedSparseGridDriver*)data_rep->driver();
   const RealMatrix& comb_var_sets = csg_driver->combined_variable_sets();
   size_t p, v, num_pts = comb_var_sets.numCols(),
-    num_t2v = ec2_it->second.numRows(), num_t1v = eg1_it->second.numRows();
+    num_v   = comb_var_sets.numRows(), num_t2v = ec2_it->second.numRows(),
+    num_t1v = eg1_it->second.numRows();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
   if (expansionCoeffFlag) {
     if (combinedExpT1Coeffs.length() != num_pts)
@@ -238,8 +237,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
     size_t l, ll, num_lev = expansionType1Coeffs.size();
     RealVector t1c_vals(num_lev, false);  Real t1c_prod;
     for (p=0; p<num_pts; ++p) {
-      RealVector c_vars(Teuchos::getCol(Teuchos::View,
-	*const_cast<RealMatrix*>(&comb_var_sets), (int)p));
+      RealVector c_vars(Teuchos::View,
+			const_cast<Real*>(comb_var_sets[p]), (int)num_v);
       // pre-compute stored vals once for both Coeffs/CoeffGrads
       for (ec1_it =expansionType1Coeffs.begin(), l=0;
 	   ec1_it!=expansionType1Coeffs.end(); ++ec1_it, ++l)
@@ -290,8 +289,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
   }
   default: //case ADD_COMBINE: // addition of current and stored expansions
     for (p=0; p<num_pts; ++p) {
-      RealVector c_vars(Teuchos::getCol(Teuchos::View,
-	*const_cast<RealMatrix*>(&comb_var_sets), (int)p));
+      RealVector c_vars(Teuchos::View,
+			const_cast<Real*>(comb_var_sets[p]), (int)num_v);
       if (expansionCoeffFlag) {
 	for (ec1_it  = expansionType1Coeffs.begin();
 	     ec1_it != expansionType1Coeffs.end(); ++ec1_it)
@@ -3529,24 +3528,27 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   // of the interpolant (integrates powers of the interpolant using the same
   // collocation rules/orders used to form the interpolant).
   else {
-    size_t i, num_pts = modSurrData.points();
-    const SDVArray& sdv_array = modSurrData.variables_data();
+    IntegrationDriver* driver_rep =   data_rep->driverRep;
+    const RealMatrix&  var_sets   = driver_rep->variable_sets();// *** TPQ!
+    size_t i, num_pts = var_sets.numCols(), num_v = var_sets.numRows();
     RealVector t1_exp(num_pts);
     if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native
-      size_t num_v = data_rep->numVars;
       RealMatrix t2_exp(num_v, num_pts);
       for (i=0; i<num_pts; ++i) {
-	const RealVector& c_vars = sdv_array[i].continuous_variables();
+	RealVector c_vars(Teuchos::View,
+			  const_cast<Real*>(var_sets[i]), (int)num_v);
 	t1_exp[i] = value(c_vars);
 	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
       }
-      IntegrationDriver* driver_rep = data_rep->driverRep;
       integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
 			driver_rep->type2_weight_sets(), expansionMoments);
     }
     else { // value-based native quadrature
-      for (i=0; i<num_pts; ++i)
-	t1_exp[i] = value(sdv_array[i].continuous_variables());
+      for (i=0; i<num_pts; ++i) {
+	RealVector c_vars(Teuchos::View,
+			  const_cast<Real*>(var_sets[i]), (int)num_v);
+	t1_exp[i] = value(c_vars); // *** currently requires colloc_indices
+      }
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
 			expansionMoments);
     }
