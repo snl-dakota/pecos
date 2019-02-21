@@ -602,7 +602,7 @@ level_to_delta_pair(size_t i, unsigned short level)
 }
 
 
-void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
+void HierarchSparseGridDriver::compute_grid()
 {
   bool clear = (refineControl != NO_CONTROL); // restore prev state if refined
   update_smolyak_multi_index(clear);          // compute smolyakMultiIndex
@@ -610,26 +610,9 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
   assign_1d_collocation_points_weights();     // define 1-D point/weight sets
 
   if (nestedGrid) {
-    // points are stored both in RealMatrix2DArray and in flattened RealMatrix
-    RealMatrix2DArray& pts = varSetsIter->second;
-    compute_points_weights(smolMIIter->second, collocKeyIter->second, pts,
-			   t1WtIter->second, t2WtIter->second);
-    //copy_data(varSetsIter->second, var_sets);
-    size_t lev, num_lev, set, num_sets, pt, num_tp_pts, cntr = 0, v;
-    int num_colloc_pts;
-    update_collocation_points(collocKeyIter->second, num_colloc_pts);
-    if (var_sets.numCols() != num_colloc_pts)
-      var_sets.shapeUninitialized(numVars, num_colloc_pts); //
-    num_lev = pts.size();
-    for (lev=0; lev<num_lev; ++lev) {
-      RealMatrixArray& pts_l = pts[lev];  num_sets   = pts_l.size();
-      for (set=0; set<num_sets; ++set) {
-	RealMatrix& pts_ls = pts_l[set];  num_tp_pts = pts_ls.numCols();
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
-	  copy_data(pts_ls[pt], numVars, var_sets[cntr]);
-      }
-    }
-
+    compute_points_weights(smolMIIter->second, collocKeyIter->second,
+			   varSetsIter->second, t1WtIter->second,
+			   t2WtIter->second);
     if (trackCollocIndices)
       assign_collocation_indices();
   }
@@ -656,6 +639,29 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
   */
 
   //update_reference(); // not currently implemented for HSGD
+}
+
+
+void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
+{
+  compute_grid(); // populates varSetsIter->second
+
+  // copy from RealMatrix2DArray to flattened RealMatrix
+  RealMatrix2DArray& pts = varSetsIter->second;
+  size_t lev, num_lev, set, num_sets, pt, num_tp_pts, cntr = 0;
+  int num_colloc_pts;
+  update_collocation_points(collocKeyIter->second, num_colloc_pts);
+  if (var_sets.numCols() != num_colloc_pts)
+    var_sets.shapeUninitialized(numVars, num_colloc_pts);
+  num_lev = pts.size();
+  for (lev=0; lev<num_lev; ++lev) {
+    RealMatrixArray& pts_l = pts[lev];  num_sets   = pts_l.size();
+    for (set=0; set<num_sets; ++set) {
+      RealMatrix& pts_ls = pts_l[set];  num_tp_pts = pts_ls.numCols();
+      for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
+	copy_data(pts_ls[pt], numVars, var_sets[cntr]);
+    }
+  }
 }
 
 

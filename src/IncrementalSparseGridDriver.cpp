@@ -220,21 +220,21 @@ int IncrementalSparseGridDriver::grid_size()
 }
 
 
-void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
+void IncrementalSparseGridDriver::compute_grid()
 {
   // Note: incremental and combined sparse grid definitions use different point
   // orderings --> IncrementalSparseGridDriver uses a separate implementation
   // to define its reference grid, rather than inheriting from CombinedSGDriver
 
-  update_smolyak_arrays();    // smolyak{MultiIndex,Coeffs}
-  update_collocation_key();   // collocKey
-  reference_unique(var_sets); // compute the reference grid
-  update_reference();         // update reference arrays
+  update_smolyak_arrays();  // smolyak{MultiIndex,Coeffs}
+  update_collocation_key(); // collocKey
+  reference_unique();       // compute pts,wts for the reference grid
+  update_reference();       // update reference arrays
 
 #ifdef DEBUG
   PCout << "IncrementalSparseGridDriver::compute_grid() results:\n"
 	<< "uniqueIndexMapping:\n" << uniqIndMapIter->second << "\nvar_sets:\n";
-  write_data(PCout, var_sets, false, true, true);
+  write_data(PCout, varSetsIter->second, false, true, true);
   if (trackUniqueProdWeights) {
     PCout << "\ntype1WeightSets:\n" << t1WtIter->second;
     if (computeType2Weights) {

@@ -52,16 +52,19 @@ public:
   void clear_keys();
   void clear_inactive();
 
-  void compute_grid(RealMatrix& variable_sets);
+  void compute_grid();
   int  grid_size();
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
   const UShortArray& maximal_grid();
 
+  const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
   const RealMatrix& type2_weight_sets() const;
+  const RealMatrix& variable_sets(const UShortArray& key) const;
   const RealVector& type1_weight_sets(const UShortArray& key) const;
   const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+  const RealMatrix& combined_variable_sets() const;
   const RealVector& combined_type1_weight_sets() const;
   const RealMatrix& combined_type2_weight_sets() const;
 
@@ -99,6 +102,11 @@ public:
   const UShort2DArray& collocation_key() const;
   /// return collocKey[key]
   const UShort2DArray& collocation_key(const UShortArray& key) const;
+
+  /// return combinedLevelIndex
+  const UShortArray& combined_level_index() const;
+  /// return combinedCollocKey
+  const UShort2DArray& combined_collocation_key() const;
 
   /// stand-alone initializer of tensor grid settings (except for
   /// distribution params)
@@ -147,6 +155,10 @@ private:
   /// iterator to active entry within levelIndex
   std::map<UShortArray, UShort2DArray>::iterator collocKeyIter;
 
+  /// the set of unique collocation points in the sparse grid
+  std::map<UShortArray, RealMatrix> variableSets;
+  /// iterator for active entry within variableSets
+  std::map<UShortArray, RealMatrix>::iterator varSetsIter;
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the tensor grid
   std::map<UShortArray, RealVector> type1WeightSets;
@@ -158,12 +170,30 @@ private:
   /// iterator for active entry within type2WeightSets
   std::map<UShortArray, RealMatrix>::iterator t2WtIter;
 
+  /// multi-index for maximal grid that is the result of combining a set
+  /// of level expansions
+  UShortArray combinedLevelIndex;
+  /// collocation key for maximal grid that is the result of combining a
+  /// set of level expansions (defined from combinedSmolyakMultiIndex)
+  UShort2DArray combinedCollocKey;
+
+  /// variable sets for maximal grid defined by overlaying level grids
+  /** Could also be managed within SurrogateData, but would require data
+      sharing per PolynomialApproximation instance. */
+  RealMatrix combinedVarSets;
+  /// combination of CombinedSparseGridDriver::type1WeightSets, consistent
+  /// with combination of level expansions
+  RealVector combinedT1WeightSets;
+  /// combination of CombinedSparseGridDriver::type2WeightSets, consistent
+  /// with combination of level expansions
+  RealMatrix combinedT2WeightSets;
+
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
   /// model form, discretization level, etc.
   UShortArray activeKey;
-  /// store the key identified in the last call to maximal_grid()
-  UShortArray maximalKey;
+  // store the key identified in the last call to maximal_grid()
+  //UShortArray maximalKey;
 };
 
 
@@ -208,6 +238,7 @@ inline void TensorProductDriver::clear_keys()
   activeKey.clear();
   levelIndex.clear();       levelIndIter =      levelIndex.end();
   collocKey.clear();       collocKeyIter =       collocKey.end();
+  variableSets.clear();      varSetsIter =    variableSets.end();
   type1WeightSets.clear();      t1WtIter = type1WeightSets.end();
   type2WeightSets.clear();      t2WtIter = type2WeightSets.end();
 }
@@ -230,6 +261,11 @@ inline void TensorProductDriver::update_active_iterators()
   if (collocKeyIter == collocKey.end()) {
     std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
     collocKeyIter = collocKey.insert(u2a_pair).first;
+  }
+  varSetsIter = variableSets.find(activeKey);
+  if (varSetsIter == variableSets.end()) {
+    std::pair<UShortArray, RealMatrix> rm_pair(activeKey, RealMatrix());
+    varSetsIter = variableSets.insert(rm_pair).first;
   }
   t1WtIter = type1WeightSets.find(activeKey);
   if (t1WtIter == type1WeightSets.end()) {
@@ -313,6 +349,24 @@ nested_quadrature_order(const UShortArray& ref_quad_order)
 }
 
 
+inline const RealMatrix& TensorProductDriver::variable_sets() const
+{ return varSetsIter->second; }
+
+
+inline const RealMatrix& TensorProductDriver::
+variable_sets(const UShortArray& key) const
+{
+  std::map<UShortArray, RealMatrix>::const_iterator cit
+    = variableSets.find(key);
+  if (cit == variableSets.end()) {
+    PCerr << "Error: key not found in TensorProductDriver::variable_sets()."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
+
+
 inline const RealVector& TensorProductDriver::type1_weight_sets() const
 { return t1WtIter->second; }
 
@@ -349,14 +403,6 @@ type2_weight_sets(const UShortArray& key) const
 }
 
 
-inline const RealVector& TensorProductDriver::combined_type1_weight_sets() const
-{ return type1_weight_sets(maximalKey); }
-
-
-inline const RealMatrix& TensorProductDriver::combined_type2_weight_sets() const
-{ return type2_weight_sets(maximalKey); }
-
-
 inline const UShortArray& TensorProductDriver::level_index() const
 { return levelIndIter->second; }
 
@@ -390,6 +436,27 @@ collocation_key(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline const RealMatrix& TensorProductDriver::combined_variable_sets() const
+{ return combinedVarSets; }      //variable_sets(maximalKey);
+
+
+inline const RealVector& TensorProductDriver::combined_type1_weight_sets() const
+{ return combinedT1WeightSets; } //type1_weight_sets(maximalKey);
+
+
+inline const RealMatrix& TensorProductDriver::combined_type2_weight_sets() const
+{ return combinedT2WeightSets; } //type2_weight_sets(maximalKey);
+
+
+inline const UShortArray& TensorProductDriver::combined_level_index() const
+{ return combinedLevelIndex; }
+
+
+inline const UShort2DArray& TensorProductDriver::
+combined_collocation_key() const
+{ return combinedCollocKey; }
 
 
 inline int TensorProductDriver::grid_size()

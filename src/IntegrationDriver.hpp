@@ -66,7 +66,9 @@ public:
   virtual void initialize_grid_parameters(const ShortArray& u_types,
 					  const AleatoryDistParams& adp);
 
-  /// compute scaled variable and weight sets for the TPQ grid
+  /// compute variable and weight sets for the grid
+  virtual void compute_grid();
+  /// compute variable and weight sets for the grid
   virtual void compute_grid(RealMatrix& var_sets);
   /// compute number of collocation points
   virtual int grid_size();
@@ -88,26 +90,30 @@ public:
   /// current unstored grid state)
   virtual const UShortArray& maximal_grid();
 
-  /// return active variableSets for .../CombinedSparseGrid
+  /// return active variableSets for Cubature/TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::variableSets is 2DArray)
   virtual const RealMatrix& variable_sets() const;
   /// return active type1WeightSets from Cubature/TensorProduct/
-  /// CombinedSparseGrid or concatenate type1WeightSets in HierarchSparseGrid
+  /// CombinedSparseGrid (HierarchSparseGridDriver::type1WeightSets is 2DArray)
   virtual const RealVector& type1_weight_sets() const;
   /// return active type2WeightSets from Cubature/TensorProduct/
-  /// CombinedSparseGrid or concatenate type2WeightSets in HierarchSparseGrid
+  /// CombinedSparseGrid (HierarchSparseGridDriver::type2WeightSets is 2DArray)
   virtual const RealMatrix& type2_weight_sets() const;
-  /// return type1WeightSets[key] from Cubature/TensorProduct/CombinedSparseGrid
-  /// or concatenate type1WeightSets in HierarchSparseGrid
+  /// return variableSets[key] for TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::variableSets is 2DArray)
+  virtual const RealMatrix& variable_sets(const UShortArray& key) const;
+  /// return type1WeightSets[key] from TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::type1WeightSets is 2DArray)
   virtual const RealVector& type1_weight_sets(const UShortArray& key) const;
-  /// return type2WeightSets[key] from Cubature/TensorProduct/CombinedSparseGrid
-  /// or concatenate type2WeightSets in HierarchSparseGrid
+  /// return type2WeightSets[key] from TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::type2WeightSets is 2DArray)
   virtual const RealMatrix& type2_weight_sets(const UShortArray& key) const;
 
-  /// return combinedVarSets for Cubature/TensorProduct/CombinedSparseGrid
+  /// return combinedVarSets for TensorProduct/CombinedSparseGrid
   virtual const RealMatrix& combined_variable_sets() const;
-  /// return combinedT1WeightSets for Cubature/TensorProduct/CombinedSparseGrid
+  /// return combinedT1WeightSets for TensorProduct/CombinedSparseGrid
   virtual const RealVector& combined_type1_weight_sets();
-  /// return combinedT2WeightSets for Cubature/TensorProduct/CombinedSparseGrid
+  /// return combinedT2WeightSets for TensorProduct/CombinedSparseGrid
   virtual const RealMatrix& combined_type2_weight_sets();
 
   //

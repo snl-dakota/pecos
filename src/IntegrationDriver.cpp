@@ -258,14 +258,25 @@ initialize_grid_parameters(const ShortArray& u_types,
 }
 
 
+void IntegrationDriver::compute_grid()
+{
+  if (driverRep)
+    driverRep->compute_grid(); // forward to letter
+  else {
+    PCerr << "Error: compute_grid() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void IntegrationDriver::compute_grid(RealMatrix& var_sets)
 {
   if (driverRep)
     driverRep->compute_grid(var_sets); // forward to letter
-  else {
-    PCerr << "Error: compute_grid(RealMatrix&) not available for this "
-	  << "driver type." << std::endl;
-    abort_handler(-1);
+  else { // default implementation
+    compute_grid();
+    var_sets = variable_sets(); // copy
   }
 }
 
@@ -329,6 +340,17 @@ const RealMatrix& IntegrationDriver::type2_weight_sets() const
 }
 
 
+const RealMatrix& IntegrationDriver::variable_sets(const UShortArray& key) const
+{
+  if (!driverRep) {
+    PCerr << "Error: variable_sets(key) not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->variable_sets(key);
+}
+
+
 const RealVector& IntegrationDriver::
 type1_weight_sets(const UShortArray& key) const
 {
@@ -355,32 +377,38 @@ type2_weight_sets(const UShortArray& key) const
 
 const RealMatrix& IntegrationDriver::combined_variable_sets() const
 {
-  if (driverRep)
-    return driverRep->combined_variable_sets();
-  else {
-    //return variable_sets(maximal_grid());
+  if (!driverRep) {
+    //return variable_sets(maximal_grid()); // overlays now preferred
     PCerr << "Error: combined_variable_sets() not available for this driver "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
+  return driverRep->combined_variable_sets();
 }
 
 
 const RealVector& IntegrationDriver::combined_type1_weight_sets()
 {
-  if (driverRep)
-    return driverRep->combined_type1_weight_sets();
-  else
-    return type1_weight_sets(maximal_grid());
+  if (!driverRep) {
+    //return type1_weight_sets(maximal_grid()); // overlays now preferred
+    PCerr << "Error: combined_type1_weight_sets() not available for this "
+	  << "driver type." << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->combined_type1_weight_sets();
+
 }
 
 
 const RealMatrix& IntegrationDriver::combined_type2_weight_sets()
 {
-  if (driverRep)
-    return driverRep->combined_type2_weight_sets();
-  else
-    return type2_weight_sets(maximal_grid());
+  if (!driverRep) {
+    //return type2_weight_sets(maximal_grid()); // overlays now preferred
+    PCerr << "Error: combined_type2_weight_sets() not available for this "
+	  << "driver type." << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->combined_type2_weight_sets();
 }
 
 

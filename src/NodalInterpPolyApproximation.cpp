@@ -3636,9 +3636,6 @@ member_integral(const BitArray& member_bits, Real mean)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  //IntegrationDriver* driver_rep = data_rep->driverRep;
-  const SDVArray& sdv_array = modSurrData.variables_data();
-
   size_t i, j, num_member_coeffs, num_v = sharedDataRep->numVars;
   SizetList member_indices;
   for (j=0; j<num_v; ++j)
@@ -3649,6 +3646,7 @@ member_integral(const BitArray& member_bits, Real mean)
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    const RealMatrix&      var_sets = tpq_driver->variable_sets();
     const UShortArray&    lev_index = tpq_driver->level_index();
     SizetArray colloc_index; // empty -> default indexing
 
@@ -3666,8 +3664,8 @@ member_integral(const BitArray& member_bits, Real mean)
     // Perform outer integral over set u
     num_member_coeffs = member_t1_coeffs.length();
     for (i=0; i<num_member_coeffs; ++i) {
-      const RealVector& c_vars
-	= sdv_array[member_colloc_index[i]].continuous_variables();
+      RealVector c_vars(Teuchos::View,
+	const_cast<Real*>(var_sets[member_colloc_index[i]]), (int)num_v);
       Real h_t1_coeff_i_mm = data_rep->
 	tensor_product_value(c_vars, member_t1_coeffs, member_t2_coeffs,
 			     lev_index, member_colloc_key, empty_colloc_index,
@@ -3689,10 +3687,11 @@ member_integral(const BitArray& member_bits, Real mean)
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver
       = (CombinedSparseGridDriver*)data_rep->driver();
-    const IntArray&            sm_coeffs = csg_driver->smolyak_coefficients();
-    const UShort2DArray&        sm_index = csg_driver->smolyak_multi_index();
-    const UShort3DArray&      colloc_key = csg_driver->collocation_key();
-    const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
+    const RealMatrix&       var_sets = csg_driver->variable_sets();
+    const IntArray&        sm_coeffs = csg_driver->smolyak_coefficients();
+    const UShort2DArray&    sm_index = csg_driver->smolyak_multi_index();
+    const UShort3DArray&  colloc_key = csg_driver->collocation_key();
+    const Sizet2DArray& colloc_index = csg_driver->collocation_indices();
     size_t num_smolyak_indices = sm_coeffs.size(),
            num_member_indices  = member_indices.size();
     UShortArray quad_order;
@@ -3738,8 +3737,8 @@ member_integral(const BitArray& member_bits, Real mean)
 	UShort2DArray& m_c_key_i   = member_colloc_key[i];
 	SizetArray&    m_c_index_i = member_colloc_index[i];
 	for (j=0; j<num_member_coeffs; ++j) {
-	  const RealVector& c_vars
-	    = sdv_array[m_c_index_i[j]].continuous_variables();
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[m_c_index_i[j]]), (int)num_v);
 	  // create key for this member coeff; see if val/grad already computed
 	  update_member_key(m_c_key_i[j], member_indices, member_map_key,
 			    num_member_indices);
@@ -3847,7 +3846,7 @@ member_coefficients_weights(const BitArray& member_bits,
     // key and c_vars data may change, but member data should be consistent.
     member_t1_wts[member_index]       = member_wt;
     member_colloc_key[member_index]   = key_i;  // links back to interp poly's
-    member_colloc_index[member_index] = c_index;// links back to SurrData c_vars
+    member_colloc_index[member_index] = c_index;// links back to Driver varSets
 
     // now do the same for the type2 coeffs and weights
     if (data_rep->basisConfigOptions.useDerivs) {

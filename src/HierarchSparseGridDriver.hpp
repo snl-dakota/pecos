@@ -51,6 +51,7 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  void compute_grid();
   void compute_grid(RealMatrix& var_sets);
   int grid_size();
 

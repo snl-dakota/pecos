@@ -61,6 +61,8 @@ public:
   /// get integrandOrder
   unsigned short integrand_order() const;
 
+  /// return variableSets
+  const RealMatrix& variable_sets() const;
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
   // return type2WeightSets
@@ -72,7 +74,7 @@ public:
   /// number of collocation points with duplicates removed
   int grid_size();
   /// compute scaled variable and weight sets for the cubature grid
-  void compute_grid(RealMatrix& variable_sets);
+  void compute_grid();
 
 private:
 
@@ -97,11 +99,13 @@ private:
   /// the current number of unique points in the grid
   int numPts;
 
+  /// the set of collocation points in the cubature grid
+  RealMatrix variableSets;
   /// the set of type1 weights (for integration of value interpolants)
-  /// associated with each point in the {TPQ,SSG,Cub} grid
+  /// associated with each point in the Cubature grid
   RealVector type1WeightSets;
   // the set of type2 weights (for integration of gradient interpolants)
-  // for each derivative component and for each point in the {TPQ,SSG} grid
+  // for each derivative component and for each point in the grid
   //RealMatrix type2WeightSets;
 };
 
@@ -132,6 +136,10 @@ inline void CubatureDriver::integrand_order(unsigned short order)
 
 inline unsigned short CubatureDriver::integrand_order() const
 { return integrandOrder; }
+
+
+inline const RealMatrix& CubatureDriver::variable_sets() const
+{ return variableSets; }
 
 
 inline const RealVector& CubatureDriver::type1_weight_sets() const

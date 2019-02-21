@@ -61,7 +61,7 @@ public:
   /// update {smolMI,smolCoeffs,collocKey,collocInd}Iter from activeKey
   void update_active_iterators();
 
-  void compute_grid(RealMatrix& var_sets);
+  void compute_grid();
   /// compute (if update required) and return number of unique
   /// collocation points
   int grid_size();

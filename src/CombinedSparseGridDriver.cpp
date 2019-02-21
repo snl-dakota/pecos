@@ -444,7 +444,7 @@ const UShortArray& CombinedSparseGridDriver::maximal_grid()
 }
 
 
-void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
+void CombinedSparseGridDriver::compute_grid()
 {
   assign_smolyak_arrays();
 
@@ -461,7 +461,6 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 				numPtsIter->second, unique_index_map,
 				varSetsIter->second, t1WtIter->second,
 				t2WtIter->second);
-  var_sets = varSetsIter->second; // copy active points into passed matrix
 
   if (trackCollocDetails) {
     UShort3DArray& colloc_key = collocKeyIter->second;
@@ -473,13 +472,13 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 
 #ifdef DEBUG
   PCout << "CombinedSparseGridDriver::compute_grid() results:\n"
-	<< "unique index mapping:\n" << unique_index_map << "\nvar_sets:\n";
-  write_data(PCout, var_sets, false, true, true);
+	<< "unique index mapping:\n" << unique_index_map << "\nvariableSets:\n";
+  write_data(PCout, varSetsIter->second, false, true, true);
   if (trackUniqueProdWeights) {
-    PCout << "\ntype1WeightSets:\n" << t1_wts;
+    PCout << "\ntype1WeightSets:\n" << t1WtIter->second;
     if (computeType2Weights) {
       PCout << "\ntype2WeightSets:\n";
-      write_data(PCout, t2_wts, false, true, true);
+      write_data(PCout, t2WtIter->second, false, true, true);
     }
   }
 #endif

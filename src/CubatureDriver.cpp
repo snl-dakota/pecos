@@ -225,7 +225,7 @@ int CubatureDriver::grid_size()
 }
 
 
-void CubatureDriver::compute_grid(RealMatrix& variable_sets)
+void CubatureDriver::compute_grid()
 {
   // --------------------------------
   // Get number of collocation points
@@ -239,8 +239,8 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   // Get collocation points and integration weights
   // ----------------------------------------------
   type1WeightSets.sizeUninitialized(numPts);
-  variable_sets.shapeUninitialized(numVars, numPts); // Teuchos: col major
-  double *pts = variable_sets.values(), *wts = type1WeightSets.values();
+  variableSets.shapeUninitialized(numVars, numPts); // Teuchos: col major
+  double *pts = variableSets.values(), *wts = type1WeightSets.values();
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
   double pt_factor, wt_factor;
   BasisPolynomial& poly0 = polynomialBasis[0];
@@ -350,7 +350,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
 
   // scale points and weights
   if (pt_scaling)
-    variable_sets.scale(poly0.point_factor());
+    variableSets.scale(poly0.point_factor());
   if (wt_scaling)
     type1WeightSets.scale(std::pow(poly0.weight_factor(), (int)numVars));
 }

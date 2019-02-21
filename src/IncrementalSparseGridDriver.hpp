@@ -54,7 +54,7 @@ public:
   /// update {smolMI,smolCoeffs,collocKey,collocInd}Iter from activeKey
   void update_active_iterators();
 
-  void compute_grid(RealMatrix& variable_sets);
+  void compute_grid();
   /// compute (if update required) and return number of unique
   /// collocation points
   int grid_size();
@@ -119,7 +119,7 @@ public:
   void update_collocation_key();
 
   /// define a1{Points,Type1Weights,Type2Weights} based on the reference grid
-  void reference_unique(RealMatrix& var_sets);
+  void reference_unique();
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for trailing index sets within smolyakMultiIndex
   void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
@@ -430,16 +430,15 @@ inline void IncrementalSparseGridDriver::clear_keys()
 }
 
 
-inline void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
+inline void IncrementalSparseGridDriver::reference_unique()
 {
   compute_unique_points_weights(smolMIIter->second, smolCoeffsIter->second,
     collocKeyIter->second, collocIndIter->second, numPtsIter->second,
     a1PIter->second, a1T1WIter->second, a1T2WIter->second, zVec[activeKey],
     r1Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
     uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
-    uniqIndMapIter->second, var_sets, t1WtIter->second, t2WtIter->second);
-
-  varSetsIter->second = var_sets; // copy
+    uniqIndMapIter->second, varSetsIter->second, t1WtIter->second,
+    t2WtIter->second);
 }
 
 
