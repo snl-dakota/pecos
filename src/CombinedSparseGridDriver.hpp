@@ -62,9 +62,10 @@ public:
   void update_active_iterators();
 
   void compute_grid();
-  /// compute (if update required) and return number of unique
-  /// collocation points
+  void compute_grid(RealMatrix& var_sets);
   int grid_size();
+  void combine_grid();
+  void combined_to_active(bool clear_combined);
 
   const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
@@ -101,11 +102,6 @@ public:
     BasisConfigOptions& bc_options,
     short growth_rate = MODERATE_RESTRICTED_GROWTH, bool track_colloc = false,
     bool track_uniq_prod_wts = true);
-
-  /// combine Smolyak data and points/weights
-  void combine_grid();
-  /// promote combined Smolyak data and points/weights to active data
-  void combined_to_active(bool clear_combined);
 
   /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
   void assign_smolyak_arrays();
@@ -596,6 +592,13 @@ compute_unique_points_weights(const UShort2DArray& sm_mi,
 				num_colloc_pts, a1_pts, a1_t1w, a1_t2w, zv, r1v,
 				sind1, isu1, uind1, uset1, num_u1,
 				unique_index_map, var_sets, t1_wts, t2_wts);
+}
+
+
+inline void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
+{
+  compute_grid();
+  var_sets = varSetsIter->second; // copy
 }
 
 

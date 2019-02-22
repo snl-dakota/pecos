@@ -54,6 +54,8 @@ public:
   void compute_grid();
   void compute_grid(RealMatrix& var_sets);
   int grid_size();
+  void combine_grid();
+  void combined_to_active(bool clear_combined);
 
   void clear_inactive();
   void clear_keys();
@@ -118,11 +120,6 @@ public:
 		       BasisConfigOptions& bc_options,
 		       short growth_rate = MODERATE_RESTRICTED_GROWTH,
 		       bool track_colloc_indices = true);
-
-  /// combine Smolyak data and points/weights
-  void combine_grid();
-  /// promote combined Smolyak data and points/weights to active data
-  void combined_to_active(bool clear_combined);
 
   void assign_collocation_key();
   void assign_collocation_key(const UShort3DArray& sm_mi,

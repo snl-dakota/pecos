@@ -53,10 +53,13 @@ public:
   void clear_inactive();
 
   void compute_grid();
+  void compute_grid(RealMatrix& var_sets);
   int  grid_size();
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
   const UShortArray& maximal_grid();
+  void combine_grid();
+  void combined_to_active(bool clear_combined);
 
   const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
@@ -131,11 +134,17 @@ private:
   
   /// update levelIndex from quadOrder
   void update_level_index_from_quadrature_order();
+  /// update lev_index from q_ord
+  void update_level_index_from_quadrature_order(const UShortArray& q_ord,
+						UShortArray& lev_index);
   /// update levelIndex[i] from quadOrder[i]
   void update_level_index_from_quadrature_order(size_t i);
 
   /// update quadOrder from levelIndex
   void update_quadrature_order_from_level_index();
+  /// update q_ord from lev_index
+  void update_quadrature_order_from_level_index(const UShortArray& lev_index,
+						UShortArray& q_ord);
 
   //
   //- Heading: Data
@@ -280,14 +289,19 @@ inline void TensorProductDriver::update_active_iterators()
 }
 
 
-inline void TensorProductDriver::update_level_index_from_quadrature_order()
+inline void TensorProductDriver::
+update_level_index_from_quadrature_order(const UShortArray& q_ord,
+					 UShortArray& lev_index)
 {
-  UShortArray& lev_index = levelIndIter->second;
-  size_t i, len = quadOrder.size();
+  size_t i, len = q_ord.size();
   if (lev_index.size() != len) lev_index.resize(len);
   for (i=0; i<len; ++i)
-    lev_index[i] = quadOrder[i] - 1;
+    lev_index[i] = q_ord[i] - 1;
 }
+
+
+inline void TensorProductDriver::update_level_index_from_quadrature_order()
+{ update_level_index_from_quadrature_order(quadOrder, levelIndIter->second); }
 
 
 inline void TensorProductDriver::
@@ -295,14 +309,19 @@ update_level_index_from_quadrature_order(size_t i)
 { levelIndIter->second[i] = quadOrder[i] - 1; }
 
 
-inline void TensorProductDriver::update_quadrature_order_from_level_index()
+inline void TensorProductDriver::
+update_quadrature_order_from_level_index(const UShortArray& lev_index,
+					 UShortArray& q_ord)
 {
-  const UShortArray& lev_index = levelIndIter->second;
   size_t i, len = lev_index.size();
-  if (quadOrder.size() != len) quadOrder.resize(len);
+  if (q_ord.size() != len) q_ord.resize(len);
   for (i=0; i<len; ++i)
-    quadOrder[i] = lev_index[i] + 1;
+    q_ord[i] = lev_index[i] + 1;
 }
+
+
+inline void TensorProductDriver::update_quadrature_order_from_level_index()
+{ update_quadrature_order_from_level_index(levelIndIter->second, quadOrder); }
 
 
 inline void TensorProductDriver::quadrature_order(const UShortArray& quad_order)
@@ -346,6 +365,13 @@ nested_quadrature_order(const UShortArray& ref_quad_order)
     else
       quadrature_order(nested_order, i); // sets quadOrder and levelIndex
   }
+}
+
+
+inline void TensorProductDriver::compute_grid(RealMatrix& var_sets)
+{
+  compute_grid();
+  var_sets = varSetsIter->second; // copy
 }
 
 

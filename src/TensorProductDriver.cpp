@@ -80,6 +80,55 @@ const UShortArray& TensorProductDriver::maximal_grid()
 }
 
 
+void TensorProductDriver::combine_grid()
+{
+  std::map<UShortArray, UShortArray>::const_iterator
+    li_cit = levelIndex.begin();
+  combinedLevelIndex = li_cit->second; ++li_cit;
+  for (; li_cit!=levelIndex.end(); ++li_cit) {
+    const UShortArray& li = li_cit->second;
+    for (size_t v=0; v<numVars; ++v)
+      if (li[v] > combinedLevelIndex[v])
+	combinedLevelIndex[v] = li[v];
+  }
+
+  UShortArray comb_order;
+  update_quadrature_order_from_level_index(combinedLevelIndex, comb_order);
+  compute_tensor_grid(comb_order, combinedLevelIndex, combinedVarSets,
+		      combinedT1WeightSets, combinedT2WeightSets,
+		      combinedCollocKey);
+}
+
+
+void TensorProductDriver::combined_to_active(bool clear_combined)
+{
+  // Replace active arrays with combined arrays
+
+  // Note: inactive weight sets to be removed by clear_inactive()
+
+  if (clear_combined) {
+    std::swap(levelIndIter->second,   combinedLevelIndex);
+    std::swap(collocKeyIter->second,  combinedCollocKey);
+    std::swap(varSetsIter->second,    combinedVarSets);
+    std::swap(t1WtIter->second,       combinedT1WeightSets);
+    std::swap(t2WtIter->second,       combinedT2WeightSets);
+
+    combinedLevelIndex.clear();
+    combinedCollocKey.clear();
+    combinedVarSets.shapeUninitialized(0,0);
+    combinedT1WeightSets.sizeUninitialized(0);
+    combinedT2WeightSets.shapeUninitialized(0,0);
+  }
+  else {
+    levelIndIter->second   = combinedLevelIndex;
+    collocKeyIter->second  = combinedCollocKey;
+    varSetsIter->second    = combinedVarSets;
+    t1WtIter->second       = combinedT1WeightSets;
+    t2WtIter->second       = combinedT2WeightSets;
+  }
+}
+
+
 /** This function selects the smallest nested rule order that meets the
     integrand precision of a corresponding Gauss rule.  It is similar to
     the moderate exponential growth option in sparse grids. */
@@ -288,7 +337,8 @@ void TensorProductDriver::compute_grid()
   // Get collocation points and integration weights and update 1D arrays
   // -------------------------------------------------------------------
   compute_tensor_grid(quadOrder, levelIndIter->second, varSetsIter->second,
-		      t1WtIter->second, t2WtIter->second,collocKeyIter->second);
+		      t1WtIter->second, t2WtIter->second,
+		      collocKeyIter->second);
 }
 
 } // namespace Pecos

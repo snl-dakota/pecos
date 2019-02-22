@@ -420,9 +420,8 @@ void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
   // combined{Var,T1Weight,T2Weight}Sets, et al.
   // Note: unlike Nodal SC, PCE only requires grid combination at the end, so
   //       incremental combined grid updates are not necessary for efficiency.
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  csg_driver->combine_grid();
-  csg_driver->combined_to_active(clear_combined);
+  driverRep->combine_grid();
+  driverRep->combined_to_active(clear_combined);
 
   // Leave combinedMultiIndex as separate book-keeping to support repeated
   // combinations within adaptive refinement.

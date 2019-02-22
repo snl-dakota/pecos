@@ -244,8 +244,7 @@ void SharedNodalInterpPolyApproxData::pre_combine_data()
   // combined{Var,T1Weight,T2Weight}Sets, et al.
   // *** TO DO: consider incremental updates for efficiency, as expansion
   //            combination is performed for every Nodal candidate evaluation
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  csg_driver->combine_grid();
+  driverRep->combine_grid();
 }
 
 
@@ -268,8 +267,7 @@ void SharedNodalInterpPolyApproxData::combined_to_active(bool clear_combined)
   active_key(driverRep->maximal_grid());
   */
 
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  csg_driver->combined_to_active(clear_combined);
+  driverRep->combined_to_active(clear_combined);
 
   // allocate Sobol interactions corresponding to interpolant on combined grid
   allocate_component_sobol();

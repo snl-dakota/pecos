@@ -86,9 +86,13 @@ public:
   /// clear inactive grid settings following their usage/combination
   virtual void clear_inactive();
 
-  /// return the index of the maximal stored grid state (_NPOS if the
-  /// current unstored grid state)
+  /// return the key of the maximal stored grid state
   virtual const UShortArray& maximal_grid();
+
+  /// combine grid data and points/weights
+  virtual void combine_grid();
+  /// promote combined grid data and points/weights to active data
+  virtual void combined_to_active(bool clear_combined);
 
   /// return active variableSets for Cubature/TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::variableSets is 2DArray)

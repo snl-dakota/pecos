@@ -515,6 +515,30 @@ const UShortArray& IntegrationDriver::maximal_grid()
 }
 
 
+void IntegrationDriver::combine_grid()
+{
+  if (driverRep)
+    driverRep->combine_grid();
+  else {
+    PCerr << "Error: combine_grid() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void IntegrationDriver::combined_to_active(bool clear_combined)
+{
+  if (driverRep)
+    driverRep->combined_to_active(clear_combined);
+  else {
+    PCerr << "Error: combined_to_active() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void IntegrationDriver::
 compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
 		    RealMatrix& variable_sets,  RealVector& t1_weight_sets,
@@ -575,7 +599,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
 
 void IntegrationDriver::
 compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
-		    const SizetList& subset_indices, RealMatrix& variable_sets,
+		    const SizetList& subset_indices, RealMatrix& var_sets,
 		    UShort2DArray& colloc_key)
 {
   size_t i, j, k, num_colloc_pts = 1;
@@ -589,11 +613,11 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
   // > project 1-D colloc point arrays (of potentially different type and order)
   //   into an n-dimensional stencil
-  variable_sets.shapeUninitialized(numVars, num_colloc_pts);//Teuchos: col major
+  var_sets.shapeUninitialized(numVars, num_colloc_pts);//Teuchos: col major
   colloc_key.resize(num_colloc_pts);
   UShortArray colloc_indices(numVars, 0);
   for (i=0; i<num_colloc_pts; ++i) {
-    Real*    pt_i = variable_sets[i]; // column vector i
+    Real* pt_i = var_sets[i]; // column vector i
     // assign pts for all of the variables (previous collocPts1D is sufficient
     // for non-subset variables)
     for (j=0; j<numVars; ++j)

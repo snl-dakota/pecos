@@ -55,8 +55,7 @@ public:
   void update_active_iterators();
 
   void compute_grid();
-  /// compute (if update required) and return number of unique
-  /// collocation points
+  void compute_grid(RealMatrix& var_sets);
   int grid_size();
 
   /// initialize all sparse grid settings (distribution params already
@@ -427,6 +426,13 @@ inline void IncrementalSparseGridDriver::clear_keys()
   isUnique2.clear();       isUniq2Iter  = isUnique2.end();
 
   uniqueIndexMapping.clear();  uniqIndMapIter = uniqueIndexMapping.end();
+}
+
+
+inline void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
+{
+  compute_grid();
+  var_sets = varSetsIter->second; // copy
 }
 
 

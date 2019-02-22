@@ -37,44 +37,36 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  CubatureDriver();                                ///< default constructor
-  CubatureDriver(unsigned short integrand_order);  ///< constructor
-  ~CubatureDriver();                               ///< destructor
+  CubatureDriver();                               ///< default constructor
+  CubatureDriver(unsigned short integrand_order); ///< constructor
+  ~CubatureDriver();                              ///< destructor
+
+  //
+  //- Heading: Virtual function redefinitions
+  //
+
+  void initialize_grid(const ShortArray& u_types, unsigned short order,
+		       unsigned short rule);
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
+  void initialize_grid_parameters(const ShortArray& u_types,
+				  const AleatoryDistParams& dp);
+
+  const RealMatrix& variable_sets() const;
+  const RealVector& type1_weight_sets() const;
+  //const RealMatrix& type2_weight_sets() const;
+  //const UShortArray& maximal_grid() const;
+  int grid_size();
+  void compute_grid();
+  void compute_grid(RealMatrix& var_sets);
 
   //
   //- Heading: Member functions
   //
 
-  /// initialize cubature settings except for distribution params
-  void initialize_grid(const ShortArray& u_types, unsigned short order,
-		       unsigned short rule);
-  /// initialize all cubature settings (distribution params already
-  /// set within poly_basis)
-  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
-
-  /// initialize settings for parameterized cubature rules
-  void initialize_grid_parameters(const ShortArray& u_types,
-				  const AleatoryDistParams& dp);
-
   /// set integrandOrder
   void integrand_order(unsigned short order);
   /// get integrandOrder
   unsigned short integrand_order() const;
-
-  /// return variableSets
-  const RealMatrix& variable_sets() const;
-  /// return type1WeightSets
-  const RealVector& type1_weight_sets() const;
-  // return type2WeightSets
-  //const RealMatrix& type2_weight_sets() const;
-
-  // return index of the maximal stored grid state (_NPOS if current grid)
-  //const UShortArray& maximal_grid() const;
-
-  /// number of collocation points with duplicates removed
-  int grid_size();
-  /// compute scaled variable and weight sets for the cubature grid
-  void compute_grid();
 
 private:
 
@@ -123,6 +115,13 @@ inline CubatureDriver::CubatureDriver(unsigned short integrand_order):
 
 inline CubatureDriver::~CubatureDriver()
 { }
+
+
+inline void CubatureDriver::compute_grid(RealMatrix& var_sets)
+{
+  compute_grid();
+  var_sets = variableSets; // copy
+}
 
 
 inline void CubatureDriver::integrand_order(unsigned short order)

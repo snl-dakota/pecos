@@ -106,8 +106,7 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
   }
 
   // combine all multiIndex keys into combinedMultiIndex{,Map}
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  hsg_driver->combine_grid();
+  driverRep->combine_grid();
   // Note: grid combination is only currently required in the hierarchical
   // interpolation case, so there is not currently support at higher levels
   // for an abstract call to Driver::combine_grid().  For now, our hook is
@@ -116,10 +115,7 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
 
 
 void SharedHierarchInterpPolyApproxData::combined_to_active(bool clear_combined)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  hsg_driver->combined_to_active(clear_combined);
-}
+{ driverRep->combined_to_active(clear_combined); }
 
 
 size_t SharedHierarchInterpPolyApproxData::
