@@ -194,6 +194,7 @@ protected:
   void compute_unique_points_weights(const UShort2DArray& sm_mi,
 				     const IntArray& sm_coeffs,
 				     const UShort3DArray& colloc_key,
+				     IntArray& unique_index_map,
 				     RealMatrix& var_sets, RealVector& t1_wts,
 				     RealMatrix& t2_wts);
   /// modular helper for public reference_unique(RealMatrix&)
@@ -281,6 +282,12 @@ protected:
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
+  /// mapping from points in set of tensor grids to unique sparse grid
+  /// collocation points (unrolled array of collocation indices)
+  std::map<UShortArray, IntArray> uniqueIndexMapping;
+  /// active entry within uniqueIndexMapping
+  std::map<UShortArray, IntArray>::iterator uniqIndMapIter;
+
   /// the set of unique collocation points in the sparse grid
   std::map<UShortArray, RealMatrix> variableSets;
   /// iterator for active entry within variableSets
@@ -307,6 +314,8 @@ protected:
   /// collocation key for maximal grid that is the result of combining a
   /// set of level expansions (defined from combinedSmolyakMultiIndex)
   UShort3DArray combinedCollocKey;
+  /// mapping from combined sparse grid points to unique collocation points
+  IntArray combinedUniqueIndexMap;
 
   /// variable sets for maximal grid defined by overlaying level grids
   /** Could also be managed within SurrogateData, but would require data
@@ -413,6 +422,11 @@ inline void CombinedSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, Sizet2DArray> s2a_pair(activeKey, Sizet2DArray());
     collocIndIter = collocIndices.insert(s2a_pair).first;
   }
+  uniqIndMapIter = uniqueIndexMapping.find(activeKey);
+  if (uniqIndMapIter == uniqueIndexMapping.end()) {
+    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
+    uniqIndMapIter = uniqueIndexMapping.insert(ua_pair).first;
+  }
   varSetsIter = variableSets.find(activeKey);
   if (varSetsIter == variableSets.end()) {
     std::pair<UShortArray, RealMatrix> rm_pair(activeKey, RealMatrix());
@@ -437,15 +451,16 @@ inline void CombinedSparseGridDriver::clear_keys()
 {
   SparseGridDriver::clear_keys();
 
-  smolyakMultiIndex.clear();  smolMIIter = smolyakMultiIndex.end();
-  smolyakCoeffs.clear();      smolCoeffsIter = smolyakCoeffs.end();
+  smolyakMultiIndex.clear();   smolMIIter = smolyakMultiIndex.end();
+  smolyakCoeffs.clear();       smolCoeffsIter = smolyakCoeffs.end();
 
-  collocKey.clear();          collocKeyIter = collocKey.end();
-  collocIndices.clear();      collocIndIter = collocIndices.end();
+  collocKey.clear();           collocKeyIter = collocKey.end();
+  collocIndices.clear();       collocIndIter = collocIndices.end();
+  uniqueIndexMapping.clear();  uniqIndMapIter = uniqueIndexMapping.end();
 
-  variableSets.clear();       varSetsIter = variableSets.end();
-  type1WeightSets.clear();    t1WtIter = type1WeightSets.end();
-  type2WeightSets.clear();    t2WtIter = type2WeightSets.end();
+  variableSets.clear();        varSetsIter = variableSets.end();
+  type1WeightSets.clear();     t1WtIter = type1WeightSets.end();
+  type2WeightSets.clear();     t2WtIter = type2WeightSets.end();
 }
 
 
@@ -582,12 +597,12 @@ inline void CombinedSparseGridDriver::
 compute_unique_points_weights(const UShort2DArray& sm_mi,
 			      const IntArray& sm_coeffs,
 			      const UShort3DArray& colloc_key,
-			      RealMatrix& var_sets, RealVector& t1_wts,
-			      RealMatrix& t2_wts)
+			      IntArray& unique_index_map, RealMatrix& var_sets,
+			      RealVector& t1_wts, RealMatrix& t2_wts)
 {
   RealMatrix a1_pts, a1_t2w;  RealVector a1_t1w, zv, r1v;
   Sizet2DArray colloc_ind;    int num_colloc_pts, num_u1;
-  BitArray isu1;              IntArray sind1, uind1, uset1, unique_index_map;
+  BitArray isu1;              IntArray sind1, uind1, uset1;
   compute_unique_points_weights(sm_mi, sm_coeffs, colloc_key, colloc_ind,
 				num_colloc_pts, a1_pts, a1_t1w, a1_t2w, zv, r1v,
 				sind1, isu1, uind1, uset1, num_u1,

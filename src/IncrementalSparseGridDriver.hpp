@@ -288,11 +288,6 @@ private:
   std::map<UShortArray, BitArray> isUnique2;
   /// active entry within isUnique2
   std::map<UShortArray, BitArray>::iterator isUniq2Iter;
-
-  /// unrolled array of collocation indices
-  std::map<UShortArray, IntArray> uniqueIndexMapping;
-  /// active entry within uniqueIndexMapping
-  std::map<UShortArray, IntArray>::iterator uniqIndMapIter;
 };
 
 
@@ -390,11 +385,6 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, BitArray> ua_pair(activeKey, BitArray());
     isUniq2Iter = isUnique2.insert(ua_pair).first;
   }
-  uniqIndMapIter = uniqueIndexMapping.find(activeKey);
-  if (uniqIndMapIter == uniqueIndexMapping.end()) {
-    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
-    uniqIndMapIter = uniqueIndexMapping.insert(ua_pair).first;
-  }
 
   CombinedSparseGridDriver::update_active_iterators();
 }
@@ -424,8 +414,6 @@ inline void IncrementalSparseGridDriver::clear_keys()
   uniqueIndex2.clear();    uniqInd2Iter = uniqueIndex2.end();
   isUnique1.clear();       isUniq1Iter  = isUnique1.end();
   isUnique2.clear();       isUniq2Iter  = isUnique2.end();
-
-  uniqueIndexMapping.clear();  uniqIndMapIter = uniqueIndexMapping.end();
 }
 
 

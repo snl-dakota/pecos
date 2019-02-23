@@ -386,6 +386,10 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   // resize sobolIndices to sync with resize of sobolIndexMap
   allocate_component_sobol();
 
+  // Create a dummy modSurrData for the combined-now-active coeffs, for
+  // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
+  create_surrogate_data(modSurrData); // overwrite data for activeKey
+
   // if outgoing stats type is combined, then can carry over current moment
   // stats from combined to active.  But if the outgoing stats type was already
   // active (seems unlikely), then the previous active stats are invalidated.  
@@ -395,6 +399,50 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   // new active moments.
   //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS){
   //  clear_computed_bits();
+}
+
+
+void NodalInterpPolyApproximation::
+create_surrogate_data(SurrogateData& surr_data)
+{
+  // Update the active key of surr_data with synthetic data based on the
+  // active grid from csg_driver
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+
+  // CombinedSparseGridDriver::combined_to_active() transfers all data except
+  // collocation indices, which are invalidated by the combination.  In support
+  // of the synthetic data to be created, new colloc indices are defined at the
+  // end of CSGDriver::combined_to_active(), and this colloc index sequence is
+  // employed below. 
+  const RealMatrix&  var_sets = data_rep->driver()->variable_sets();
+  const RealVector& t1_coeffs = expT1CoeffsIter->second;
+  const RealMatrix& t2_coeffs = expT2CoeffsIter->second;
+
+  // shallow copy vars array data using HierarchSparseGridDriver::variableSets
+  surr_data.clear_all_active();
+  size_t num_v = var_sets.numRows(), num_pts = var_sets.numCols();
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+  short bits = (use_derivs) ? 3 : 1;
+  surr_data.resize(num_pts, bits, num_v);
+  SDVArray& sdv_array = surr_data.variables_data(); 
+  SDRArray& sdr_array = surr_data.response_data();
+  
+  // use interpolant to produce data values that are being interpolated
+  // Note: SurrogateData reconstruction follows order of unique variable
+  //       sets, also used in defining expansion coeffs (inverse of the
+  //       mapping in compute_coefficients())
+  for (size_t pt=0; pt<num_pts; ++pt) {
+    RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[pt]),
+		      (int)num_v);
+    sdv_array[pt].continuous_variables(c_vars);
+    SurrogateDataResp& sdr = sdr_array[pt];
+    sdr.response_function( value(c_vars, t1_coeffs, t2_coeffs) );
+    if (use_derivs)
+      sdr.response_gradient(
+	gradient_basis_variables(c_vars, t1_coeffs, t2_coeffs) );
+  }
 }
 
 
@@ -3177,7 +3225,7 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
 	  PCout << "Diagonal covar: sm_coeffs[" << i << "] = " << sm_coeff_i
 		<< " tp_covar = " << tp_covar << '\n';
 #else
-	  covar += sm_coeff_i * sm_coeff_i * // *** coeff^2 for prod of interp
+	  covar += sm_coeff_i * sm_coeff_i * // coeff^2 for prod of interp
 	    product_of_interpolants(x, mean_1, mean_2, exp_t1c_1, exp_t2c_1,
 	      exp_t1c_2, exp_t2c_2, sm_mi_i, key_i, c_index_i);
 	    // short-cut tensor_product_covariance(...)
@@ -3528,8 +3576,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   // of the interpolant (integrates powers of the interpolant using the same
   // collocation rules/orders used to form the interpolant).
   else {
-    IntegrationDriver* driver_rep =   data_rep->driverRep;
-    const RealMatrix&  var_sets   = driver_rep->variable_sets();// *** TPQ!
+    IntegrationDriver* driver_rep = data_rep->driverRep;
+    const RealMatrix&  var_sets = driver_rep->variable_sets();
     size_t i, num_pts = var_sets.numCols(), num_v = var_sets.numRows();
     RealVector t1_exp(num_pts);
     if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native

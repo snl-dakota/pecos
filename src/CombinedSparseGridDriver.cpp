@@ -456,7 +456,7 @@ void CombinedSparseGridDriver::compute_grid()
   // Compute collocation points
   // ------------------------------------
   grid_size(); // ensure active numCollocPts is up to date
-  IntArray unique_index_map;
+  IntArray& unique_index_map = uniqIndMapIter->second;
   compute_unique_points_weights(ssgLevIter->second, anisoWtsIter->second,
 				numPtsIter->second, unique_index_map,
 				varSetsIter->second, t1WtIter->second,
@@ -502,11 +502,10 @@ void CombinedSparseGridDriver::combine_grid()
   assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey);
   // Define combined points and weights to support expectation() calls
   compute_unique_points_weights(combinedSmolyakMultiIndex,
-				combinedSmolyakCoeffs, combinedCollocKey,
-				combinedVarSets, combinedT1WeightSets,
-				combinedT2WeightSets);
-  // Can't define collocation indices for combined grids, prior to creating
-  // synthetic SurrogateData in the PolynomialApproximations.  
+				combinedSmolyakCoeffs,  combinedCollocKey,
+				combinedUniqueIndexMap, combinedVarSets,
+				combinedT1WeightSets,   combinedT2WeightSets);
+  // colloc indices are only regenerated for promotions in combined_to_active()
 }
 
 
@@ -522,6 +521,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
     //std::swap(Iter->second, combinedSmolyakMultiIndexMap); // no corresponding
     std::swap(smolCoeffsIter->second, combinedSmolyakCoeffs);
     std::swap(collocKeyIter->second,  combinedCollocKey);
+    std::swap(uniqIndMapIter->second, combinedUniqueIndexMap);
     std::swap(varSetsIter->second,    combinedVarSets);
     std::swap(t1WtIter->second,       combinedT1WeightSets);
     std::swap(t2WtIter->second,       combinedT2WeightSets);
@@ -530,6 +530,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
     combinedSmolyakMultiIndexMap.clear();
     combinedSmolyakCoeffs.clear();
     combinedCollocKey.clear();
+    combinedUniqueIndexMap.clear();
     combinedVarSets.shapeUninitialized(0,0);
     combinedT1WeightSets.sizeUninitialized(0);
     combinedT2WeightSets.shapeUninitialized(0,0);
@@ -539,6 +540,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
     //Iter->second = combinedSmolyakMultiIndexMap;// no corresponding active
     smolCoeffsIter->second = combinedSmolyakCoeffs;
     collocKeyIter->second  = combinedCollocKey;
+    uniqIndMapIter->second = combinedUniqueIndexMap;
     varSetsIter->second    = combinedVarSets;
     t1WtIter->second       = combinedT1WeightSets;
     t2WtIter->second       = combinedT2WeightSets;
@@ -546,9 +548,10 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
 
   // collocation indices are invalidated by expansion combination since the
   // corresponding combined grids involve overlays of data that no longer
-  // reflect individual evaluations (to restore validity of collocIndices, a
-  // synthetic modSurrData must be defined for each PolynomialApproximation)
-  collocIndIter->second.clear();
+  // reflect individual evaluations (to match restoration of collocIndices,
+  // new modSurrData must be defined in NodalInterpPolyApproximation)
+  assign_collocation_indices(collocKeyIter->second, uniqIndMapIter->second,
+			     collocIndIter->second);
 }
 
 

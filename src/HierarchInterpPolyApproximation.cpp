@@ -83,73 +83,6 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 }
 
 
-void HierarchInterpPolyApproximation::
-create_surrogate_data(SurrogateData& surr_data)
-{
-  // Update the active key of surr_data with synthetic data based on the
-  // active grid from hsg_driver
-
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-
-  // HierarchSparseGridDriver::combined_to_active() transfers all data except
-  // collocation indices, which are invalidated by the combination.  In support
-  // of the synthetic data to be created, new colloc point count and (default)
-  // colloc indices are defined at the end of HSGDriver::combined_to_active(),
-  // and this default colloc index sequence is employed below. 
-  const RealMatrix2DArray& var_sets = hsg_driver->hierarchical_variable_sets();
-  const UShort3DArray&        sm_mi = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&   colloc_key = hsg_driver->collocation_key();
-  const Sizet3DArray&  colloc_index = hsg_driver->collocation_indices();
-  size_t             num_colloc_pts = hsg_driver->collocation_points();
-
-  const RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
-  const RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;
-
-  // shallow copy vars array data using HierarchSparseGridDriver::variableSets
-  surr_data.clear_all_active();
-  size_t num_v = var_sets[0][0].numRows();
-  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
-  short bits = (use_derivs) ? 3 : 1;
-  surr_data.resize(num_colloc_pts, bits, num_v);
-  SDVArray& sdv_array = surr_data.variables_data(); 
-  SDRArray& sdr_array = surr_data.response_data();
-
-  // use interpolant to produce data values that are being interpolated
-  // Note: for a nested hierarchical construction, we know that contributions
-  //       from level > l are zero for colloc pts that correspond to level l.
-  size_t lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
-    c_index = colloc_index[0][0][0];
-  RealVector v0(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),(int)num_v);
-  sdv_array[c_index].continuous_variables(v0); // DEFAULT_COPY assumes view
-  SurrogateDataResp& sdr0 = sdr_array[c_index];  //sdr0.clear();
-  sdr0.response_function(value(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
-  if (use_derivs)
-    sdr0.response_gradient(
-      gradient_basis_variables(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
-  for (lev=1; lev<num_lev; ++lev) {
-    num_sets = colloc_key[lev].size();
-    for (set=0; set<num_sets; ++set) {
-      num_tp_pts = colloc_key[lev][set].size();
-      const RealMatrix& var_sets_ls = var_sets[lev][set];
-      for (pt=0; pt<num_tp_pts; ++pt) {
-	c_index = colloc_index[lev][set][pt];
-	RealVector v_lsp(Teuchos::View, const_cast<Real*>(var_sets_ls[pt]),
-			 (int)num_v);
-	sdv_array[c_index].continuous_variables(v_lsp);
-	SurrogateDataResp& sdr_lsp = sdr_array[c_index];
-	sdr_lsp.response_function(
-	  value(v_lsp, sm_mi, colloc_key, t1_coeffs, t2_coeffs, lev));
-	if (use_derivs)
-	  sdr_lsp.response_gradient(gradient_basis_variables(v_lsp, sm_mi,
-	    colloc_key, t1_coeffs, t2_coeffs, lev));
-      }
-    }
-  }
-}
-
-
 void HierarchInterpPolyApproximation::compute_coefficients()
 {
   PolynomialApproximation::compute_coefficients();
@@ -302,6 +235,87 @@ void HierarchInterpPolyApproximation::increment_coefficients()
 
   // size sobolIndices based on shared sobolIndexMap
   allocate_component_sobol();
+}
+
+
+/** Lower level helper function to process a single index set. */
+void HierarchInterpPolyApproximation::
+increment_coefficients(const UShortArray& index_set)
+{
+  RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
+  RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
+  RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
+  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDRArray& sdr_array = modSurrData.response_data();
+
+  size_t lev, old_levels = exp_t1_coeffs.size(), set, old_sets,
+    pt, old_pts = 0;
+  for (lev=0; lev<old_levels; ++lev) {
+    old_sets = exp_t1_coeffs[lev].size();
+    for (set=0; set<old_sets; ++set)
+      old_pts += (expansionCoeffFlag) ?	exp_t1_coeffs[lev][set].length() :
+	exp_t1_coeff_grads[lev][set].numCols();
+  }
+  lev = l1_norm(index_set);
+  if (lev >= old_levels) {
+    exp_t1_coeffs.resize(lev+1);
+    exp_t2_coeffs.resize(lev+1);
+    exp_t1_coeff_grads.resize(lev+1);
+  }
+  set = exp_t1_coeffs[lev].size();
+  // append empty and update in place
+  RealVector fns; RealMatrix grads;
+  exp_t1_coeffs[lev].push_back(fns);
+  exp_t2_coeffs[lev].push_back(grads);
+  exp_t1_coeff_grads[lev].push_back(grads);
+  RealVector& t1_coeffs      = exp_t1_coeffs[lev][set];
+  RealMatrix& t2_coeffs      = exp_t2_coeffs[lev][set];
+  RealMatrix& t1_coeff_grads = exp_t1_coeff_grads[lev][set];
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray& colloc_key = hsg_driver->collocation_key();
+  size_t index, num_trial_pts = colloc_key[lev][set].size(),
+    v, num_deriv_vars = 0;
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+  if (expansionCoeffFlag) {
+    t1_coeffs.sizeUninitialized(num_trial_pts);
+    if (use_derivs) {
+      num_deriv_vars = exp_t2_coeffs[0][0].numRows();
+      t2_coeffs.shapeUninitialized(num_deriv_vars, num_trial_pts);
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    num_deriv_vars = exp_t1_coeff_grads[0][0].numRows();
+    t1_coeff_grads.shapeUninitialized(num_deriv_vars, num_trial_pts);
+  }
+ 
+  for (pt=0, index=old_pts; pt<num_trial_pts; ++pt, ++index) {
+    const RealVector& c_vars = sdv_array[index].continuous_variables();
+    const SurrogateDataResp& sdr = sdr_array[index];
+    if (expansionCoeffFlag) {
+      t1_coeffs[pt] = sdr.response_function() -
+	value(c_vars, sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
+      if (use_derivs) {
+	const RealVector& data_grad = sdr.response_gradient();
+	const RealVector& prev_grad = gradient_basis_variables(c_vars, sm_mi,
+	  colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
+	Real* hier_grad = t2_coeffs[pt];
+	for (v=0; v<num_deriv_vars; ++v)
+	  hier_grad[v] = data_grad[v] - prev_grad[v];
+      }
+    }
+    if (expansionCoeffGradFlag) {
+      const RealVector& data_grad = sdr.response_gradient();
+      const RealVector& prev_grad = gradient_nonbasis_variables(c_vars, sm_mi,
+	colloc_key, exp_t1_coeff_grads, lev-1);
+      Real* hier_grad = t1_coeff_grads[pt];
+      for (v=0; v<num_deriv_vars; ++v)
+	hier_grad[v] = data_grad[v] - prev_grad[v];
+    }
+  }
 }
 
 
@@ -832,82 +846,68 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
 }
 
 
-/** Lower level helper function to process a single index set. */
 void HierarchInterpPolyApproximation::
-increment_coefficients(const UShortArray& index_set)
+create_surrogate_data(SurrogateData& surr_data)
 {
-  RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
-  RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
-  RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  const SDVArray& sdv_array = modSurrData.variables_data();
-  const SDRArray& sdr_array = modSurrData.response_data();
-
-  size_t lev, old_levels = exp_t1_coeffs.size(), set, old_sets,
-    pt, old_pts = 0;
-  for (lev=0; lev<old_levels; ++lev) {
-    old_sets = exp_t1_coeffs[lev].size();
-    for (set=0; set<old_sets; ++set)
-      old_pts += (expansionCoeffFlag) ?	exp_t1_coeffs[lev][set].length() :
-	exp_t1_coeff_grads[lev][set].numCols();
-  }
-  lev = l1_norm(index_set);
-  if (lev >= old_levels) {
-    exp_t1_coeffs.resize(lev+1);
-    exp_t2_coeffs.resize(lev+1);
-    exp_t1_coeff_grads.resize(lev+1);
-  }
-  set = exp_t1_coeffs[lev].size();
-  // append empty and update in place
-  RealVector fns; RealMatrix grads;
-  exp_t1_coeffs[lev].push_back(fns);
-  exp_t2_coeffs[lev].push_back(grads);
-  exp_t1_coeff_grads[lev].push_back(grads);
-  RealVector& t1_coeffs      = exp_t1_coeffs[lev][set];
-  RealMatrix& t2_coeffs      = exp_t2_coeffs[lev][set];
-  RealMatrix& t1_coeff_grads = exp_t1_coeff_grads[lev][set];
+  // Update the active key of surr_data with synthetic data based on the
+  // active grid from hsg_driver
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
-  const UShort4DArray& colloc_key = hsg_driver->collocation_key();
-  size_t index, num_trial_pts = colloc_key[lev][set].size(),
-    v, num_deriv_vars = 0;
+
+  // HierarchSparseGridDriver::combined_to_active() transfers all data except
+  // collocation indices, which are invalidated by the combination.  In support
+  // of the synthetic data to be created, new colloc point count and (default)
+  // colloc indices are defined at the end of HSGDriver::combined_to_active(),
+  // and this default colloc index sequence is employed below. 
+  const RealMatrix2DArray& var_sets = hsg_driver->hierarchical_variable_sets();
+  const UShort3DArray&        sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&   colloc_key = hsg_driver->collocation_key();
+  const Sizet3DArray&  colloc_index = hsg_driver->collocation_indices();
+  size_t             num_colloc_pts = hsg_driver->collocation_points();
+
+  const RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
+  const RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;
+
+  // shallow copy vars array data using HierarchSparseGridDriver::variableSets
+  surr_data.clear_all_active();
+  size_t num_v = var_sets[0][0].numRows();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
-  if (expansionCoeffFlag) {
-    t1_coeffs.sizeUninitialized(num_trial_pts);
-    if (use_derivs) {
-      num_deriv_vars = exp_t2_coeffs[0][0].numRows();
-      t2_coeffs.shapeUninitialized(num_deriv_vars, num_trial_pts);
-    }
-  }
-  if (expansionCoeffGradFlag) {
-    num_deriv_vars = exp_t1_coeff_grads[0][0].numRows();
-    t1_coeff_grads.shapeUninitialized(num_deriv_vars, num_trial_pts);
-  }
- 
-  for (pt=0, index=old_pts; pt<num_trial_pts; ++pt, ++index) {
-    const RealVector& c_vars = sdv_array[index].continuous_variables();
-    const SurrogateDataResp& sdr = sdr_array[index];
-    if (expansionCoeffFlag) {
-      t1_coeffs[pt] = sdr.response_function() -
-	value(c_vars, sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
-      if (use_derivs) {
-	const RealVector& data_grad = sdr.response_gradient();
-	const RealVector& prev_grad = gradient_basis_variables(c_vars, sm_mi,
-	  colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
-	Real* hier_grad = t2_coeffs[pt];
-	for (v=0; v<num_deriv_vars; ++v)
-	  hier_grad[v] = data_grad[v] - prev_grad[v];
+  short bits = (use_derivs) ? 3 : 1;
+  surr_data.resize(num_colloc_pts, bits, num_v);
+  SDVArray& sdv_array = surr_data.variables_data(); 
+  SDRArray& sdr_array = surr_data.response_data();
+
+  // use interpolant to produce data values that are being interpolated
+  // Note: for a nested hierarchical construction, we know that contributions
+  //       from level > l are zero for colloc pts that correspond to level l.
+  size_t lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
+    c_index = colloc_index[0][0][0];
+  RealVector v0(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),(int)num_v);
+  sdv_array[c_index].continuous_variables(v0); // DEFAULT_COPY assumes view
+  SurrogateDataResp& sdr0 = sdr_array[c_index];  //sdr0.clear();
+  sdr0.response_function(value(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
+  if (use_derivs)
+    sdr0.response_gradient(
+      gradient_basis_variables(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
+  for (lev=1; lev<num_lev; ++lev) {
+    num_sets = colloc_key[lev].size();
+    for (set=0; set<num_sets; ++set) {
+      num_tp_pts = colloc_key[lev][set].size();
+      const RealMatrix& var_sets_ls = var_sets[lev][set];
+      for (pt=0; pt<num_tp_pts; ++pt) {
+	c_index = colloc_index[lev][set][pt];
+	RealVector v_lsp(Teuchos::View, const_cast<Real*>(var_sets_ls[pt]),
+			 (int)num_v);
+	sdv_array[c_index].continuous_variables(v_lsp);
+	SurrogateDataResp& sdr_lsp = sdr_array[c_index];
+	sdr_lsp.response_function(
+	  value(v_lsp, sm_mi, colloc_key, t1_coeffs, t2_coeffs, lev));
+	if (use_derivs)
+	  sdr_lsp.response_gradient(gradient_basis_variables(v_lsp, sm_mi,
+	    colloc_key, t1_coeffs, t2_coeffs, lev));
       }
-    }
-    if (expansionCoeffGradFlag) {
-      const RealVector& data_grad = sdr.response_gradient();
-      const RealVector& prev_grad = gradient_nonbasis_variables(c_vars, sm_mi,
-	colloc_key, exp_t1_coeff_grads, lev-1);
-      Real* hier_grad = t1_coeff_grads[pt];
-      for (v=0; v<num_deriv_vars; ++v)
-	hier_grad[v] = data_grad[v] - prev_grad[v];
     }
   }
 }
