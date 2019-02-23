@@ -130,7 +130,7 @@ private:
 
   /// update surr_data with synthetic data (from evaluating the interpolant)
   /// in order to ease downstream processing
-  void create_surrogate_data(SurrogateData& surr_data);
+  void synthetic_surrogate_data(SurrogateData& surr_data);
 
   /// helper function to evaluate mean(x) for passed coefficients
   Real mean(const RealVector& x, const RealVector& exp_t1_coeffs, 

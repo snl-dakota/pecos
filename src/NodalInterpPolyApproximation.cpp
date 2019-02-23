@@ -342,7 +342,7 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   // replace active expansions with combined expansion arrays
   // > clear_inactive() takes care of the auxilliary inactive expansions that
   //   are now assimilated within each new active expansion
-  // > swap() not available for Real{Vector,Matrix}
+  // > swap() is conditionally available for Real{Vector,Matrix}
 
   if (expansionCoeffFlag) {
     if (clear_combined) {
@@ -388,7 +388,7 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
 
   // Create a dummy modSurrData for the combined-now-active coeffs, for
   // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
-  create_surrogate_data(modSurrData); // overwrite data for activeKey
+  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
 
   // if outgoing stats type is combined, then can carry over current moment
   // stats from combined to active.  But if the outgoing stats type was already
@@ -403,7 +403,7 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
 
 
 void NodalInterpPolyApproximation::
-create_surrogate_data(SurrogateData& surr_data)
+synthetic_surrogate_data(SurrogateData& surr_data)
 {
   // Update the active key of surr_data with synthetic data based on the
   // active grid from csg_driver
@@ -414,8 +414,7 @@ create_surrogate_data(SurrogateData& surr_data)
   // CombinedSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
   // of the synthetic data to be created, new colloc indices are defined at the
-  // end of CSGDriver::combined_to_active(), and this colloc index sequence is
-  // employed below. 
+  // end of CSGDriver::combined_to_active(), and ordering is preserved below. 
   const RealMatrix&  var_sets = data_rep->driver()->variable_sets();
   const RealVector& t1_coeffs = expT1CoeffsIter->second;
   const RealMatrix& t2_coeffs = expT2CoeffsIter->second;
@@ -3571,11 +3570,13 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
       t1_exp[i] = value(Teuchos::getCol(Teuchos::View, alt_pts, (int)i));
     integrate_moments(t1_exp, alt_driver->type1_weight_sets(),expansionMoments);
   }
+  /*
   // Native quadrature on interpolant can be value-based or gradient-enhanced.
   // These approaches just replace the values of the response with the values
   // of the interpolant (integrates powers of the interpolant using the same
   // collocation rules/orders used to form the interpolant).
-  else {
+  else if (csg_driver->track_collocation_details() &&
+	   csg_driver->collocation_indices().empty()) {// invalidated by combine
     IntegrationDriver* driver_rep = data_rep->driverRep;
     const RealMatrix&  var_sets = driver_rep->variable_sets();
     size_t i, num_pts = var_sets.numCols(), num_v = var_sets.numRows();
@@ -3585,7 +3586,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
       for (i=0; i<num_pts; ++i) {
 	RealVector c_vars(Teuchos::View,
 			  const_cast<Real*>(var_sets[i]), (int)num_v);
-	t1_exp[i] = value(c_vars);
+	t1_exp[i] = value(c_vars); // *** requires colloc_indices! ***
 	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
       }
       integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
@@ -3595,8 +3596,30 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
       for (i=0; i<num_pts; ++i) {
 	RealVector c_vars(Teuchos::View,
 			  const_cast<Real*>(var_sets[i]), (int)num_v);
-	t1_exp[i] = value(c_vars); // *** currently requires colloc_indices
+	t1_exp[i] = value(c_vars); // *** requires colloc_indices! ***
       }
+      integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
+			expansionMoments);
+    }
+  }
+  */
+  else { // use modSurrData: original single-level or synthetic combined
+    IntegrationDriver* driver_rep = data_rep->driverRep;
+    const SDRArray& sdr_array = modSurrData.response_data();
+    size_t i, num_pts = sdr_array.size();
+    RealVector t1_exp(num_pts);
+    if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native
+      RealMatrix t2_exp(data_rep->numVars, num_pts);
+      for (i=0; i<num_pts; ++i) {
+	t1_exp[i] = sdr_array[i].response_function();
+	Teuchos::setCol(sdr_array[i].response_gradient(), (int)i, t2_exp);
+      }
+      integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
+			driver_rep->type2_weight_sets(), expansionMoments);
+    }
+    else { // value-based native quadrature
+      for (i=0; i<num_pts; ++i)
+	t1_exp[i] = sdr_array[i].response_function();
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
 			expansionMoments);
     }

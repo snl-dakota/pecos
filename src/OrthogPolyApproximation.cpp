@@ -172,9 +172,8 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
-  allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
-  // Note: no swap() available for Real{Vector,Matrix}
+  // Note: swap() is conditionally available for Real{Vector,Matrix}
   if (expansionCoeffFlag) {
     if (clear_combined) {
 #ifdef TEUCHOS_SWAP
@@ -199,6 +198,8 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
     else // redundant copy
       expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep
   }
+
+  allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
   // if outgoing stats type is combined, then can carry over current moment
   // stats from combined to active.  But if the outgoing stats type was already

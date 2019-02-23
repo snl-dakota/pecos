@@ -826,7 +826,7 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
 
   // Create a dummy modSurrData for the combined-now-active coeffs, for
   // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
-  create_surrogate_data(modSurrData); // overwrite data for activeKey
+  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
 
   // if outgoing stats type is combined, then can carry over current moment
   // stats from combined to active.  But if the outgoing stats type was already
@@ -847,7 +847,7 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
 
 
 void HierarchInterpPolyApproximation::
-create_surrogate_data(SurrogateData& surr_data)
+synthetic_surrogate_data(SurrogateData& surr_data)
 {
   // Update the active key of surr_data with synthetic data based on the
   // active grid from hsg_driver
@@ -4496,7 +4496,7 @@ integrate_response_moments(size_t num_moments,
   }
 
   // precompute all value() and gradient_basis_variables() for {t1,t2}_coeffs
-  // Note: this is essentially what create_surrogate_data() does, following
+  // Note: this is essentially what synthetic_surrogate_data() does, following
   //       combined_to_active() (eliminating the need to exercise this
   //       overloaded form of integrate_response_moments() for FINAL_RESULTS).
   RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),

@@ -731,18 +731,56 @@ void ProjectOrthogPolyApproximation::expectation()
 
 
 void ProjectOrthogPolyApproximation::
+synthetic_surrogate_data(SurrogateData& surr_data)
+{
+  // Update the active key of surr_data with synthetic data based on the
+  // active grid from csg_driver
+
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+
+  // CombinedSparseGridDriver::combined_to_active() transfers all data except
+  // collocation indices, which are invalidated by the combination.  In support
+  // of the synthetic data to be created, new colloc indices are defined at the
+  // end of CSGDriver::combined_to_active(), and ordering is preserved below. 
+  const RealMatrix&   var_sets = data_rep->driver()->variable_sets();
+  const RealVector& exp_coeffs = expCoeffsIter->second;
+
+  // shallow copy vars array data using HierarchSparseGridDriver::variableSets
+  surr_data.clear_all_active();
+  size_t num_v = var_sets.numRows(), num_pts = var_sets.numCols();
+  surr_data.resize(num_pts, 1, num_v);
+  SDVArray& sdv_array = surr_data.variables_data(); 
+  SDRArray& sdr_array = surr_data.response_data();
+  
+  // use interpolant to produce data values that are being interpolated
+  // Note: SurrogateData reconstruction follows order of unique variable
+  //       sets, also used in defining expansion coeffs (inverse of the
+  //       mapping in compute_coefficients())
+  for (size_t pt=0; pt<num_pts; ++pt) {
+    RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[pt]),
+		      (int)num_v);
+    sdv_array[pt].continuous_variables(c_vars);
+    SurrogateDataResp& sdr = sdr_array[pt];
+    sdr.response_function(value(c_vars));
+  }
+}
+
+
+void ProjectOrthogPolyApproximation::
 integrate_response_moments(size_t num_moments)//, bool combined_stats)
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
 
-  // define data_coeffs
-  size_t i, num_pts = modSurrData.points();
+  // use modSurrData: original single-level or synthetic combined
   const SDRArray& sdr_array = modSurrData.response_data();
-  RealVector data_coeffs(num_pts);
+  size_t i, num_pts = sdr_array.size();
+  RealVector data_fns(num_pts);
   for (i=0; i<num_pts; ++i)
-    data_coeffs[i] = sdr_array[i].response_function();
+    data_fns[i] = sdr_array[i].response_function();
 
+  /*
   // For MLMF, augment modSurrData using evaluations from stored expansions.
   // This fn is used in final expansion post-processing so combined_to_active()
   // has been applied.
@@ -781,22 +819,23 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
 	switch (combine_type) {
 	case MULT_COMBINE:
 	  for (i=0; i<num_pts; ++i)
-	    data_coeffs[i] *= OrthogPolyApproximation::
+	    data_fns[i] *= OrthogPolyApproximation::
 	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
 	  break;
 	default: //case ADD_COMBINE: (correction specification not required)
 	  for (i=0; i<num_pts; ++i)
-	    data_coeffs[i] += OrthogPolyApproximation::
+	    data_fns[i] += OrthogPolyApproximation::
 	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
 	  break;
 	}
       }
   }
+  */
 
-  // update numericalMoments based on data_coeffs
+  // update numericalMoments based on data_fns
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
-  integrate_moments(data_coeffs, data_rep->driverRep->type1_weight_sets(),
+  integrate_moments(data_fns, data_rep->driverRep->type1_weight_sets(),
 		    numericalMoments);
 }
 

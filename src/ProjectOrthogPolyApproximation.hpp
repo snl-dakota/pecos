@@ -74,6 +74,8 @@ protected:
   //void compute_moments(const RealVector& x, bool full_stats = true,
   //		       bool combined_stats = false);
 
+  void combined_to_active(bool clear_combined = true);
+
 private:
 
   //
@@ -99,6 +101,11 @@ private:
 			   const SDVArray& data_vars, const SDRArray& data_resp,
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
 			   RealMatrix& exp_coeff_grads);
+
+  /// update surr_data with synthetic data (from evaluating the expansion)
+  /// following promotion of combined expansion to active (simplifies stats
+  /// computation for FINAL_RESULTS)
+  void synthetic_surrogate_data(SurrogateData& surr_data);
 
   /// computes the chaosCoeffs via averaging of samples
   /// (expCoeffsSolnApproach is SAMPLING)
@@ -145,6 +152,17 @@ ProjectOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline ProjectOrthogPolyApproximation::~ProjectOrthogPolyApproximation()
 { }
+
+
+inline void ProjectOrthogPolyApproximation::
+combined_to_active(bool clear_combined)
+{
+  OrthogPolyApproximation::combined_to_active(clear_combined);
+
+  // Create a dummy modSurrData for the combined-now-active coeffs, for
+  // accelerating FINAL_RESULTS (response integration, ...)
+  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+}
 
 
 inline void ProjectOrthogPolyApproximation::
