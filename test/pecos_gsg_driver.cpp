@@ -408,7 +408,7 @@ int main(int argc, char* argv[])
 
       shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	poly_approx[iQoI].decrement_coefficients(true);
+	poly_approx[iQoI].pop_coefficients(true);
 	// Also restore the corresponding surrogate data
 	poly_approx[iQoI].surrogate_data().pop(true);
       }

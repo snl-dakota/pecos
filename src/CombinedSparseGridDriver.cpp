@@ -489,12 +489,14 @@ void CombinedSparseGridDriver::combine_grid()
 {
   size_t i, num_combine = smolyakMultiIndex.size(), combine_sm_map_ref;
   combinedSmolyakMultiIndex.clear();
-  combinedSmolyakMultiIndexMap.resize(num_combine);
+  //combinedSmolyakMultiIndexMap.resize(num_combine);
+  Sizet2DArray comb_sm_mi_map(num_combine);
   std::map<UShortArray, UShort2DArray>::const_iterator sm_cit;
   for (sm_cit  = smolyakMultiIndex.begin(), i=0;
        sm_cit != smolyakMultiIndex.end(); ++sm_cit, ++i)
     append_multi_index(sm_cit->second, combinedSmolyakMultiIndex,
-		       combinedSmolyakMultiIndexMap[i], combine_sm_map_ref);
+		       //combinedSmolyakMultiIndexMap[i],
+		       comb_sm_mi_map[i], combine_sm_map_ref);
 
   // recompute combinedSmolyakCoeffs and combinedCollocKey from scratch
   update_smolyak_coefficients(0, combinedSmolyakMultiIndex,
@@ -527,7 +529,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
     std::swap(t2WtIter->second,       combinedT2WeightSets);
 
     combinedSmolyakMultiIndex.clear();
-    combinedSmolyakMultiIndexMap.clear();
+    //combinedSmolyakMultiIndexMap.clear();
     combinedSmolyakCoeffs.clear();
     combinedCollocKey.clear();
     combinedUniqueIndexMap.clear();

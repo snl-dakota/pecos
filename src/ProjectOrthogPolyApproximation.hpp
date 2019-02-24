@@ -159,8 +159,8 @@ combined_to_active(bool clear_combined)
 {
   OrthogPolyApproximation::combined_to_active(clear_combined);
 
-  // Create a dummy modSurrData for the combined-now-active coeffs, for
-  // accelerating FINAL_RESULTS (response integration, ...)
+  // Create synthetic modSurrData for the combined-now-active coeffs, for
+  // supporting FINAL_RESULTS processing (numerical moments on combined grid)
   synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
 }
 

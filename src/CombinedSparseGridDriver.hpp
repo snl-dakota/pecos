@@ -152,8 +152,8 @@ public:
 
   /// return combinedSmolyakMultiIndex
   const UShort2DArray& combined_smolyak_multi_index() const;
-  /// return combinedSmolyakMultiIndexMap
-  const Sizet2DArray& combined_smolyak_multi_index_map() const;
+  // return combinedSmolyakMultiIndexMap
+  //const Sizet2DArray& combined_smolyak_multi_index_map() const;
   /// return combinedCollocKey
   const UShort3DArray& combined_collocation_key() const;
 
@@ -306,9 +306,9 @@ protected:
   /// multi-index for maximal grid that is the result of combining a set
   /// of level expansions
   UShort2DArray combinedSmolyakMultiIndex;
-  /// mapping of terms when aggregating CombinedSparseGridDriver::
-  /// smolyakMultiIndex into combinedSmolyakMultiIndex in pre_combine_data()
-  Sizet2DArray combinedSmolyakMultiIndexMap;
+  // mapping of terms when aggregating CombinedSparseGridDriver::
+  // smolyakMultiIndex into combinedSmolyakMultiIndex in pre_combine_data()
+  //Sizet2DArray combinedSmolyakMultiIndexMap;
   /// Smolyak coefficients corresponding to combinedSmolyakMultiIndex
   IntArray combinedSmolyakCoeffs;
   /// collocation key for maximal grid that is the result of combining a
@@ -676,9 +676,9 @@ combined_smolyak_multi_index() const
 { return combinedSmolyakMultiIndex; }
 
 
-inline const Sizet2DArray& CombinedSparseGridDriver::
-combined_smolyak_multi_index_map() const
-{ return combinedSmolyakMultiIndexMap; }
+//inline const Sizet2DArray& CombinedSparseGridDriver::
+//combined_smolyak_multi_index_map() const
+//{ return combinedSmolyakMultiIndexMap; }
 
 
 inline const UShort3DArray& CombinedSparseGridDriver::

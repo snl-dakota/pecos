@@ -416,7 +416,7 @@ append_tensor_expansions(size_t start_tp_index)
   // (following any caching of previous states)
   resize_expansion();
 
-  // update expansion{Coeffs,CoeffGrads} using a hierarchical update
+  // update expansion{Coeffs,CoeffGrads} using an incremental update
   // rather than building from scratch
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
@@ -746,23 +746,20 @@ synthetic_surrogate_data(SurrogateData& surr_data)
   const RealMatrix&   var_sets = data_rep->driver()->variable_sets();
   const RealVector& exp_coeffs = expCoeffsIter->second;
 
-  // shallow copy vars array data using HierarchSparseGridDriver::variableSets
+  // shallow copy vars array data using CombinedSparseGridDriver::variableSets
   surr_data.clear_all_active();
   size_t num_v = var_sets.numRows(), num_pts = var_sets.numCols();
-  surr_data.resize(num_pts, 1, num_v);
-  SDVArray& sdv_array = surr_data.variables_data(); 
-  SDRArray& sdr_array = surr_data.response_data();
+  surr_data.resize(num_pts, 1, num_v); // no deriv data
   
   // use interpolant to produce data values that are being interpolated
-  // Note: SurrogateData reconstruction follows order of unique variable
-  //       sets, also used in defining expansion coeffs (inverse of the
-  //       mapping in compute_coefficients())
+  // Note: SurrogateData reconstruction follows order of unique variable sets
+  SDVArray& sdv_array = surr_data.variables_data(); 
+  SDRArray& sdr_array = surr_data.response_data();
   for (size_t pt=0; pt<num_pts; ++pt) {
     RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[pt]),
 		      (int)num_v);
     sdv_array[pt].continuous_variables(c_vars);
-    SurrogateDataResp& sdr = sdr_array[pt];
-    sdr.response_function(value(c_vars));
+    sdr_array[pt].response_function(value(c_vars));
   }
 }
 

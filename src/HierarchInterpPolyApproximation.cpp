@@ -865,31 +865,31 @@ synthetic_surrogate_data(SurrogateData& surr_data)
   const UShort3DArray&        sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray&   colloc_key = hsg_driver->collocation_key();
   const Sizet3DArray&  colloc_index = hsg_driver->collocation_indices();
-  size_t             num_colloc_pts = hsg_driver->collocation_points();
+  size_t             num_colloc_pts = hsg_driver->collocation_points(),
+    lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
+    num_v = var_sets[0][0].numRows();
 
   const RealVector2DArray& t1_coeffs = expT1CoeffsIter->second;
   const RealMatrix2DArray& t2_coeffs = expT2CoeffsIter->second;
 
   // shallow copy vars array data using HierarchSparseGridDriver::variableSets
   surr_data.clear_all_active();
-  size_t num_v = var_sets[0][0].numRows();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
   short bits = (use_derivs) ? 3 : 1;
   surr_data.resize(num_colloc_pts, bits, num_v);
-  SDVArray& sdv_array = surr_data.variables_data(); 
-  SDRArray& sdr_array = surr_data.response_data();
 
   // use interpolant to produce data values that are being interpolated
   // Note: for a nested hierarchical construction, we know that contributions
   //       from level > l are zero for colloc pts that correspond to level l.
-  size_t lev, num_lev = colloc_key.size(), set, num_sets, pt, num_tp_pts,
-    c_index = colloc_index[0][0][0];
+  SDVArray& sdv_array = surr_data.variables_data(); 
+  SDRArray& sdr_array = surr_data.response_data();
+  size_t c_index = colloc_index[0][0][0];
   RealVector v0(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),(int)num_v);
   sdv_array[c_index].continuous_variables(v0); // DEFAULT_COPY assumes view
-  SurrogateDataResp& sdr0 = sdr_array[c_index];  //sdr0.clear();
-  sdr0.response_function(value(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
+  sdr_array[c_index].response_function(
+    value(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
   if (use_derivs)
-    sdr0.response_gradient(
+    sdr_array[c_index].response_gradient(
       gradient_basis_variables(v0, sm_mi, colloc_key, t1_coeffs, t2_coeffs, 0));
   for (lev=1; lev<num_lev; ++lev) {
     num_sets = colloc_key[lev].size();
@@ -901,12 +901,12 @@ synthetic_surrogate_data(SurrogateData& surr_data)
 	RealVector v_lsp(Teuchos::View, const_cast<Real*>(var_sets_ls[pt]),
 			 (int)num_v);
 	sdv_array[c_index].continuous_variables(v_lsp);
-	SurrogateDataResp& sdr_lsp = sdr_array[c_index];
-	sdr_lsp.response_function(
+	sdr_array[c_index].response_function(
 	  value(v_lsp, sm_mi, colloc_key, t1_coeffs, t2_coeffs, lev));
 	if (use_derivs)
-	  sdr_lsp.response_gradient(gradient_basis_variables(v_lsp, sm_mi,
-	    colloc_key, t1_coeffs, t2_coeffs, lev));
+	  sdr_array[c_index].response_gradient(
+	    gradient_basis_variables(v_lsp, sm_mi, colloc_key,
+				     t1_coeffs, t2_coeffs, lev));
       }
     }
   }
