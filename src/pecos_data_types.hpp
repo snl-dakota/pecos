@@ -33,9 +33,6 @@
 #include <vector>
 #include <deque>
 
-// leave off by default until Teuchos accepts patch file(s)
-//#define TEUCHOS_SWAP
-
 
 namespace Pecos {
 
@@ -341,14 +338,10 @@ template <typename ContainerT1, typename ContainerT2>
 inline void push_back_to_back(ContainerT1& array1, ContainerT2& array2)
 {
   typename ContainerT1::iterator p1_it = --array1.end();
-#ifdef TEUCHOS_SWAP
   // avoid deep copy of potentially large Real{Vector,Matrix}
   // push_back empty instance and update in place
   array2.push_back(typename ContainerT2::value_type()); // push empty
   array2.back().swap(*p1_it); // shallow copy
-#else
-  array2.push_back(*p1_it);   // deep copy
-#endif // TEUCHOS_SWAP
   array1.erase(p1_it);
 }
 
@@ -359,14 +352,10 @@ inline void push_index_to_back(ContainerT1& array1, OrdinalType p1_index,
 			       ContainerT2& array2)
 {
   typename ContainerT1::iterator p1_it = array1.begin() + p1_index;
-#ifdef TEUCHOS_SWAP
   // avoid deep copy of potentially large Real{Vector,Matrix}
   // push_back empty instance and update in place
   array2.push_back(typename ContainerT2::value_type());
   array2.back().swap(*p1_it); // shallow copy
-#else
-  array2.push_back(*p1_it);   // deep copy
-#endif // TEUCHOS_SWAP
   array1.erase(p1_it);
 }
 
@@ -376,17 +365,12 @@ template <typename ContainerT1, typename OrdinalType, typename ContainerT2>
 inline void push_range_to_back(ContainerT1& array1, OrdinalType p1_index,
 			       ContainerT2& array2)
 {
-#ifdef TEUCHOS_SWAP
   // avoid deep copies of potentially large Real{Vector,Matrix} instances
   size_t i1, i2, len1 = array1.size(), len2 = array2.size(),
     new_len2 = len2 + len1 - p1_index;
   array2.resize(new_len2); // populates end with empty instances
   for (i1=p1_index, i2=len2; i1<len1; ++i1, ++i2)
     array2[i2].swap(array1[i1]);
-#else
-  // deep copies
-  array2.insert(array2.end(), array1.begin() + p1_index, array1.end());
-#endif // TEUCHOS_SWAP
   array1.resize(p1_index);
 }
 
