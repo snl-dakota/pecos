@@ -270,25 +270,6 @@ protected:
   const RealSymMatrix& multivariate_polynomial_hessian_matrix(
     const RealVector& x, const UShortArray& indices);
 
-  /// define/update a combined Pareto set with a new multi_index by
-  /// omitting terms that are weakly Pareto dominated (more omissions
-  /// = smaller resulting set)
-  void update_pareto_set(const UShort2DArray& multi_index,
-			 UShort2DArray& combined_pareto);
-  /// define/update a combined Pareto set for a new multi_index term
-  void update_pareto_set(const UShortArray& mi_i,
-			 UShort2DArray& combined_pareto);
-  /// define/update a leading multi_index frontier omitting points that are
-  /// strongly Pareto dominated (fewer omissions = larger resulting set)
-  void update_frontier(const UShortArraySet& multi_index,
-		       UShortArraySet& mi_frontier);
-  /// define/update a leading multi_index frontier omitting points that are
-  /// strongly Pareto dominated (fewer omissions = larger resulting set)
-  void update_frontier(const UShort2DArray& multi_index,
-		       UShortArraySet& mi_frontier);
-  /// update/update a leading multi_index frontier for a new multi_index term
-  void update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier);
-
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;
 
@@ -760,46 +741,6 @@ multivariate_polynomial_hessian_matrix(const RealVector& x,
   //    mvp_hess_col[r] = multivariate_polynomial_hessian(x, r, c, indices);
   //}
   return mvpHessian;
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_pareto_set(const UShort2DArray& multi_index,
-		  UShort2DArray& combined_pareto)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  size_t i, num_p = multi_index.size();
-  for (i=0; i<num_p; ++i)
-    update_pareto_set(multi_index[i], combined_pareto);
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_frontier(const UShort2DArray& multi_index, UShortArraySet& mi_frontier)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  size_t i, num_p = multi_index.size();
-  for (i=0; i<num_p; ++i)
-    update_frontier(multi_index[i], mi_frontier);
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_frontier(const UShortArraySet& multi_index, UShortArraySet& mi_frontier)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  UShortArraySet::const_iterator cit;
-  for (cit=multi_index.begin(); cit!=multi_index.end(); ++cit)
-    update_frontier(*cit, mi_frontier);
 }
 
 

@@ -182,7 +182,7 @@ protected:
 				   IntArray& sm_coeffs);
 
   /// remove Smolyak multi-indices with zero coefficients
-  void prune_zero_coefficients(UShort2DArray& sm_mi, IntArray& sm_coeffs);
+  void prune_inactive(UShort2DArray& sm_mi, IntArray& sm_coeffs);
 
   /// compute points and type1,2 integration weights for a sparse grid
   /// defined by level and (optionally) anisotropic weights
@@ -593,7 +593,7 @@ update_smolyak_coefficients(size_t start_index)
 
 
 inline void CombinedSparseGridDriver::
-prune_zero_coefficients(UShort2DArray& sm_mi, IntArray& sm_coeffs)
+prune_inactive(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 {
   size_t i, num_coeffs = sm_coeffs.size(), cntr;
   for (i=0, cntr=0; i<num_coeffs; ++i)

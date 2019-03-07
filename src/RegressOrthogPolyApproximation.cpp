@@ -2710,7 +2710,7 @@ frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   for (i=0, si_it=sparse_indices.begin(); i<num_exp_terms; ++i, ++si_it)
-    data_rep->update_pareto_set(multi_index[*si_it], pareto_mi);
+    update_pareto_set(multi_index[*si_it], pareto_mi);
   size_t num_pareto_mi = pareto_mi.size();
 
   UShort2DArray orig_multi_index(multi_index);  // copy
@@ -2780,22 +2780,21 @@ void RegressOrthogPolyApproximation::
 advance_multi_index_front(const UShort2DArray& multi_index,
 			  UShortArraySetArray& mi_advancements)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-
   // Compute frontier_mi from the restricted (but complete) multi_index.  This
   // provides a reduced multi_index for purposes of fwd neighbor expansion.
   UShortArraySet mi_frontier;
-  data_rep->update_frontier(multi_index, mi_frontier);
+  update_pareto_frontier(multi_index, mi_frontier);
 
   // create a set of advancements from this reference frontier
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   size_t i, num_mi,
     num_advance = data_rep->regressConfigOptions.numAdvancements;
   mi_advancements.resize(num_advance);
 
   add_admissible_forward_neighbors(mi_frontier, mi_advancements[0]);
   for (i=1; i<num_advance; ++i) {
-    data_rep->update_frontier(mi_advancements[i-1], mi_frontier);
+    update_pareto_frontier(mi_advancements[i-1], mi_frontier);
     add_admissible_forward_neighbors(mi_frontier, mi_advancements[i]);
   }
   /*
@@ -2803,7 +2802,7 @@ advance_multi_index_front(const UShort2DArray& multi_index,
     UShortArraySet& mi_adv_i = mi_advancements[i];
     add_admissible_forward_neighbors(mi_frontier, mi_adv_i);
     if (i+1 < num_advance)
-      data_rep->update_frontier(mi_adv_i, mi_frontier);
+      update_pareto_frontier(mi_adv_i, mi_frontier);
   }
   */
 }

@@ -295,22 +295,21 @@ inline void assess_dominance(const UShortArray& new_order,
 			     bool& new_dominated, bool& ref_dominated)
 {
   // can't use std::vector::operator< (used for component-wise sorting)
-  size_t i, n = new_order.size();
-  bool equal = true, ref_dominated_temp = true;
-  new_dominated = true;
+  size_t i, n = new_order.size();  bool equal = true;
+  ref_dominated = new_dominated = true;
   for (i=0; i<n; ++i)
     if (new_order[i] > ref_order[i])
       { equal = false; new_dominated = false; }
     else if (ref_order[i] > new_order[i])
-      { equal = false; ref_dominated_temp = false; }
-  // asymmetric logic since incumbent wins a tie
-  ref_dominated = (!equal && ref_dominated_temp);
+      { equal = false; ref_dominated = false; }
+  // asymmetric logic: incumbent wins a tie
+  if (equal) ref_dominated = false;
 }
 
 
 /** "Strong" Pareto dominance: multi_index "a" strongly dominates multi_index
     "b" iff a_i > b_i for all i.  This case needs no notion of challenger
-    versus incumbent. */
+    versus incumbent.  Used for Pareto frontier (as opposed to Pareto set). */
 inline void assess_strong_dominance(const UShortArray& order_a,
 				    const UShortArray& order_b,
 				    bool& a_dominated, bool& b_dominated)
@@ -328,10 +327,10 @@ inline void assess_strong_dominance(const UShortArray& order_a,
 }
 
 
-/** Pareto dominance (typical definition): return true if new_order dominates
-    ref_order (using typical dominance definition). */
-inline bool new_dominates_reference(const UShortArray& new_order,
-				    const UShortArray& ref_order)
+/** Pareto dominance: return true if new_order dominates ref_order using
+    typical dominance definition (Pareto set rather than frontier). */
+inline bool new_dominates(const UShortArray& new_order,
+			  const UShortArray& ref_order)
 {
   size_t i, n = new_order.size();
   bool equal = true, ref_dominated = true;
@@ -345,16 +344,116 @@ inline bool new_dominates_reference(const UShortArray& new_order,
 }
 
 
-/** Pareto dominance (typical definition): return true if new_order dominates
-    all entries in ref_orders (using typical dominance definition). */
-inline bool new_dominates_reference(const UShortArray&   new_order,
-				    const UShort2DArray& ref_orders)
+/** Pareto dominance: return true if new_order dominates any entry in
+    ref_orders using typical dominance definition (Pareto set rather
+    than frontier). */
+inline bool new_dominates_any(const UShortArray&   new_order,
+			      const UShort2DArray& ref_orders)
 {
   size_t i, num_orders = ref_orders.size();
   for (i=0; i<num_orders; ++i)
-    if (!new_dominates_reference(new_order, ref_orders[i]))
+    if (new_dominates(new_order, ref_orders[i]))
+      { return true; break; }
+  return false;
+}
+
+
+/** Pareto dominance: return true if new_order dominates all entries
+    in ref_orders using typical dominance definition (Pareto set rather
+    than frontier). */
+inline bool new_dominates_all(const UShortArray&   new_order,
+			      const UShort2DArray& ref_orders)
+{
+  size_t i, num_orders = ref_orders.size();
+  for (i=0; i<num_orders; ++i)
+    if (!new_dominates(new_order, ref_orders[i]))
       { return false; break; }
   return true;
+}
+
+
+/** define/update pareto_set using incoming multi_index by pruning
+    terms that are weakly Pareto-dominated */
+inline bool update_pareto_set(const UShortArray& new_order,
+			      UShort2DArray& pareto_set)
+{
+  std::list<UShort2DArray::iterator> removes;
+  UShort2DArray::iterator jit;
+  bool i_dominated = false, j_dominated;
+  for (jit=pareto_set.begin(); jit!=pareto_set.end(); ++jit) {
+    assess_dominance(new_order, *jit, i_dominated, j_dominated);
+    if (i_dominated) break;
+    if (j_dominated) removes.push_back(jit);
+  }
+  // prune newly dominated in reverse order (vector iterators
+  // following a point of insertion or deletion are invalidated)
+  while (!removes.empty())
+    { pareto_set.erase(removes.back()); removes.pop_back(); }
+  // add nondominated
+  if (i_dominated)                        return false;
+  else { pareto_set.push_back(new_order); return true; }
+}
+
+
+inline void update_pareto_set(const UShort2DArray& new_orders,
+			      UShort2DArray& pareto_set)
+{
+  // This function can be used for update or for initial definition:
+  // > supports the case where the incoming array is a multi-index with
+  //   dominated terms --> performs conversion to a non-dominated frontier.
+
+  size_t i, num_p = new_orders.size();
+  for (i=0; i<num_p; ++i)
+    update_pareto_set(new_orders[i], pareto_set);
+}
+
+
+/** define/update a leading multi_index frontier using incoming
+    multi_index by pruning points that are strongly Pareto-dominated */
+inline bool update_pareto_frontier(const UShortArray& new_order,
+				   UShortArraySet& pareto_frontier)
+{
+  std::list<UShortArraySet::iterator> removes;
+  UShortArraySet::iterator jit;
+  bool i_dominated = false, j_dominated;
+  for (jit=pareto_frontier.begin(); jit!=pareto_frontier.end(); ++jit) {
+    assess_strong_dominance(new_order, *jit, i_dominated, j_dominated);
+    if (i_dominated) break;
+    if (j_dominated) removes.push_back(jit);
+  }
+  // prune newly dominated in any order
+  std::list<UShortArraySet::iterator>::iterator rm_iter;
+  for (rm_iter=removes.begin(); rm_iter!=removes.end(); ++rm_iter)
+    pareto_frontier.erase(*rm_iter);
+  // add nondominated
+  if (i_dominated)                          return false;
+  else { pareto_frontier.insert(new_order); return true; }
+}
+
+
+inline void update_pareto_frontier(const UShort2DArray& new_orders,
+				   UShortArraySet& pareto_frontier)
+{
+  // This function can be used for update or for initial definition:
+  // > supports the case where the incoming array is a multi-index with
+  //   dominated terms --> performs conversion to a non-dominated frontier.
+
+  size_t i, num_p = new_orders.size();
+  for (i=0; i<num_p; ++i)
+    update_pareto_frontier(new_orders[i], pareto_frontier);
+}
+
+
+inline void update_pareto_frontier(const UShortArraySet& new_orders,
+				   UShortArraySet& pareto_frontier)
+{
+  // This function can be used for update or for initial definition:
+  // > supports the case where the incoming array is a multi-index with
+  //   dominated terms --> performs conversion to a non-dominated frontier.
+
+  UShortArraySet::const_iterator cit;
+  for (cit=new_orders.begin(); cit!=new_orders.end(); ++cit)
+    update_pareto_frontier(*cit, pareto_frontier);
 }
 
 } // namespace Pecos

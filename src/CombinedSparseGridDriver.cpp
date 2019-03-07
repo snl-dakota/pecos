@@ -489,44 +489,55 @@ void CombinedSparseGridDriver::compute_grid()
 
 void CombinedSparseGridDriver::combine_grid()
 {
-  std::map<UShortArray, UShort2DArray>::const_iterator sm_cit
-    = smolyakMultiIndex.begin();
-
-  /* Not general enough since update_smolyak_coefficients() requires
-     incremental candidates that dominate reference grid.
-  size_t i, num_combine = smolyakMultiIndex.size(), combine_sm_map_ref;
-  combinedSmolyakMultiIndex.clear();
-  //combinedSmolyakMultiIndexMap.resize(num_combine);
-  Sizet2DArray comb_sm_mi_map(num_combine);
-  for (i=0; sm_cit != smolyakMultiIndex.end(); ++sm_cit, ++i)
-    append_multi_index(sm_cit->second, combinedSmolyakMultiIndex,
-		       //combinedSmolyakMultiIndexMap[i],
-		       comb_sm_mi_map[i], combine_sm_map_ref);
-  */
+  // combinedSmolyakMultiIndex is not a Pareto set and will typically have
+  // dominated terms with coeffs < 0.  Special care is therefore required
+  // with Pareto logic: we start from a valid reference grid, append all
+  // non-dominated multi-index "candidates", update the Smolyak coefficients,
+  // and then prune terms for which these coefficients are zero.
 
   // start from first grid (often maximal)
+  std::map<UShortArray, UShort2DArray>::const_iterator sm_cit
+    = smolyakMultiIndex.begin();
   combinedSmolyakMultiIndex = sm_cit->second;  ++sm_cit;
+  UShort2DArray combined_pareto;
+  update_pareto_set(combinedSmolyakMultiIndex, combined_pareto);
 
-  // Note: combined MI will typically have dominated terms with coeffs < 0
-  //   --> care is required with use of Pareto logic as we don't ultimately
-  //       want a Pareto frontier; rather we start from a valid reference grid
-  //       and then append non-dominated multi-index "candidates" to it.
-  size_t i, num_sm_mi;
+  // loop over all other level grids, searching for Pareto-optimal indices
+  size_t i, num_mi;  bool batch_update;
   for (; sm_cit != smolyakMultiIndex.end(); ++sm_cit) {
-    const UShort2DArray& sm_mi = sm_cit->second;  num_sm_mi = sm_mi.size();
-    for (i=0; i<num_sm_mi; ++i)
-      if (new_dominates_reference(sm_mi[i], combinedSmolyakMultiIndex))
+    const UShort2DArray& sm_mi = sm_cit->second;  num_mi = sm_mi.size();
+
+    // One pass with batch Pareto updating: ensure coeff<0 sets get included
+    batch_update = false;
+    for (i=0; i<num_mi; ++i)
+      if (new_dominates_any(sm_mi[i], combined_pareto))
+	{ combinedSmolyakMultiIndex.push_back(sm_mi[i]); batch_update = true; }
+    if (batch_update) update_pareto_set(sm_mi, combined_pareto);
+
+    /*
+    // One pass w/ continual Pareto updating: dangerous -> loss of coeff<0 sets
+    for (i=0; i<num_mi; ++i)
+      if (update_pareto_set(sm_mi[i], combined_pareto))
 	combinedSmolyakMultiIndex.push_back(sm_mi[i]);
-      // don't prune any dominated ref coefficients at this time
-      // (can prune indices with zero coefficients when done)
+
+    // Two pass: dangerous -> sets needed for coeff<0 could be lost
+    UShort2DArray pareto_l;
+    update_pareto_set(sm_mi, pareto_l);  num_mi = pareto_l.size();
+    for (i=0; i<num_mi; ++i)
+      if (update_pareto_set(pareto_l[i], combined_pareto))
+	combinedSmolyakMultiIndex.push_back(pareto_l[i]);
+    */
   }
-  
-  // update combinedSmolyakCoeffs relative to first grid
+
+  // initialize combinedSmolyakCoeffs from first grid and then update for
+  // any Pareto-optimal index set additions
+  // Note: sandia_sgmgg_coef_inc2() requires that candidates are advancements
   combinedSmolyakCoeffs = smolyakCoeffs.begin()->second;
   update_smolyak_coefficients(combinedSmolyakCoeffs.size(),
 			      combinedSmolyakMultiIndex, combinedSmolyakCoeffs);
   // prune inactive index sets
-  prune_zero_coefficients(combinedSmolyakMultiIndex, combinedSmolyakCoeffs);
+  prune_inactive(combinedSmolyakMultiIndex, combinedSmolyakCoeffs);
+
   // recompute combinedCollocKey from scratch
   assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey);
   // Define combined points and weights to support expectation() calls

@@ -651,49 +651,6 @@ integrand_order_to_expansion_order(const UShortArray& int_order,
 }
 
 
-void SharedOrthogPolyApproxData::
-update_pareto_set(const UShortArray& mi_i, UShort2DArray& combined_pareto)
-{
-  std::list<UShort2DArray::iterator> removes;
-  UShort2DArray::iterator jit;
-  bool i_dominated = false, j_dominated;
-  for (jit=combined_pareto.begin(); jit!=combined_pareto.end(); ++jit) {
-    assess_dominance(mi_i, *jit, i_dominated, j_dominated);
-    if (i_dominated) break;
-    if (j_dominated) removes.push_back(jit);
-  }
-  // 
-  // prune newly dominated in reverse order (vector iterators
-  // following a point of insertion or deletion are invalidated)
-  while (!removes.empty())
-    { combined_pareto.erase(removes.back()); removes.pop_back(); }
-  // add nondominated
-  if (!i_dominated)
-    combined_pareto.push_back(mi_i);
-}
-
-
-void SharedOrthogPolyApproxData::
-update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier)
-{
-  std::list<UShortArraySet::iterator> removes;
-  UShortArraySet::iterator jit;
-  bool i_dominated = false, j_dominated;
-  for (jit=mi_frontier.begin(); jit!=mi_frontier.end(); ++jit) {
-    assess_strong_dominance(mi_i, *jit, i_dominated, j_dominated);
-    if (i_dominated) break;
-    if (j_dominated) removes.push_back(jit);
-  }
-  // prune newly dominated in any order
-  std::list<UShortArraySet::iterator>::iterator rm_iter;
-  for (rm_iter=removes.begin(); rm_iter!=removes.end(); ++rm_iter)
-    mi_frontier.erase(*rm_iter);
-  // add nondominated
-  if (!i_dominated)
-    mi_frontier.insert(mi_i);
-}
-
-
 /** This test works in combination with DEBUG settings in
     (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::type1_gradient(). */
 void SharedOrthogPolyApproxData::gradient_check()
