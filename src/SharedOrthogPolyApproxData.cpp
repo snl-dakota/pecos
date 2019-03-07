@@ -416,15 +416,13 @@ void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
   // *** memory footprint), though not strictly required...
   //active_key(maximal_expansion());
 
-  // combine level data into combinedSmolyak{MultiIndex,Coeffs},
+  // combine level data for Driver into combinedSmolyak{MultiIndex,Coeffs},
   // combined{Var,T1Weight,T2Weight}Sets, et al.
   // Note: unlike Nodal SC, PCE only requires grid combination at the end, so
   //       incremental combined grid updates are not necessary for efficiency.
   driverRep->combine_grid();
   driverRep->combined_to_active(clear_combined);
 
-  // Leave combinedMultiIndex as separate book-keeping to support repeated
-  // combinations within adaptive refinement.
   if (clear_combined) {
     std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
     combinedMultiIndex.clear();
@@ -693,80 +691,6 @@ update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier)
   // add nondominated
   if (!i_dominated)
     mi_frontier.insert(mi_i);
-}
-
-
-/*
-bool SharedOrthogPolyApproxData::
-assess_dominance(const UShort2DArray& pareto,
-		 const UShort2DArray& combined_pareto)
-{
-  bool new_dominated = true, i_dominated, j_dominated;
-  size_t i, j, num_p = pareto.size(),
-    num_combined_p = combined_pareto.size();
-  for (i=0; i<num_p; ++i) {
-    const UShortArray& pareto_i = pareto[i];
-    i_dominated = false;
-    for (j=0; j<num_combined_p; ++j) {
-      assess_dominance(pareto_i, combined_pareto[j], i_dominated, j_dominated);
-      if (i_dominated) break;
-    }
-    if (!i_dominated) {
-      new_dominated = false;
-#ifdef DEBUG
-      PCout << "Nondominated new pareto member =\n" << pareto_i;
-#else
-      break;
-#endif // DEBUG
-    }
-  }
-  return new_dominated;
-}
-*/
-
-
-/** Weak Pareto dominance: multi_index a weakly dominates multi_index b
-    iff a_i >= b_i for all i and a_i > b_i for at least one dimension.
-    Here we add the additional distinction of a challenger versus an 
-    incumbent: tie goes to the incumbent (the challenger is dominated
-    and is not added redundantly to the Pareto set). */
-void SharedOrthogPolyApproxData::
-assess_dominance(const UShortArray& new_order,
-		 const UShortArray& existing_order,
-		 bool& new_dominated, bool& existing_dominated)
-{
-  // can't use std::vector::operator< (used for component-wise sorting)
-  size_t i, n = new_order.size();
-  bool equal = true, existing_dominated_temp = true;
-  new_dominated = true;
-  for (i=0; i<n; ++i)
-    if (new_order[i] > existing_order[i])
-      { equal = false; new_dominated = false; }
-    else if (existing_order[i] > new_order[i])
-      { equal = false; existing_dominated_temp = false; }
-  // asymmetric logic since incumbent wins a tie
-  existing_dominated = (!equal && existing_dominated_temp);
-}
-
-
-/** Strong Pareto dominance: multi_index a strongly dominates
-    multi_index b iff a_i > b_i for all i.  This case needs no notion
-    of challenger versus incumbent. */
-void SharedOrthogPolyApproxData::
-assess_strong_dominance(const UShortArray& order_a,
-			const UShortArray& order_b,
-			bool& a_dominated, bool& b_dominated)
-{
-  // can't use std::vector::operator< (used for component-wise sorting)
-  size_t i, n = order_a.size();
-  a_dominated = b_dominated = true;
-  for (i=0; i<n; ++i)
-    if (order_a[i] == order_b[i])
-      { a_dominated = b_dominated = false; break; }
-    else if (order_a[i] > order_b[i])
-      a_dominated = false;
-    else // order_b[i] > order_a[i]
-      b_dominated = false;
 }
 
 

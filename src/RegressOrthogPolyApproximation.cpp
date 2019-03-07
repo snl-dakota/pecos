@@ -2729,7 +2729,7 @@ frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
     for (j=0; j<num_pareto_mi; ++j) {
       // manage tie: i is "challenger" and is dominated if == frontier member;
       // j is "incumbent" and is not dominated if equal to challenger
-      data_rep->assess_dominance(mi_i, pareto_mi[j], i_dominated, j_dominated);
+      assess_dominance(mi_i, pareto_mi[j], i_dominated, j_dominated);
       if (i_dominated) break;
     }
 #ifdef DEBUG

@@ -201,15 +201,14 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
 
   allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
-  // if outgoing stats type is combined, then can carry over current moment
-  // stats from combined to active.  But if the outgoing stats type was already
-  // active (seems unlikely), then the previous active stats are invalidated.  
-  // To avoid introducing an order dependency on the updating of stats type,
-  // assume the former case: stats type is similarly changing from COMBINED_
-  // to ACTIVE_ stats such that previous combined moments can be preserved as
-  // new active moments.
-  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS){
-  //  clear_computed_bits();
+  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
+  // multifidelity_expansion()), then previous active stats are invalidated.
+  // But if outgoing stats type is combined, then can avoid recomputation
+  // and carry over current moment stats from combined to active. 
+  // Note: due to this carry-over optimization, updating of stats type from
+  //       COMBINED to ACTIVE must follow this function
+  if (data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS)
+    clear_computed_bits();
 }
 
 

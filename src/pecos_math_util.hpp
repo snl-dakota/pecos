@@ -254,7 +254,108 @@ inline void append_multi_index(const UShort2DArray& ref_mi,
     }
   }
 }
+
+
+// assess whether pareto array is dominated by combined_pareto
+bool SharedOrthogPolyApproxData::
+assess_dominance(const UShort2DArray& pareto,
+		 const UShort2DArray& combined_pareto)
+{
+  bool new_dominated = true, i_dominated, j_dominated;
+  size_t i, j, num_p = pareto.size(),
+    num_combined_p = combined_pareto.size();
+  for (i=0; i<num_p; ++i) {
+    const UShortArray& pareto_i = pareto[i];
+    i_dominated = false;
+    for (j=0; j<num_combined_p; ++j) {
+      assess_dominance(pareto_i, combined_pareto[j], i_dominated, j_dominated);
+      if (i_dominated) break;
+    }
+    if (!i_dominated) {
+      new_dominated = false;
+#ifdef DEBUG
+      PCout << "Nondominated new pareto member =\n" << pareto_i;
+#else
+      break;
+#endif // DEBUG
+    }
+  }
+  return new_dominated;
+}
 */
+
+
+/** Pareto dominance (typical definition): multi_index "a" weakly dominates
+    multi_index "b" iff a_i >= b_i for all i and a_i > b_i for at least 
+    one dimension.  Here we add the additional distinction of a challenger
+    versus an incumbent: tie goes to the incumbent (the challenger is not
+    added redundantly to the Pareto set). */
+inline void assess_dominance(const UShortArray& new_order,
+			     const UShortArray& ref_order,
+			     bool& new_dominated, bool& ref_dominated)
+{
+  // can't use std::vector::operator< (used for component-wise sorting)
+  size_t i, n = new_order.size();
+  bool equal = true, ref_dominated_temp = true;
+  new_dominated = true;
+  for (i=0; i<n; ++i)
+    if (new_order[i] > ref_order[i])
+      { equal = false; new_dominated = false; }
+    else if (ref_order[i] > new_order[i])
+      { equal = false; ref_dominated_temp = false; }
+  // asymmetric logic since incumbent wins a tie
+  ref_dominated = (!equal && ref_dominated_temp);
+}
+
+
+/** "Strong" Pareto dominance: multi_index "a" strongly dominates multi_index
+    "b" iff a_i > b_i for all i.  This case needs no notion of challenger
+    versus incumbent. */
+inline void assess_strong_dominance(const UShortArray& order_a,
+				    const UShortArray& order_b,
+				    bool& a_dominated, bool& b_dominated)
+{
+  // can't use std::vector::operator< (used for component-wise sorting)
+  size_t i, n = order_a.size();
+  a_dominated = b_dominated = true;
+  for (i=0; i<n; ++i)
+    if (order_a[i] == order_b[i])
+      { a_dominated = b_dominated = false; break; }
+    else if (order_a[i] > order_b[i])
+      a_dominated = false;
+    else // order_b[i] > order_a[i]
+      b_dominated = false;
+}
+
+
+/** Pareto dominance (typical definition): return true if new_order dominates
+    ref_order (using typical dominance definition). */
+inline bool new_dominates_reference(const UShortArray& new_order,
+				    const UShortArray& ref_order)
+{
+  size_t i, n = new_order.size();
+  bool equal = true, ref_dominated = true;
+  for (i=0; i<n; ++i)
+    if (new_order[i] > ref_order[i])
+      equal = false;
+    else if (ref_order[i] > new_order[i])
+      { equal = false; ref_dominated = false; }
+  // asymmetric logic since incumbent wins a tie
+  return (!equal && ref_dominated);
+}
+
+
+/** Pareto dominance (typical definition): return true if new_order dominates
+    all entries in ref_orders (using typical dominance definition). */
+inline bool new_dominates_reference(const UShortArray&   new_order,
+				    const UShort2DArray& ref_orders)
+{
+  size_t i, num_orders = ref_orders.size();
+  for (i=0; i<num_orders; ++i)
+    if (!new_dominates_reference(new_order, ref_orders[i]))
+      { return false; break; }
+  return true;
+}
 
 } // namespace Pecos
 

@@ -289,19 +289,6 @@ protected:
   /// update/update a leading multi_index frontier for a new multi_index term
   void update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier);
 
-  // assess whether new_pareto is dominated by total_pareto
-  //bool assess_dominance(const UShort2DArray& pareto,
-  //			  const UShort2DArray& combined_pareto);
-  /// assess bi-directional weak dominance for a "challenger" polynomial
-  /// index set against an "incumbent" polynomial index set
-  void assess_dominance(const UShortArray& new_order,
-			const UShortArray& existing_order,
-			bool& new_dominated, bool& existing_dominated);
-  /// assess bi-directional strong dominance between two polynomial index sets
-  void assess_strong_dominance(const UShortArray& order_a,
-			       const UShortArray& order_b,
-			       bool& a_dominated, bool& b_dominated);
-
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;
 

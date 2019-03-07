@@ -181,6 +181,9 @@ protected:
 				   const UShort2DArray& sm_mi,
 				   IntArray& sm_coeffs);
 
+  /// remove Smolyak multi-indices with zero coefficients
+  void prune_zero_coefficients(UShort2DArray& sm_mi, IntArray& sm_coeffs);
+
   /// compute points and type1,2 integration weights for a sparse grid
   /// defined by level and (optionally) anisotropic weights
   void compute_unique_points_weights(unsigned short ssg_lev,
@@ -586,6 +589,26 @@ update_smolyak_coefficients(size_t start_index)
 {
   update_smolyak_coefficients(start_index, smolMIIter->second,
 			      smolCoeffsIter->second);
+}
+
+
+inline void CombinedSparseGridDriver::
+prune_zero_coefficients(UShort2DArray& sm_mi, IntArray& sm_coeffs)
+{
+  size_t i, num_coeffs = sm_coeffs.size(), cntr;
+  for (i=0, cntr=0; i<num_coeffs; ++i)
+    if (sm_coeffs[i])
+      ++cntr;
+  if (cntr == num_coeffs) return; // all coeffs already non-zero
+
+  IntArray nonzero_sm_coeffs(cntr);  UShort2DArray nonzero_sm_mi(cntr);
+  for (i=0, cntr=0; i<num_coeffs; ++i)
+    if (sm_coeffs[i]) {
+      nonzero_sm_mi[cntr]     = sm_mi[i];
+      nonzero_sm_coeffs[cntr] = sm_coeffs[i];
+      ++cntr;
+    }
+  std::swap(sm_mi, nonzero_sm_mi);  std::swap(sm_coeffs, nonzero_sm_coeffs);
 }
 
 

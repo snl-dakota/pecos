@@ -285,12 +285,14 @@ void CombinedSparseGridDriver::
 update_smolyak_coefficients(size_t start_index, const UShort2DArray& sm_mi,
 			    IntArray& sm_coeffs)
 {
-  size_t j, cntr = 0, num_sets = sm_mi.size(), len1 = num_sets-1;
-  int i, m = numVars;
+  size_t num_sets = sm_mi.size();
+  if (start_index >= num_sets) return;
+
   if (sm_coeffs.size() != num_sets)
     sm_coeffs.resize(num_sets);
-  int *s1 = new int [numVars*len1], *c1 = new int [len1],
-      *s2 = new int [numVars];
+  size_t j, cntr = 0, len1 = num_sets-1;
+  int i, m = numVars, *s1 = new int [numVars*len1], *c1 = new int [len1],
+    *s2 = new int [numVars];
   // initialize s1 and c1
   for (i=0; i<start_index; ++i) {
     c1[i] = sm_coeffs[i];
@@ -487,20 +489,45 @@ void CombinedSparseGridDriver::compute_grid()
 
 void CombinedSparseGridDriver::combine_grid()
 {
+  std::map<UShortArray, UShort2DArray>::const_iterator sm_cit
+    = smolyakMultiIndex.begin();
+
+  /* Not general enough since update_smolyak_coefficients() requires
+     incremental candidates that dominate reference grid.
   size_t i, num_combine = smolyakMultiIndex.size(), combine_sm_map_ref;
   combinedSmolyakMultiIndex.clear();
   //combinedSmolyakMultiIndexMap.resize(num_combine);
   Sizet2DArray comb_sm_mi_map(num_combine);
-  std::map<UShortArray, UShort2DArray>::const_iterator sm_cit;
-  for (sm_cit  = smolyakMultiIndex.begin(), i=0;
-       sm_cit != smolyakMultiIndex.end(); ++sm_cit, ++i)
+  for (i=0; sm_cit != smolyakMultiIndex.end(); ++sm_cit, ++i)
     append_multi_index(sm_cit->second, combinedSmolyakMultiIndex,
 		       //combinedSmolyakMultiIndexMap[i],
 		       comb_sm_mi_map[i], combine_sm_map_ref);
+  */
 
-  // recompute combinedSmolyakCoeffs and combinedCollocKey from scratch
-  update_smolyak_coefficients(0, combinedSmolyakMultiIndex,
-			      combinedSmolyakCoeffs);
+  // start from first grid (often maximal)
+  combinedSmolyakMultiIndex = sm_cit->second;  ++sm_cit;
+
+  // Note: combined MI will typically have dominated terms with coeffs < 0
+  //   --> care is required with use of Pareto logic as we don't ultimately
+  //       want a Pareto frontier; rather we start from a valid reference grid
+  //       and then append non-dominated multi-index "candidates" to it.
+  size_t i, num_sm_mi;
+  for (; sm_cit != smolyakMultiIndex.end(); ++sm_cit) {
+    const UShort2DArray& sm_mi = sm_cit->second;  num_sm_mi = sm_mi.size();
+    for (i=0; i<num_sm_mi; ++i)
+      if (new_dominates_reference(sm_mi[i], combinedSmolyakMultiIndex))
+	combinedSmolyakMultiIndex.push_back(sm_mi[i]);
+      // don't prune any dominated ref coefficients at this time
+      // (can prune indices with zero coefficients when done)
+  }
+  
+  // update combinedSmolyakCoeffs relative to first grid
+  combinedSmolyakCoeffs = smolyakCoeffs.begin()->second;
+  update_smolyak_coefficients(combinedSmolyakCoeffs.size(),
+			      combinedSmolyakMultiIndex, combinedSmolyakCoeffs);
+  // prune inactive index sets
+  prune_zero_coefficients(combinedSmolyakMultiIndex, combinedSmolyakCoeffs);
+  // recompute combinedCollocKey from scratch
   assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey);
   // Define combined points and weights to support expectation() calls
   compute_unique_points_weights(combinedSmolyakMultiIndex,
@@ -551,7 +578,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
   // collocation indices are invalidated by expansion combination since the
   // corresponding combined grids involve overlays of data that no longer
   // reflect individual evaluations (to match restoration of collocIndices,
-  // new modSurrData must be defined in NodalInterpPolyApproximation)
+  // new modSurrData must be defined in {NodalInterp,Orthog}PolyApproximation)
   assign_collocation_indices(collocKeyIter->second, uniqIndMapIter->second,
 			     collocIndIter->second);
 }

@@ -828,21 +828,21 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
   synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
 
-  // if outgoing stats type is combined, then can carry over current moment
-  // stats from combined to active.  But if the outgoing stats type was already
-  // active (seems unlikely), then the previous active stats are invalidated.  
-  // To avoid introducing an order dependency on the updating of stats type,
-  // assume the former case: stats type is similarly changing from COMBINED_
-  // to ACTIVE_ stats such that previous combined moments can be preserved as
-  // new active moments.  Note: reference and delta are less important to reuse
-  // in the context of final active processing, so go ahead and clear these
-  // tracker bits for simplicity (even though these moments could be preserved
-  // as well with sufficient care).
-  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS){
-    clear_reference_computed_bits(); clear_delta_computed_bits();
-  //}
-  //else // previous active coeffs overwritten -> all moments invalidated
-  //  clear_computed_bits();
+  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
+  // multifidelity_expansion()), then previous active stats are invalidated.
+  // But if outgoing stats type is combined, then can avoid recomputation
+  // and carry over current moment stats from combined to active. 
+  // Note: due to this carry-over optimization, updating of stats type from
+  //       COMBINED to ACTIVE must follow this function
+  // Note: reference and delta are less important to reuse in the context of
+  //       final active processing, so clear these tracker bits for simplicity
+  //       (even though they could be preserved as well with sufficient care).
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    { clear_reference_computed_bits(); clear_delta_computed_bits(); }
+  else // previous active coeffs overwritten -> all moments invalidated
+    clear_computed_bits();
 }
 
 

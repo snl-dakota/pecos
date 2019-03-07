@@ -344,6 +344,8 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   //   are now assimilated within each new active expansion
   // > swap() is conditionally available for Real{Vector,Matrix}
 
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   if (expansionCoeffFlag) {
     if (clear_combined) {
 #ifdef TEUCHOS_SWAP
@@ -355,8 +357,7 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
     }
     else // redundant copy
       expT1CoeffsIter->second = combinedExpT1Coeffs;     // deep
-    SharedNodalInterpPolyApproxData* data_rep
-      = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+
     if (data_rep->basisConfigOptions.useDerivs) {
       if (clear_combined) {
 #ifdef TEUCHOS_SWAP
@@ -370,6 +371,7 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
 	expT2CoeffsIter->second = combinedExpT2Coeffs;     // deep
     }
   }
+
   if (expansionCoeffGradFlag) {
     if (clear_combined) {
 #ifdef TEUCHOS_SWAP
@@ -390,15 +392,14 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
   synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
 
-  // if outgoing stats type is combined, then can carry over current moment
-  // stats from combined to active.  But if the outgoing stats type was already
-  // active (seems unlikely), then the previous active stats are invalidated.  
-  // To avoid introducing an order dependency on the updating of stats type,
-  // assume the former case: stats type is similarly changing from COMBINED_
-  // to ACTIVE_ stats such that previous combined moments can be preserved as
-  // new active moments.
-  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS){
-  //  clear_computed_bits();
+  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
+  // multifidelity_expansion()), then previous active stats are invalidated.
+  // But if outgoing stats type is combined, then can avoid recomputation
+  // and carry over current moment stats from combined to active. 
+  // Note: due to this carry-over optimization, updating of stats type from
+  //       COMBINED to ACTIVE must follow this function
+  if (data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS)
+    clear_computed_bits();
 }
 
 
