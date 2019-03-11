@@ -420,8 +420,10 @@ void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
   // combined{Var,T1Weight,T2Weight}Sets, et al.
   // Note: unlike Nodal SC, PCE only requires grid combination at the end, so
   //       incremental combined grid updates are not necessary for efficiency.
-  driverRep->combine_grid();
-  driverRep->combined_to_active(clear_combined);
+  if (driverRep) {
+    driverRep->combine_grid();
+    driverRep->combined_to_active(clear_combined);
+  }
 
   if (clear_combined) {
     std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
