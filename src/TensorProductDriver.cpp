@@ -126,6 +126,8 @@ void TensorProductDriver::combined_to_active(bool clear_combined)
     t1WtIter->second       = combinedT1WeightSets;
     t2WtIter->second       = combinedT2WeightSets;
   }
+
+  update_quadrature_order_from_level_index();
 }
 
 
