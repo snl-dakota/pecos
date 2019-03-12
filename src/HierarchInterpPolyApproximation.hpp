@@ -637,6 +637,11 @@ private:
   //- Heading: Data
   //
 
+  /// performance setting: reuse accumulated productType{1,2}Coeffs for fast
+  /// computation of covariance metrics, despite loss of precision from
+  /// subtractive cancellation (E[R_i R_j] - Mean_i Mean_j)
+  bool speedOverPrecision;
+
   /// bookkeeping to track computation of reference mean to avoid
   /// unnecessary recomputation
   short computedRefMean;
@@ -739,7 +744,7 @@ HierarchInterpPolyApproximation(const SharedBasisApproxData& shared_data):
   InterpPolyApproximation(shared_data),
   expT1CoeffsIter(expansionType1Coeffs.end()),
   prodT1CoeffsIter(productType1Coeffs.end()),
-  prodT2CoeffsIter(productType2Coeffs.end())
+  prodT2CoeffsIter(productType2Coeffs.end()), speedOverPrecision(false)
 { }
 
 

@@ -1475,16 +1475,15 @@ covariance(PolynomialApproximation* poly_approx_2)
   }
 
   Real covar, mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
-  if (product_interpolants())
+  if (speedOverPrecision && product_interpolants())
      // uncentered raw moment available (accept loss of precision)
     covar = expectation(prodT1CoeffsIter->second[poly_approx_2],
 			prodT2CoeffsIter->second[poly_approx_2])
           - mean_1 * mean_2;
-  else { // form central product interp from scratch
+  else { // form central product interp from scratch and then integrate it
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
     central_product_interpolant(hip_approx_2, mean_1, mean_2,
 				cov_t1_coeffs, cov_t2_coeffs);
-    // evaluate expectation of these t1/t2 coefficients
     covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
   }
 
@@ -1518,16 +1517,15 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   Real covar, mean_1 = mean(x),
     mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
-  if (product_interpolants())
+  if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
     covar = expectation(x, prodT1CoeffsIter->second[poly_approx_2],
 			prodT2CoeffsIter->second[poly_approx_2])
           - mean_1 * mean_2;
-  else { // form central product interp from scratch
+  else { // form central product interp from scratch and then integrate it
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
     central_product_interpolant(hip_approx_2, mean_1, mean_2,
 				cov_t1_coeffs, cov_t2_coeffs);
-    // evaluate expectation of these t1/t2 coefficients
     covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
   }
 
@@ -1835,12 +1833,12 @@ reference_variance(const UShort2DArray& ref_key)
     return referenceMoments[1];
 
   Real ref_var, ref_mean = reference_mean(ref_key);
-  if (product_interpolants())
+  if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
     ref_var = expectation(prodT1CoeffsIter->second[this],
 			  prodT2CoeffsIter->second[this], ref_key)
             - ref_mean * ref_mean;
-  else { // form central product interp from scratch
+  else { // form central product interp from scratch and then integrate it
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
 				cov_t2_coeffs, ref_key);
@@ -1864,12 +1862,12 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
     return referenceMoments[1];
 
   Real ref_var, ref_mean = reference_mean(x, ref_key);
-  if (product_interpolants())
+  if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
     ref_var = expectation(x, prodT1CoeffsIter->second[this],
 			     prodT2CoeffsIter->second[this], ref_key)
             - ref_mean * ref_mean;
-  else { // form central product interp from scratch
+  else { // form central product interp from scratch and then integrate it
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
 				cov_t2_coeffs, ref_key);
@@ -1895,13 +1893,13 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(ref_key_map);
-  if (product_interpolants())
+  if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
     ref_var = expectation(productType1Coeffs, productType2Coeffs, this,
 			  hsg_driver->type1_weight_sets_map(),
 			  hsg_driver->type2_weight_sets_map(), ref_key_map)
             - ref_mean * ref_mean;
-  else { // form central product interp from scratch (inactive)
+  else { // form central product interp from scratch and then integrate it
     std::map<UShortArray, RealVector2DArray> cov_t1c_map;
     std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1c_map,
@@ -1930,13 +1928,13 @@ reference_combined_variance(const RealVector& x,
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(x, ref_key_map);
-  if (product_interpolants())
+  if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
     ref_var = expectation(x, productType1Coeffs, productType2Coeffs, this,
 			  hsg_driver->smolyak_multi_index_map(),
 			  hsg_driver->collocation_key_map(), ref_key_map)
             - ref_mean * ref_mean;
-  else { // form central product interp from scratch (inactive)
+  else { // form central product interp from scratch and then integrate it
     std::map<UShortArray, RealVector2DArray> cov_t1c_map;
     std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1c_map,
