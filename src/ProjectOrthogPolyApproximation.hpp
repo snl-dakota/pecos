@@ -15,6 +15,7 @@
 #define PROJECT_ORTHOG_POLY_APPROXIMATION_HPP
 
 #include "OrthogPolyApproximation.hpp"
+#include "SharedProjectOrthogPolyApproxData.hpp"
 
 namespace Pecos {
 
@@ -161,7 +162,14 @@ combined_to_active(bool clear_combined)
 
   // Create synthetic modSurrData for the combined-now-active coeffs, for
   // supporting FINAL_RESULTS processing (numerical moments on combined grid)
-  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+  // Note: exclude CUBATURE and SAMPLING, which lack combined grids.
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+    synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+    break;
+  }
 }
 
 

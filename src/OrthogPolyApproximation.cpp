@@ -205,8 +205,8 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
   // multifidelity_expansion()), then previous active stats are invalidated.
   // But if outgoing stats type is combined, then can avoid recomputation
   // and carry over current moment stats from combined to active. 
-  // Note: due to this carry-over optimization, updating of stats type from
-  //       COMBINED to ACTIVE must follow this function
+  // Note: this reuse optimization introduces an order dependency --> updating
+  //       stats type from COMBINED to ACTIVE must occur after this function
   if (data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS)
     clear_computed_bits();
 }

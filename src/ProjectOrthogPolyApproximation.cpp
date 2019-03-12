@@ -12,7 +12,6 @@
 //- Owner:        Mike Eldred
 
 #include "ProjectOrthogPolyApproximation.hpp"
-#include "SharedProjectOrthogPolyApproxData.hpp"
 #include "TensorProductDriver.hpp"
 #include "IncrementalSparseGridDriver.hpp"
 #include "CubatureDriver.hpp"

@@ -412,7 +412,7 @@ void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
 {
   // retrieve the most refined from the existing grids (from sequence
   // specification + any subsequent refinement)
-  // *** This might still be a good idea (e.g., for not temporarily inflating
+  // *** This might still be a good idea (e.g., avoid temporarily inflating
   // *** memory footprint), though not strictly required...
   //active_key(maximal_expansion());
 
@@ -420,9 +420,12 @@ void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
   // combined{Var,T1Weight,T2Weight}Sets, et al.
   // Note: unlike Nodal SC, PCE only requires grid combination at the end, so
   //       incremental combined grid updates are not necessary for efficiency.
-  if (driverRep) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: case QUADRATURE:
+  //case CUBATURE: // key-based data not implemented for multilevel
     driverRep->combine_grid();
     driverRep->combined_to_active(clear_combined);
+    break;
   }
 
   if (clear_combined) {
