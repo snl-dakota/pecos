@@ -55,6 +55,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  bool update_active_iterators(const UShortArray& key);
+
   int min_coefficients() const;
 
   void allocate_arrays();
@@ -73,10 +75,6 @@ protected:
   //
   //- Heading: New virtual functions
   //
-
-  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter for new
-  /// activeKey from sharedDataRep
-  virtual bool update_active_iterators(const UShortArray& key);
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments,
@@ -134,6 +132,8 @@ update_active_iterators(const UShortArray& key)
   surrData.active_key(key);
   if (!modSurrData.is_null())
     modSurrData.active_key(key);
+
+  PolynomialApproximation::update_active_iterators(key);
   return true;
 }
 
@@ -153,12 +153,12 @@ compute_moments(bool full_stats, bool combined_stats)
     //integrate_response_moments(2, combined_stats);
 
     // this approach utilizes bit trackers for computed moments:
-    numericalMoments.resize(2);
+    numMomentsIter->second.resize(2);
     if (combined_stats)
       { combined_mean(); combined_variance(); }
     else
       {          mean();          variance(); }
-    expansionMoments.resize(0);
+    expMomentsIter->second.resize(0);
   }
 }
 
@@ -167,7 +167,7 @@ inline void InterpPolyApproximation::
 compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode only supports first two moments
-  numericalMoments.resize(2);
+  numMomentsIter->second.resize(2);
   if (combined_stats)
     { combined_mean(x); combined_variance(x); }
   else
@@ -175,7 +175,7 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 
   //if (full_stats) integrate_expansion_moments(4, x, combined_stats);
   //else
-    expansionMoments.resize(0);
+    expMomentsIter->second.resize(0);
   // Note: it would be feasible to implement an all_variables version of
   // integrate_expansion_moments() by evaluating the combined expansion at
   // {design/epistemic=initialPtU,aleatory=Gauss points}

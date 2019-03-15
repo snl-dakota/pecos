@@ -149,15 +149,11 @@ protected:
 		       bool combined_stats = false);
 
   //
-  //- Heading: New virtual functions
+  //- Heading: Member functions
   //
 
   /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
-  virtual void update_active_iterators(const UShortArray& key);
-
-  //
-  //- Heading: Member functions
-  //
+  bool update_active_iterators(const UShortArray& key);
 
   /// size expansion{Coeffs,CoeffGrads} based on the shared multiIndex
   void size_expansion();
@@ -291,12 +287,12 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
 
 
-inline void OrthogPolyApproximation::
+inline bool OrthogPolyApproximation::
 update_active_iterators(const UShortArray& key)
 {
   // Test for change
   if (expCoeffsIter != expansionCoeffs.end() && expCoeffsIter->first == key)
-    return;
+    return false;
 
   expCoeffsIter = expansionCoeffs.find(key);
   if (expCoeffsIter == expansionCoeffs.end()) {
@@ -312,6 +308,9 @@ update_active_iterators(const UShortArray& key)
   surrData.active_key(key);
   if (!modSurrData.is_null())
     modSurrData.active_key(key);
+
+  PolynomialApproximation::update_active_iterators(key);
+  return true;
 }
 
 
@@ -321,12 +320,13 @@ compute_moments(bool full_stats, bool combined_stats)
   // standard variables mode supports two expansion moments by default
   // (specialized by ProjectOrthogPolyApprox)
 
-  if (expansionMoments.length() != 2) expansionMoments.resize(2);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
   if (combined_stats)
     { combined_mean(); combined_variance(); } // for combinedExpCoeffs
   else {
-    mean(); variance(); // updates expansionMoments[0] and [1]
-    //standardize_moments(expansionMoments);
+    mean(); variance(); // updates first two expansionMoments
+    //standardize_moments(exp_mom);
   }
 }
 
@@ -336,12 +336,13 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode currently two expansion moments by default
 
-  if (expansionMoments.length() != 2) expansionMoments.resize(2);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
   if (combined_stats)
     { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
   else {
-    mean(x); variance(x); // updates expansionMoments[0] and [1]
-    //standardize_moments(expansionMoments);
+    mean(x); variance(x); // updates first two expansionMoments
+    //standardize_moments(exp_mom);
   }
 }
 
@@ -509,8 +510,8 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   // allocate_arrays() except for redundant size_expansion())
   allocate_total_sobol();
   allocate_component_sobol();
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
 }
 
 

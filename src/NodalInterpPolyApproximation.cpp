@@ -2968,15 +2968,18 @@ mean_gradient(const RealMatrix& exp_t1_coeff_grads,
 
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
-  if (meanGradient.length() == num_deriv_vars) meanGradient = 0.;
-  else meanGradient.size(num_deriv_vars);
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  RealVector& mean_grad = meanGradient[data_rep->activeKey];
+  if (mean_grad.length() == num_deriv_vars) mean_grad = 0.;
+  else mean_grad.size(num_deriv_vars);
   Real t1_wt_i;
   for (i=0; i<num_colloc_pts; ++i) {
     t1_wt_i = t1_wts[i];
     for (j=0; j<num_deriv_vars; ++j)
-      meanGradient[j] += exp_t1_coeff_grads(j,i) * t1_wt_i;
+      mean_grad[j] += exp_t1_coeff_grads(j,i) * t1_wt_i;
   }
-  return meanGradient;
+  return mean_grad;
 }
 
 
@@ -3011,9 +3014,10 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
-    if (meanGradient.length() != num_deriv_vars)
-      meanGradient.sizeUninitialized(num_deriv_vars);
-    meanGradient = 0.;
+    RealVector& mean_grad = meanGradient[data_rep->activeKey];
+    if (mean_grad.length() != num_deriv_vars)
+      mean_grad.sizeUninitialized(num_deriv_vars);
+    mean_grad = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver
       = (CombinedSparseGridDriver*)data_rep->driver();
@@ -3029,10 +3033,10 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
 	  tensor_product_mean_gradient(x, exp_t1_coeffs, exp_t2_coeffs,
 	    exp_t1_coeff_grads, sm_mi[i], colloc_key[i], colloc_index[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
-	  meanGradient[j] += coeff * tpm_grad[j];
+	  mean_grad[j] += coeff * tpm_grad[j];
       }
     }
-    return meanGradient;
+    return mean_grad;
     break;
   }
 }
@@ -3277,16 +3281,17 @@ variance_gradient(Real mean, const RealVector& exp_t1_coeffs,
   IntegrationDriver* driver_rep = data_rep->driverRep;
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
-  if  (varianceGradient.length() == num_deriv_vars) varianceGradient = 0.;
-  else varianceGradient.size(num_deriv_vars);
+  RealVector& var_grad = varianceGradient[data_rep->activeKey];
+  if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
+  else var_grad.size(num_deriv_vars);
 
   // See Eq. 6.23 in Theory Manual: grad of variance incorporates grad of mean
   for (i=0; i<num_colloc_pts; ++i) {
     Real term_i = 2. * (exp_t1_coeffs[i] - mean) * t1_wts[i];
     for (j=0; j<num_deriv_vars; ++j)
-      varianceGradient[j] += term_i * exp_t1_coeff_grads(j,i);
+      var_grad[j] += term_i * exp_t1_coeff_grads(j,i);
   }
-  return varianceGradient;
+  return var_grad;
 }
 
 
@@ -3333,8 +3338,9 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     size_t num_deriv_vars = dvv.size();
-    if  (varianceGradient.length() == num_deriv_vars) varianceGradient = 0.;
-    else varianceGradient.size(num_deriv_vars);
+    RealVector& var_grad = varianceGradient[data_rep->activeKey];
+    if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
+    else var_grad.size(num_deriv_vars);
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver
       = (CombinedSparseGridDriver*)data_rep->driver();
@@ -3355,7 +3361,7 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
 	    exp_t2_coeffs, exp_t1_coeff_grads, sm_mi[i], colloc_key[i],
 	    colloc_index[i], dvv);
 	  for (j=0; j<num_deriv_vars; ++j)
-	    varianceGradient[j] += coeff * tpv_grad[j];
+	    var_grad[j] += coeff * tpv_grad[j];
 	}
       break;
 
@@ -3369,7 +3375,7 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
 	    exp_t2_coeffs, exp_t1_coeff_grads, sm_mi[i], colloc_key[i],
 	    colloc_index[i], dvv);
 	  for (j=0; j<num_deriv_vars; ++j)
-	    varianceGradient[j] += coeff * tpv_grad[j];
+	    var_grad[j] += coeff * tpv_grad[j];
 	}
 
     // For a fast product of interpolants, cross-terms are neglected and
@@ -3390,7 +3396,7 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
 	    tensor_product_variance_gradient(x, tpm, tpm_grad, exp_t1_coeffs,
 	    exp_t2_coeffs, exp_t1_coeff_grads, sm_mi_i, key_i, c_index_i, dvv);
 	  for (j=0; j<num_deriv_vars; ++j)
-	    varianceGradient[j] += coeff * tpv_grad[j];
+	    var_grad[j] += coeff * tpv_grad[j];
 	}
       break;
 
@@ -3402,7 +3408,7 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
       abort_handler(-1);
       break;
     }
-    return varianceGradient;
+    return var_grad;
     break;
   }
   }
@@ -3471,8 +3477,9 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   IntegrationDriver* driver_rep = data_rep->driverRep;
-  if (numericalMoments.length() != num_moments)
-    numericalMoments.sizeUninitialized(num_moments);
+  RealVector& numer_mom = numMomentsIter->second;
+  if (numer_mom.length() != num_moments)
+    numer_mom.sizeUninitialized(num_moments);
 
   // Support combined_stats for completeness
   // > use of combined_to_active() prior to full_stats computation makes
@@ -3486,18 +3493,18 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
     if (combined_stats)
       integrate_moments(combinedExpT1Coeffs, combinedExpT2Coeffs,
 	driver_rep->combined_type1_weight_sets(),
-	driver_rep->combined_type2_weight_sets(), numericalMoments);
+	driver_rep->combined_type2_weight_sets(), numer_mom);
     else
       integrate_moments(expT1CoeffsIter->second, expT2CoeffsIter->second,
 	driver_rep->type1_weight_sets(), driver_rep->type2_weight_sets(),
-	numericalMoments);
+	numer_mom);
   }
   else if (combined_stats)
     integrate_moments(combinedExpT1Coeffs,
-      driver_rep->combined_type1_weight_sets(), numericalMoments);
+      driver_rep->combined_type1_weight_sets(), numer_mom);
   else
     integrate_moments(expT1CoeffsIter->second, driver_rep->type1_weight_sets(),
-      numericalMoments);
+      numer_mom);
 }
 
 
@@ -3527,8 +3534,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	  << "promotion of combined to active." << std::endl;
     abort_handler(-1);
   }
-  if (expansionMoments.length() != num_moments)
-    expansionMoments.sizeUninitialized(num_moments);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != num_moments) exp_mom.sizeUninitialized(num_moments);
 
   // TO DO: evaluate moments 2/3/4 by evaluating the interpolant of R on higher
   // order grids so that the moment function (R-\mu)^k can be reinterpolated
@@ -3568,7 +3575,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
     RealVector t1_exp(num_pts);
     for (i=0; i<num_pts; ++i)
       t1_exp[i] = value(Teuchos::getCol(Teuchos::View, alt_pts, (int)i));
-    integrate_moments(t1_exp, alt_driver->type1_weight_sets(),expansionMoments);
+    integrate_moments(t1_exp, alt_driver->type1_weight_sets(), exp_mom);
   }
   /*
   // Native quadrature on interpolant can be value-based or gradient-enhanced.
@@ -3590,7 +3597,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
       }
       integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
-			driver_rep->type2_weight_sets(), expansionMoments);
+			driver_rep->type2_weight_sets(), exp_mom);
     }
     else { // value-based native quadrature
       for (i=0; i<num_pts; ++i) {
@@ -3599,7 +3606,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	t1_exp[i] = value(c_vars); // *** requires colloc_indices! ***
       }
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
-			expansionMoments);
+			exp_mom);
     }
   }
   */
@@ -3615,18 +3622,18 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	Teuchos::setCol(sdr_array[i].response_gradient(), (int)i, t2_exp);
       }
       integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
-			driver_rep->type2_weight_sets(), expansionMoments);
+			driver_rep->type2_weight_sets(), exp_mom);
     }
     else { // value-based native quadrature
       for (i=0; i<num_pts; ++i)
 	t1_exp[i] = sdr_array[i].response_function();
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
-			expansionMoments);
+			exp_mom);
     }
   }
 #ifdef DEBUG
   PCout << "Expansion moments type 1 coefficients:\n" << t1_exp
-	<< "Expansion moments:\n" << expansionMoments;
+	<< "Expansion moments:\n" << exp_mom;
 #endif // DEBUG
 }
 

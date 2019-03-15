@@ -257,9 +257,9 @@ public:
   //- Heading: Member functions
   //
 
-  /// return expansionMoments
+  /// return active expansionMoments
   const RealVector& expansion_moments() const;
-  /// return numericalMoments
+  /// return active numericalMoments
   const RealVector& numerical_integration_moments() const;
   /// return preferred response moments (either expansion or numerical
   /// integration, depending on approximation type)
@@ -351,6 +351,9 @@ protected:
   //- Heading: New virtual functions
   //
 
+  /// update *Iter for new activeKey from sharedDataRep
+  virtual bool update_active_iterators(const UShortArray& key);
+
   //
   //- Heading: Member functions
   //
@@ -403,12 +406,16 @@ protected:
   /// form.  For OrthogPolyApproximation, these are primary, and for
   /// InterpPolyApproximation, they are secondary.  Conversions to standardized
   /// moments (std deviation, skewness, kurtosis) are performed elsewhere.
-  RealVector expansionMoments;
+  std::map<UShortArray, RealVector> expansionMoments;
+  /// iterator to active entry in expansionMoments
+  std::map<UShortArray, RealVector>::iterator expMomentsIter;
   /// mean and central moments 2/3/4 computed via numerical integration of the
   /// response.  For OrthogPolyApproximation, these are secondary, and for
   /// InterpPolyApproximation, they are primary.  Conversions to standardized
   /// moments (std deviation, skewness, kurtosis) are performed elsewhere.
-  RealVector numericalMoments;
+  std::map<UShortArray, RealVector> numericalMoments;
+  /// iterator to active entry in numericalMoments
+  std::map<UShortArray, RealVector>::iterator numMomentsIter;
 
   /// gradient of the polynomial approximation returned by gradient()
   RealVector approxGradient;
@@ -416,29 +423,33 @@ protected:
   RealSymMatrix approxHessian;
   /// gradient of the primary mean (expansion mean for OrthogPoly,
   /// numerical integration mean for InterpPoly)
-  RealVector meanGradient;
+  std::map<UShortArray, RealVector> meanGradient;
   /// gradient of the primary variance (expansion variance for OrthogPoly,
   /// numerical integration variance for InterpPoly)
-  RealVector varianceGradient;
+  std::map<UShortArray, RealVector> varianceGradient;
 
   /// track computation of mean and mean gradient to avoid unnecessary
   /// recomputation
-  short computedMean;
+  std::map<UShortArray, short> computedMean;
+  /// iterator to active entry in computedMean
+  std::map<UShortArray, short>::iterator compMeanIter;
   /// track computation of variance and variance gradient to avoid
   /// unnecessary recomputation
-  short computedVariance;
+  std::map<UShortArray, short> computedVariance;
+  /// iterator to active entry in computedVariance
+  std::map<UShortArray, short>::iterator compVarIter;
   /// track previous evaluation point for all_variables mean to avoid
   /// unnecessary recomputation
-  RealVector xPrevMean;
+  std::map<UShortArray, RealVector> xPrevMean;
   /// track previous evaluation point for all_variables mean gradient
   /// to avoid unnecessary recomputation
-  RealVector xPrevMeanGrad;
+  std::map<UShortArray, RealVector> xPrevMeanGrad;
   /// track previous evaluation point for all_variables variance to
   /// avoid unnecessary recomputation
-  RealVector xPrevVar;
+  std::map<UShortArray, RealVector> xPrevVar;
   /// track previous evaluation point for all_variables variance
   /// gradient to avoid unnecessary recomputation
-  RealVector xPrevVarGrad;
+  std::map<UShortArray, RealVector> xPrevVarGrad;
 
   /// global sensitivities as given by Sobol'
   RealVector sobolIndices;
@@ -455,13 +466,46 @@ private:
 
 inline PolynomialApproximation::
 PolynomialApproximation(const SharedBasisApproxData& shared_data):
-  BasisApproximation(BaseConstructor(), shared_data), computedMean(0),
-  computedVariance(0), expansionCoeffFlag(true), expansionCoeffGradFlag(false)
+  BasisApproximation(BaseConstructor(), shared_data),
+  expansionCoeffFlag(true), expansionCoeffGradFlag(false),
+  expMomentsIter(expansionMoments.end()), numMomentsIter(numericalMoments.end())
 { }
 
 
 inline PolynomialApproximation::~PolynomialApproximation()
 { }
+
+
+inline bool PolynomialApproximation::
+update_active_iterators(const UShortArray& key)
+{
+  if (expMomentsIter != expansionMoments.end() && expMomentsIter->first == key)
+    return false;
+
+  expMomentsIter = expansionMoments.find(key);
+  if (expMomentsIter == expansionMoments.end()) {
+    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    expMomentsIter = expansionMoments.insert(rv_pair).first;
+  }
+  numMomentsIter = numericalMoments.find(key);
+  if (numMomentsIter == numericalMoments.end()) {
+    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    numMomentsIter = numericalMoments.insert(rv_pair).first;
+  }
+
+  compMeanIter = computedMean.find(key);
+  if (compMeanIter == computedMean.end()) {
+    std::pair<UShortArray, short> us_pair(key, 0);
+    compMeanIter = computedMean.insert(us_pair).first;
+  }
+  compVarIter = computedVariance.find(key);
+  if (compVarIter == computedVariance.end()) {
+    std::pair<UShortArray, short> us_pair(key, 0);
+    compVarIter = computedVariance.insert(us_pair).first;
+  }
+
+  return true;
+}
 
 
 inline const SurrogateData& PolynomialApproximation::surrogate_data() const
@@ -505,16 +549,16 @@ paired_lf_key(const UShortArray& hf_key, UShortArray& lf_key) const
 
 
 inline void PolynomialApproximation::clear_computed_bits()
-{ computedMean = computedVariance = 0; }
+{ compMeanIter->second = compVarIter->second = 0; }
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const
-{ return expansionMoments; }
+{ return expMomentsIter->second; }
 
 
 inline const RealVector& PolynomialApproximation::
 numerical_integration_moments() const
-{ return numericalMoments; }
+{ return numMomentsIter->second; }
 
 
 /** All current cases should prefer expansionMoments (with the distinction
@@ -523,15 +567,15 @@ numerical_integration_moments() const
 inline const RealVector& PolynomialApproximation::moments() const
 {
   // TO DO: return to this (will require activation of exp moments for all view)
-  //return expansionMoments;
+  //return expMomentsIter->second;
 
   // TO DO: remove temporary approach (avoids derived class specialization)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expBasisType) {
   case NODAL_INTERPOLANT: case HIERARCHICAL_INTERPOLANT:
-    return numericalMoments; break;
+    return numMomentsIter->second; break;
   default:
-    return expansionMoments; break;
+    return expMomentsIter->second; break;
   }
 }
 
@@ -543,18 +587,20 @@ inline void PolynomialApproximation::moments(const RealVector& mom)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expBasisType) {
   case NODAL_INTERPOLANT: case HIERARCHICAL_INTERPOLANT:
-    numericalMoments = mom; break;//copy_data_partial(mom, numericalMoments, 0);
+    numMomentsIter->second = mom;//copy_data_partial(mom, numericalMoments, 0);
+    break;
   default:
-    expansionMoments = mom; break;//copy_data_partial(mom, expansionMoments, 0);
+    expMomentsIter->second = mom;//copy_data_partial(mom, expansionMoments, 0);
+    break;
   }
 
   // activate bit trackers for moment set (a truncated array _does_ invalidate
   // other moments as this is assumed to be the available moment set)
   size_t num_mom = mom.length();
   switch (num_mom) {
-  case 0:  computedMean &= ~1;  computedVariance &= ~1; break;
-  case 1:  computedMean |=  1;  computedVariance &= ~1; break;
-  default: computedMean |=  1;  computedVariance |=  1; break; // normal case
+  case 0:  compMeanIter->second &= ~1;  compVarIter->second &= ~1; break;
+  case 1:  compMeanIter->second |=  1;  compVarIter->second &= ~1; break;
+  default: compMeanIter->second |=  1;  compVarIter->second |=  1; break;//usual
   }
 }
 
@@ -565,8 +611,9 @@ inline Real PolynomialApproximation::moment(size_t i) const
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   short exp_type = data_rep->expConfigOptions.expBasisType;
-  const RealVector& moments = (exp_type == NODAL_INTERPOLANT ||
-    exp_type == HIERARCHICAL_INTERPOLANT) ? numericalMoments : expansionMoments;
+  const RealVector& moments
+    = (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
+    ? numMomentsIter->second : expMomentsIter->second;
   if (moments.length() <= i) {
     PCerr << "Error: index (" << i << ") out of bounds in "
 	  << "PolynomialApproximation::moment()." << std::endl;
@@ -582,8 +629,9 @@ inline void PolynomialApproximation::moment(Real mom, size_t i)
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   short exp_type = data_rep->expConfigOptions.expBasisType;
-  RealVector& moments = (exp_type == NODAL_INTERPOLANT ||
-    exp_type == HIERARCHICAL_INTERPOLANT) ? numericalMoments : expansionMoments;
+  RealVector& moments
+    = (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
+    ? numMomentsIter->second : expMomentsIter->second;
   if (moments.length() <= i) {
     PCerr << "Error: index (" << i << ") out of bounds in "
 	  << "PolynomialApproximation::moment()." << std::endl;
@@ -593,8 +641,8 @@ inline void PolynomialApproximation::moment(Real mom, size_t i)
 
   // activate bit tracker for i-th moment (does _not_ invalidate other moments)
   switch (i) {
-  case 0: computedMean     |= 1; break;
-  case 1: computedVariance |= 1; break;
+  case 0: compMeanIter->second |= 1; break;
+  case 1: compVarIter->second  |= 1; break;
   //default: other indices do not have trackers
   }
 }

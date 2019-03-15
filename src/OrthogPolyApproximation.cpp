@@ -42,8 +42,8 @@ void OrthogPolyApproximation::allocate_arrays()
   // to expansion{Coeff,GradFlag} settings
   size_expansion();
 
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
 }
 
 
@@ -523,12 +523,12 @@ Real OrthogPolyApproximation::mean()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (computedMean & 1))
-    return expansionMoments[0];
+  if (std_mode && (compMeanIter->second & 1))
+    return expMomentsIter->second[0];
 
   Real mean = expCoeffsIter->second[0];
   if (std_mode)
-    { expansionMoments[0] = mean; computedMean |= 1; }
+    { expMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
   return mean;
 }
 
@@ -548,9 +548,10 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool all_mode = !data_rep->nonRandomIndices.empty();
-  if (all_mode && (computedMean & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean))
-    return expansionMoments[0];
+  const UShortArray& key = data_rep->activeKey;
+  if (all_mode && (compMeanIter->second & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
+    return expMomentsIter->second[0];
 
   const RealVector& exp_coeffs = expCoeffsIter->second;
   Real mean = exp_coeffs[0];
@@ -570,8 +571,10 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
 #endif // DEBUG
     }
 
-  if (all_mode)
-    { expansionMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
+  if (all_mode) {
+    expMomentsIter->second[0] = mean;
+    compMeanIter->second |= 1;  xPrevMean[key] = x;
+  }
   return mean;
 }
 
@@ -595,13 +598,15 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (computedMean & 2))
-    return meanGradient;
+  const UShortArray& key = data_rep->activeKey;
+  if (std_mode && (compMeanIter->second & 2))
+    return meanGradient[key];
 
-  meanGradient = Teuchos::getCol(Teuchos::Copy, expCoeffGradsIter->second, 0);
-  if (std_mode) computedMean |=  2; //   activate 2-bit
-  else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
-  return meanGradient;
+  RealVector& mean_grad = meanGradient[key];
+  mean_grad = Teuchos::getCol(Teuchos::Copy, expCoeffGradsIter->second, 0);
+  if (std_mode) compMeanIter->second |=  2; // activate 2-bit
+  else   compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
+  return mean_grad;
 }
 
 
@@ -622,9 +627,11 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool all_mode = !data_rep->nonRandomIndices.empty();
-  if ( all_mode && (computedMean & 2) &&
-       data_rep->match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
-    return meanGradient;
+  const UShortArray& key = data_rep->activeKey;
+  if ( all_mode && (compMeanIter->second & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
+    // && dvv == dvvPrev)
+    return meanGradient[key];
 
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs      = expCoeffsIter->second;
@@ -632,12 +639,13 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   size_t i, j, deriv_index, num_deriv_v = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  if (meanGradient.length() != num_deriv_v)
-    meanGradient.sizeUninitialized(num_deriv_v);
+  RealVector& mean_grad = meanGradient[key];
+  if (mean_grad.length() != num_deriv_v)
+    mean_grad.sizeUninitialized(num_deriv_v);
   for (i=0; i<num_deriv_v; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     bool random = data_rep->randomVarsKey[deriv_index];
-    Real& grad_i = meanGradient[i];
+    Real& grad_i = mean_grad[i];
     if (random) {// deriv w.r.t. des var insertion
       // Error check for required data
       if (!expansionCoeffGradFlag) {
@@ -681,9 +689,9 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     if (random) // deriv w.r.t. des var insertion
       ++cntr;
   }
-  if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
-  else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
-  return meanGradient;
+  if (all_mode) { compMeanIter->second |=  2; xPrevMeanGrad[key] = x; }
+  else   compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
+  return mean_grad;
 }
 
 
@@ -717,13 +725,13 @@ covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  if (same && std_mode && (computedVariance & 1))
-    return expansionMoments[1];
+  if (same && std_mode && (compVarIter->second & 1))
+    return expMomentsIter->second[1];
   else {
     Real covar = covariance(data_rep->multi_index(), expCoeffsIter->second,
 			    opa_2->expCoeffsIter->second);
     if (same && std_mode)
-      { expansionMoments[1] = covar; computedVariance |= 1; }
+      { expMomentsIter->second[1] = covar; compVarIter->second |= 1; }
     return covar;
   }
 }
@@ -773,6 +781,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool same = (this == opa_2), all_mode = !data_rep->nonRandomIndices.empty();
+  const UShortArray& key = data_rep->activeKey;
 
   // Error check for required data
   if ( !expansionCoeffFlag ||
@@ -782,14 +791,16 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  if ( same && all_mode && (computedVariance & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar) )
-    return expansionMoments[1];
+  if ( same && all_mode && (compVarIter->second & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+    return expMomentsIter->second[1];
 
   Real covar = covariance(x, data_rep->multi_index(), expCoeffsIter->second,
 			  opa_2->expCoeffsIter->second);
-  if (same && all_mode)
-    { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  if (same && all_mode) {
+    expMomentsIter->second[1] = covar;
+    compVarIter->second |= 1;  xPrevVar[key] = x;
+  }
   return covar;
 }
 
@@ -801,12 +812,12 @@ Real OrthogPolyApproximation::combined_mean()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (computedMean & 1))
-    return expansionMoments[0];
+  if (std_mode && (compMeanIter->second & 1))
+    return expMomentsIter->second[0];
 
   Real mean = combinedExpCoeffs[0];
   if (std_mode)
-    { expansionMoments[0] = mean; computedMean |= 1; }
+    { expMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
   return mean;
 }
 
@@ -819,9 +830,10 @@ Real OrthogPolyApproximation::combined_mean(const RealVector& x)
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool all_mode = !data_rep->nonRandomIndices.empty();
-  if (all_mode && (computedMean & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean))
-    return expansionMoments[0];
+  const UShortArray& key = data_rep->activeKey;
+  if (all_mode && (compMeanIter->second & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
+    return expMomentsIter->second[0];
 
   Real mean = combinedExpCoeffs[0];
   const UShort2DArray& comb_mi = data_rep->combinedMultiIndex;
@@ -832,8 +844,10 @@ Real OrthogPolyApproximation::combined_mean(const RealVector& x)
       mean += combinedExpCoeffs[i] * data_rep->
 	multivariate_polynomial(x, comb_mi[i], data_rep->nonRandomIndices);
 
-  if (all_mode)
-    { expansionMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
+  if (all_mode) {
+    expMomentsIter->second[0] = mean;
+    compMeanIter->second |= 1;  xPrevMean[key] = x;
+  }
   return mean;
 }
 
@@ -846,13 +860,13 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool same = (opa_2 == this), std_mode = data_rep->nonRandomIndices.empty();
 
-  if (same && std_mode && (computedVariance & 1))
-    return expansionMoments[1];
+  if (same && std_mode && (compVarIter->second & 1))
+    return expMomentsIter->second[1];
 
   Real covar = covariance(data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  opa_2->combinedExpCoeffs);
   if (same && std_mode)
-    { expansionMoments[1] = covar; computedVariance |= 1; }
+    { expMomentsIter->second[1] = covar; compVarIter->second |= 1; }
   return covar;
 }
 
@@ -864,15 +878,18 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool same = (this == opa_2), all_mode = !data_rep->nonRandomIndices.empty();
+  const UShortArray& key = data_rep->activeKey;
 
-  if ( same && all_mode && (computedVariance & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar) )
-    return expansionMoments[1];
+  if ( same && all_mode && (compVarIter->second & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+    return expMomentsIter->second[1];
 
   Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  opa_2->combinedExpCoeffs);
-  if (same && all_mode)
-    { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  if (same && all_mode) {
+    expMomentsIter->second[1] = covar;
+    compVarIter->second |= 1;  xPrevVar[key] = x;
+  }
   return covar;
 }
 
@@ -897,25 +914,27 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (computedVariance & 2))
-    return varianceGradient;
+  const UShortArray& key = data_rep->activeKey;
+  if (std_mode && (compVarIter->second & 2))
+    return varianceGradient[key];
 
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs      = expCoeffsIter->second;
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
   size_t i, j, num_deriv_v = exp_coeff_grads.numRows(),
     num_exp_terms = mi.size();
-  if (varianceGradient.length() != num_deriv_v)
-    varianceGradient.sizeUninitialized(num_deriv_v);
-  varianceGradient = 0.;
+  RealVector& var_grad = varianceGradient[key];
+  if (var_grad.length() != num_deriv_v)
+    var_grad.sizeUninitialized(num_deriv_v);
+  var_grad = 0.;
   for (i=1; i<num_exp_terms; ++i) {
     Real term_i = 2. * exp_coeffs[i] * data_rep->norm_squared(mi[i]);
     for (j=0; j<num_deriv_v; ++j)
-      varianceGradient[j] += term_i * exp_coeff_grads[i][j];
+      var_grad[j] += term_i * exp_coeff_grads[i][j];
   }
-  if (std_mode) computedVariance |=  2;
-  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
-  return varianceGradient;
+  if (std_mode) compVarIter->second |=  2;
+  else   compVarIter->second &= ~2; // deactivate 2-bit: protect mixed use
+  return var_grad;
 }
 
 
@@ -941,9 +960,11 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool all_mode = !nrand_ind.empty();
-  if ( all_mode && (computedVariance & 2) &&
-       data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
-    return varianceGradient;
+  const UShortArray& key = data_rep->activeKey;
+  if ( all_mode && (compVarIter->second & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
+    // && dvv == dvvPrev)
+    return varianceGradient[key];
 
   const UShort2DArray&   mi = data_rep->multi_index();
   const SizetList& rand_ind = data_rep->randomIndices;
@@ -952,9 +973,10 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   size_t i, j, k, deriv_index, num_deriv_v = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  if (varianceGradient.length() != num_deriv_v)
-    varianceGradient.sizeUninitialized(num_deriv_v);
-  varianceGradient = 0.;
+  RealVector& var_grad = varianceGradient[key];
+  if (var_grad.length() != num_deriv_v)
+    var_grad.sizeUninitialized(num_deriv_v);
+  var_grad = 0.;
 
   Real norm_sq_j, poly_j, poly_grad_j, norm_poly_j, coeff_j, coeff_grad_j;
   for (i=0; i<num_deriv_v; ++i) {
@@ -991,7 +1013,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 	      // -------------------------------------------
 	      // derivative w.r.t. design variable insertion
 	      // -------------------------------------------
-	      varianceGradient[i] += norm_poly_j *
+	      var_grad[i] += norm_poly_j *
 		(coeff_j * exp_coeff_grads[k][cntr] +
 		 exp_coeffs[k] * coeff_grad_j) *
 		data_rep->multivariate_polynomial(x, mi_k, nrand_ind);
@@ -999,7 +1021,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 	      // ----------------------------------------------
 	      // derivative w.r.t. design variable augmentation
 	      // ----------------------------------------------
-	      varianceGradient[i] +=
+	      var_grad[i] +=
 		coeff_j * exp_coeffs[k] * norm_sq_j *
 		// Psi_j * dPsi_k_ds_i + dPsi_j_ds_i * Psi_k
 		(poly_j * data_rep->multivariate_polynomial_gradient(x,
@@ -1013,9 +1035,9 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     if (random) // deriv w.r.t. des var insertion
       ++cntr;
   }
-  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
-  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
-  return varianceGradient;
+  if (all_mode) { compVarIter->second |=  2; xPrevVarGrad[key] = x; }
+  else   compVarIter->second &= ~2; // deactivate 2-bit: protect mixed use
+  return var_grad;
 }
 
 

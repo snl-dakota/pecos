@@ -85,7 +85,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const UShortArray& key);
 
   int min_coefficients() const;
 
@@ -427,12 +427,12 @@ inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 { }
 
 
-inline void RegressOrthogPolyApproximation::
+inline bool RegressOrthogPolyApproximation::
 update_active_iterators(const UShortArray& key)
 {
   // Test for change
   if (sparseIndIter != sparseIndices.end() && sparseIndIter->first == key)
-    return;
+    return false;
 
   sparseIndIter = sparseIndices.find(key);
   if (sparseIndIter == sparseIndices.end()) {
@@ -441,6 +441,7 @@ update_active_iterators(const UShortArray& key)
   }
 
   OrthogPolyApproximation::update_active_iterators(key);
+  return true;
 }
 
 

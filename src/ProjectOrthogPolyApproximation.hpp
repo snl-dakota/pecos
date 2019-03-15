@@ -178,12 +178,13 @@ compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
 
-  if (expansionMoments.length() != 2) expansionMoments.resize(2);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.resize(2);
   if (combined_stats)
     { combined_mean(); combined_variance(); } // for combinedExpCoeffs
   else {
-    mean(); variance(); // updates expansionMoments[0] and [1]
-    //standardize_moments(expansionMoments);
+    mean(); variance(); // updates first two expansionMoments
+    //standardize_moments(exp_mom);
   }
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
@@ -208,7 +209,7 @@ compute_moments(bool full_stats, bool combined_stats)
     integrate_response_moments(4);//, combined_stats); // TO DO
   }
   else
-    numericalMoments.resize(0);
+    numMomentsIter->second.resize(0);
 }
 
 
@@ -219,12 +220,13 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode currently supports two expansion moments
 
-  if (expansionMoments.length() != 2) expansionMoments.resize(2);
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.resize(2);
   if (combined_stats)
     { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
   else {
-    mean(x); variance(x); // updates expansionMoments[0] and [1]
-    //standardize_moments(expansionMoments);
+    mean(x); variance(x); // updates first two expansionMoments
+    //standardize_moments(exp_mom);
   }
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
@@ -241,7 +243,7 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
     integrate_response_moments(2, x);//, combined_stats); // TO DO
   }
   else
-    numericalMoments.resize(0);
+    numMomentsIter->second.resize(0);
 }
 */
 
