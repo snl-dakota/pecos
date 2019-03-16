@@ -648,9 +648,11 @@ tensor_product_mean_gradient(const RealVector& x,
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   IntegrationDriver* driver_rep = data_rep->driverRep;
-  if (tpMeanGrad.length() != num_deriv_vars)
-    tpMeanGrad.sizeUninitialized(num_deriv_vars);
-  tpMeanGrad = 0.;
+  if (tpMomentGrads.size() != 2) tpMomentGrads.resize(2);
+  RealVector& tp_mean_grad = tpMomentGrads[0];
+  if (tp_mean_grad.length() != num_deriv_vars)
+    tp_mean_grad.sizeUninitialized(num_deriv_vars);
+  tp_mean_grad = 0.;
 
   // screen for insertion and augmentation and perform error checks
   bool insert = false, augment = false;
@@ -754,7 +756,7 @@ tensor_product_mean_gradient(const RealVector& x,
       barycentric_gradient_scaling(lev_index, data_rep->nonRandomIndices);
     Real* accum = accumulator[num_v-1];
     for (d=0; d<num_deriv_vars; ++d)
-      tpMeanGrad[d] = accum[d] * scale;
+      tp_mean_grad[d] = accum[d] * scale;
   }
   else if (data_rep->basisConfigOptions.useDerivs) {
     if (insert) {
@@ -857,10 +859,10 @@ tensor_product_mean_gradient(const RealVector& x,
     }
     Real *t1_accum = t1_accumulator[num_v-1], *t2_accum;
     for (d=0; d<num_deriv_vars; ++d) {
-      tpMeanGrad[d] = t1_accum[d];
+      tp_mean_grad[d] = t1_accum[d];
       t2_accum = t2_accumulators[d][num_v-1];
       for (v=0; v<num_v; ++v)
-	tpMeanGrad[d] += t2_accum[v];
+	tp_mean_grad[d] += t2_accum[v];
     }
 
     /*
@@ -878,7 +880,7 @@ tensor_product_mean_gradient(const RealVector& x,
 	// -------------------------------------------------------------------
 	// deriv of All var expansion w.r.t. nonrand var (design augmentation)
 	// -------------------------------------------------------------------
-	Real& tp_mean_grad_d = tpMeanGrad[d];
+	Real& tp_mean_grad_d = tp_mean_grad[d];
 	tp_mean_grad_d += t1_coeff * t1_wt *
 	  type1_interpolant_gradient(x, deriv_index, key_p, lev_index,
 				     data_rep->nonRandomIndices);
@@ -960,7 +962,7 @@ tensor_product_mean_gradient(const RealVector& x,
 	data_rep->accumulate_horners_gradient(accumulator, lev_index, key_p,
 					      dvv, x);
     }
-    copy_data(accumulator[num_v-1], (int)num_deriv_vars, tpMeanGrad);
+    copy_data(accumulator[num_v-1], (int)num_deriv_vars, tp_mean_grad);
 
     /*
     // Simpler but less efficient approach:
@@ -979,7 +981,7 @@ tensor_product_mean_gradient(const RealVector& x,
 	t1_coeff = exp_t1_coeffs[c_index];	
       for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	deriv_index = dvv[d] - 1; // OK since we are in an "All" view
-	tpMeanGrad[d] += (data_rep->randomVarsKey[deriv_index]) ?
+	tp_mean_grad[d] += (data_rep->randomVarsKey[deriv_index]) ?
 	  // ------------------------------------------------------------------
 	  // derivative of All var expansion w.r.t. rand var (design insertion)
 	  // ------------------------------------------------------------------
@@ -994,7 +996,7 @@ tensor_product_mean_gradient(const RealVector& x,
     */
   }
 
-  return tpMeanGrad;
+  return tp_mean_grad;
 }
 
 
@@ -1438,9 +1440,11 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   IntegrationDriver* driver_rep = data_rep->driverRep;
-  if (tpVarianceGrad.length() != num_deriv_vars)
-    tpVarianceGrad.sizeUninitialized(num_deriv_vars);
-  tpVarianceGrad = 0.;
+  if (tpMomentGrads.size() != 2) tpMomentGrads.resize(2);
+  RealVector& tp_var_grad = tpMomentGrads[1];
+  if (tp_var_grad.length() != num_deriv_vars)
+    tp_var_grad.sizeUninitialized(num_deriv_vars);
+  tp_var_grad = 0.;
 
   // screen for insertion and augmentation and perform error checks
   bool insert = false, augment = false;
@@ -1577,7 +1581,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	barycentric_gradient_scaling(lev_index, data_rep->nonRandomIndices);
       Real* accum = accumulator[num_v-1];
       for (d=0; d<num_deriv_vars; ++d)
-	tpVarianceGrad[d] = accum[d] * scale;
+	tp_var_grad[d] = accum[d] * scale;
     }
     else if (data_rep->basisConfigOptions.useDerivs) {
       if (insert) {
@@ -1680,10 +1684,10 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
       }
       Real *t1_accum = t1_accumulator[num_v-1], *t2_accum;
       for (d=0; d<num_deriv_vars; ++d) {
-	tpVarianceGrad[d] = t1_accum[d];
+	tp_var_grad[d] = t1_accum[d];
 	t2_accum = t2_accumulators[d][num_v-1];
 	for (v=0; v<num_v; ++v)
-	  tpVarianceGrad[d] += t2_accum[v];
+	  tp_var_grad[d] += t2_accum[v];
       }
 
       /*
@@ -1700,7 +1704,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	  // ---------------------------------------------------------------
 	  // deriv of All var exp w.r.t. nonrandom var (design augmentation)
 	  // ---------------------------------------------------------------
-	  Real& grad_d = tpVarianceGrad[d];
+	  Real& grad_d = tp_var_grad[d];
 	  grad_d += t1_coeff_p_mm * t1_coeff_p_mm
 	    * type1_interpolant_gradient(x, deriv_index, key_p,
 					 lev_index, data_rep->nonRandomIndices)
@@ -1782,7 +1786,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	  data_rep->accumulate_horners_gradient(accumulator, lev_index, key_p,
 						dvv, x);
       }
-      copy_data(accumulator[num_v-1], (int)num_deriv_vars, tpVarianceGrad);
+      copy_data(accumulator[num_v-1], (int)num_deriv_vars, tp_var_grad);
 
       /*
       Real t1_coeff_p_mm;
@@ -1795,7 +1799,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	  exp_t1_coeff_grads[c_index_p] : NULL;
 	for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	  deriv_index = dvv[d] - 1; // OK since we are in an "All" view
-	  tpVarianceGrad[d] += (data_rep->randomVarsKey[deriv_index]) ?
+	  tp_var_grad[d] += (data_rep->randomVarsKey[deriv_index]) ?
 	    // ---------------------------------------------------------------
 	    // deriv of All var expansion w.r.t. random var (design insertion)
 	    // ---------------------------------------------------------------
@@ -1918,7 +1922,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 				     data_rep->nonRandomIndices);
       Real* accum = accumulator[num_v-1];
       for (d=0; d<num_deriv_vars; ++d)
-	tpVarianceGrad[d] = accum[d] * scale;
+	tp_var_grad[d] = accum[d] * scale;
     }
     else if (data_rep->basisConfigOptions.useDerivs) {
       if (insert) {
@@ -2024,10 +2028,10 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
       }
       Real *t1_accum = t1_accumulator[num_v-1], *t2_accum;
       for (d=0; d<num_deriv_vars; ++d) {
-	tpVarianceGrad[d] = t1_accum[d];
+	tp_var_grad[d] = t1_accum[d];
 	t2_accum = t2_accumulators[d][num_v-1];
 	for (v=0; v<num_v; ++v)
-	  tpVarianceGrad[d] += t2_accum[v];
+	  tp_var_grad[d] += t2_accum[v];
       }
 
       /*
@@ -2046,7 +2050,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	  // ---------------------------------------------------------------
 	  // deriv of All var exp w.r.t. nonrandom var (design augmentation)
 	  // ---------------------------------------------------------------
-	  Real& grad_d = tpVarianceGrad[d];
+	  Real& grad_d = tp_var_grad[d];
 	  grad_d += t1_coeff_p_mm * t1_coeff_p_mm
 	    * data_rep->type1_interpolant_gradient(x, deriv_index, key_p,
 	                                           reinterp_lev_index,
@@ -2134,7 +2138,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	  data_rep->accumulate_horners_gradient(accumulator, reinterp_lev_index,
 						key_p, dvv, x);
       }
-      copy_data(accumulator[num_v-1], (int)num_deriv_vars, tpVarianceGrad);
+      copy_data(accumulator[num_v-1], (int)num_deriv_vars, tp_var_grad);
 
       /*
       RealVector empty_rv; Real t1_coeff_p_mm;
@@ -2147,7 +2151,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 	  gradient_nonbasis_variables(c_vars, exp_t1_coeff_grads) : empty_rv;
 	for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	  deriv_index = dvv[d] - 1; // OK since we are in an "All" view
-	  tpVarianceGrad[d] += (data_rep->randomVarsKey[deriv_index]) ?
+	  tp_var_grad[d] += (data_rep->randomVarsKey[deriv_index]) ?
 	    // ---------------------------------------------------------------
 	    // deriv of All var expansion w.r.t. random var (design insertion)
 	    // ---------------------------------------------------------------
@@ -2198,7 +2202,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
       t1_coeff_j_mm, t1_coeff_k_mm;
     for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
       deriv_index = dvv[d] - 1; // OK since we are in an "All" view
-      Real& grad_d = tpVarianceGrad[d];
+      Real& grad_d = tp_var_grad[d];
       // first loop of double sum
       for (j=0; j<num_colloc_pts; ++j) {
 	const UShortArray& key_j = colloc_key[j];
@@ -2253,7 +2257,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
   }
   }
 
-  return tpVarianceGrad;
+  return tp_var_grad;
 }
 
 
@@ -2968,9 +2972,7 @@ mean_gradient(const RealMatrix& exp_t1_coeff_grads,
 
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  RealVector& mean_grad = meanGradient[data_rep->activeKey];
+  RealVector& mean_grad = momentGradsIter->second[0];
   if (mean_grad.length() == num_deriv_vars) mean_grad = 0.;
   else mean_grad.size(num_deriv_vars);
   Real t1_wt_i;
@@ -3014,7 +3016,7 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
-    RealVector& mean_grad = meanGradient[data_rep->activeKey];
+    RealVector& mean_grad = momentGradsIter->second[0];
     if (mean_grad.length() != num_deriv_vars)
       mean_grad.sizeUninitialized(num_deriv_vars);
     mean_grad = 0.;
@@ -3276,12 +3278,9 @@ variance_gradient(Real mean, const RealVector& exp_t1_coeffs,
 		  const RealMatrix& exp_t1_coeff_grads,
 		  const RealVector& t1_wts)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
-  RealVector& var_grad = varianceGradient[data_rep->activeKey];
+  RealVector& var_grad = momentGradsIter->second[1];
   if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
   else var_grad.size(num_deriv_vars);
 
@@ -3310,8 +3309,6 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  //IntegrationDriver* driver_rep = data_rep->driverRep;
-
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
@@ -3338,7 +3335,7 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     size_t num_deriv_vars = dvv.size();
-    RealVector& var_grad = varianceGradient[data_rep->activeKey];
+    RealVector& var_grad = momentGradsIter->second[1];
     if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
     else var_grad.size(num_deriv_vars);
     // Smolyak recursion of anisotropic tensor products

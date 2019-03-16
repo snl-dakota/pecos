@@ -600,9 +600,9 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
   bool std_mode = data_rep->nonRandomIndices.empty();
   const UShortArray& key = data_rep->activeKey;
   if (std_mode && (compMeanIter->second & 2))
-    return meanGradient[key];
+    return momentGradsIter->second[0];
 
-  RealVector& mean_grad = meanGradient[key];
+  RealVector& mean_grad = momentGradsIter->second[0];
   mean_grad = Teuchos::getCol(Teuchos::Copy, expCoeffGradsIter->second, 0);
   if (std_mode) compMeanIter->second |=  2; // activate 2-bit
   else   compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
@@ -631,7 +631,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   if ( all_mode && (compMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
-    return meanGradient[key];
+    return momentGradsIter->second[0];
 
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs      = expCoeffsIter->second;
@@ -639,7 +639,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   size_t i, j, deriv_index, num_deriv_v = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  RealVector& mean_grad = meanGradient[key];
+  RealVector& mean_grad = momentGradsIter->second[0];
   if (mean_grad.length() != num_deriv_v)
     mean_grad.sizeUninitialized(num_deriv_v);
   for (i=0; i<num_deriv_v; ++i) {
@@ -916,14 +916,14 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   bool std_mode = data_rep->nonRandomIndices.empty();
   const UShortArray& key = data_rep->activeKey;
   if (std_mode && (compVarIter->second & 2))
-    return varianceGradient[key];
+    return momentGradsIter->second[1];
 
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs      = expCoeffsIter->second;
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
   size_t i, j, num_deriv_v = exp_coeff_grads.numRows(),
     num_exp_terms = mi.size();
-  RealVector& var_grad = varianceGradient[key];
+  RealVector& var_grad = momentGradsIter->second[1];
   if (var_grad.length() != num_deriv_v)
     var_grad.sizeUninitialized(num_deriv_v);
   var_grad = 0.;
@@ -964,7 +964,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   if ( all_mode && (compVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
-    return varianceGradient[key];
+    return momentGradsIter->second[1];
 
   const UShort2DArray&   mi = data_rep->multi_index();
   const SizetList& rand_ind = data_rep->randomIndices;
@@ -973,7 +973,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   size_t i, j, k, deriv_index, num_deriv_v = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  RealVector& var_grad = varianceGradient[key];
+  RealVector& var_grad = momentGradsIter->second[1];
   if (var_grad.length() != num_deriv_v)
     var_grad.sizeUninitialized(num_deriv_v);
   var_grad = 0.;

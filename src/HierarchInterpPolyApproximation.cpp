@@ -1380,7 +1380,7 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
   bool std_mode = data_rep->nonRandomIndices.empty();
   const UShortArray& key = data_rep->activeKey;
   if (std_mode && (compMeanIter->second & 2))
-    return meanGradient[key];
+    return momentGradsIter->second[0];
 
   // Error check for required data
   if (!expansionCoeffGradFlag) {
@@ -1389,7 +1389,7 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  RealVector& mean_grad = meanGradient[key];
+  RealVector& mean_grad = momentGradsIter->second[0];
   mean_grad = expectation_gradient(expT1CoeffGradsIter->second);
   if (std_mode) compMeanIter->second |=  2;//  activate 2-bit
   else          compMeanIter->second &= ~2;//deactivate 2-bit: protect mixed use
@@ -1418,7 +1418,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   if ( all_mode && (compMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
-    return meanGradient[key];
+    return momentGradsIter->second[0];
 
   // ---------------------------------------------------------------------
   // For xi = ran vars, sa = augmented des vars, si = inserted design vars
@@ -1433,7 +1433,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
   // ---------------------------------------------------------------------
   size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
-  RealVector& mean_grad = meanGradient[key];
+  RealVector& mean_grad = momentGradsIter->second[0];
   if (mean_grad.length() != num_deriv_vars)
     mean_grad.sizeUninitialized(num_deriv_vars);
   const RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
@@ -1664,7 +1664,7 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
   bool std_mode = data_rep->nonRandomIndices.empty();
   const UShortArray& key = data_rep->activeKey;
   if (std_mode && (compVarIter->second & 2))
-    return varianceGradient[key];
+    return momentGradsIter->second[1];
 
   // Error check for required data
   if (!expansionCoeffFlag ||
@@ -1678,7 +1678,7 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
   RealMatrix2DArray cov_t1_coeff_grads;
   central_product_gradient_interpolant(this, mean1, mean1, mean1_grad,
 				       mean1_grad, cov_t1_coeff_grads);
-  RealVector& var_grad = varianceGradient[key];
+  RealVector& var_grad = momentGradsIter->second[1];
   var_grad = expectation_gradient(cov_t1_coeff_grads);
   if (std_mode) compVarIter->second |=  2;
   else          compVarIter->second &= ~2;// deactivate 2-bit: protect mixed use
@@ -1704,7 +1704,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   if ( all_mode && (compVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
-    return varianceGradient[key];
+    return momentGradsIter->second[1];
 
   // ---------------------------------------------------------------------
   // For xi = ran vars, sa = augmented des vars, si = inserted design vars
@@ -1737,7 +1737,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   if (augment)
     central_product_interpolant(this, mean_1, mean_1, cov_t1c, cov_t2c);
 
-  RealVector& var_grad = varianceGradient[key];
+  RealVector& var_grad = momentGradsIter->second[1];
   if (var_grad.length() != num_deriv_vars)
     var_grad.sizeUninitialized(num_deriv_vars);
   for (i=0; i<num_deriv_vars; ++i) {

@@ -684,10 +684,8 @@ private:
   std::map<UShortArray, RealVector> deltaMoments;
   /// iterator to active entry in deltaMoments
   std::map<UShortArray, RealVector>::iterator deltaMomentsIter;
-  /// storage for reference mean gradient
-  std::map<UShortArray, RealVector> meanRefGradient;
-  /// storage for reference variance gradient
-  std::map<UShortArray, RealVector> varianceRefGradient;
+  /// storage for reference moment gradients (mean, variance)
+  std::map<UShortArray, RealVectorArray> momentRefGradients;
 
   /// the type1 coefficients of the expansion for interpolating values
   std::map<UShortArray, RealVector2DArray> expansionType1Coeffs;
@@ -898,8 +896,11 @@ inline void HierarchInterpPolyApproximation::increment_reference_to_current()
   // update reference data
   if ( (computed_mean & 1) || (computed_var & 1) )
     refMomentsIter->second = numMomentsIter->second;
-  if (computed_mean & 2)     meanRefGradient =     meanGradient;
-  if (computed_var  & 2) varianceRefGradient = varianceGradient;
+  if ( (computed_mean & 2) || (computed_var & 2) ) {
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    momentRefGradients[data_rep->activeKey] = momentGradsIter->second;
+  }
 
   clear_current_computed_bits(); clear_delta_computed_bits();
 }
@@ -916,8 +917,11 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
   // update current data
   if ( (comp_ref_mean & 1) || (comp_ref_var & 1) )
     numMomentsIter->second = refMomentsIter->second;
-  if (comp_ref_mean & 2)     meanGradient =     meanRefGradient;
-  if (comp_ref_var  & 2) varianceGradient = varianceRefGradient;
+  if ( (comp_ref_mean & 2) || (comp_ref_var & 2) ) {
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    momentGradsIter->second = momentRefGradients[data_rep->activeKey];
+  }
 
   clear_delta_computed_bits(); // clear delta bits, but retain reference
 }

@@ -421,12 +421,11 @@ protected:
   RealVector approxGradient;
   /// Hessian of the polynomial approximation returned by hessian()
   RealSymMatrix approxHessian;
-  /// gradient of the primary mean (expansion mean for OrthogPoly,
-  /// numerical integration mean for InterpPoly)
-  std::map<UShortArray, RealVector> meanGradient;
-  /// gradient of the primary variance (expansion variance for OrthogPoly,
-  /// numerical integration variance for InterpPoly)
-  std::map<UShortArray, RealVector> varianceGradient;
+  /// gradient of mean/variance/etc. for the "primary" moments (expansion
+  /// for OrthogPoly, numerical for InterpPoly) 
+  std::map<UShortArray, RealVectorArray> momentGradients;
+  /// iterator to active entry in momentGradients
+  std::map<UShortArray, RealVectorArray>::iterator momentGradsIter;
 
   /// track computation of mean and mean gradient to avoid unnecessary
   /// recomputation
@@ -492,6 +491,14 @@ update_active_iterators(const UShortArray& key)
     std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
     numMomentsIter = numericalMoments.insert(rv_pair).first;
   }
+
+  //if (expansionCoeffGradFlag) { // or all_vars for combined exp grads?
+    momentGradsIter = momentGradients.find(key);
+    if (momentGradsIter == momentGradients.end()) {
+      std::pair<UShortArray, RealVectorArray> rva_pair(key, RealVectorArray(2));
+      momentGradsIter = momentGradients.insert(rva_pair).first;
+    }
+  //}
 
   compMeanIter = computedMean.find(key);
   if (compMeanIter == computedMean.end()) {

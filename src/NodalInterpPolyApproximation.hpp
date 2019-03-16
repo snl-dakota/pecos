@@ -344,12 +344,9 @@ private:
   /// roll up of expansion type 1 coefficient gradients across all keys
   RealMatrix combinedExpT1CoeffGrads;
 
-  /// the gradient of the mean of a tensor-product interpolant; a
-  /// contributor to meanGradient
-  RealVector tpMeanGrad;     // TO DO: move to shared data? (2nd pass tuning)
-  /// the gradient of the variance of a tensor-product interpolant; a
-  /// contributor to varianceGradient
-  RealVector tpVarianceGrad; // TO DO: move to shared data? (2nd pass tuning)
+  /// the gradient of the mean and variance of a tensor-product interpolant;
+  /// a contributor to momentGradients[key]
+  RealVectorArray tpMomentGrads;// TO DO: move to shared data? (2nd pass tuning)
 };
 
 
@@ -524,7 +521,7 @@ inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
   if (std_mode && (compMeanIter->second & 2))
-    return meanGradient[data_rep->activeKey];
+    return momentGradsIter->second[0];
 
   if (std_mode) compMeanIter->second |=  2;//  activate 2-bit
   else          compMeanIter->second &= ~2;//deactivate 2-bit: protect mixed use
@@ -546,9 +543,9 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     // && dvv == dvvPrev)
     switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:
-      return tpMeanGrad;        break;
+      return tpMomentGrads[0];           break;
     case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
-      return meanGradient[key]; break;
+      return momentGradsIter->second[0]; break;
     }
 
   // compute the gradient of the mean
@@ -658,7 +655,7 @@ inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   bool std_mode = data_rep->nonRandomIndices.empty();
   if (std_mode && (compVarIter->second & 2))
-    return varianceGradient[data_rep->activeKey];
+    return momentGradsIter->second[1];
 
   if (std_mode) compVarIter->second |=  2;
   else          compVarIter->second &= ~2;// deactivate 2-bit: protect mixed use
@@ -681,9 +678,9 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     // && dvv == dvvPrev)
     switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:
-      return tpVarianceGrad;        break;
+      return tpMomentGrads[1];           break;
     case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
-      return varianceGradient[key]; break;
+      return momentGradsIter->second[1]; break;
     }
 
   if (all_mode) { compVarIter->second |=  2; xPrevVarGrad[key] = x; }
@@ -691,7 +688,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // don't compute expansion mean/mean_grad for case where tensor
   // means/mean_grads will be used
   return (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST) ?
-    variance_gradient(x, 0., meanGradient[key], // dummy values (not used)
+    variance_gradient(x, 0., momentGradsIter->second[0], // dummy values
 		      expT1CoeffsIter->second, expT2CoeffsIter->second,
 		      expT1CoeffGradsIter->second, dvv) :
     variance_gradient(x, mean(x), mean_gradient(x, dvv),
