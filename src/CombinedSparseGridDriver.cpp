@@ -731,7 +731,7 @@ compute_unique_points_weights(const UShort2DArray& sm_mi,
   num_colloc_pts = num_u1;
   assign_unique_indices(isu1, uind1, uset1, unique_index_map);
   assign_collocation_indices(colloc_key, unique_index_map, colloc_ind);
-  update_sparse_points(colloc_ind, 0, isu1, 0, a1_pts, var_sets);
+  assign_sparse_points(colloc_ind, 0, isu1, 0, a1_pts, var_sets);
   if (trackUniqueProdWeights)
     assign_sparse_weights(colloc_key, colloc_ind, num_colloc_pts, sm_coeffs,
 			  a1_t1w, a1_t2w, t1_wts, t2_wts);
@@ -833,23 +833,23 @@ assign_unique_indices(const BitArray& isu1, const IntArray& xdnu1,
 
 
 void CombinedSparseGridDriver::
-update_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
-		     const BitArray& is_unique,
-		     int index_offset, // 0 (reference) or num_u1 (increment)
-		     const RealMatrix& tensor_pts, RealMatrix& unique_pts)
+assign_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
+		     const BitArray& raw_is_unique,
+		     size_t curr_unique_pts, // 0 (ref) or num_u1 (incr)
+		     const RealMatrix& raw_pts, RealMatrix& unique_pts)
 {
   // update sizes
-  size_t num_unique_pts = is_unique.count();
-  unique_pts.shapeUninitialized(numVars, num_unique_pts);
+  size_t new_unique_pts = raw_is_unique.count();
+  unique_pts.reshape(numVars, new_unique_pts + curr_unique_pts);
 
   size_t i, j, cntr = 0, uniq_index, num_sm_mi = colloc_ind.size(), num_tp_pts;
   for (i=start_index; i<num_sm_mi; ++i) {
     const SizetArray& colloc_ind_i = colloc_ind[i];
     num_tp_pts = colloc_ind_i.size();
     for (j=0; j<num_tp_pts; ++j, ++cntr) {
-      if (is_unique[cntr]) {
-	uniq_index = colloc_ind_i[j] - index_offset;
-	copy_data(tensor_pts[cntr], numVars, unique_pts[uniq_index]);
+      if (raw_is_unique[cntr]) {
+	uniq_index = colloc_ind_i[j];
+	copy_data(raw_pts[cntr], numVars, unique_pts[uniq_index]);
       }
     }
   }
@@ -886,7 +886,7 @@ assign_sparse_weights(const UShort3DArray& colloc_key,
 void CombinedSparseGridDriver::
 add_sparse_weights(size_t start_index, const UShort3DArray& colloc_key,
 		   const Sizet2DArray& colloc_ind, const IntArray& sm_coeffs,
-		   const RealVector& tensor_t1w, const RealMatrix& tensor_t2w,
+		   const RealVector& raw_t1w, const RealMatrix& raw_t2w,
 		   RealVector& unique_t1w, RealMatrix& unique_t2w)
 {
   // add contributions for new index sets
@@ -899,10 +899,10 @@ add_sparse_weights(size_t start_index, const UShort3DArray& colloc_key,
       for (j=0; j<num_tp_pts; ++j, ++cntr) {
 	uniq_index = colloc_ind_i[j];
 	// assign tensor weights to unique weights
-	unique_t1w[uniq_index] += sm_coeff * tensor_t1w[cntr];
+	unique_t1w[uniq_index] += sm_coeff * raw_t1w[cntr];
 	if (computeType2Weights) {
 	  Real*  uniq_t2w_j = unique_t2w[uniq_index];
-	  const Real* t2w_j = tensor_t2w[cntr];
+	  const Real* t2w_j =    raw_t2w[cntr];
 	  for (k=0; k<numVars; ++k)
 	    uniq_t2w_j[k] += sm_coeff * t2w_j[k];
 	}

@@ -75,8 +75,9 @@ public:
   size_t push_trial_index();
   size_t push_index(const UShortArray& key) const;
   //size_t finalize_index(size_t i, const UShortArray& key) const;
-  void push_set();
+
   void compute_trial_grid(RealMatrix& var_sets);
+  void push_set();
   void pop_set();
   void finalize_sets(bool output_sets, bool converged_within_tol,
 		     bool reverted);
@@ -92,8 +93,7 @@ public:
   /// adaptive grid refinement procedures
   void update_reference();
 
-  /// return active trial set under evaluation as a candidate for
-  /// adaptive refinement
+  /// return active trial set under evaluation as a refinement candidate
   const UShortArray& trial_set() const;
   /// return trial set corresponding to key
   const UShortArray& trial_set(const UShortArray& key) const;
@@ -143,7 +143,8 @@ private:
     RealVector& r2v, IntArray& sind1, BitArray& isu1, IntArray& uind1,
     IntArray& uset1, int& num_u1, IntArray& sind2, BitArray& isu2,
     IntArray& uind2, IntArray& uset2, int& num_u2, IntArray& unique_index_map,
-    RealVector& t1_wts, RealMatrix& t2_wts, bool update_1d_pts_wts);
+    RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts,
+    bool update_1d_pts_wts);
   /// modular helper for public merge_unique()
   void merge_unique_points_weights(const UShort2DArray& sm_mi,
     const IntArray& sm_coeffs, const IntArray& sm_coeffs_ref,
@@ -153,8 +154,8 @@ private:
     RealMatrix& a2_t2w, RealVector& r1v, RealVector& r2v,
     IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
     int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
-    IntArray& uset2, int& num_u2, IntArray& unique_index_map,
-    RealVector& t1_wts, RealMatrix& t2_wts);
+    IntArray& uset2, int& num_u2);
+    //, IntArray& unique_index_map, RealVector& t1_wts, RealMatrix& t2_wts);
 
   /// updates sm_mi from sm_coeffs after uniform/isotropic refinement
   void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
@@ -175,13 +176,18 @@ private:
 			     const BitArray& isu2,  const IntArray& xdnu2,
 			     const IntArray& undx2, IntArray& unique_index_map);
 
+  /// process raw a2 points to create a unique point set increment
+  void increment_sparse_points(const Sizet2DArray& colloc_ind,
+			       size_t start_index,
+			       const BitArray& raw_is_unique,
+			       size_t colloc_index_offset,
+			       const RealMatrix& raw_incr_pts,
+			       RealMatrix& unique_incr_pts);
+
   /// define the reference type{1,2}WeightSets
   void assign_sparse_weights();
   /// update type{1,2}WeightSets based on a grid increment
   void update_sparse_weights(size_t start_index);
-  /// restore type{1,2}WeightSets to reference values
-  void pop_weights();
-
   /// convenience function for updating sparse weights from two sets of
   /// tensor weights and updated coefficients
   void update_sparse_weights(size_t start_index,
@@ -195,6 +201,8 @@ private:
 			     const RealMatrix& a2_t2_wts,
 			     RealVector& unique_t1_wts,
 			     RealMatrix& unique_t2_wts);
+  /// restore type{1,2}WeightSets to reference values
+  void pop_weights();
 
   //
   //- Heading: Data
@@ -431,7 +439,7 @@ inline void IncrementalSparseGridDriver::reference_unique()
     a1PIter->second, a1T1WIter->second, a1T2WIter->second, zVec[activeKey],
     r1Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
     uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
-    uniqIndMapIter->second, varSetsIter->second, t1WtIter->second,
+    uniqIndMapIter->second, varSetsIter->second, t1WtIter->second, // ***
     t2WtIter->second);
 }
 
@@ -447,8 +455,8 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
     sortIndex1[activeKey], isUniq1Iter->second, uniqInd1Iter->second,
     uniqSet1Iter->second, numUniq1Iter->second, sortIndex2[activeKey],
     isUniq2Iter->second,  uniqInd2Iter->second, uniqSet2Iter->second,
-    numUniq2Iter->second, uniqIndMapIter->second, t1WtIter->second,
-    t2WtIter->second, update_1d_pts_wts);
+    numUniq2Iter->second, uniqIndMapIter->second, varSetsIter->second,
+    t1WtIter->second, t2WtIter->second, update_1d_pts_wts);
 }
 
 
@@ -461,8 +469,8 @@ inline void IncrementalSparseGridDriver::merge_unique()
     r2Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
     uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
     sortIndex2[activeKey], isUniq2Iter->second, uniqInd2Iter->second,
-    uniqSet2Iter->second, numUniq2Iter->second, uniqIndMapIter->second,
-    t1WtIter->second, t2WtIter->second);
+    uniqSet2Iter->second, numUniq2Iter->second);
+    //, uniqIndMapIter->second, t1WtIter->second, t2WtIter->second);
 }
 
 

@@ -220,11 +220,11 @@ protected:
   void assign_unique_indices(const BitArray& isu1, const IntArray& xdnu1,
 			     const IntArray& undx1, IntArray& unique_index_map);
 
-  /// convenience function for updating sparse points from a set of
-  /// aggregated tensor points
-  void update_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
-			    const BitArray& is_unique, int index_offset,
-			    const RealMatrix& tensor_pts,
+  /// convenience function for updating sparse (unique) points from a set of
+  /// aggregated (non-unique) tensor points
+  void assign_sparse_points(const Sizet2DArray& colloc_ind, size_t start_index,
+			    const BitArray& raw_is_unique,
+			    size_t curr_unique_pts, const RealMatrix& raw_pts,
 			    RealMatrix& unique_pts);
 
   /// convenience function for assigning sparse weights from a set of
@@ -240,10 +240,9 @@ protected:
   /// a set of tensor weights
   void add_sparse_weights(size_t start_index, const UShort3DArray& colloc_key,
 			  const Sizet2DArray& colloc_ind,
-			  const IntArray& sm_coeffs,
-			  const RealVector& tensor_t1w,
-			  const RealMatrix& tensor_t2w,
-			  RealVector& unique_t1w, RealMatrix& unique_t2w);
+			  const IntArray& sm_coeffs, const RealVector& raw_t1w,
+			  const RealMatrix& raw_t2w, RealVector& unique_t1w,
+			  RealMatrix& unique_t2w);
 
   //
   //- Heading: Data
