@@ -448,8 +448,7 @@ finalize_sets(bool output_sets, bool converged_within_tol, bool reverted)
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
   // generate final grid, uniqueIndexMapping, collocIndices, numCollocPts
-  increment_unique(start_index, false);
-  merge_unique();
+  finalize_unique(start_index);
 
   if (output_sets) {
     size_t i, j, num_sm_mi = sm_mi.size();

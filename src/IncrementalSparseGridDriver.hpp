@@ -124,8 +124,8 @@ public:
   void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
-  // apply all remaining trial sets
-  //void finalize_unique(size_t start_index);
+  /// apply all remaining trial sets
+  void finalize_unique(size_t start_index);
 
 private:
 
@@ -439,7 +439,7 @@ inline void IncrementalSparseGridDriver::reference_unique()
     a1PIter->second, a1T1WIter->second, a1T2WIter->second, zVec[activeKey],
     r1Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
     uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
-    uniqIndMapIter->second, varSetsIter->second, t1WtIter->second, // ***
+    uniqIndMapIter->second, varSetsIter->second, t1WtIter->second,
     t2WtIter->second);
 }
 
@@ -474,21 +474,19 @@ inline void IncrementalSparseGridDriver::merge_unique()
 }
 
 
-/*
-void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
+inline void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 {
   increment_unique(start_index, false);
   merge_unique();
 
-  // *** TO DO ***: This doesn't address issue of potential point replication
-  // changes between initial trial set status and finalization.  Need an
-  // improved mechanism for point restore/finalize in Dakota::Approximation.
-  // Could add a virtual fn to interrogate collocation_indices() from the 
-  // Approximation level.  Perhaps run some performance tests first to verify
-  // that this condition is possible (or does structure of admissible indices
-  // prevent replication in trial sets that is not first detected in old sets).
+  // Note: This doesn't address issue of potential point replication changes
+  // between initial trial set status and finalization.  Need an improved
+  // mechanism for point restore/finalize in Dakota::Approximation.  Could add
+  // a virtual fn to interrogate collocation_indices() from the Approximation
+  // level.  Perhaps run some performance tests first to verify that this
+  // condition is possible (or does structure of admissible indices prevent
+  // replication in trial sets that is not first detected in old sets?).
 }
-*/
 
 
 inline const UShortArray& IncrementalSparseGridDriver::
