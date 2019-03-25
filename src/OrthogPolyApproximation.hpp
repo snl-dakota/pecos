@@ -503,6 +503,10 @@ approximation_coefficients(bool normalized) const
 inline void OrthogPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 {
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
+
   if (normalized) denormalize(approx_coeffs, expCoeffsIter->second);
   else            expCoeffsIter->second = approx_coeffs;
 

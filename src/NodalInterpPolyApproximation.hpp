@@ -411,6 +411,7 @@ approximation_coefficients(bool normalized) const
   if (normalized)
     PCerr << "Warning: normalized coefficients not supported in "
 	  << "InterpPolyApproximation export." << std::endl;
+
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
@@ -429,21 +430,24 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 {
   if (normalized)
     PCerr << "Warning: normalized coefficients not supported in "
-	  << "InterpPolyApproximation import." << std::endl;
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+	  << "NodalInterpPolyApproximation import." << std::endl;
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   if (data_rep->basisConfigOptions.useDerivs) {
-    PCerr << "Error: approximation_coefficients() not supported in "
-	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
+    PCerr << "Error: approximation_coefficients() not supported in NodalInterp"
+	  << "PolyApproximation for type2 coefficients." << std::endl;
     abort_handler(-1);
   }
   else {
+    update_active_iterators(data_rep->activeKey);
+
     expT1CoeffsIter->second = approx_coeffs;
 
     allocate_total_sobol();
     allocate_component_sobol();
 
     if (numMomentsIter->second.empty()) {
-      SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
       size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
       numMomentsIter->second.sizeUninitialized(num_moments);
     }

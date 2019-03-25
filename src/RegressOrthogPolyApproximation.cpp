@@ -3156,10 +3156,12 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 
   // won't happen with current import use cases
 
-  // synchronize the expansion coeffs with the shared multi-index length
-  // expansionCoeffs is a deflation of approx_coeffs
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
+
+  // synchronize the expansion coeffs with the shared multi-index length
+  // expansionCoeffs is a deflation of approx_coeffs
   const UShort2DArray& mi = data_rep->multi_index();
   RealVector& exp_coeffs = expCoeffsIter->second;
   const SizetSet& sparse_ind = sparseIndIter->second;
