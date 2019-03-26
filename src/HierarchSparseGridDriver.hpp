@@ -53,7 +53,7 @@ public:
 
   void compute_grid();
   void compute_grid(RealMatrix& var_sets);
-  int grid_size();
+  int  grid_size();
   void combine_grid();
   void combined_to_active(bool clear_combined);
 
@@ -87,7 +87,7 @@ public:
   void compute_increment(RealMatrix& var_sets);
   void push_increment();
   void pop_increment();
-  //void merge_increment();
+  //void merge_unique();
 
   void print_smolyak_multi_index() const;
 

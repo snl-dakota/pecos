@@ -85,7 +85,7 @@ public:
   void compute_increment(RealMatrix& var_sets);
   void push_increment();
   void pop_increment();
-  void merge_increment();
+  void merge_unique();
   
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
@@ -122,8 +122,6 @@ public:
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for trailing index sets within smolyakMultiIndex
   void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
-  /// update a1Points by merging with unique a2Points
-  void merge_unique();
   /// apply all remaining trial sets
   void finalize_unique(size_t start_index);
 
@@ -154,8 +152,8 @@ private:
     RealMatrix& a2_t2w, RealVector& r1v, RealVector& r2v,
     IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
     int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
-    IntArray& uset2, int& num_u2);
-    //, IntArray& unique_index_map, RealVector& t1_wts, RealMatrix& t2_wts);
+    IntArray& uset2, int& num_u2, IntArray& unique_index_map,
+    RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts);
 
   /// updates sm_mi from sm_coeffs after uniform/isotropic refinement
   void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
@@ -469,8 +467,8 @@ inline void IncrementalSparseGridDriver::merge_unique()
     r2Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
     uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
     sortIndex2[activeKey], isUniq2Iter->second, uniqInd2Iter->second,
-    uniqSet2Iter->second, numUniq2Iter->second);
-    //, uniqIndMapIter->second, t1WtIter->second, t2WtIter->second);
+    uniqSet2Iter->second, numUniq2Iter->second, uniqIndMapIter->second,
+    varSetsIter->second, t1WtIter->second, t2WtIter->second);
 }
 
 
@@ -619,10 +617,6 @@ inline void IncrementalSparseGridDriver::update_smolyak_arrays()
   else
     update_smolyak_arrays_aniso(smolMIIter->second, smolCoeffsIter->second);
 }
-
-
-inline void IncrementalSparseGridDriver::merge_increment()
-{ merge_unique(); } // form a3 and promote to new a1
 
 } // namespace Pecos
 

@@ -103,7 +103,7 @@ public:
   /// removes a previously computed grid increment
   virtual void pop_increment();
   /// merges a grid increment into the reference grid
-  virtual void merge_increment();
+  virtual void merge_unique();
 
   /// update derived reference data, if required
   virtual void update_reference();

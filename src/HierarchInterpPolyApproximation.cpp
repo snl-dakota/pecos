@@ -2677,8 +2677,10 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
       hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   }
 
-  if (same && std_mode)
-    { deltaMomentsIter->second[1] = delta_covar; compDeltaVarIter->second |= 1; }
+  if (same && std_mode) {
+    deltaMomentsIter->second[1] = delta_covar;
+    compDeltaVarIter->second |= 1;
+  }
   return delta_covar;
 }
 
@@ -2781,8 +2783,10 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
       ref_key_map, incr_key_map);
   }
 
-  if (same && std_mode)
-    { deltaMomentsIter->second[1] = delta_covar; compDeltaVarIter->second |= 1; }
+  if (same && std_mode) {
+    deltaMomentsIter->second[1] = delta_covar;
+    compDeltaVarIter->second |= 1;
+  }
   return delta_covar;
 }
 
@@ -3573,14 +3577,15 @@ product_interpolant(const SDVArray& sdv_array, const SDRArray& sdr_array_1,
 	  data_fn1 = sdr_1.response_function();
 	  data_fn2 = sdr_2.response_function();
 	  prod_t1c_ls[pt] = data_fn1 * data_fn2
-	    - value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    - value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c,
+		    lev-1, set_partition);
 	  // type2 hierarchical interpolation of R1 R2
 	  // --> interpolated grads are R1 * R2' + R2 * R1'
 	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
 	  const RealVector& data_grad1 = sdr_1.response_gradient();
 	  const RealVector& data_grad2 = sdr_2.response_gradient();
 	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
-	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1, set_partition);
 	  for (v=0; v<num_v; ++v)
 	    prod_t2c_lsp[v] = data_fn1 * data_grad2[v]
 	      + data_fn2 * data_grad1[v] - prev_grad[v];
@@ -3594,7 +3599,7 @@ product_interpolant(const SDVArray& sdv_array, const SDRArray& sdr_array_1,
 	  Real r1 = sdr_array_1[c_index].response_function(),
 	       r2 = sdr_array_2[c_index].response_function(), r1r2 = r1*r2,
 	       r1r2_lm1 = value(sdv_array[c_index].continuous_variables(),
-		 sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1),
+		 sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1, set_partition),
 	       surplus = r1r2 - r1r2_lm1;
 	  PCout << "Surplus components l" << lev << " s" << set << " p" << pt
 		<< ": r1r2 = " << r1r2 << " r1r2_lm1 = " << r1r2_lm1
@@ -3604,7 +3609,7 @@ product_interpolant(const SDVArray& sdv_array, const SDRArray& sdr_array_1,
 	  prod_t1c_ls[pt] = sdr_array_1[c_index].response_function()
 	    * sdr_array_2[c_index].response_function()
 	    - value(sdv_array[c_index].continuous_variables(), sm_mi,
-		    colloc_key, prod_t1c, prod_t2c, lev-1);
+		    colloc_key, prod_t1c, prod_t2c, lev-1, set_partition);
 #endif // DEBUG
 	}
     }
@@ -3685,21 +3690,24 @@ product_interpolant(const RealMatrix2DArray& var_sets,
 	  RealVector c_vars(Teuchos::View,
 	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  // type1 hierarchical interpolation of R1 R2
-	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev);
+	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev,
+			 set_partition);
 	  r2_val = (same) ? r1_val :
-	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev);
+	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev,
+		  set_partition);
 	  prod_t1c_ls[pt] = r1_val * r2_val -
-	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1,
+		  set_partition);
 	  // type2 hierarchical interpolation of R1 R2
 	  // --> interpolated grads are R1 * R2' + R2 * R1'
 	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
 	  const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
-	    colloc_key, r1_t1c, r1_t2c, lev);
+	    colloc_key, r1_t1c, r1_t2c, lev, set_partition);
 	  const RealVector& r2_grad = (same) ? r1_grad :
 	    gradient_basis_variables(c_vars, sm_mi, colloc_key, r2_t1c,
-	    r2_t2c, lev);
+	    r2_t2c, lev, set_partition);
 	  const RealVector& prev_grad = gradient_basis_variables(c_vars,
-	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1, set_partition);
 	  for (v=0; v<num_v; ++v)
 	    prod_t2c_lsp[v] = r1_val * r2_grad[v] + r2_val * r1_grad[v]
 	                    - prev_grad[v];
@@ -3710,11 +3718,14 @@ product_interpolant(const RealMatrix2DArray& var_sets,
 	  RealVector c_vars(Teuchos::View,
 	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  // type1 hierarchical interpolation of R1 R2
-	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev);
+	  r1_val = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev,
+			 set_partition);
 	  r2_val = (same) ? r1_val :
-	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev);
+	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev,
+		  set_partition);
 	  prod_t1c_ls[pt] = r1_val * r2_val -
-	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1,
+		  set_partition);
 	}
     }
   }
@@ -3859,7 +3870,8 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 	    r1r2_l = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
 	  }
 	  prod_t1c_ls[pt] = r1r2_l
-	    - value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    - value(c_vars, sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1,
+		    set_partition);
 	  // type2 hierarchical interpolation of R1 R2
 	  // --> interpolated grads are R1 * R2' + R2 * R1'
 	  Real* prod_t2c_lsp = prod_t2c_ls[pt];
@@ -3868,7 +3880,7 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 	  const RealVector& lf_grad1
 	    = lf_sdr_array_1[c_index].response_gradient();
 	  const RealVector& prev_grad = gradient_basis_variables(c_vars,
-	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1);
+	    sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1, set_partition);
 	  if (same)
 	    for (v=0; v<num_v; ++v)
 	      prod_t2c_lsp[v] = 2. *
@@ -3898,8 +3910,9 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 	    r1r2_l = hf_fn1 * hf_fn2 - lf_fn1 * lf_fn2;
 	  }
 #ifdef DEBUG
-	  Real r1r2_lm1 = value(sdv_array[c_index].continuous_variables(),
-				sm_mi, colloc_key, prod_t1c, prod_t2c, lev-1),
+	  Real r1r2_lm1 =
+	    value(sdv_array[c_index].continuous_variables(), sm_mi, colloc_key,
+		  prod_t1c, prod_t2c, lev-1, set_partition),
 	        surplus = r1r2_l - r1r2_lm1;
 	  PCout << "Surplus components l" << lev << " s" << set << " p" << pt
 		<< ": r1r2_l = " << r1r2_l << " r1r2_lm1 = " << r1r2_lm1
@@ -3908,7 +3921,7 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 #else
 	  prod_t1c_ls[pt] = r1r2_l -
 	    value(sdv_array[c_index].continuous_variables(), sm_mi, colloc_key,
-		  prod_t1c, prod_t2c, lev-1);
+		  prod_t1c, prod_t2c, lev-1, set_partition);
 #endif // DEBUG
 	}
     }
@@ -4003,14 +4016,15 @@ central_product_interpolant(const SDVArray& sdv_array,
 	  data_fn1_mm1 = sdr_1.response_function() - mean_1;
 	  data_fn2_mm2 = sdr_2.response_function() - mean_2;
 	  cov_t1c_ls[pt] = data_fn1_mm1 * data_fn2_mm2 -
-	    value(c_vars, sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1);
+	    value(c_vars, sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1,
+		  set_partition);
 	  // type2 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
 	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
 	  Real* cov_t2c_lsp = cov_t2c_ls[pt];
 	  const RealVector& data_grad1 = sdr_1.response_gradient();
 	  const RealVector& data_grad2 = sdr_2.response_gradient();
 	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
-	    sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1);
+	    sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1, set_partition);
 	  // Note: mean is only a function of nonbasis variables, so
 	  // basis vars grad of data_fn{1,2}_mm{1,2} is only data_grad{1,2}
 	  for (v=0; v<num_v; ++v)
@@ -4025,7 +4039,7 @@ central_product_interpolant(const SDVArray& sdv_array,
 	    = (sdr_array_1[c_index].response_function() - mean_1)
 	    * (sdr_array_2[c_index].response_function() - mean_2)
 	    - value(sdv_array[c_index].continuous_variables(), sm_mi,
-		    colloc_key, cov_t1c, cov_t2c, lev-1);
+		    colloc_key, cov_t1c, cov_t2c, lev-1, set_partition);
 	}
     }
   }
@@ -4111,22 +4125,25 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
 	  RealVector c_vars(Teuchos::View,
 	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	  r1_val_mm1 = value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev) -
-	    mean_r1;
+	  r1_val_mm1 =
+	    value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev, set_partition)
+	    - mean_r1;
 	  r2_val_mm2 = (same) ? r1_val_mm1 :
-	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev) - mean_r2;
+	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev, set_partition)
+	    - mean_r2;
 	  cov_t1c_ls[pt] = r1_val_mm1 * r2_val_mm2 -
-	    value(c_vars, sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1);
+	    value(c_vars, sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1,
+		  set_partition);
 	  // type2 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
 	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
 	  Real* cov_t2c_lsp = cov_t2c_ls[pt];
 	  const RealVector& r1_grad = gradient_basis_variables(c_vars, sm_mi,
-	    colloc_key, r1_t1c, r1_t2c, lev);
+	    colloc_key, r1_t1c, r1_t2c, lev, set_partition);
 	  const RealVector& r2_grad = (same) ? r1_grad :
 	    gradient_basis_variables(c_vars, sm_mi, colloc_key, r2_t1c,
-	    r2_t2c, lev);
+	    r2_t2c, lev, set_partition);
 	  const RealVector& prev_grad = gradient_basis_variables(c_vars, sm_mi,
-	    colloc_key, cov_t1c, cov_t2c, lev-1);
+	    colloc_key, cov_t1c, cov_t2c, lev-1, set_partition);
 	  // Note: mean is only a function of nonbasis variables, so
 	  // basis vars grad of r{1,2}_val_mm{1,2} is only r{1,2}_grad
 	  for (v=0; v<num_v; ++v)
@@ -4139,11 +4156,14 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
 	  RealVector c_vars(Teuchos::View,
 	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  r1_val_mm1 =
-	    value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev) - mean_r1;
+	    value(c_vars, sm_mi, colloc_key, r1_t1c, r1_t2c, lev, set_partition)
+	    - mean_r1;
 	  r2_val_mm2 = (same) ? r1_val_mm1 :
-	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev) - mean_r2;
+	    value(c_vars, sm_mi, colloc_key, r2_t1c, r2_t2c, lev, set_partition)
+	    - mean_r2;
 	  cov_t1c_ls[pt] = r1_val_mm1 * r2_val_mm2 -
-	    value(c_vars, sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1);
+	    value(c_vars, sm_mi, colloc_key, cov_t1c, cov_t2c, lev-1,
+		  set_partition);
 	}
     }
   }
@@ -4220,7 +4240,7 @@ central_product_gradient_interpolant(const SDVArray& sdv_array,
 	const RealVector& r2_grad = sdr_2.response_gradient();
 	const RealVector& prev_grad = gradient_nonbasis_variables(
 	  sdv_array[c_index].continuous_variables(), sm_mi, colloc_key,
-	  cov_t1_coeff_grads, lev-1);
+	  cov_t1_coeff_grads, lev-1, set_partition);
 	Real* cov_t1_coeff_grads_lsp = cov_t1_coeff_grads_ls[pt];
 	for (v=0; v<num_deriv_vars; ++v)
 	  cov_t1_coeff_grads_lsp[v] = r1_mm * (r2_grad[v] - mean2_grad[v])
@@ -4297,15 +4317,15 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
 	RealVector c_vars(Teuchos::View,
 	  const_cast<Real*>(var_sets[lev][set][pt]), (int)num_deriv_vars);
         r1_mm = value(c_vars, sm_mi, colloc_key, r1_t1_coeffs, r1_t2_coeffs,
-	  lev) - mean_r1;
+	  lev, set_partition) - mean_r1;
 	r2_mm = (same) ? r1_mm : value(c_vars, sm_mi, colloc_key, r2_t1_coeffs,
-	  r2_t2_coeffs, lev) - mean_r2;
+	  r2_t2_coeffs, lev, set_partition) - mean_r2;
 	const RealVector& r1_grad = gradient_nonbasis_variables(c_vars, sm_mi,
-	  colloc_key, r1_t1_coeff_grads, lev);
+	  colloc_key, r1_t1_coeff_grads, lev, set_partition);
 	const RealVector& r2_grad = gradient_nonbasis_variables(c_vars, sm_mi,
-	  colloc_key, r2_t1_coeff_grads, lev);
+	  colloc_key, r2_t1_coeff_grads, lev, set_partition);
 	const RealVector& prev_grad = gradient_nonbasis_variables(c_vars, sm_mi,
-	  colloc_key, cov_t1_coeff_grads, lev-1);
+	  colloc_key, cov_t1_coeff_grads, lev-1, set_partition);
 	Real* cov_t1_coeff_grads_lsp = cov_t1_coeff_grads_ls[pt];
 	for (v=0; v<num_deriv_vars; ++v)
 	  cov_t1_coeff_grads_lsp[v]

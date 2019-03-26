@@ -483,6 +483,11 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 		     const UShortArray& basis_index, const UShort2DArray& key,
 		     const SizetArray& colloc_index)
 {
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to value summation is zero.
+  if (exp_t1_coeffs.empty())
+    return 0.;
+
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -702,6 +707,11 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 		     const SizetArray& subset_colloc_index,
 		     const SizetList& subset_indices)
 {
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to value summation is zero.
+  if (subset_t1_coeffs.empty())
+    return 0.;
+
   // Note: subset_* are consistent with the reduced variable subset,
   // but x and basis_index are full space.
 
@@ -712,7 +722,8 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 
     size_t num_subset_v = subset_indices.size(),
       num_act_v = barycentric_active_variables(basis_index, subset_indices);
-    if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
+    if (num_act_v == 0) { // all x in subset correspond to interp pts
+      // convert 1-D exact indices into an n-D colloc index:
       size_t pt_index = barycentric_exact_index(basis_index, subset_indices);
       // Note: pt_index calculation utilizes only the subset variables
       if (pt_index == _NPOS) // if exactIndex but not exactDeltaIndex, then
@@ -820,8 +831,13 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 {
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
-  size_t i, j, num_colloc_pts = key.size();
 
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (exp_t1_coeffs.empty())
+    { tpGradient = 0.; return tpGradient; }
+
+  size_t i, j, num_colloc_pts = key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -919,8 +935,13 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 {
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
-  size_t i, j, num_colloc_pts = subset_key.size();
 
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (subset_t1_coeffs.empty())
+    { tpGradient = 0.; return tpGradient; }
+
+  size_t i, j, num_colloc_pts = subset_key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -1019,12 +1040,16 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 					const SizetArray& colloc_index,
 					const SizetArray& dvv)
 {
-  size_t i, j, deriv_index, num_colloc_pts = key.size(),
-    num_deriv_vars = dvv.size();
+  size_t num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   if (!num_deriv_vars) return tpGradient;
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (exp_t1_coeffs.empty())
+    { tpGradient = 0.; return tpGradient; }
 
+  size_t i, j, deriv_index, num_colloc_pts = key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -1172,6 +1197,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
   size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (exp_t1_coeff_grads.numCols() == 0)
+    { tpGradient = 0.; return tpGradient; }
 
   if (barycentricFlag) {
 

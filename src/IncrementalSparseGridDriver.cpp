@@ -266,7 +266,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   update_collocation_key(); // needed for compute_tensor_points_weights()
   // compute a2 pts/wts; update collocIndices, uniqueIndexMapping
   increment_unique(last_index);
-  // update unique var_sets
+  // update var_sets with increment (not aggregate) of unique points from a2
   increment_sparse_points(collocIndIter->second, last_index,
 			  isUniq2Iter->second, numUniq1Iter->second,
 			  a2PIter->second, var_sets);
@@ -288,7 +288,7 @@ void IncrementalSparseGridDriver::compute_increment(RealMatrix& var_sets)
   // update a2 for multiple trial sets
   size_t start_index = smolyakCoeffsRef[activeKey].size();
   increment_unique(start_index);
-  // update unique var_sets from a2
+  // update var_sets with increment (not aggregate) of unique points from a2
   increment_sparse_points(collocIndIter->second, start_index,
 			  isUniq2Iter->second, numUniq1Iter->second,
 			  a2PIter->second, var_sets);
@@ -556,8 +556,8 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
   RealMatrix& a2_t2w, RealVector& r1v, RealVector& r2v, IntArray& sind1,
   BitArray& isu1, IntArray& uind1, IntArray& uset1, int& num_u1,
   IntArray& sind2, BitArray& isu2, IntArray& uind2, IntArray& uset2,
-  int& num_u2)
-  //, IntArray& unique_index_map, RealVector& t1_wts, RealMatrix& t2_wts)
+  int& num_u2, IntArray& unique_index_map, RealMatrix& pts,
+  RealVector& t1_wts, RealMatrix& t2_wts)
 {
   int i, m = numVars, n1 = a1_pts.numCols(), n2 = a2_pts.numCols(),
     n1n2 = n1+n2, n3, num_u3;
@@ -595,26 +595,28 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
   // Need to increment again as pop operations need to restore previous state
   // after a non-permanent increment
   num_colloc_pts = num_u3;
-  /* MSE, 3/19/2019: why is this not redundant with increment_unique()?
+  /* ***************************************************************************
+     MSE, 3/19/2019: why is this not redundant with increment_unique()?
      > all cases of merge_unique follow either increment or push operations
      > only need to redo this is if a3 merged ordering is different
-     > TO DO: investigate point_radial_tol_unique_index_inc3(), activate DEBUG block above, ...
+     > TO DO: investigate _inc3() output, activate DEBUG block above, ...
+  */
   size_t start_index = sm_coeffs_ref.size();
   update_unique_indices(start_index, num_u1, uind1, uset1, isu2, uind2, uset2,
 			unique_index_map);
   assign_collocation_indices(colloc_key, unique_index_map, colloc_ind,
 			     start_index);
+  assign_sparse_points(colloc_ind, start_index, isu2, num_u1, a2_pts, pts);
   if (trackUniqueProdWeights)
     update_sparse_weights(start_index, colloc_key, colloc_ind, num_colloc_pts,
 			  sm_coeffs, sm_coeffs_ref, a1_t1w, a1_t2w, a2_t1w,
 			  a2_t2w, t1_wts, t2_wts);
-  */
+  // ***************************************************************************
   // Promote a3 to a1: update a1 reference points/weights
   //a1_pts = a3_pts; // equivalent, but potentially more copy overhead
   a1_pts.reshape(numVars, n1n2);
   for (i=n1; i<n1n2; ++i)
     copy_data(a3_pts[i], numVars, a1_pts[i]);
-  //increment_sparse_points(a2_pts, varSetsIter->second);
   if (trackUniqueProdWeights) {
     a1_t1w.resize(n1n2);
     if (computeType2Weights) a1_t2w.reshape(numVars, n1n2);

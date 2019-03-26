@@ -344,7 +344,7 @@ void SparseGridDriver::pop_increment()
 }
 
 
-void SparseGridDriver::merge_increment()
+void SparseGridDriver::merge_unique()
 { } // not needed for HierarchSparseGridDriver, so use no-op as default
 
 
@@ -386,8 +386,8 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
   // update smolyakMultiIndex (permanently, will not be popped)
   increment_smolyak_multi_index(set_star);
-  push_set();        // calls increment_unique() --> INC2
-  merge_increment(); // calls merge_unique()     --> INC3
+  push_set();     // calls increment_unique()      --> INC2
+  merge_unique(); // promotes increment to new ref --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
   const UShortArray&    tr_set = trial_set();
