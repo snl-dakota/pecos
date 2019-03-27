@@ -889,7 +889,8 @@ inline void HierarchInterpPolyApproximation::clear_computed_bits()
 inline void HierarchInterpPolyApproximation::increment_reference_to_current()
 {
   // update reference bits
-  bool computed_mean = compMeanIter->second, computed_var = compVarIter->second;
+  short computed_mean = compMeanIter->second,
+        computed_var  =  compVarIter->second;
   compRefMeanIter->second = computed_mean;
   compRefVarIter->second  = computed_var;
 
@@ -909,8 +910,8 @@ inline void HierarchInterpPolyApproximation::increment_reference_to_current()
 inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
 {
   // update current bits
-  bool comp_ref_mean = compRefMeanIter->second,
-       comp_ref_var  = compRefVarIter->second;
+  short comp_ref_mean = compRefMeanIter->second,
+        comp_ref_var  = compRefVarIter->second;
   compMeanIter->second = comp_ref_mean;
   compVarIter->second  = comp_ref_var;
 
