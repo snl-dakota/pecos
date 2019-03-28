@@ -9,8 +9,10 @@
 #include "python_helpers.hpp"
 #include "swigpyrun.h"
 
-namespace Surrogates{
- 
+using Pecos::util::OptionsList;
+
+namespace Pecos {
+
 void print_pyobject_string_rep(PyObject * value){
   PyObject* objectsRepresentation = PyObject_Repr(value);
   const char* s = PyString_AsString(objectsRepresentation);
@@ -606,4 +608,4 @@ PyObject * copyStdVectorToPyList(std::vector<OptionsList> &list){
   return NULL;
 }
   
-}//  namespace Surrogates
+}//  namespace Pecos

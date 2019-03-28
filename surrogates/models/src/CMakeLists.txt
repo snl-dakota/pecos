@@ -18,8 +18,8 @@ SET(HEADERS Function.hpp CppFunction.hpp
             Variables.hpp BoundedVariables.hpp
 	    VariableTransformation.hpp AffineVariableTransformation.hpp
 	    RegressionBuilder.hpp)
-add_library(models ${SOURCES} ${HEADERS})
+add_library(pecos_models ${SOURCES} ${HEADERS})
 include_directories(${DakotaSurrogates_SOURCE_DIR}/models/src
 	            ${Teuchos_INCLUDE_DIRS})
 
-target_link_libraries(models pecos_util ${Teuchos_LIBRARIES})
+target_link_libraries(pecos_models pecos_util ${Pecos_TPL_LIBS})

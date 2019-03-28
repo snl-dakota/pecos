@@ -20,7 +20,7 @@ namespace surrogates {
 
 std::shared_ptr<PolyApproximation> polynomial_approximation_factory(
 	  const std::shared_ptr<VariableTransformation> &var_transform,
-	  const OptionsList& opts) {
+	  const util::OptionsList& opts) {
   int poly_type = opts.get<int>("poly_type");
   switch (poly_type){
   case MONOMIAL : {
