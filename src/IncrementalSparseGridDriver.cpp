@@ -560,7 +560,7 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
   RealVector& t1_wts, RealMatrix& t2_wts)
 {
   int i, m = numVars, n1 = a1_pts.numCols(), n2 = a2_pts.numCols(),
-    n1n2 = n1+n2, n3, num_u3;
+    n1n2 = n1+n2, n3;
   RealVector r3v(n1n2, false);
   RealMatrix a3_pts(m, n1n2, false);
   IntArray sind3(n1n2), uset3(n1n2), uind3(n1n2);
@@ -576,17 +576,17 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
     r1v.values(), &sind1[0], is_unique1, num_u1, &uset1[0], &uind1[0], n2,
     a2_pts.values(), r2v.values(), &sind2[0], is_unique2, num_u2, &uset2[0],
     &uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0], is_unique3,
-    &num_u3, &uset3[0], &uind3[0]);
+    &num_colloc_pts, &uset3[0], &uind3[0]);
 
 #ifdef DEBUG
-  PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n";
+  PCout << "Merge unique: num_unique3 = " << num_colloc_pts << "\na3 =\n";
   write_data(PCout, a3_pts, false, true, true);
   PCout << "               r3   indx3 unique3   undx3   xdnu3:\n";
-  for (size_t i=0; i<num_u3; ++i)
+  for (size_t i=0; i<num_colloc_pts; ++i)
     PCout << std::setw(17) << r3v[i]        << std::setw(8) << sind3[i]
 	  << std::setw(8)  << is_unique3[i] << std::setw(8) << uset3[i]
 	  << std::setw(8)  << uind3[i] << '\n';
-  for (size_t i=num_u3; i<n1n2; ++i)
+  for (size_t i=num_colloc_pts; i<n1n2; ++i)
     PCout << std::setw(17) << r3v[i]       << std::setw(8)  << sind3[i]
 	  << std::setw(8) << is_unique3[i] << std::setw(16) << uind3[i] << '\n';
   PCout << std::endl;
@@ -594,13 +594,10 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
 
   // Need to increment again as pop operations need to restore previous state
   // after a non-permanent increment
-  num_colloc_pts = num_u3;
-  /* ***************************************************************************
-     MSE, 3/19/2019: why is this not redundant with increment_unique()?
+  /* MSE, 3/19/2019: seems redundant with same steps in increment_unique():
      > all cases of merge_unique follow either increment or push operations
-     > only need to redo this is if a3 merged ordering is different
-     > TO DO: investigate _inc3() output, activate DEBUG block above, ...
-  */
+     > only need to redo this is if merge ordering was modified by inc3
+       (if needed, check _inc3() ordering by activating DEBUG block above)
   size_t start_index = sm_coeffs_ref.size();
   update_unique_indices(start_index, num_u1, uind1, uset1, isu2, uind2, uset2,
 			unique_index_map);
@@ -611,7 +608,7 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
     update_sparse_weights(start_index, colloc_key, colloc_ind, num_colloc_pts,
 			  sm_coeffs, sm_coeffs_ref, a1_t1w, a1_t2w, a2_t1w,
 			  a2_t2w, t1_wts, t2_wts);
-  // ***************************************************************************
+  */
   // Promote a3 to a1: update a1 reference points/weights
   //a1_pts = a3_pts; // equivalent, but potentially more copy overhead
   a1_pts.reshape(numVars, n1n2);
@@ -627,7 +624,8 @@ merge_unique_points_weights(const UShort2DArray& sm_mi,
     }
   }
   // Promote a3 to a1: update reference indices, counts, radii
-  num_u1 = num_u3;  r1v = r3v;  sind1 = sind3;  uset1 = uset3;  uind1 = uind3;
+  num_u1 = num_colloc_pts;
+  r1v = r3v;  sind1 = sind3;  uset1 = uset3;  uind1 = uind3;
   copy_data(is_unique3, n1n2, isu1);
   delete [] is_unique1; delete [] is_unique2; delete [] is_unique3;
 }
