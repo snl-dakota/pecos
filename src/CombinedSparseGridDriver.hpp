@@ -570,12 +570,12 @@ inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
   const UShort2DArray& sm_mi = smolMIIter->second;
   const IntArray&  sm_coeffs = smolCoeffsIter->second;
   size_t i, sm_mi_len = sm_mi.size(), cntr = 0;
-  for (i=0; i<sm_mi_len; ++i) {
+  for (i=0; i<sm_mi_len; ++i)
     if (sm_coeffs[i]) {
-      PCout << "Smolyak index set " << ++cntr << ':';
+      PCout << "Smolyak index set " << ++cntr << " (coeff = "
+	    << sm_coeffs[i] << "):";
       print_index_set(PCout, sm_mi[i]);
     }
-  }
 }
 
 
