@@ -176,27 +176,19 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
   // Note: swap() is conditionally available for Real{Vector,Matrix}
   if (expansionCoeffFlag) {
     if (clear_combined) {
-#ifdef TEUCHOS_SWAP
-      expCoeffsIter->second.swap(combinedExpCoeffs); // shallow
-#else
-      expCoeffsIter->second = combinedExpCoeffs;     // deep
-#endif
+      expCoeffsIter->second.swap(combinedExpCoeffs); // shallow ptr swap
       combinedExpCoeffs.resize(0);
     }
     else // redundant copy
-      expCoeffsIter->second = combinedExpCoeffs;     // deep
+      expCoeffsIter->second = combinedExpCoeffs;     // deep copy
   }
   if (expansionCoeffGradFlag) {
     if (clear_combined) {
-#ifdef TEUCHOS_SWAP
-      expCoeffGradsIter->second.swap(combinedExpCoeffGrads); // shallow
-#else
-      expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep
-#endif
+      expCoeffGradsIter->second.swap(combinedExpCoeffGrads); // shallow ptr swap
       combinedExpCoeffGrads.reshape(0, 0);
     }
     else // redundant copy
-      expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep
+      expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep copy
   }
 
   allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap

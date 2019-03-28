@@ -348,41 +348,29 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   if (expansionCoeffFlag) {
     if (clear_combined) {
-#ifdef TEUCHOS_SWAP
-      expT1CoeffsIter->second.swap(combinedExpT1Coeffs); // shallow
-#else
-      expT1CoeffsIter->second = combinedExpT1Coeffs;     // deep
-#endif
+      expT1CoeffsIter->second.swap(combinedExpT1Coeffs); // shallow ptr swap
       combinedExpT1Coeffs.resize(0);
     }
     else // redundant copy
-      expT1CoeffsIter->second = combinedExpT1Coeffs;     // deep
+      expT1CoeffsIter->second = combinedExpT1Coeffs;     // deep copy
 
     if (data_rep->basisConfigOptions.useDerivs) {
       if (clear_combined) {
-#ifdef TEUCHOS_SWAP
-	expT2CoeffsIter->second.swap(combinedExpT2Coeffs); // shallow
-#else
-	expT2CoeffsIter->second = combinedExpT2Coeffs;     // deep
-#endif
+	expT2CoeffsIter->second.swap(combinedExpT2Coeffs); // shallow ptr swap
 	combinedExpT2Coeffs.reshape(0, 0);
       }
       else // redundant copy
-	expT2CoeffsIter->second = combinedExpT2Coeffs;     // deep
+	expT2CoeffsIter->second = combinedExpT2Coeffs;     // deep copy
     }
   }
 
   if (expansionCoeffGradFlag) {
     if (clear_combined) {
-#ifdef TEUCHOS_SWAP
-      expT1CoeffGradsIter->second.swap(combinedExpT1CoeffGrads); // shallow
-#else
-      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep
-#endif
+      expT1CoeffGradsIter->second.swap(combinedExpT1CoeffGrads); // ptr swap
       combinedExpT1CoeffGrads.reshape(0, 0);
     }
     else // redundant copy
-      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep
+      expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep copy
   }
 
   // resize sobolIndices to sync with resize of sobolIndexMap
