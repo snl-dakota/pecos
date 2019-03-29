@@ -150,6 +150,14 @@ public:
   /// perform a deep copy of incoming prob_trans
   void copy(const ProbabilityTransformation& prob_trans);
 
+  /// return xDist
+  const MultivariateDistribution& x_distribution() const;
+  /// return uDist
+  const MultivariateDistribution& u_distribution() const;
+
+  /*
+  // REPLACE THESE CALLS WITH, FOR EXAMPLE, x_distibution().initialize_*()
+
   /// initializes randomVarsX (no transformation: u-space not needed)
   void initialize_random_variable_types(const ShortArray& x_types);
   /// initializes randomVarsX and ranVarTypesU
@@ -169,6 +177,8 @@ public:
   void reshape_correlation_matrix(size_t num_leading_vars,
 				  size_t num_probabilistic_vars,
 				  size_t num_trailing_vars);
+
+  // REPLACE THESE CALLS WITH, FOR EXAMPLE, x_distibution().moments()
 
   /// return randomVarsX
   const std::vector<RandomVariable>& x_random_variables() const;
@@ -247,6 +257,7 @@ public:
   const RealSymMatrix& x_correlation_matrix() const;
   /// return corrCholeskyFactorZ
   const RealMatrix& z_correlation_factor() const;
+  */
 
   /// function to check modelRep (does this envelope contain a letter)
   bool is_null() const;
@@ -288,22 +299,15 @@ protected:
   //- Heading: Data members
   //
 
-  /// vector of random variables encapsulating distribution parameters and
-  /// statistical functions (pdf, cdf, etc.)
-  std::vector<RandomVariable> randomVarsX;
-  /// vector of types of each u-space standardized uncertain variable to
-  /// which each x-space variable is transformed
-  ShortArray ranVarTypesU;
+  // vector of types of each u-space standardized uncertain variable to
+  // which each x-space variable is transformed
+  //ShortArray ranVarTypesU;
 
-  /// flag for indicating if correlation exists among the x-space
-  /// uncertain variables
-  bool correlationFlagX;
-  /// matrix of random variable correlation coefficients
-  RealSymMatrix corrMatrixX;
-  /// cholesky factor of a modified correlation matrix (#corrMatrixX
-  /// is modified in transform_correlations() for use in z-space)
-  RealMatrix corrCholeskyFactorZ;
-
+  /// the original random variable distribution
+  MultivariateDistribution xDist;
+  /// the transformed random variable distribution
+  MultivariateDistribution uDist;
+  
 private:
 
   //
@@ -326,269 +330,14 @@ private:
 };
 
 
-inline const std::vector<RandomVariable>& ProbabilityTransformation::
-x_random_variables() const
-{ return (probTransRep) ? probTransRep->randomVarsX : randomVarsX; }
+inline const MultivariateDistribution& ProbabilityTransformation::
+x_distribution() const
+{ return xDist; }
 
 
-inline void ProbabilityTransformation::
-check_x_type(size_t i, short x_type) const
-{
-  if (probTransRep) probTransRep->check_x_type(i, x_type);
-  else if (randomVarsX[i].type() != x_type) {
-    PCerr << "Error: failure in x_type check in ProbabilityTransformation."
-	  << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-inline RealRealPairArray ProbabilityTransformation::x_moments() const
-{
-  if (probTransRep) return probTransRep->x_moments();
-  else {
-    size_t i, num_v = randomVarsX.size();
-    RealRealPairArray x_mom(num_v);
-    for (i=0; i<num_v; ++i)
-      x_mom[i] = randomVarsX[i].moments();
-    return x_mom;
-  }
-}
-
-
-inline RealVector ProbabilityTransformation::x_means() const
-{
-  if (probTransRep) return probTransRep->x_means();
-  else {
-    size_t i, num_v = randomVarsX.size();
-    RealVector means(num_v, false);
-    for (i=0; i<num_v; ++i)
-      means[i] = randomVarsX[i].mean();
-    return means;
-  }
-}
-
-
-inline RealVector ProbabilityTransformation::x_std_deviations() const
-{
-  if (probTransRep) return probTransRep->x_std_deviations();
-  else {
-    size_t i, num_v = randomVarsX.size();
-    RealVector std_devs(num_v, false);
-    for (i=0; i<num_v; ++i)
-      std_devs[i] = randomVarsX[i].standard_deviation();
-    return std_devs;
-  }
-}
-
-
-inline RealRealPairArray ProbabilityTransformation::x_bounds() const
-{
-  if (probTransRep) return probTransRep->x_bounds();
-  else {
-    size_t i, num_v = randomVarsX.size();
-    RealRealPairArray x_bnds(num_v);
-    for (i=0; i<num_v; ++i)
-      x_bnds[i] = randomVarsX[i].bounds();
-    return x_bnds;
-  }
-}
-
-
-inline RealVector ProbabilityTransformation::x_lower_bounds() const
-{
-  if (probTransRep) return probTransRep->x_lower_bounds();
-  else {
-    size_t i, num_v = randomVarsX.size();
-    RealVector lwr_bnds(num_v, false);
-    for (i=0; i<num_v; ++i)
-      lwr_bnds[i] = randomVarsX[i].bounds().first;
-    return lwr_bnds;
-  }
-}
-
-
-inline RealVector ProbabilityTransformation::x_upper_bounds() const
-{
-  if (probTransRep) return probTransRep->x_upper_bounds();
-  else {
-    size_t i, num_v = randomVarsX.size();
-    RealVector upr_bnds(num_v, false);
-    for (i=0; i<num_v; ++i)
-      upr_bnds[i] = randomVarsX[i].bounds().second;
-    return upr_bnds;
-  }
-}
-
-
-inline Real ProbabilityTransformation::x_pdf(Real x_val, size_t i) const
-{
-  return (probTransRep) ? probTransRep->randomVarsX[i].pdf(x_val) :
-    randomVarsX[i].pdf(x_val);
-}
-
-
-inline Real ProbabilityTransformation::x_log_pdf(Real x_val, size_t i) const
-{
-  return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf(x_val) :
-    randomVarsX[i].log_pdf(x_val);
-}
-
-
-inline Real ProbabilityTransformation::
-x_log_pdf_gradient(Real x_val, size_t i) const
-{
-  return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf_gradient(x_val) :
-    randomVarsX[i].log_pdf_gradient(x_val);
-}
-
-
-inline Real ProbabilityTransformation::
-x_log_pdf_hessian(Real x_val, size_t i) const
-{
-  return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf_hessian(x_val) :
-    randomVarsX[i].log_pdf_hessian(x_val);
-}
-
-
-inline Real ProbabilityTransformation::x_pdf(const RealVector& x_pt) const
-{
-  if (probTransRep) return probTransRep->x_pdf(x_pt);
-  else {
-    // TO DO: add support for evaluation of correlated MVN density
-    if (correlationFlagX) {
-      PCerr << "Error: ProbabilityTransformation::x_pdf() currently uses a "
-	    << "product of marginal densities\n       and can only be used for "
-	    << "independent random variables." << std::endl;
-      abort_handler(-1);
-    }
-    size_t i, num_v = randomVarsX.size();
-    Real density = 1.;
-    for (i=0; i<num_v; ++i)
-      density *= x_pdf(x_pt[i], i);
-    return density;
-  }
-}
-
-
-inline Real ProbabilityTransformation::x_log_pdf(const RealVector& x_pt) const
-{
-  if (probTransRep) return probTransRep->x_log_pdf(x_pt);
-  else {
-    // TO DO: add support for evaluation of correlated MVN density
-    if (correlationFlagX) {
-      PCerr << "Error: ProbabilityTransformation::x_log_pdf() currently uses a "
-	    << "sum of log marginal densities\n       and can only be used for "
-	    << "independent random variables." << std::endl;
-      abort_handler(-1);
-    }
-    size_t i, num_v = randomVarsX.size();
-    Real log_density = 0.;
-    for (i=0; i<num_v; ++i)
-      log_density += x_log_pdf(x_pt[i], i);
-    return log_density;
-  }
-}
-
-
-inline Real ProbabilityTransformation::u_pdf(const RealVector& u_pt) const
-{
-  if (probTransRep) return probTransRep->u_pdf(u_pt);
-  else {
-    // u-space is independent -> use product of marginals
-    size_t i, num_v = randomVarsX.size();
-    Real density = 1.;
-    for (i=0; i<num_v; ++i)
-      density *= u_pdf(u_pt[i], i);
-    return density;
-  }
-}
-
-
-inline Real ProbabilityTransformation::u_log_pdf(const RealVector& u_pt) const
-{
-  if (probTransRep) return probTransRep->u_log_pdf(u_pt);
-  else {
-    // u-space is independent -> use sum of log marginals
-    size_t i, num_v = randomVarsX.size();
-    Real log_density = 0.;
-    for (i=0; i<num_v; ++i)
-      log_density += u_log_pdf(u_pt[i], i);
-    return log_density;
-  }
-}
-
-
-template <typename Engine> 
-Real ProbabilityTransformation::draw_x_sample(size_t i, Engine& rng) const
-{
-  return (probTransRep) ? probTransRep->randomVarsX[i].draw_sample(rng) :
-    randomVarsX[i].draw_sample(rng);
-}
-
-
-template <typename Engine> 
-Real ProbabilityTransformation::draw_u_sample(size_t i, Engine& rng) const
-{
-  if (probTransRep) return probTransRep->draw_u_sample(i, rng);
-  else {
-    // can only use randomVarsX[i].standard_pdf() for cases where u_type is a
-    // standardized form of the x_type.  For STD_NORMAL and STD_UNIFORM, many
-    // x_types can be mapped to these u_types, so use global utility fns
-    // whenever there are no auxilliary parameters to manage.
-    switch (ranVarTypesU[i]) {
-    // these cases require static fns since U type may not correspond to X type
-    case STD_NORMAL:  return  NormalRandomVariable::draw_std_sample(rng); break;
-    case STD_UNIFORM: return UniformRandomVariable::draw_std_sample(rng); break;
-    case STD_EXPONENTIAL:
-      return ExponentialRandomVariable::draw_std_sample(rng);             break;
-    // these cases can rely on correspondence between X and U types
-    case STD_BETA:
-      check_x_type(i, BETA);
-      return randomVarsX[i].draw_standard_sample(rng); break;
-    case STD_GAMMA:
-      check_x_type(i, GAMMA);
-      return randomVarsX[i].draw_standard_sample(rng); break;
-    default: // no transformation (e.g., PCE with numerically-generated bases)
-      check_x_type(i, ranVarTypesU[i]);
-      return randomVarsX[i].draw_sample(rng);          break;
-    }
-  }
-}
-
-
-inline const ShortArray& ProbabilityTransformation::u_types() const
-{ return (probTransRep) ? probTransRep->ranVarTypesU : ranVarTypesU; }
-
-
-inline void ProbabilityTransformation::u_types(const ShortArray& types)
-{
-  if (probTransRep) probTransRep->ranVarTypesU = types;
-  else              ranVarTypesU = types;
-}
-
-
-inline void ProbabilityTransformation::u_type(short type, size_t i)
-{
-  if (probTransRep) probTransRep->ranVarTypesU[i] = type;
-  else              ranVarTypesU[i] = type;
-}
-
-
-inline bool ProbabilityTransformation::x_correlation() const
-{ return (probTransRep) ? probTransRep->correlationFlagX : correlationFlagX; }
-
-
-inline const RealSymMatrix& ProbabilityTransformation::
-x_correlation_matrix() const
-{ return (probTransRep) ? probTransRep->corrMatrixX : corrMatrixX; }
-
-
-inline const RealMatrix& ProbabilityTransformation::z_correlation_factor() const
-{
-  return (probTransRep) ? probTransRep->corrCholeskyFactorZ :
-                          corrCholeskyFactorZ;
-}
+inline const MultivariateDistribution& ProbabilityTransformation::
+u_distribution() const
+{ return uDist; }
 
 
 inline bool ProbabilityTransformation::is_null() const

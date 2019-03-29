@@ -73,6 +73,23 @@ reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 }
 
 
+void MarginalsCorrDistribution::
+initialize_random_variable_parameter(size_t v, short dist_param, Real value)
+{ randomVars[v].parameter(dist_param, value); }
+
+
+void MarginalsCorrDistribution::
+initialize_random_variable_parameters(size_t v, const ShortArray& dist_params,
+				      const RealVector& values)
+{
+  RandomVariable& random_var = randomVars[v];
+  size_t i, num_params = std::min(dist_params.size(), values.length());
+  for (i=0; i<num_params; ++i)
+    random_var.parameter(dist_params[i], values[i]);
+}
+
+
+{
 /*
 void MarginalsCorrDistribution::
 initialize_random_variable_parameters(const RealVector& cd_l_bnds,
@@ -424,6 +441,34 @@ Real MarginalsCorrDistribution::u_log_pdf_hessian(Real u_val, size_t i) const
       check_type(i, ranVarTypesU[i]);
       return randomVars[i].log_pdf_hessian(u_val);          break;
     }
+  }
+}
+
+
+inline Real MarginalsCorrDistribution::u_pdf(const RealVector& u_pt) const
+{
+  if (probTransRep) return probTransRep->u_pdf(u_pt);
+  else {
+    // u-space is independent -> use product of marginals
+    size_t i, num_v = randomVarsX.size();
+    Real density = 1.;
+    for (i=0; i<num_v; ++i)
+      density *= u_pdf(u_pt[i], i);
+    return density;
+  }
+}
+
+
+inline Real MarginalsCorrDistribution::u_log_pdf(const RealVector& u_pt) const
+{
+  if (probTransRep) return probTransRep->u_log_pdf(u_pt);
+  else {
+    // u-space is independent -> use sum of log marginals
+    size_t i, num_v = randomVarsX.size();
+    Real log_density = 0.;
+    for (i=0; i<num_v; ++i)
+      log_density += u_log_pdf(u_pt[i], i);
+    return log_density;
   }
 }
 */
