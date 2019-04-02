@@ -16,11 +16,12 @@ static const char rcsId[]="@(#) $Id: MarginalsCorrDistribution.cpp 4768 2007-12-
 
 namespace Pecos {
 
-void MarginalsCorrDistribution::
-initialize_random_variables(const ShortArray& rv_types)
+void MarginalsCorrDistribution::initialize(const ShortArray& rv_types)
 {
-  // (default) construction of x-space random variables occurs once
-  // (updates to distribution parameters can occur repeatedly)
+  ranVarTypes = rv_types;
+
+  // construction of x-space random variables occurs once (updates to
+  // distribution parameters can occur repeatedly)
   size_t i, num_v = rv_types.size();
   randomVars.resize(num_v);
   for (i=0; i<num_v; ++i)
@@ -29,7 +30,36 @@ initialize_random_variables(const ShortArray& rv_types)
 
 
 void MarginalsCorrDistribution::
-initialize_correlations(const RealSymMatrix& corr)
+parameters(size_t v, const ShortArray& dist_params, const RealVector& values)
+{
+  RandomVariable& random_var = randomVars[v];
+  size_t i, num_params = std::min(dist_params.size(), values.length());
+  for (i=0; i<num_params; ++i)
+    random_var.parameter(dist_params[i], values[i]);
+}
+
+
+void MarginalsCorrDistribution::
+parameters(size_t start_v, size_t num_v, short dist_param,
+	   const RealVector& values)
+{
+  size_t i, v, num_updates = std::min(values.length(), num_v);
+  for (i=0, v=start_v; i<num_updates; ++i, ++v)
+    randomVars[v].parameter(dist_param, values[i]);
+}
+
+
+void MarginalsCorrDistribution::
+parameters(short rv_type, short dist_param, const RealVector& values)
+{
+  size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
+  for (rv=0; i<num_rv; ++rv)
+    if (ranVarTypes[rv] == rv_type && cntr < num_vals)
+      randomVars[rv].parameter(dist_param, values[cntr++]);
+}
+
+
+void MarginalsCorrDistribution::correlations(const RealSymMatrix& corr)
 {
   corrMatrix = corr;
 
@@ -43,53 +73,67 @@ initialize_correlations(const RealSymMatrix& corr)
 
 
 void MarginalsCorrDistribution::
-reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
-			   size_t num_trail_v)
+expand_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
+			  size_t num_trail_v)
 {
   if (!correlationFlag)
     return;
-
-  size_t i, j, offset, num_corr_v = corrMatrix.numRows(),
-    num_active_v = num_lead_v + num_prob_v + num_trail_v;
-  if (num_corr_v != num_active_v) {
-    if (num_corr_v != num_prob_v) {
-      PCerr << "\nError: unknown symmetric matrix dim (" << num_corr_v
-	    << ") in MarginalsCorrDistribution::reshape_correlation_matrix()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-    RealSymMatrix old_corr_matrix(corrMatrix);
-    corrMatrix.shape(num_active_v); // initializes to zero
-    for (i=0; i<num_lead_v; i++)
-      corrMatrix(i,i) = 1.;
-    offset = num_lead_v;
-    for (i=0; i<num_prob_v; i++)
-      for (j=0; j<num_prob_v; j++)
-	corrMatrix(i+offset, j+offset) = old_corr_matrix(i,j);
-    offset += num_prob_v;
-    for (i=0; i<num_trail_v; i++)
-      corrMatrix(i+offset, i+offset) = 1.;
+  size_t num_prev_v  = corrMatrix.numRows(),
+         num_total_v = num_lead_v + num_prob_v + num_trail_v;
+  if (num_prev_v == num_total_v)
+    return;
+  else if (num_prev_v != num_prob_v) { // old->new subset assumed below
+    PCerr << "\nError: unexpected matrix size (" << num_prev_v
+	  << ") in MarginalsCorrDistribution::expand_correlation_matrix()."
+	  << std::endl;
+    abort_handler(-1);
   }
+
+  // expand from num_prob_v to num_total_v
+
+  size_t i, j, offset;
+  RealSymMatrix old_corr_matrix(corrMatrix); // copy
+  corrMatrix.shape(num_total_v); // init to zero
+  for (i=0; i<num_lead_v; i++)
+    corrMatrix(i,i) = 1.;
+  offset = num_lead_v;
+  for (i=0; i<num_prob_v; i++)
+    for (j=0; j<=i; j++)
+      corrMatrix(i+offset, j+offset) = old_corr_matrix(i,j);
+  offset += num_prob_v;
+  for (i=0; i<num_trail_v; i++)
+    corrMatrix(i+offset, i+offset) = 1.;
 }
 
 
 void MarginalsCorrDistribution::
-initialize_random_variable_parameter(size_t v, short dist_param, Real value)
-{ randomVars[v].parameter(dist_param, value); }
-
-
-void MarginalsCorrDistribution::
-initialize_random_variable_parameters(size_t v, const ShortArray& dist_params,
-				      const RealVector& values)
+contract_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
+			    size_t num_trail_v)
 {
-  RandomVariable& random_var = randomVars[v];
-  size_t i, num_params = std::min(dist_params.size(), values.length());
-  for (i=0; i<num_params; ++i)
-    random_var.parameter(dist_params[i], values[i]);
+  if (!correlationFlag)
+    return;
+  size_t num_prev_v  = corrMatrix.numRows(),
+         num_total_v = num_lead_v + num_prob_v + num_trail_v;
+  if (num_prev_v == num_prob_v)
+    return;
+  else if (num_prev_v != num_total_v) {
+    PCerr << "\nError: unexpected matrix size (" << num_prev_v
+	  << ") in MarginalsCorrDistribution::contract_correlation_matrix()."
+	  << std::endl;
+    abort_handler(-1);
+  }
+
+  // contract from num_total_v to num_prob_v
+
+  size_t i, j;
+  RealSymMatrix old_corr_matrix(corrMatrix); // copy
+  corrMatrix.shape(num_prob_v); // init to zero
+  for (i=0; i<num_prob_v; i++)
+    for (j=0; j<=i; j++)
+      corrMatrix(i, j) = old_corr_matrix(i+num_lead_v,j+num_lead_v);
 }
 
 
-{
 /*
 void MarginalsCorrDistribution::
 initialize_random_variable_parameters(const RealVector& cd_l_bnds,

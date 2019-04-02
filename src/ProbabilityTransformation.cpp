@@ -23,7 +23,7 @@ namespace Pecos {
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~ProbabilityTransformation). */
 ProbabilityTransformation::ProbabilityTransformation(BaseConstructor):
-  correlationFlagX(false), probTransRep(NULL), referenceCount(1)
+  probTransRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "ProbabilityTransformation::ProbabilityTransformation(Base"

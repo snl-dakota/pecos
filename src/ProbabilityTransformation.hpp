@@ -10,14 +10,8 @@
 #define PROBABILITY_TRANSFORMATION_HPP
 
 #include "pecos_data_types.hpp"
-#include "NormalRandomVariable.hpp"
-#include "UniformRandomVariable.hpp"
-#include "ExponentialRandomVariable.hpp"
 
 namespace Pecos {
-
-class AleatoryDistParams;
-class EpistemicDistParams;
 
 
 /// Base class for all nonlinear distribution transformations
@@ -147,8 +141,8 @@ public:
   //- Heading: Member functions
   //
 
-  /// perform a deep copy of incoming prob_trans
-  void copy(const ProbabilityTransformation& prob_trans);
+  // perform a deep copy of incoming prob_trans
+  //void copy(const ProbabilityTransformation& prob_trans);
 
   /// return xDist
   const MultivariateDistribution& x_distribution() const;

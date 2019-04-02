@@ -31,19 +31,32 @@ public:
   MarginalsCorrDistribution();  ///< constructor
   ~MarginalsCorrDistribution(); ///< destructor
 
-  
-  /// initializes randomVarsX (no transformation: u-space not needed)
-  void initialize_random_variables(const ShortArray& rv_types);
-  /// updates parameters within randomVarsX
-  void initialize_random_variable_parameters(const RealVector& cd_l_bnds,
-					     const RealVector& cd_u_bnds,
-					     const AleatoryDistParams& adp,
-					     const EpistemicDistParams& edp,
-					     const RealVector& cs_l_bnds,
-					     const RealVector& cs_u_bnds);
+  //
+  //- Heading: Member function definitions
+  //
+
+  /// set ranVarTypes and initialize randomVars
+  void initialize(const ShortArray& rv_types);
+
+  /// update a scalar distribution parameter within randomVars[v]
+  void parameter(size_t v, short dist_param, Real value);
+  /// update an array of distribution parameters within randomVars[v]
+  void parameters(size_t v, const ShortArray& dist_params,
+		  const RealVector& values);
+  /// update values for one distribution parameter across the specified sequence
+  /// of random variables
+  void parameters(size_t start_v, size_t num_v, short dist_param,
+		  const RealVector& values);
+  /// update values for one distribution parameter for all random variables
+  /// matching the specified random variable type
+  void parameters(short rv_type, short dist_param, const RealVector& values);
+
   /// initializes corrMatrixX and correlationFlagX
-  void initialize_correlations(const RealSymMatrix& x_corr);
-  /// reshape corrMatrixX for an all_variables specification
+  void correlations(const RealSymMatrix& x_corr);
+  /// expand corrMatrix from probabilistic variables to combined variables
+  void reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
+				  size_t num_trail_v);
+  /// contract corrMatrix from combined variables to probabilistic variables
   void reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 				  size_t num_trail_v);
 
@@ -93,21 +106,21 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// return the multivariate PDF value for x-space random variables
+  /// return the multivariate PDF value for full set of random variables
   Real pdf(const RealVector& pt) const;
-  /// return the multivariate log PDF value for x-space random variables
+  /// return the multivariate log PDF value for full set of random variables
   Real log_pdf(const RealVector& pt) const;
 
   //
   //- Heading: Data
   //
 
-  /// vector of random variables encapsulating distribution parameters and
-  /// statistical functions (pdf, cdf, etc.)
-  std::vector<RandomVariable> randomVars;
   /// vector of types of each u-space standardized uncertain variable to
   /// which each x-space variable is transformed
   ShortArray ranVarTypes;
+  /// vector of random variables encapsulating distribution parameters and
+  /// statistical functions (pdf, cdf, etc.)
+  std::vector<RandomVariable> randomVars;
 
   /// matrix of random variable correlation coefficients
   RealSymMatrix corrMatrix;
@@ -158,6 +171,11 @@ inline void MarginalsCorrDistribution::check_type(size_t i, short rv_type) const
     abort_handler(-1);
   }
 }
+
+
+inline void MarginalsCorrDistribution::
+parameter(size_t v, short dist_param, Real value)
+{ randomVars[v].parameter(dist_param, value); }
 
 
 inline RealRealPairArray MarginalsCorrDistribution::moments() const
