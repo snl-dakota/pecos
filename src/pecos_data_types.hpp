@@ -313,7 +313,7 @@ inline size_t l1_norm(const std::vector<OrdinalType>& index_set)
 }
 
 
-/// compare two Real values using DBL_EPSILON relative tolerance
+/// inflate a scalar specification into a homogeneous vector
 template <typename OrdinalType, typename ScalarType> 
 void inflate_scalar(std::vector<ScalarType>& v, OrdinalType num_v)
 {
