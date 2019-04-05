@@ -219,6 +219,8 @@ inline Real LognormalRandomVariable::parameter(short dist_param) const
   }
   case LN_LAMBDA:  return lnLambda; break;
   case LN_ZETA:    return lnZeta;   break;
+  case LN_LWR_BND: return 0.;       break;
+  case LN_UPR_BND: return std::numeric_limits<Real>::infinity(); break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in LognormalRandomVariable::parameter()." << std::endl;
@@ -229,6 +231,7 @@ inline Real LognormalRandomVariable::parameter(short dist_param) const
 
 inline void LognormalRandomVariable::parameter(short dist_param, Real val)
 {
+  bool err_flag = false;
   switch (dist_param) {
   case LN_MEAN: {    // assume stdev is invariant from previous params
     Real zeta_sq = lnZeta*lnZeta,
@@ -244,10 +247,19 @@ inline void LognormalRandomVariable::parameter(short dist_param, Real val)
   case LN_ERR_FACT: zeta_from_error_factor(val, lnZeta); break;
   case LN_LAMBDA:   lnLambda = val;                      break;
   case LN_ZETA:     lnZeta   = val;                      break;
+  case LN_LWR_BND:
+    if (val != 0.) err_flag = true;
+    break;
+  case LN_UPR_BND:
+    if (val != std::numeric_limits<Real>::infinity()) err_flag = true;
+    break;
   default:
+    err_flag = true; break;
+  }
+  if (err_flag) {
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in LognormalRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); break;
+    abort_handler(-1);
   }
 }
 

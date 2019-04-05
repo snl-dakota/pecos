@@ -87,7 +87,7 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case BOUNDED_LOGNORMAL:
     ran_var_rep = new BoundedLognormalRandomVariable();                   break;
   case STD_UNIFORM: case UNIFORM: case CONTINUOUS_DESIGN:
-  case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
+  case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL_UNCERTAIN:
     ran_var_rep = new UniformRandomVariable();                            break;
   case LOGUNIFORM:     ran_var_rep = new LoguniformRandomVariable();      break;
   case TRIANGULAR:     ran_var_rep = new TriangularRandomVariable();      break;
@@ -107,8 +107,12 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
   case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
   case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
-  case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
-    ran_var_rep = new HistogramPtRandomVariable();                        break;
+  case HISTOGRAM_PT_INT:
+    ran_var_rep = new HistogramPtRandomVariable<int>();                   break;
+  case HISTOGRAM_PT_STRING:
+    ran_var_rep = new HistogramPtRandomVariable<String>();                break;
+  case HISTOGRAM_PT_REAL:
+    ran_var_rep = new HistogramPtRandomVariable<Real>();                  break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;

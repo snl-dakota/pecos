@@ -29,56 +29,6 @@ void MarginalsCorrDistribution::initialize(const ShortArray& rv_types)
 }
 
 
-void MarginalsCorrDistribution::
-parameters(size_t v, const ShortArray& dist_params, const RealVector& values)
-{
-  // set multiple distribution parameters for a single variable
-
-  RandomVariable& random_var = randomVars[v];
-  size_t i, num_params = std::min(dist_params.size(), values.length());
-  for (i=0; i<num_params; ++i)
-    random_var.parameter(dist_params[i], values[i]);
-}
-
-
-void MarginalsCorrDistribution::
-parameters(size_t start_v, size_t num_v, short dist_param,
-	   const RealVector& values)
-{
-  // set one distribution parameter type for a range of random variables
-
-  size_t i, v, num_updates = std::min(values.length(), num_v);
-  for (i=0, v=start_v; i<num_updates; ++i, ++v)
-    randomVars[v].parameter(dist_param, values[i]);
-}
-
-
-void MarginalsCorrDistribution::
-parameters(short rv_type, short dist_param, const RealVector& values)
-{
-  // Providing rv_type eliminates need to check for dist_param support
-
-  size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
-  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
-    if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].parameter(dist_param, values[cntr++]);
-}
-
-
-/* API based on distribution support query not currently required:
-void MarginalsCorrDistribution::
-parameters(short dist_param, const RealVector& values)
-{
-  // Without rv_type, query RV for dist_param support to match values to RV
-
-  size_t rv, num_rv = randomVars.size(), cntr = 0, num_vals = values.length();
-  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
-    if (randomVars[rv].supports(dist_param))
-      randomVars[rv].parameter(dist_param, values[cntr++]);
-}
-*/
-
-
 void MarginalsCorrDistribution::correlations(const RealSymMatrix& corr)
 {
   corrMatrix = corr;

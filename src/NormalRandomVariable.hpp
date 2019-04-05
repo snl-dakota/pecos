@@ -304,8 +304,10 @@ inline Real NormalRandomVariable::parameter(short dist_param) const
   switch (dist_param) {
   case N_MEAN:    case N_LOCATION: return gaussMean;   break;
   case N_STD_DEV: case N_SCALE:    return gaussStdDev; break;
+  case N_LWR_BND: return -std::numeric_limits<Real>::infinity(); break;
+  case N_UPR_BND: return  std::numeric_limits<Real>::infinity(); break;
   default:
-    PCerr << "Error: update failure for distribution parameter " << dist_param
+    PCerr << "Error: lookup failure for distribution parameter " << dist_param
 	  << " in NormalRandomVariable::parameter()." << std::endl;
     abort_handler(-1); return 0.; break;
   }
@@ -314,15 +316,23 @@ inline Real NormalRandomVariable::parameter(short dist_param) const
 
 inline void NormalRandomVariable::parameter(short dist_param, Real val)
 {
+  bool err_flag = false;
   switch (dist_param) {
   case N_MEAN:    case N_LOCATION: gaussMean   = val; break;
   case N_STD_DEV: case N_SCALE:    gaussStdDev = val; break;
-  // Note: bounded normal case would translate/scale bounds for
-  // N_LOCATION,N_SCALE (see NestedModel::real_variable_mapping())
+  case N_LWR_BND:
+    if (val != -std::numeric_limits<Real>::infinity()) err_flag = true;
+    break;
+  case N_UPR_BND:
+    if (val !=  std::numeric_limits<Real>::infinity()) err_flag = true;
+    break;
   default:
+    err_flag = true; break;
+  }
+  if (err_flag) {
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in NormalRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); break;
+    abort_handler(-1);
   }
 }
 

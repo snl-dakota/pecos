@@ -73,8 +73,11 @@ get_distribution(short mv_dist_type)
 
   if (mv_dist_type == MARGINALS_CORRELATIONS)
     return new MarginalsCorrDistribution();
+  //else if (mv_dist_type == MULTIVARIATE_NORMAL)
+  //  return new MultivariateNormalDistribution();
   //else if (mv_dist_type == JOINT_KDE)
-  //  return new JointKDEDistribution(); // etc.
+  //  return new JointKDEDistribution();
+  //etc.
   else {
     PCerr << "Error: MultivariateDistribution type " << mv_dist_type
 	  << " not available." << std::endl;

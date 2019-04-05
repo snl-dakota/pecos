@@ -173,9 +173,92 @@ inline void MarginalsCorrDistribution::check_type(size_t i, short rv_type) const
 }
 
 
-inline void MarginalsCorrDistribution::
-parameter(size_t v, short dist_param, Real value)
+template <typename ValueType>
+void MarginalsCorrDistribution::
+parameter(size_t v, short dist_param, ValueType value)
 { randomVars[v].parameter(dist_param, value); }
+
+
+template <typename OrdinalType, typename ScalarType>
+void MarginalsCorrDistribution::
+parameters(size_t start_v, size_t num_v, short dist_param,
+	   const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+{
+  // set one type of distribution parameter for a range of random variables
+
+  size_t i, v, num_updates = std::min(values.length(), num_v);
+  for (i=0, v=start_v; i<num_updates; ++i, ++v)
+    randomVars[v].parameter(dist_param, values[i]);
+}
+
+
+template <typename ValueType>
+void MarginalsCorrDistribution::
+parameters(size_t start_v, size_t num_v, short dist_param,
+	   const std::vector<ValueType>& values)
+{
+  // set one distribution parameter type for a range of random variables
+
+  size_t i, v, num_updates = std::min(values.size(), num_v);
+  for (i=0, v=start_v; i<num_updates; ++i, ++v)
+    randomVars[v].parameter(dist_param, values[i]);
+}
+
+
+template <typename OrdinalType, typename ScalarType>
+void MarginalsCorrDistribution::
+parameters(short rv_type, short dist_param,
+	   const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+{
+  // rv_type eliminates need to check for dist_param support
+
+  size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
+  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
+    if (ranVarTypes[rv] == rv_type)
+      randomVars[rv].parameter(dist_param, values[cntr++]);
+}
+
+
+template <typename ValueType>
+void MarginalsCorrDistribution::
+parameters(short rv_type, short dist_param,
+	   const std::vector<ValueType>& values)
+{
+  // rv_type eliminates need to check for dist_param support
+
+  size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.size();
+  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
+    if (ranVarTypes[rv] == rv_type)
+      randomVars[rv].parameter(dist_param, values[cntr++]);
+}
+
+
+/* These APIs not currently required:
+template <typename VectorType>
+void MarginalsCorrDistribution::
+parameters(size_t v, const ShortArray& dist_params, const VectorType& values)
+{
+  // set multiple distribution parameters for a single variable
+
+  RandomVariable& random_var = randomVars[v];
+  size_t i, num_params = std::min(dist_params.size(), values.length());
+  for (i=0; i<num_params; ++i)
+    random_var.parameter(dist_params[i], values[i]);
+}
+
+
+template <typename VectorType>
+void MarginalsCorrDistribution::
+parameters(short dist_param, const VectorType& values)
+{
+  // Without rv_type, query RV for dist_param support to match values to RV
+
+  size_t rv, num_rv = randomVars.size(), cntr = 0, num_vals = values.length();
+  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
+    if (randomVars[rv].supports(dist_param))
+      randomVars[rv].parameter(dist_param, values[cntr++]);
+}
+*/
 
 
 inline RealRealPairArray MarginalsCorrDistribution::moments() const

@@ -405,7 +405,8 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   //case U_LOCATION: - TO DO
   //case U_SCALE:    - TO DO
   case NO_TARGET: // can occur for all_variables Jacobians
-    if (ranVarType == CONTINUOUS_DESIGN || ranVarType == CONTINUOUS_INTERVAL ||
+    if (ranVarType == CONTINUOUS_DESIGN             ||
+	ranVarType == CONTINUOUS_INTERVAL_UNCERTAIN ||
 	ranVarType == CONTINUOUS_STATE)
       return 0.;
     else dist_err = true;
