@@ -21,8 +21,6 @@
 
 namespace Pecos {
 
-class AleatoryDistParams;
-
 
 /// Derived approximation class for global basis polynomials.
 

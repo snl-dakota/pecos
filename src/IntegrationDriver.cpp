@@ -248,13 +248,13 @@ assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr)
 
 void IntegrationDriver::
 initialize_grid_parameters(const ShortArray& u_types, 
-			   const AleatoryDistParams& adp)
+			   const MultivariateDistribution& mv_dist)
 {
   if (driverRep)
-    driverRep->initialize_grid_parameters(u_types, adp); // forward to letter
+    driverRep->initialize_grid_parameters(u_types, mv_dist); // fwd to letter
   else // default implementation
-    SharedPolyApproxData::update_basis_distribution_parameters(u_types, adp,
-							       polynomialBasis);
+    SharedPolyApproxData::
+      update_basis_distribution_parameters(u_types, mv_dist, polynomialBasis);
 }
 
 
@@ -436,10 +436,10 @@ initialize_grid(const ShortArray& u_types,
 
   SharedPolyApproxData::
     initialize_polynomial_basis(basis_types, collocRules, polynomialBasis);
-  // TO DO: need AleatoryDistParams instance
+  // TO DO: need MultivariateDistribution instance
   //if (dist_params)
   //  SharedPolyApproxData::
-  //    update_basis_distribution_parameters(u_types, adp, polynomialBasis);
+  //    update_basis_distribution_parameters(u_types, mv_dist, polynomialBasis);
 
   for (size_t i=0; i<numVars; i++)
     if (basis_types[i] == HERMITE_INTERP ||

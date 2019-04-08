@@ -79,7 +79,7 @@ void SharedNodalInterpPolyApproxData::allocate_data()
 
   // initialize expMomentIntDriver if needed
   if (alt_moment_grid) { // modify driver_basis to employ Gaussian integration
-    // This approach reduces data reqmts (u_types, adp) and increases reuse,
+    // This approach reduces data reqmts (u_types, mv_dist) and increases reuse,
     // relative to building from scratch using SharedOPAData::construct_basis().
     std::vector<BasisPolynomial> alt_driver_basis(numVars);
     for (size_t i=0; i<numVars; ++i) {
@@ -97,10 +97,10 @@ void SharedNodalInterpPolyApproxData::allocate_data()
       }
       // TO DO: any quad order modifications need to be handled downstream
     }
-    /* This approach requires u_types and adp, which aren't readily available
+    /* This approach requires u_types & mv_dist, which aren't readily available
     BasisConfigOptions bc_options(false, false, false, false);
     SharedOrthogPolyApproxData::
-      construct_basis(u_types, adp, bc_options, alt_driver_basis);
+      construct_basis(u_types, mv_dist, bc_options, alt_driver_basis);
     */
 
     // suppress hierarchical sparse grid driver for this purpose

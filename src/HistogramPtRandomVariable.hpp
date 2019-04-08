@@ -104,7 +104,9 @@ HistogramPtRandomVariable<T>::~HistogramPtRandomVariable()
 
 template <typename T>
 void HistogramPtRandomVariable<T>::update(const std::map<T, Real>& vals_cnts)
-{ valueCountPairs = vals_cnts; }// specializations for also assigning ranVarType
+{ valueCountPairs = vals_cnts; }
+// specializations used for assigning ranVarType, but could also employ
+// std::is_same for type identification
 
 
 template <typename T>

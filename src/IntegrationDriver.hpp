@@ -20,7 +20,7 @@
 
 namespace Pecos {
 
-class AleatoryDistParams;
+class MultivariateDistribution;
 class ExpansionConfigOptions;
 class BasisConfigOptions;
 
@@ -62,9 +62,9 @@ public:
   virtual void initialize_grid(const ShortArray& u_types,
 			       const ExpansionConfigOptions& ec_options,
 			       const BasisConfigOptions& bc_options);
-  /// update polynomialBasis with data from AleatoryDistParams
+  /// update polynomialBasis with data from MultivariateDistribution
   virtual void initialize_grid_parameters(const ShortArray& u_types,
-					  const AleatoryDistParams& adp);
+			    const MultivariateDistribution& mv_dist);
 
   /// compute variable and weight sets for the grid
   virtual void compute_grid();

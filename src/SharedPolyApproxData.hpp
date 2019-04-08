@@ -334,7 +334,8 @@ public:
     const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);
   /// pass distribution parameters from dp to poly_basis
   static void update_basis_distribution_parameters(const ShortArray& u_types,
-    const AleatoryDistParams& dp, std::vector<BasisPolynomial>& poly_basis);
+    const MultivariateDistribution& mv_dist,
+    std::vector<BasisPolynomial>& poly_basis);
 
   // returns index of the data set to be restored from within popped
   // bookkeeping (entry in poppedLevMultiIndex corresponding to key)

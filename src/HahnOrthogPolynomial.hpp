@@ -51,15 +51,6 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  //
-  //- Heading: Noninherited memeber functions
-  //
-
-  //  These will need to be rolled into the API - RWH
-  /// return gammaPoly
-  Real gamma_polynomial() const;
-  /// set gammaStat (total population)
-  void gamma_stat(Real gamma);
 
 protected:
 
@@ -68,15 +59,10 @@ protected:
   //
   Real type1_value(Real x, unsigned short order);
 
-  /// return alphaPoly
-  Real alpha_polynomial() const;
-  /// return betaPoly
-  Real beta_polynomial() const;
-
-  /// set alphaStat (selected population)
-  void alpha_stat(Real alpha);
-  /// set betaStat (num draws)
-  void beta_stat(Real beta);
+  /// set distribution parameter value
+  void parameter(short dist_param, Real param);
+  /// get distribution parameter value
+  Real parameter(short dist_param);
 
 private:
 
@@ -84,84 +70,72 @@ private:
   //- Heading: Data
   //
 
-  /// the hypergeometric alpha parameter
-  Real alphaPoly;
-  /// the hypergeometric beta parameter
-  Real betaPoly;
-  /// the number of discrete points on which to base the polynomial 
-  Real gammaPoly;
+  /// number in total population
+  int totalPop;
+  /// number in selected population
+  int selectPop;
+  /// number failed in population
+  int numDrawn;
 };
 
 
 inline HahnOrthogPolynomial::HahnOrthogPolynomial() :
-  alphaPoly(-1.0), betaPoly(-1.0), gammaPoly(-1.0)
+  totalPop(-1), selectPop(-1), numDrawn(-1) // dummy values prior to update
 { }
+
 
 inline HahnOrthogPolynomial::~HahnOrthogPolynomial()
 { }
 
-inline void HahnOrthogPolynomial::alpha_stat(Real alpha)
+
+inline Real HahnOrthogPolynomial::parameter(short dist_param)
+{
+  switch (dist_param) {
+  case HGE_TOT_POP: return (Real)totalPop;  break;
+  case HGE_SEL_POP: return (Real)selectPop; break;
+  case HGE_DRAWN:   return (Real)numDrawn;  break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in HahnOrthogPolynomial"
+	  << "::parameter()." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+inline void HahnOrthogPolynomial::parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
+  int i_param = (int)param;
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = alpha;
+    switch (dist_param) {
+    case HGE_TOT_POP:  totalPop = i_param; break;
+    case HGE_SEL_POP: selectPop = i_param; break;
+    case HGE_DRAWN:    numDrawn = i_param; break;
+    }
   }
   else {
     parametricUpdate = false;
-    Real ap = alpha;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+    switch (dist_param) {
+    case HGE_TOT_POP:
+      if (totalPop != i_param)
+	{ totalPop = i_param;  parametricUpdate = true; reset_gauss(); }
+      break;
+    case HGE_SEL_POP:
+      if (selectPop != i_param)
+	{ selectPop = i_param; parametricUpdate = true; reset_gauss(); }
+      break;
+    case HGE_DRAWN:
+      if (numDrawn != i_param)
+	{ numDrawn = i_param;  parametricUpdate = true; reset_gauss(); }
+      break;
+    }
   }
 }
-
-inline void HahnOrthogPolynomial::beta_stat(Real beta)
-{
-  // *_stat() routines are called for each approximation build from
-  // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
-    betaPoly = beta;
-  }
-  else {
-    parametricUpdate = false;
-    Real bp = beta;
-    if (!real_compare(betaPoly, bp))
-      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
-  }
-}
-
-inline void HahnOrthogPolynomial::gamma_stat(Real gamma)
-{
-  // *_stat() routines are called for each approximation build from
-  // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
-    gammaPoly = gamma;
-  }
-  else {
-    parametricUpdate = false;
-    Real bp = gamma;
-    if (!real_compare(gammaPoly, bp))
-      { gammaPoly = bp; parametricUpdate = true; reset_gauss(); }
-  }
-}
-
-inline Real HahnOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
-
-inline Real HahnOrthogPolynomial::beta_polynomial() const
-{ return betaPoly; }
-
-inline Real HahnOrthogPolynomial::gamma_polynomial() const
-{ return gammaPoly; }
 
 } // namespace Pecos
 

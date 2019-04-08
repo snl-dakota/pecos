@@ -151,7 +151,7 @@ private:
   IntVector hyperGeomTotalPopulation;
   /// hypergeometric uncertain variable numbers in selected population
   IntVector hyperGeomSelectedPopulation;
-  /// hypergeometric uncertain variable numbers failed in population
+  /// hypergeometric uncertain variable numbers drawn from population
   IntVector hyperGeomNumDrawn;
   /// histogram uncertain (i,y) point pairs (discrete histogram)
   IntRealMapArray histogramPointIntPairs;

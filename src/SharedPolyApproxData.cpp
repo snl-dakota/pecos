@@ -157,127 +157,108 @@ initialize_polynomial_basis(const ShortArray& basis_types,
 
 void SharedPolyApproxData::
 update_basis_distribution_parameters(const ShortArray& u_types,
-				     const AleatoryDistParams& adp,
+				     const MultivariateDistribution& mv_dist,
 				     std::vector<BasisPolynomial>& poly_basis)
 {
-  size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
-    luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
-    fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0, biuv_cntr=0, nbuv_cntr=0,
-    puv_cntr=0, geuv_cntr=0, hguv_cntr=0, 
-    hpiuv_cntr=0, hpsuv_cntr=0, hpruv_cntr=0;
-
-  // update poly_basis using distribution data from dp
+  // update poly_basis using distribution data from mv_dist
+  size_t i, num_vars = u_types.size();
   for (i=0; i<num_vars; ++i)
     switch (u_types[i]) {
-    case STD_NORMAL:
-      ++nuv_cntr; break;
-    case STD_UNIFORM: case STD_EXPONENTIAL:
+    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:
       break;
     case STD_BETA:
-      poly_basis[i].alpha_stat(adp.beta_alpha(beuv_cntr));
-      poly_basis[i].beta_stat(adp.beta_beta(beuv_cntr));
-      ++beuv_cntr; break;
+      poly_basis[i].parameter(BE_ALPHA, mv_dist.parameter(i, BE_ALPHA));
+      poly_basis[i].parameter(BE_BETA,  mv_dist.parameter(i, BE_BETA));
+      break;
     case STD_GAMMA:
-      poly_basis[i].alpha_stat(adp.gamma_alpha(gauv_cntr));
-      ++gauv_cntr; break;
+      poly_basis[i].parameter(GA_ALPHA, mv_dist.parameter(i, GA_ALPHA));
+      break;
     case BOUNDED_NORMAL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_normal_distribution(adp.normal_mean(nuv_cntr),
-				    adp.normal_std_deviation(nuv_cntr),
-				    adp.normal_lower_bound(nuv_cntr),
-				    adp.normal_upper_bound(nuv_cntr));
-      ++nuv_cntr; break;
-    case LOGNORMAL: {
-      Real lambda, zeta;
-      params_from_lognormal_spec(adp.lognormal_means(),
-				 adp.lognormal_std_deviations(),
-				 adp.lognormal_lambdas(), adp.lognormal_zetas(),
-				 adp.lognormal_error_factors(), lnuv_cntr,
-				 lambda, zeta);
+	bounded_normal_distribution(mv_dist.parameter(i, N_MEAN),
+				    mv_dist.parameter(i, N_STD_DEV),
+				    mv_dist.parameter(i, N_LWR_BND),
+				    mv_dist.parameter(i, N_UPR_BND));
+      break;
+    case LOGNORMAL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	lognormal_distribution(lambda, zeta);
-      ++lnuv_cntr; break;
-    }
-    case BOUNDED_LOGNORMAL: {
-      Real lambda, zeta;
-      params_from_lognormal_spec(adp.lognormal_means(),
-				 adp.lognormal_std_deviations(),
-				 adp.lognormal_lambdas(), adp.lognormal_zetas(),
-				 adp.lognormal_error_factors(), lnuv_cntr,
-				 lambda, zeta);
+	lognormal_distribution(mv_dist.parameter(i, LN_LAMBDA),
+			       mv_dist.parameter(i, LN_ZETA));
+      break;
+    case BOUNDED_LOGNORMAL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_lognormal_distribution(lambda, zeta,
-				       adp.lognormal_lower_bound(lnuv_cntr),
-				       adp.lognormal_upper_bound(lnuv_cntr));
-      ++lnuv_cntr; break;
-    }
+	bounded_lognormal_distribution(mv_dist.parameter(i, LN_LAMBDA),
+				       mv_dist.parameter(i, LN_ZETA),
+				       mv_dist.parameter(i, LN_LWR_BND),
+				       mv_dist.parameter(i, LN_UPR_BND));
+      break;
     case LOGUNIFORM:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	loguniform_distribution(adp.loguniform_lower_bound(luuv_cntr),
-				adp.loguniform_upper_bound(luuv_cntr));
-      ++luuv_cntr; break;
+	loguniform_distribution(mv_dist.parameter(i, LU_LWR_BND),
+				mv_dist.parameter(i, LU_UPR_BND));
+      break;
     case TRIANGULAR:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	triangular_distribution(adp.triangular_lower_bound(tuv_cntr),
-				adp.triangular_mode(tuv_cntr),
-				adp.triangular_upper_bound(tuv_cntr));
-      ++tuv_cntr; break;
+	triangular_distribution(mv_dist.parameter(i, T_LWR_BND),
+				mv_dist.parameter(i, T_MODE),
+				mv_dist.parameter(i, T_UPR_BND));
+      break;
     case GUMBEL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	gumbel_distribution(adp.gumbel_alpha(guuv_cntr),
-			    adp.gumbel_beta(guuv_cntr));
-      ++guuv_cntr; break;
+	gumbel_distribution(mv_dist.parameter(i, GU_ALPHA),
+			    mv_dist.parameter(i, GU_BETA));
+      break;
     case FRECHET:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	frechet_distribution(adp.frechet_alpha(fuv_cntr),
-			     adp.frechet_beta(fuv_cntr));
-      ++fuv_cntr; break;
+	frechet_distribution(mv_dist.parameter(i, F_ALPHA),
+			     mv_dist.parameter(i, F_BETA));
+      break;
     case WEIBULL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	weibull_distribution(adp.weibull_alpha(wuv_cntr),
-			     adp.weibull_beta(wuv_cntr));
-      ++wuv_cntr; break;
+	weibull_distribution(mv_dist.parameter(i, W_ALPHA),
+			     mv_dist.parameter(i, W_BETA));
+      break;
     case HISTOGRAM_BIN:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	histogram_bin_distribution(adp.histogram_bin_pairs(hbuv_cntr));
-      ++hbuv_cntr; break;
-    case BINOMIAL:
-      poly_basis[i].alpha_stat(adp.binomial_probability_per_trial(biuv_cntr));
-      poly_basis[i].beta_stat(adp.binomial_num_trials(biuv_cntr));
-      ++biuv_cntr; break;
-    case NEGATIVE_BINOMIAL:
-      poly_basis[i].alpha_stat(
-	   adp.negative_binomial_probability_per_trial(nbuv_cntr));
-      poly_basis[i].beta_stat(adp.negative_binomial_num_trials(nbuv_cntr));
-      ++nbuv_cntr; break;
+	histogram_bin_distribution(mv_dist.parameter(i, H_BIN_PAIRS));
+      break;
     case POISSON:
-      poly_basis[i].alpha_stat(adp.poisson_lambda(puv_cntr));
-      ++puv_cntr; break;
+      poly_basis[i].parameter(P_LAMBDA, mv_dist.parameter(i, P_LAMBDA));
+      break;
+    case BINOMIAL:
+      poly_basis[i].parameter(BI_P_PER_TRIAL,
+			      mv_dist.parameter(i, BI_P_PER_TRIAL));
+      poly_basis[i].parameter(BI_TRIALS, mv_dist.parameter(i, BI_TRIALS));
+      break;
+    case NEGATIVE_BINOMIAL:
+      poly_basis[i].parameter(NBI_P_PER_TRIAL,
+			      mv_dist.parameter(i, NBI_P_PER_TRIAL));
+      poly_basis[i].parameter(NBI_TRIALS, mv_dist.parameter(i, NBI_TRIALS));
+      break;
     case GEOMETRIC:
-      // Use Meixner polynomial for Geometric variables setting num_trials to 1
-      poly_basis[i].alpha_stat(
-	   adp.geometric_probability_per_trial(geuv_cntr));
-      poly_basis[i].beta_stat(1);
-      ++geuv_cntr; break;
+      poly_basis[i].parameter(GE_P_PER_TRIAL,
+			      mv_dist.parameter(i, GE_P_PER_TRIAL));
+      // There is no numTrials for Geometric variables -> simplest to have
+      // Meixner numTrials default to 1., rather than setting NBI_TRIALS
+      //poly_basis[i].parameter(NBI_TRIALS, 1.);
+      break;
     case HYPERGEOMETRIC:
-      poly_basis[i].alpha_stat(adp.hypergeometric_total_population(hguv_cntr));
-      poly_basis[i].beta_stat(
-	adp.hypergeometric_selected_population(hguv_cntr));
-      ((HahnOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	gamma_stat(adp.hypergeometric_num_drawn(hguv_cntr));
-      ++hguv_cntr; break;
+      poly_basis[i].parameter(HGE_TOT_POP, mv_dist.parameter(i, HGE_TOT_POP));
+      poly_basis[i].parameter(HGE_SEL_POP, mv_dist.parameter(i, HGE_SEL_POP));
+      poly_basis[i].parameter(HGE_DRAWN,   mv_dist.parameter(i, HGE_DRAWN));
+      break;
     case HISTOGRAM_PT_INT:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(adp.histogram_point_int_pairs(hpiuv_cntr));
-      ++hpiuv_cntr; break;
+	histogram_pt_distribution<int>(mv_dist.parameter(i, H_PT_INT_PAIRS));
+      break;
     case HISTOGRAM_PT_STRING:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(adp.histogram_point_string_pairs(hpsuv_cntr));
-      ++hpsuv_cntr; break;
+	histogram_pt_distribution<String>(mv_dist.parameter(i, H_PT_STR_PAIRS));
+      break;
     case HISTOGRAM_PT_REAL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(adp.histogram_point_real_pairs(hpruv_cntr));
-      ++hpruv_cntr; break;
+        histogram_pt_distribution<Real>(mv_dist.parameter(i, H_PT_REAL_PAIRS));
+      break;
     default:
       PCerr << "Error: unsupported u-space type in SharedPolyApproxData::"
 	    << "distribution_parameters()" << std::endl;

@@ -96,13 +96,13 @@ public:
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using class member data
   void construct_basis(const ShortArray& u_types,
-		       const AleatoryDistParams& adp);
+		       const MultivariateDistribution& mv_dist);
   
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using passed data
   static void construct_basis(const ShortArray& u_types,
-			      const AleatoryDistParams& adp,
+			      const MultivariateDistribution& mv_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis);
 
@@ -110,7 +110,7 @@ public:
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using passed data
   static void construct_basis(const ShortArray& u_types,
-			      const AleatoryDistParams& adp,
+			      const MultivariateDistribution& mv_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis,
 			      ShortArray &basis_types,ShortArray &colloc_rules);
@@ -505,11 +505,12 @@ inline void SharedOrthogPolyApproxData::decrement_order()
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
+construct_basis(const ShortArray& u_types,
+		const MultivariateDistribution& mv_dist)
 {
   ShortArray colloc_rules;
   BasisConfigOptions bc_options;
-  construct_basis(u_types, adp, basisConfigOptions, polynomialBasis,
+  construct_basis(u_types, mv_dist, basisConfigOptions, polynomialBasis,
 		  orthogPolyTypes, colloc_rules);		  
 }
 
@@ -518,12 +519,13 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
+construct_basis(const ShortArray& u_types,
+		const MultivariateDistribution& mv_dist,
 		const BasisConfigOptions& bc_options,
 		std::vector<BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
-  construct_basis(u_types, adp, bc_options, poly_basis,
+  construct_basis(u_types, mv_dist, bc_options, poly_basis,
 		  basis_types, colloc_rules);
 }
 
@@ -531,7 +533,8 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
+construct_basis(const ShortArray& u_types,
+		const MultivariateDistribution& mv_dist,
 		const BasisConfigOptions& bc_options,
 		std::vector<BasisPolynomial>& poly_basis,
 		ShortArray &basis_types, ShortArray &colloc_rules)
@@ -541,7 +544,7 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 					      basis_types, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
   if (dist_params)
-    update_basis_distribution_parameters(u_types, adp, poly_basis);
+    update_basis_distribution_parameters(u_types, mv_dist, poly_basis);
 }
 
 

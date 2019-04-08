@@ -46,48 +46,66 @@ protected:
   Real type1_hessian( Real x, unsigned short order );
   Real norm_squared( unsigned short order );
 
-  /// return alphaPoly
-  Real alpha_polynomial() const;
   /// set betaPoly
-  void alpha_stat(Real alpha);
+  void parameter(short dist_param, Real param);
+  /// get betaPoly
+  Real parameter(short dist_param);
 
 private: 
   
-  /// Poisson distributioon is the probability that a realziations of 
-  /// a random variable X with mean alpha_stat occurring k times in a 
-  /// fixed interval.
-  /// expected value of the random variable X
-  Real alphaPoly;
+  /// Poisson distribution is the probability that a realization of a random
+  /// variable X with mean lambda occurring k times in a fixed interval.
 
+  /// expected value of the random variable X
+  Real lambdaParam;
 };
 
-inline CharlierOrthogPolynomial::CharlierOrthogPolynomial()
-{};
+
+inline CharlierOrthogPolynomial::CharlierOrthogPolynomial():
+  lambdaParam(-1.) // dummy value prior to update
+{ }
+
 
 inline CharlierOrthogPolynomial::~CharlierOrthogPolynomial()
-{};
+{ }
 
-inline Real CharlierOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
 
-inline void CharlierOrthogPolynomial::alpha_stat(Real alpha)
+inline Real CharlierOrthogPolynomial::parameter(short dist_param)
 {
+  switch (dist_param) {
+  case P_LAMBDA: return lambdaParam; break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
+	  << "Polynomial::parameter()." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+inline void CharlierOrthogPolynomial::parameter(short dist_param, Real param)
+{
+  if (dist_param != P_LAMBDA) {
+    PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
+	  << "Polynomial::parameter()." << std::endl;
+    abort_handler(-1);
+  }
+
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = alpha;
+    lambdaParam = param;
   }
   else {
     parametricUpdate = false;
-    Real ap = alpha;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+    if (!real_compare(lambdaParam, param))
+      { lambdaParam = param; parametricUpdate = true; reset_gauss(); }
   }
 }
 
-#endif // CHARLIER_ORTHOG_POLYNOMIAL_HPP
-
 } // namespace Pecos
+
+#endif // CHARLIER_ORTHOG_POLYNOMIAL_HPP

@@ -19,7 +19,7 @@
 
 namespace Pecos {
 
-class AleatoryDistParams;
+class MultivariateDistribution;
 
 
 /// Generates N-dimensional cubature grids for numerical evaluation of
@@ -49,7 +49,7 @@ public:
 		       unsigned short rule);
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
   void initialize_grid_parameters(const ShortArray& u_types,
-				  const AleatoryDistParams& dp);
+				  const MultivariateDistribution& mv_dist);
 
   const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
@@ -75,9 +75,8 @@ private:
   //
 
   /// verify that all values within params are identical
-  bool verify_homogeneity(const RealVector& params) const;
-  /// verify that all vectors within params are identical
-  bool verify_homogeneity(const RealRealMapArray& params) const;
+  template <typename T>
+  bool verify_homogeneity(const std::vector<T>& params) const;
 
   /// size collocRules and set first entry
   void collocation_rule(unsigned short rule);
@@ -153,26 +152,14 @@ inline void CubatureDriver::collocation_rule(unsigned short rule)
 { collocRules.resize(1); collocRules[0] = (short)rule; }
 
 
-inline bool CubatureDriver::verify_homogeneity(const RealVector& params) const
+template <typename T>
+bool CubatureDriver::verify_homogeneity(const std::vector<T>& params) const
 {
   bool err_flag = false;
-  if (!params.empty()) {
-    const Real& param0 = params[0];
-    for (size_t i=1; i<numVars; ++i)
-      if (params[i] != param0)
-	{ err_flag = true; break; }
-  }
-  return err_flag;
-}
-
-
-inline bool CubatureDriver::
-verify_homogeneity(const RealRealMapArray& params) const
-{
-  bool err_flag = false;
-  if (!params.empty()) {
-    const RealRealMap& param0 = params[0];
-    for (size_t i=1; i<numVars; ++i)
+  size_t len = params.size();
+  if (len > 1) {
+    const T& param0 = params[0];
+    for (size_t i=1; i<len; ++i)
       if (params[i] != param0)
 	{ err_flag = true; break; }
   }

@@ -67,7 +67,7 @@ public:
   /// polynomials for driver usage (not the vector<vector<BasisPolynomial> >
   /// used herein), and initialize distribution parameters within this basis
   static void construct_basis(const ShortArray& u_types,
-			      const AleatoryDistParams& adp,
+			      const MultivariateDistribution& mv_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis);
 
@@ -412,7 +412,8 @@ inline void SharedInterpPolyApproxData::update_active_iterators()
 
 
 inline void SharedInterpPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
+construct_basis(const ShortArray& u_types,
+		const MultivariateDistribution& mv_dist,
 		const BasisConfigOptions& bc_options,
 		std::vector<BasisPolynomial>& poly_basis)
 {
@@ -421,7 +422,7 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 						   basis_types, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
   if (dist_params)
-    update_basis_distribution_parameters(u_types, adp, poly_basis);
+    update_basis_distribution_parameters(u_types, mv_dist, poly_basis);
 }
 
 

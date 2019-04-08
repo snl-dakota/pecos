@@ -179,12 +179,20 @@ parameter(size_t v, short dist_param, ValueType value)
 { randomVars[v].parameter(dist_param, value); }
 
 
+template <typename ValueType>
+ValueType MarginalsCorrDistribution::
+parameter(size_t v, short dist_param)
+{ return randomVars[v].parameter(dist_param); }
+
+
 template <typename OrdinalType, typename ScalarType>
 void MarginalsCorrDistribution::
 parameters(size_t start_v, size_t num_v, short dist_param,
 	   const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
 {
   // set one type of distribution parameter for a range of random variables
+  // TO DO: would like to retire this version if Dakota migrates from Teuchos
+  //        to std::vector for dist params
 
   size_t i, v, num_updates = std::min(values.length(), num_v);
   for (i=0, v=start_v; i<num_updates; ++i, ++v)
@@ -211,6 +219,8 @@ parameters(short rv_type, short dist_param,
 	   const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
 {
   // rv_type eliminates need to check for dist_param support
+  // TO DO: would like to retire this version if Dakota migrates from Teuchos
+  //        to std::vector for dist params
 
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
   for (rv=0; i < num_rv && cntr < num_vals; ++rv)
@@ -233,7 +243,25 @@ parameters(short rv_type, short dist_param,
 }
 
 
-/* These APIs not currently required:
+template <typename ValueType>
+std::vector<ValueType> MarginalsCorrDistribution::
+parameters(short rv_type, short dist_param)
+{
+  // rv_type eliminates need to check for dist_param support
+
+  std::vector<ValueType> vals;
+  vals.reserve(count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
+
+  size_t rv, num_rv = ranVarTypes.size();
+  for (rv=0; i<num_rv; ++rv)
+    if (ranVarTypes[rv] == rv_type)
+      vals.push_back(randomVars[rv].parameter(dist_param));
+
+  return vals;
+}
+
+
+/* These APIs are not currently needed but could be useful in the future:
 template <typename VectorType>
 void MarginalsCorrDistribution::
 parameters(size_t v, const ShortArray& dist_params, const VectorType& values)

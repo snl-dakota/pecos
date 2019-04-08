@@ -61,15 +61,10 @@ protected:
   //
   Real type1_value(Real x, unsigned short order);
 
-  /// return alphaPoly
-  Real alpha_polynomial() const;
-  /// return betaPoly
-  Real beta_polynomial() const;
-  
-  /// set alphaStat (probability per trial)
-  void alpha_stat(Real alpha);
-  /// set betaStat (num trials)
-  void beta_stat(Real beta);
+  /// set distribution parameter value
+  void parameter(short dist_param, Real param);
+  /// get distribution parameter value
+  Real parameter(short dist_param);
 
 private:
 
@@ -78,20 +73,37 @@ private:
   //
 
   /// the probability of a "success" for each experiment
-  Real alphaPoly;
-  /// the number of failures allowed
-  Real betaPoly;
+  Real probPerTrial;
+  /// the number of discrete points on which to base the polynomial 
+  int numTrials;
 };
 
 
 inline MeixnerOrthogPolynomial::MeixnerOrthogPolynomial() :
-  alphaPoly(-1.0), betaPoly(-1.0)
+  probPerTrial(-1.), // dummy value prior to update
+  numTrials(1) // default for Geometric dist (overridden for Negative Binomial)
 { }
+
 
 inline MeixnerOrthogPolynomial::~MeixnerOrthogPolynomial()
 { }
 
-inline void MeixnerOrthogPolynomial::alpha_stat(Real alpha)
+
+inline Real MeixnerOrthogPolynomial::parameter(short dist_param)
+{
+  switch (dist_param) {
+  case NBI_P_PER_TRIAL: case GE_P_PER_TRIAL: return probPerTrial;    break;
+  case NBI_TRIALS:                           return (Real)numTrials; break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in MeixnerOrthog"
+	  << "Polynomial::parameter()." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+inline void MeixnerOrthogPolynomial::parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -99,39 +111,27 @@ inline void MeixnerOrthogPolynomial::alpha_stat(Real alpha)
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = alpha;
+    switch (dist_param) {
+    case NBI_P_PER_TRIAL: case GE_P_PER_TRIAL: probPerTrial = param; break;
+    case NBI_TRIALS: /* case GE_TRIALS: */   numTrials = (int)param; break;
+    }
   }
   else {
     parametricUpdate = false;
-    Real ap = alpha;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+    switch (dist_param) {
+    case NBI_P_PER_TRIAL: case GE_P_PER_TRIAL:
+      if (!real_compare(probPerTrial, param))
+	{ probPerTrial = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    case NBI_TRIALS: /* case GE_TRIALS: */ {
+      int i_param = (int)param;
+      if (numTrials != i_param)
+	{ numTrials = i_param;  parametricUpdate = true; reset_gauss(); }
+      break;
+    }
+    }
   }
 }
-
-inline void MeixnerOrthogPolynomial::beta_stat(Real beta)
-{
-  // *_stat() routines are called for each approximation build from
-  // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
-    betaPoly = beta;
-  }
-  else {
-    parametricUpdate = false;
-    Real bp = beta;
-    if (!real_compare(betaPoly, bp))
-      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
-  }
-}
-
-inline Real MeixnerOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
-
-inline Real MeixnerOrthogPolynomial::beta_polynomial() const
-{ return betaPoly; }
 
 } // namespace Pecos
 

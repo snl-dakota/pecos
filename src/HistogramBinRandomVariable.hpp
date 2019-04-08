@@ -77,9 +77,9 @@ public:
   static Real cdf(Real x, const RealRealMap& bin_prs);
   static Real inverse_cdf(Real cdf, const RealRealMap& bin_prs);
 
-  static Real pdf(Real x, const RealVector& bin_prs);
-  static Real cdf(Real x, const RealVector& bin_prs);
-  static Real inverse_cdf(Real cdf, const RealVector& bin_prs);
+  //static Real pdf(Real x, const RealVector& bin_prs);
+  //static Real cdf(Real x, const RealVector& bin_prs);
+  //static Real inverse_cdf(Real cdf, const RealVector& bin_prs);
 
   static void moments_from_params(const RealRealMap& bin_prs,
 				  Real& mean, Real& std_dev);
@@ -332,14 +332,14 @@ inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)
 { binPairs = bin_prs; }
 
 
+/*
 inline Real HistogramBinRandomVariable::pdf(Real x, const RealVector& bin_prs)
 {
   // Need this case to be fast for usage in NumericGenOrthogPolynomial...
-  /* Cleaner, but induces unnecessary copy overhead:
-  RealRealMap bin_prs_rrm;
-  copy_data(bin_prs_rv, bin_prs_rrm);
-  return HistogramBinRandomVariable::pdf(x, bin_prs_rrm);
-  */
+  // Cleaner, but induces unnecessary copy overhead:
+  //RealRealMap bin_prs_rrm;
+  //copy_data(bin_prs_rv, bin_prs_rrm);
+  //return HistogramBinRandomVariable::pdf(x, bin_prs_rrm);
 
   size_t num_bins = bin_prs.length() / 2 - 1;
   if (x < bin_prs[0] || x >= bin_prs[2*num_bins])
@@ -358,11 +358,10 @@ inline Real HistogramBinRandomVariable::pdf(Real x, const RealVector& bin_prs)
 
 inline Real HistogramBinRandomVariable::cdf(Real x, const RealVector& bin_prs)
 {
-  /* Cleaner, but induces unnecessary copy overhead:
-  RealRealMap bin_prs_rrm;
-  copy_data(bin_prs_rv, bin_prs_rrm);
-  return HistogramBinRandomVariable::cdf(x, bin_prs_rrm);
-  */
+  // Cleaner, but induces unnecessary copy overhead:
+  //RealRealMap bin_prs_rrm;
+  //copy_data(bin_prs_rv, bin_prs_rrm);
+  //return HistogramBinRandomVariable::cdf(x, bin_prs_rrm);
 
   size_t num_bins = bin_prs.length() / 2 - 1;
   if (x <= bin_prs[0])
@@ -389,11 +388,10 @@ inline Real HistogramBinRandomVariable::cdf(Real x, const RealVector& bin_prs)
 inline Real HistogramBinRandomVariable::
 inverse_cdf(Real p_cdf, const RealVector& bin_prs)
 {
-  /* Cleaner, but induces unnecessary copy overhead:
-  RealRealMap bin_prs_rrm;
-  copy_data(bin_prs_rv, bin_prs_rrm);
-  return HistogramBinRandomVariable::inverse_cdf(p_cdf, bin_prs_rrm);
-  */
+  // Cleaner, but induces unnecessary copy overhead:
+  //RealRealMap bin_prs_rrm;
+  //copy_data(bin_prs_rv, bin_prs_rrm);
+  //return HistogramBinRandomVariable::inverse_cdf(p_cdf, bin_prs_rrm);
 
   size_t num_bins = bin_prs.length() / 2 - 1;
   if (p_cdf <= 0.)
@@ -414,6 +412,7 @@ inverse_cdf(Real p_cdf, const RealVector& bin_prs)
     return bin_prs[2*num_bins]; // upper bound abscissa
   }
 }
+*/
 
 
 inline void HistogramBinRandomVariable::
