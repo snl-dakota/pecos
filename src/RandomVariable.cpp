@@ -80,14 +80,19 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
 
   RandomVariable* ran_var_rep;
   switch (ran_var_type) {
-  // continuous random variables:
+  // continuous / discrete range / set variables
+  case CONTINUOUS_RANGE:    ran_var_rep = new RangeVariable<Real>();      break;
+  case DISCRETE_RANGE:      ran_var_rep = new RangeVariable<int>();       break;
+  case DISCRETE_SET_INT:    ran_var_rep = new SetVariable<int>();         break;
+  case DISCRETE_SET_STRING: ran_var_rep = new SetVariable<String>();      break;
+  case DISCRETE_SET_REAL:   ran_var_rep = new SetVariable<Real>();        break;
+  // continuous aleatory random variables:
   case STD_NORMAL: case NORMAL: ran_var_rep = new NormalRandomVariable(); break;
   case BOUNDED_NORMAL: ran_var_rep = new BoundedNormalRandomVariable();   break;
   case LOGNORMAL:      ran_var_rep = new LognormalRandomVariable();       break;
   case BOUNDED_LOGNORMAL:
     ran_var_rep = new BoundedLognormalRandomVariable();                   break;
-  case STD_UNIFORM: case UNIFORM: case CONTINUOUS_DESIGN:
-  case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL_UNCERTAIN:
+  case STD_UNIFORM: case UNIFORM:
     ran_var_rep = new UniformRandomVariable();                            break;
   case LOGUNIFORM:     ran_var_rep = new LoguniformRandomVariable();      break;
   case TRIANGULAR:     ran_var_rep = new TriangularRandomVariable();      break;
@@ -101,26 +106,33 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case HISTOGRAM_BIN:  ran_var_rep = new HistogramBinRandomVariable();    break;
   // hyper-parameter distributions:
   case INV_GAMMA:      ran_var_rep = new InvGammaRandomVariable();        break;
-  // discrete random variables:
+  // discrete aleatory random variables:
   case POISSON:        ran_var_rep = new PoissonRandomVariable();         break;
   case BINOMIAL:       ran_var_rep = new BinomialRandomVariable();        break;
   case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
   case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
   case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
-  case HISTOGRAM_PT_INT:
-    ran_var_rep = new HistogramPtRandomVariable<int>();                   break;
-  case HISTOGRAM_PT_STRING:
-    ran_var_rep = new HistogramPtRandomVariable<String>();                break;
-  case HISTOGRAM_PT_REAL:
-    ran_var_rep = new HistogramPtRandomVariable<Real>();                  break;
+  // continuous / discrete epistemic intervals:
+  case CONTINUOUS_INTERVAL_UNCERTAIN:
+    ran_var_rep = new IntervalRandomVariable<Real>();                     break;
+  case DISCRETE_INTERVAL_UNCERTAIN:
+    ran_var_rep = new IntervalRandomVariable<int>();                      break;
+  // aleatory / epistemic sets: distinct only in interpretation of set probs
+  // (statistical expectations should not be used in epistemic case)
+  case HISTOGRAM_PT_INT:    case DISCRETE_UNCERTAIN_SET_INT:
+    ran_var_rep = new DiscreteSetRandomVariable<int>();                   break;
+  case HISTOGRAM_PT_STRING: case DISCRETE_UNCERTAIN_SET_STRING:
+    ran_var_rep = new DiscreteSetRandomVariable<String>();                break;
+  case HISTOGRAM_PT_REAL:   case DISCRETE_UNCERTAIN_SET_REAL:
+    ran_var_rep = new DiscreteSetRandomVariable<Real>();                  break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;
     ran_var_rep = NULL;                                                   break;
   }
 
-  // some derived classes cover multiple ranVarTypes, so override ctor
-  // assignments for those cases:
+  // some derived classes (especially template classes) cover multiple
+  // ranVarTypes, so override ctor assignments for those cases:
   if (ran_var_rep)
     ran_var_rep->ranVarType = ran_var_type;
 
