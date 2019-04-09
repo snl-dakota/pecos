@@ -113,7 +113,7 @@ inline HistogramBinRandomVariable::~HistogramBinRandomVariable()
 { }
 
 
-inline HistogramBinRandomVariable::
+inline void HistogramBinRandomVariable::
 pull_parameter(short dist_param, RealRealMap& val) const
 {
   switch (dist_param) {
@@ -121,7 +121,7 @@ pull_parameter(short dist_param, RealRealMap& val) const
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in HistogramBinRandomVariable::pull_parameter(RRM)."<< std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 

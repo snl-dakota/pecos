@@ -192,7 +192,7 @@ inline Real TriangularRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
 
 
-inline Real TriangularRandomVariable::
+inline void TriangularRandomVariable::
 pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
@@ -202,7 +202,7 @@ pull_parameter(short dist_param, Real& val) const
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in TriangularRandomVariable::pull_parameter(Real)." << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 

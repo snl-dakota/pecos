@@ -237,7 +237,7 @@ inline Real BoundedNormalRandomVariable::log_pdf_hessian(Real x) const
 }
 
 
-inline Real BoundedNormalRandomVariable::
+inline void BoundedNormalRandomVariable::
 pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
@@ -249,7 +249,7 @@ pull_parameter(short dist_param, Real& val) const
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in BoundedNormalRandomVariable::pull_parameter(Real)."
 	  << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 

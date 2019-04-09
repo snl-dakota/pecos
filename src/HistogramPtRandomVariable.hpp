@@ -64,7 +64,7 @@ public:
   //- Heading: Member functions
   //
 
-  template <typename T>
+  //template <typename T>
   void update(const std::map<T, Real>& vals_cnts);
 
   //
@@ -117,7 +117,7 @@ template <typename T>
 void HistogramPtRandomVariable<T>::
 pull_parameter(short dist_param, std::map<T, Real>& val) const
 {
-  // could specialize template, but seems adequate
+  // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
   case H_PT_INT_PAIRS: case H_PT_STR_PAIRS: case H_PT_REAL_PAIRS:
@@ -125,16 +125,16 @@ pull_parameter(short dist_param, std::map<T, Real>& val) const
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in HistogramPtRandomVariable::pull_parameter(T)." << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 
 
 template <typename T>
 void HistogramPtRandomVariable<T>::
-push_parameter(short dist_param, const std::map<T, Real>& val) // *** TO DO: proliferate
+push_parameter(short dist_param, const std::map<T, Real>& val)
 {
-  // could specialize template, but seems adequate
+  // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
   case H_PT_INT_PAIRS: case H_PT_STR_PAIRS: case H_PT_REAL_PAIRS:

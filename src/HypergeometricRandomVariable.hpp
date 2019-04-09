@@ -158,7 +158,7 @@ pull_parameter(short dist_param, int& val) const
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in HypergeometricRandomVariable::pull_parameter(int)."
 	  << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 

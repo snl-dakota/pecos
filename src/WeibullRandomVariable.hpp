@@ -191,7 +191,7 @@ inline Real WeibullRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real WeibullRandomVariable::
+inline void WeibullRandomVariable::
 pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
@@ -200,7 +200,7 @@ pull_parameter(short dist_param, Real& val) const
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in WeibullRandomVariable::pull_parameter(Real)." << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 
