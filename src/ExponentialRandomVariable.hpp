@@ -68,8 +68,8 @@ public:
   Real to_standard(Real x) const;
   Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -224,25 +224,27 @@ inline Real ExponentialRandomVariable::from_standard(Real z) const
 { return z * betaScale; }
 
 
-inline Real ExponentialRandomVariable::parameter(short dist_param) const
+inline Real ExponentialRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case E_BETA: return betaScale; break;
+  case E_BETA: val = betaScale; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in ExponentialRandomVariable::parameter()." << std::endl;
+	  << " in ExponentialRandomVariable::pull_parameter(Real)."<< std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void ExponentialRandomVariable::parameter(short dist_param, Real val)
+inline void ExponentialRandomVariable::
+push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case E_BETA: betaScale = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in ExponentialRandomVariable::parameter()." << std::endl;
+	  << " in ExponentialRandomVariable::push_parameter(Real)."<< std::endl;
     abort_handler(-1); break;
   }
 }

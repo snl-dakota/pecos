@@ -50,8 +50,8 @@ public:
 
   Real pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -131,25 +131,26 @@ inline Real PoissonRandomVariable::pdf(Real x) const
 { return bmth::pdf(*poissonDist, x); }
 
 
-inline Real PoissonRandomVariable::parameter(short dist_param) const
+inline void PoissonRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case P_LAMBDA: return poissonLambda; break;
+  case P_LAMBDA: val = poissonLambda; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in PoissonRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in PoissonRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void PoissonRandomVariable::parameter(short dist_param, Real val)
+inline void PoissonRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case P_LAMBDA: poissonLambda = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in PoissonRandomVariable::parameter()." << std::endl;
+	  << " in PoissonRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new poissonDist instance

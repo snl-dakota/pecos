@@ -54,8 +54,8 @@ public:
 
   Real log_pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -191,27 +191,28 @@ inline Real WeibullRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real WeibullRandomVariable::parameter(short dist_param) const
+inline Real WeibullRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case W_ALPHA: return alphaStat; break;
-  case W_BETA:  return betaStat;  break;
+  case W_ALPHA: val = alphaStat; break;
+  case W_BETA:  val = betaStat;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in WeibullRandomVariable::parameter()." << std::endl;
+	  << " in WeibullRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void WeibullRandomVariable::parameter(short dist_param, Real val)
+inline void WeibullRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case W_ALPHA: alphaStat = val; break;
   case W_BETA:  betaStat  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in WeibullRandomVariable::parameter()." << std::endl;
+	  << " in WeibullRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new weibullDist instance

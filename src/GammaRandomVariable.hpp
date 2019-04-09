@@ -68,8 +68,8 @@ public:
   //Real to_standard(Real x) const;
   //Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -274,27 +274,28 @@ inline Real GammaRandomVariable::log_standard_pdf_hessian(Real z) const
 }
 
 
-inline Real GammaRandomVariable::parameter(short dist_param) const
+inline Real GammaRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case GA_ALPHA: return alphaShape; break;
-  case GA_BETA:  return betaScale;  break;
+  case GA_ALPHA: val = alphaShape; break;
+  case GA_BETA:  val = betaScale;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in GammaRandomVariable::parameter()." << std::endl;
+	  << " in GammaRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void GammaRandomVariable::parameter(short dist_param, Real val)
+inline void GammaRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case GA_ALPHA: alphaShape = val; break;
   case GA_BETA:  betaScale  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in GammaRandomVariable::parameter()." << std::endl;
+	  << " in GammaRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new gammaDist instance

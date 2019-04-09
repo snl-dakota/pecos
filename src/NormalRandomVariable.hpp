@@ -62,8 +62,8 @@ public:
   Real to_standard(Real x) const;
   Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -299,22 +299,23 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 }
 
 
-inline Real NormalRandomVariable::parameter(short dist_param) const
+inline void NormalRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case N_MEAN:    case N_LOCATION: return gaussMean;   break;
-  case N_STD_DEV: case N_SCALE:    return gaussStdDev; break;
-  case N_LWR_BND: return -std::numeric_limits<Real>::infinity(); break;
-  case N_UPR_BND: return  std::numeric_limits<Real>::infinity(); break;
+  case N_MEAN:    case N_LOCATION: val = gaussMean;   break;
+  case N_STD_DEV: case N_SCALE:    val = gaussStdDev; break;
+  case N_LWR_BND: val = -std::numeric_limits<Real>::infinity(); break;
+  case N_UPR_BND: val =  std::numeric_limits<Real>::infinity(); break;
   default:
     PCerr << "Error: lookup failure for distribution parameter " << dist_param
-	  << " in NormalRandomVariable::parameter()." << std::endl;
+	  << " in NormalRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void NormalRandomVariable::parameter(short dist_param, Real val)
+inline void NormalRandomVariable::push_parameter(short dist_param, Real val)
 {
   bool err_flag = false;
   switch (dist_param) {
@@ -331,7 +332,7 @@ inline void NormalRandomVariable::parameter(short dist_param, Real val)
   }
   if (err_flag) {
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in NormalRandomVariable::parameter()." << std::endl;
+	  << " in NormalRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1);
   }
 }

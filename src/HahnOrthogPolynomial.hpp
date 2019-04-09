@@ -60,9 +60,14 @@ protected:
   Real type1_value(Real x, unsigned short order);
 
   /// set distribution parameter value
-  void parameter(short dist_param, Real param);
+  void parameter(short dist_param, int param);
   /// get distribution parameter value
-  Real parameter(short dist_param);
+  int parameter(short dist_param);
+
+  // set distribution parameter value
+  //void parameter(short dist_param, Real param);
+  // get distribution parameter value
+  //Real parameter(short dist_param);
 
 private:
 
@@ -88,6 +93,55 @@ inline HahnOrthogPolynomial::~HahnOrthogPolynomial()
 { }
 
 
+inline int HahnOrthogPolynomial::parameter(short dist_param)
+{
+  switch (dist_param) {
+  case HGE_TOT_POP: return totalPop;  break;
+  case HGE_SEL_POP: return selectPop; break;
+  case HGE_DRAWN:   return numDrawn;  break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in HahnOrthogPolynomial"
+	  << "::parameter()." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+inline void HahnOrthogPolynomial::parameter(short dist_param, int param)
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+    switch (dist_param) {
+    case HGE_TOT_POP:  totalPop = param; break;
+    case HGE_SEL_POP: selectPop = param; break;
+    case HGE_DRAWN:    numDrawn = param; break;
+    }
+  }
+  else {
+    parametricUpdate = false;
+    switch (dist_param) {
+    case HGE_TOT_POP:
+      if (totalPop != param)
+	{ totalPop  = param;  parametricUpdate = true; reset_gauss(); }
+      break;
+    case HGE_SEL_POP:
+      if (selectPop != param)
+	{ selectPop  = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    case HGE_DRAWN:
+      if (numDrawn != param)
+	{ numDrawn  = param;  parametricUpdate = true; reset_gauss(); }
+      break;
+    }
+  }
+}
+
+/*
 inline Real HahnOrthogPolynomial::parameter(short dist_param)
 {
   switch (dist_param) {
@@ -136,6 +190,7 @@ inline void HahnOrthogPolynomial::parameter(short dist_param, Real param)
     }
   }
 }
+*/
 
 } // namespace Pecos
 

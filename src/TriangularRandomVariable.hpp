@@ -52,8 +52,8 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -192,21 +192,22 @@ inline Real TriangularRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
 
 
-inline Real TriangularRandomVariable::parameter(short dist_param) const
+inline Real TriangularRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case T_MODE:    return triangularMode; break;
-  case T_LWR_BND: return lowerBnd;       break;
-  case T_UPR_BND: return upperBnd;       break;
+  case T_MODE:    val = triangularMode; break;
+  case T_LWR_BND: val = lowerBnd;       break;
+  case T_UPR_BND: val = upperBnd;       break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in TriangularRandomVariable::parameter()." << std::endl;
+	  << " in TriangularRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void TriangularRandomVariable::parameter(short dist_param, Real val)
+inline void TriangularRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case T_MODE:    triangularMode = val; break;
@@ -214,7 +215,7 @@ inline void TriangularRandomVariable::parameter(short dist_param, Real val)
   case T_UPR_BND: upperBnd       = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in TriangularRandomVariable::parameter()." << std::endl;
+	  << " in TriangularRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new triangDist instance

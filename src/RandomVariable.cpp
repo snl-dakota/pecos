@@ -382,24 +382,49 @@ Real RandomVariable::from_standard(Real x) const
 }
 
 
-Real RandomVariable::parameter(short dist_param) const
+void RandomVariable::pull_parameter(short dist_param, Real& val) const
 {
-  if (!ranVarRep) {
-    PCerr << "Error: parameter() not supported for this random variable type."
-	  << std::endl;
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(Real) not supported for this random "
+	  << "variable type." << std::endl;
     abort_handler(-1);
   }
-  return ranVarRep->parameter(dist_param); // forward to letter
 }
 
 
-void RandomVariable::parameter(short dist_param, Real val)
+void RandomVariable::push_parameter(short dist_param, Real val)
 {
   if (ranVarRep)
-    ranVarRep->parameter(dist_param, val); // forward to letter
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
-    PCerr << "Error: parameter() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: push_parameter(Real) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::pull_parameter(short dist_param, int& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(int) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, int val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(int) not supported for this random "
+	  << "variable type." << std::endl;
     abort_handler(-1);
   }
 }

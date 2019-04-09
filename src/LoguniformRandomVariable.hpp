@@ -49,8 +49,8 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -144,27 +144,28 @@ inline Real LoguniformRandomVariable::pdf_hessian(Real x) const
 { return  2./((std::log(upperBnd) - std::log(lowerBnd)) * x * x * x); }
 
 
-inline Real LoguniformRandomVariable::parameter(short dist_param) const
+inline void LoguniformRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case LU_LWR_BND: return lowerBnd; break;
-  case LU_UPR_BND: return upperBnd; break;
+  case LU_LWR_BND: val = lowerBnd; break;
+  case LU_UPR_BND: val = upperBnd; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in LoguniformRandomVariable::parameter()." << std::endl;
+	  << " in LoguniformRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void LoguniformRandomVariable::parameter(short dist_param, Real val)
+inline void LoguniformRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case LU_LWR_BND: lowerBnd = val; break;
   case LU_UPR_BND: upperBnd = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in LoguniformRandomVariable::parameter()." << std::endl;
+	  << " in LoguniformRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
 }

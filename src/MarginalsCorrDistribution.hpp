@@ -39,17 +39,36 @@ public:
   void initialize(const ShortArray& rv_types);
 
   /// update a scalar distribution parameter within randomVars[v]
-  void parameter(size_t v, short dist_param, Real value);
-  /// update an array of distribution parameters within randomVars[v]
-  void parameters(size_t v, const ShortArray& dist_params,
-		  const RealVector& values);
-  /// update values for one distribution parameter across the specified sequence
+  template <typename ValueType>
+  void parameter(size_t v, short dist_param, ValueType value);
+  /// return a scalar distribution parameter from randomVars[v
+  template <typename ValueType>
+  ValueType parameter(size_t v, short dist_param);
+
+  /// update values for one distribution parameter across a sequence
   /// of random variables
+  template <typename OrdinalType, typename ScalarType>
   void parameters(size_t start_v, size_t num_v, short dist_param,
-		  const RealVector& values);
-  /// update values for one distribution parameter for all random variables
-  /// matching the specified random variable type
-  void parameters(short rv_type, short dist_param, const RealVector& values);
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values);
+  /// update values for one distribution parameter across the set
+  /// of random variables with matching RV type
+  template <typename OrdinalType, typename ScalarType>
+  void parameters(short rv_type, short dist_param,
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+  /// update values for one distribution parameter across a sequence
+  /// of random variables
+  template <typename ValueType>
+  void parameters(size_t start_v, size_t num_v, short dist_param,
+		  const std::vector<ValueType>& values);
+  /// update values for one distribution parameter across the set
+  /// of random variables with matching RV type
+  template <typename ValueType>
+  void parameters(short rv_type, short dist_param,
+		  const std::vector<ValueType>& values);
+  /// return values for one distribution parameter across the set
+  /// of random variables with matching RV type
+  template <typename ValueType>
+  std::vector<ValueType> parameters(short rv_type, short dist_param);
 
   /// initializes corrMatrixX and correlationFlagX
   void correlations(const RealSymMatrix& x_corr);
@@ -176,13 +195,17 @@ inline void MarginalsCorrDistribution::check_type(size_t i, short rv_type) const
 template <typename ValueType>
 void MarginalsCorrDistribution::
 parameter(size_t v, short dist_param, ValueType value)
-{ randomVars[v].parameter(dist_param, value); }
+{ randomVars[v].push_parameter(dist_param, value); }
 
 
 template <typename ValueType>
 ValueType MarginalsCorrDistribution::
 parameter(size_t v, short dist_param)
-{ return randomVars[v].parameter(dist_param); }
+{
+  ValueType val;
+  randomVars[v].pull_parameter(dist_param, val);
+  return val;
+}
 
 
 template <typename OrdinalType, typename ScalarType>
@@ -196,7 +219,7 @@ parameters(size_t start_v, size_t num_v, short dist_param,
 
   size_t i, v, num_updates = std::min(values.length(), num_v);
   for (i=0, v=start_v; i<num_updates; ++i, ++v)
-    randomVars[v].parameter(dist_param, values[i]);
+    randomVars[v].push_parameter(dist_param, values[i]);
 }
 
 
@@ -209,7 +232,7 @@ parameters(size_t start_v, size_t num_v, short dist_param,
 
   size_t i, v, num_updates = std::min(values.size(), num_v);
   for (i=0, v=start_v; i<num_updates; ++i, ++v)
-    randomVars[v].parameter(dist_param, values[i]);
+    randomVars[v].push_parameter(dist_param, values[i]);
 }
 
 
@@ -225,7 +248,7 @@ parameters(short rv_type, short dist_param,
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
   for (rv=0; i < num_rv && cntr < num_vals; ++rv)
     if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].parameter(dist_param, values[cntr++]);
+      randomVars[rv].push_parameter(dist_param, values[cntr++]);
 }
 
 
@@ -239,7 +262,7 @@ parameters(short rv_type, short dist_param,
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.size();
   for (rv=0; i < num_rv && cntr < num_vals; ++rv)
     if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].parameter(dist_param, values[cntr++]);
+      randomVars[rv].push_parameter(dist_param, values[cntr++]);
 }
 
 
@@ -250,12 +273,12 @@ parameters(short rv_type, short dist_param)
   // rv_type eliminates need to check for dist_param support
 
   std::vector<ValueType> vals;
-  vals.reserve(count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
+  vals.size(count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
 
-  size_t rv, num_rv = ranVarTypes.size();
+  size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
   for (rv=0; i<num_rv; ++rv)
     if (ranVarTypes[rv] == rv_type)
-      vals.push_back(randomVars[rv].parameter(dist_param));
+      randomVars[rv].pull_parameter(dist_param, vals[cntr++]);
 
   return vals;
 }
@@ -271,7 +294,7 @@ parameters(size_t v, const ShortArray& dist_params, const VectorType& values)
   RandomVariable& random_var = randomVars[v];
   size_t i, num_params = std::min(dist_params.size(), values.length());
   for (i=0; i<num_params; ++i)
-    random_var.parameter(dist_params[i], values[i]);
+    random_var.push_parameter(dist_params[i], values[i]);
 }
 
 
@@ -284,7 +307,7 @@ parameters(short dist_param, const VectorType& values)
   size_t rv, num_rv = randomVars.size(), cntr = 0, num_vals = values.length();
   for (rv=0; i < num_rv && cntr < num_vals; ++rv)
     if (randomVars[rv].supports(dist_param))
-      randomVars[rv].parameter(dist_param, values[cntr++]);
+      randomVars[rv].push_parameter(dist_param, values[cntr++]);
 }
 */
 

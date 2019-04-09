@@ -51,8 +51,8 @@ public:
 
   Real pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -134,25 +134,26 @@ inline Real GeometricRandomVariable::pdf(Real x) const
 { return bmth::pdf(*geometricDist, x); }
 
 
-inline Real GeometricRandomVariable::parameter(short dist_param) const
+inline void GeometricRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case GE_P_PER_TRIAL: return probPerTrial; break;
+  case GE_P_PER_TRIAL: val = probPerTrial; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in GeometricRandomVariable::parameter()." << std::endl;
+	  << " in GeometricRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void GeometricRandomVariable::parameter(short dist_param, Real val)
+inline void GeometricRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case GE_P_PER_TRIAL: probPerTrial = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in GeometricRandomVariable::parameter()." << std::endl;
+	  << " in GeometricRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new geometricDist instance

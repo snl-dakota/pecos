@@ -68,8 +68,8 @@ public:
   //Real to_standard(Real x) const;
   //Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -267,27 +267,28 @@ inline Real InvGammaRandomVariable::log_standard_pdf_hessian(Real z) const
 }
 
 
-inline Real InvGammaRandomVariable::parameter(short dist_param) const
+inline void InvGammaRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case IGA_ALPHA: return alphaShape; break;
-  case IGA_BETA:  return betaScale;  break;
+  case IGA_ALPHA: val = alphaShape; break;
+  case IGA_BETA:  val = betaScale;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in InvGammaRandomVariable::parameter()." << std::endl;
+	  << " in InvGammaRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void InvGammaRandomVariable::parameter(short dist_param, Real val)
+inline void InvGammaRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case IGA_ALPHA: alphaShape = val; break;
   case IGA_BETA:  betaScale  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in InvGammaRandomVariable::parameter()." << std::endl;
+	  << " in InvGammaRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new invGammaDist instance

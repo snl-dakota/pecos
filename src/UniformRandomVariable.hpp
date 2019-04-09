@@ -61,8 +61,8 @@ public:
   Real to_standard(Real x) const;
   Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -280,22 +280,23 @@ inline Real UniformRandomVariable::from_standard(Real z) const
 }
 
 
-inline Real UniformRandomVariable::parameter(short dist_param) const
+inline void UniformRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: return lowerBnd; break;
-  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND: return upperBnd; break;
+  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: val = lowerBnd; break;
+  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND: val = upperBnd; break;
   //case U_LOCATION: - TO DO
   //case U_SCALE:    - TO DO
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in UniformRandomVariable::parameter()." << std::endl;
+	  << " in UniformRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void UniformRandomVariable::parameter(short dist_param, Real val)
+inline void UniformRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: lowerBnd = val; break;
@@ -304,7 +305,7 @@ inline void UniformRandomVariable::parameter(short dist_param, Real val)
   //case U_SCALE:    - TO DO
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in UniformRandomVariable::parameter()." << std::endl;
+	  << " in UniformRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
 }

@@ -50,8 +50,10 @@ public:
 
   Real pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+  void pull_parameter(short dist_param, int&  val) const;
+  void push_parameter(short dist_param, int   val);
 
   Real mean() const;
   Real median() const;
@@ -89,10 +91,10 @@ protected:
   //- Heading: Data
   //
 
-  /// n parameter of binomial random variable
-  unsigned int numTrials;
   /// p parameter of binomial random variable
   Real probPerTrial;
+  /// n parameter of binomial random variable
+  unsigned int numTrials;
 
   /// pointer to the Boost binomial_distribution instance
   binomial_dist* binomialDist;
@@ -100,7 +102,7 @@ protected:
 
 
 inline BinomialRandomVariable::BinomialRandomVariable():
-  RandomVariable(BaseConstructor()), numTrials(1), probPerTrial(1.),
+  RandomVariable(BaseConstructor()), probPerTrial(1.), numTrials(1), 
   binomialDist(NULL)
 { ranVarType = BINOMIAL; }
 
@@ -108,7 +110,7 @@ inline BinomialRandomVariable::BinomialRandomVariable():
 inline BinomialRandomVariable::
 BinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
   RandomVariable(BaseConstructor()),
-  numTrials(num_trials), probPerTrial(prob_per_trial),
+  probPerTrial(prob_per_trial), numTrials(num_trials), 
   binomialDist(new binomial_dist((Real)num_trials, prob_per_trial))
 { ranVarType = BINOMIAL; }
 
@@ -137,27 +139,52 @@ inline Real BinomialRandomVariable::pdf(Real x) const
 { return bmth::pdf(*binomialDist, x); }
 
 
-inline Real BinomialRandomVariable::parameter(short dist_param) const
+inline void BinomialRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case BI_TRIALS:      return (Real)numTrials; break;
-  case BI_P_PER_TRIAL: return probPerTrial;    break;
+  case BI_P_PER_TRIAL:  val = probPerTrial;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BinomialRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in BinomialRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void BinomialRandomVariable::parameter(short dist_param, Real val)
+inline void BinomialRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case BI_TRIALS:      numTrials = (unsigned int)std::floor(val+.5); break;
-  case BI_P_PER_TRIAL: probPerTrial = val;                           break;
+  case BI_P_PER_TRIAL:  probPerTrial = val;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BinomialRandomVariable::parameter()." << std::endl;
+	  << " in BinomialRandomVariable::push_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
+  }
+  update_boost(); // create a new binomialDist instance
+}
+
+
+inline void BinomialRandomVariable::
+pull_parameter(short dist_param, int& val) const
+{
+  switch (dist_param) {
+  case BI_TRIALS:  val = numTrials;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in BinomialRandomVariable::pull_parameter(int)." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline void BinomialRandomVariable::push_parameter(short dist_param, int val)
+{
+  switch (dist_param) {
+  case BI_TRIALS:  numTrials = val;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in BinomialRandomVariable::push_parameter(int)." << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new binomialDist instance

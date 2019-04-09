@@ -196,9 +196,13 @@ public:
   virtual Real from_standard(Real z) const;
 
   /// return the value of the named distribution parameter
-  virtual Real parameter(short dist_param) const;
+  virtual void pull_parameter(short dist_param, Real& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, int&  val) const;
   /// update the value of the named distribution parameter
-  virtual void parameter(short dist_param, Real val);
+  virtual void push_parameter(short dist_param, Real val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, int val);
 
   /// return the distribution mean
   virtual Real mean() const;

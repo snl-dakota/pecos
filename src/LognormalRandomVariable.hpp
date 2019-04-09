@@ -54,8 +54,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -204,32 +204,30 @@ inline Real LognormalRandomVariable::log_pdf_hessian(Real x) const
 }
 
 
-inline Real LognormalRandomVariable::parameter(short dist_param) const
+inline void LognormalRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case LN_MEAN:    return std::exp(lnLambda + lnZeta*lnZeta/2.); break;
+  case LN_MEAN:    val = std::exp(lnLambda + lnZeta*lnZeta/2.); break;
   case LN_STD_DEV: {
     Real zeta_sq = lnZeta*lnZeta;
-    return std::exp(lnLambda + zeta_sq/2.) * std::sqrt(bmth::expm1(zeta_sq));
+    val = std::exp(lnLambda + zeta_sq/2.) * std::sqrt(bmth::expm1(zeta_sq));
     break;
   }
-  case LN_ERR_FACT: {
-    Real err_fact; error_factor_from_zeta(lnZeta, err_fact);
-    return err_fact; break;
-  }
-  case LN_LAMBDA:  return lnLambda; break;
-  case LN_ZETA:    return lnZeta;   break;
-  case LN_LWR_BND: return 0.;       break;
-  case LN_UPR_BND: return std::numeric_limits<Real>::infinity(); break;
+  case LN_ERR_FACT: error_factor_from_zeta(lnZeta, val); break;
+  case LN_LAMBDA:   val = lnLambda; break;
+  case LN_ZETA:     val = lnZeta;   break;
+  case LN_LWR_BND:  val = 0.;       break;
+  case LN_UPR_BND:  val = std::numeric_limits<Real>::infinity(); break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in LognormalRandomVariable::parameter()." << std::endl;
+	  << " in LognormalRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void LognormalRandomVariable::parameter(short dist_param, Real val)
+inline void LognormalRandomVariable::push_parameter(short dist_param, Real val)
 {
   bool err_flag = false;
   switch (dist_param) {
@@ -258,7 +256,7 @@ inline void LognormalRandomVariable::parameter(short dist_param, Real val)
   }
   if (err_flag) {
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in LognormalRandomVariable::parameter()." << std::endl;
+	  << " in LognormalRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1);
   }
 }

@@ -57,10 +57,14 @@ public:
 
   Real coefficient_of_variation() const;
 
+  void pull_parameter(short dist_param, std::map<T, Real>& val) const;
+  void push_parameter(short dist_param, const std::map<T, Real>& val);
+
   //
   //- Heading: Member functions
   //
 
+  template <typename T>
   void update(const std::map<T, Real>& vals_cnts);
 
   //
@@ -107,6 +111,40 @@ void HistogramPtRandomVariable<T>::update(const std::map<T, Real>& vals_cnts)
 { valueCountPairs = vals_cnts; }
 // specializations used for assigning ranVarType, but could also employ
 // std::is_same for type identification
+
+
+template <typename T>
+void HistogramPtRandomVariable<T>::
+pull_parameter(short dist_param, std::map<T, Real>& val) const
+{
+  // could specialize template, but seems adequate
+
+  switch (dist_param) {
+  case H_PT_INT_PAIRS: case H_PT_STR_PAIRS: case H_PT_REAL_PAIRS:
+    val = valueCountPairs; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in HistogramPtRandomVariable::pull_parameter(T)." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+template <typename T>
+void HistogramPtRandomVariable<T>::
+push_parameter(short dist_param, const std::map<T, Real>& val) // *** TO DO: proliferate
+{
+  // could specialize template, but seems adequate
+
+  switch (dist_param) {
+  case H_PT_INT_PAIRS: case H_PT_STR_PAIRS: case H_PT_REAL_PAIRS:
+    valueCountPairs = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in HistogramPtRandomVariable::push_parameter(T)." << std::endl;
+    abort_handler(-1); break;
+  }
+}
 
 
 template <typename T>

@@ -54,8 +54,8 @@ public:
 
   Real log_pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   Real median() const;
@@ -180,27 +180,28 @@ inline Real FrechetRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real FrechetRandomVariable::parameter(short dist_param) const
+inline void FrechetRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case F_ALPHA: return alphaStat; break;
-  case F_BETA:  return betaStat;  break;
+  case F_ALPHA: val = alphaStat; break;
+  case F_BETA:  val = betaStat;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in FrechetRandomVariable::parameter()." << std::endl;
+	  << " in FrechetRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void FrechetRandomVariable::parameter(short dist_param, Real val)
+inline void FrechetRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case F_ALPHA: alphaStat = val; break;
   case F_BETA:  betaStat  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in FrechetRandomVariable::parameter()." << std::endl;
+	  << " in FrechetRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
 }

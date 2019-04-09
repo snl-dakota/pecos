@@ -56,8 +56,8 @@ public:
 
   Real log_pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
 
   Real mean() const;
   //Real median() const;
@@ -203,27 +203,28 @@ inline Real GumbelRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real GumbelRandomVariable::parameter(short dist_param) const
+inline void GumbelRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case GU_ALPHA: return alphaStat; break;
-  case GU_BETA:  return betaStat;  break;
+  case GU_ALPHA: val = alphaStat; break;
+  case GU_BETA:  val = betaStat;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in GumbelRandomVariable::parameter()." << std::endl;
+	  << " in GumbelRandomVariable::pull_parameter(Real)." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void GumbelRandomVariable::parameter(short dist_param, Real val)
+inline void GumbelRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case GU_ALPHA: alphaStat = val; break;
   case GU_BETA:  betaStat  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in GumbelRandomVariable::parameter()." << std::endl;
+	  << " in GumbelRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
 }

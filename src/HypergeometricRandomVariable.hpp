@@ -52,8 +52,8 @@ public:
 
   Real pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, int& val) const;
+  void push_parameter(short dist_param, int  val);
 
   Real mean() const;
   Real median() const;
@@ -147,29 +147,33 @@ inline Real HypergeometricRandomVariable::pdf(Real x) const
 { return bmth::pdf(*hypergeomDist, x); }
 
 
-inline Real HypergeometricRandomVariable::parameter(short dist_param) const
+inline void HypergeometricRandomVariable::
+pull_parameter(short dist_param, int& val) const
 {
   switch (dist_param) {
-  case HGE_TOT_POP: return (Real)numTotalPop;  break;
-  case HGE_SEL_POP: return (Real)numSelectPop; break;
-  case HGE_DRAWN:   return (Real)numDrawn;      break;
+  case HGE_TOT_POP: val = numTotalPop;  break;
+  case HGE_SEL_POP: val = numSelectPop; break;
+  case HGE_DRAWN:   val = numDrawn;     break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in HypergeometricRandomVariable::parameter()." << std::endl;
+	  << " in HypergeometricRandomVariable::pull_parameter(int)."
+	  << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }
 
 
-inline void HypergeometricRandomVariable::parameter(short dist_param, Real val)
+inline void HypergeometricRandomVariable::
+push_parameter(short dist_param, int val)
 {
   switch (dist_param) {
-  case HGE_TOT_POP: numTotalPop  = (unsigned int)std::floor(val+.5); break;
-  case HGE_SEL_POP: numSelectPop = (unsigned int)std::floor(val+.5); break;
-  case HGE_DRAWN:   numDrawn     = (unsigned int)std::floor(val+.5); break;
+  case HGE_TOT_POP: numTotalPop  = val; break;
+  case HGE_SEL_POP: numSelectPop = val; break;
+  case HGE_DRAWN:   numDrawn     = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in HypergeometricRandomVariable::parameter()." << std::endl;
+	  << " in HypergeometricRandomVariable::push_parameter(int)."
+	  << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new hypergeomDist instance

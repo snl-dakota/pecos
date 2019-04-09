@@ -63,6 +63,9 @@ public:
 
   Real coefficient_of_variation() const;
 
+  void pull_parameter(short dist_param, RealRealMap& val) const;
+  void push_parameter(short dist_param, const RealRealMap& val);
+
   //
   //- Heading: Member functions
   //
@@ -108,6 +111,32 @@ HistogramBinRandomVariable(const RealRealMap& bin_prs):
 
 inline HistogramBinRandomVariable::~HistogramBinRandomVariable()
 { }
+
+
+inline HistogramBinRandomVariable::
+pull_parameter(short dist_param, RealRealMap& val) const
+{
+  switch (dist_param) {
+  case H_BIN_PAIRS:  val = binPairs;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in HistogramBinRandomVariable::pull_parameter(RRM)."<< std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void HistogramBinRandomVariable::
+push_parameter(short dist_param, const RealRealMap& val)
+{
+  switch (dist_param) {
+  case H_BIN_PAIRS:  binPairs = val;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in HistogramBinRandomVariable::push_parameter(RRM)."<< std::endl;
+    abort_handler(-1); break;
+  }
+}
 
 
 inline Real HistogramBinRandomVariable::cdf(Real x, const RealRealMap& bin_prs)
