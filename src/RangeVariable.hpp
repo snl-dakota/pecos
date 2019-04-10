@@ -12,8 +12,8 @@
 //- Revised by:  
 //- Version:
 
-#ifndef HISTOGRAM_PT_RANDOM_VARIABLE_HPP
-#define HISTOGRAM_PT_RANDOM_VARIABLE_HPP
+#ifndef RANGE_VARIABLE_HPP
+#define RANGE_VARIABLE_HPP
 
 #include "RandomVariable.hpp"
 
@@ -118,12 +118,12 @@ void RangeVariable<T>::pull_parameter(short dist_param, T& val) const
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
-  case CR_LWR_BND: case DR_LWR_BND:  val = lowerBound;  break;
-  case CR_UPR_BND: case DR_UPR_BND:  val = upperBound;  break;
+  case CR_LWR_BND: case DR_LWR_BND:  val = lowerBnd;  break;
+  case CR_UPR_BND: case DR_UPR_BND:  val = upperBnd;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in RangeVariable::pull_parameter(T)." << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 
@@ -134,8 +134,8 @@ void RangeVariable<T>::push_parameter(short dist_param, T val)
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
-  case CR_LWR_BND: case DR_LWR_BND:  lowerBound = val;  break;
-  case CR_UPR_BND: case DR_UPR_BND:  upperBound = val;  break;
+  case CR_LWR_BND: case DR_LWR_BND:  lowerBnd = val;  break;
+  case CR_UPR_BND: case DR_UPR_BND:  upperBnd = val;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in RangeVariable::push_parameter(T)." << std::endl;
@@ -149,7 +149,7 @@ template <typename T>
 RealRealPair RangeVariable<T>::moments() const
 {
   RealRealPair moms;
-  moments_from_params(lowerBound, upperBound, moms.first, moms.second);
+  moments_from_params(lowerBnd, upperBnd, moms.first, moms.second);
   return moms;
 }
 
@@ -216,7 +216,7 @@ moments_from_params(const std::map<T, Real>& vals_cnts,
 
 template <typename T>
 RealRealPair RangeVariable<T>::bounds() const
-{ return RealRealPair((Real)lowerBound, (Real)upperBound); }
+{ return RealRealPair((Real)lowerBnd, (Real)upperBnd); }
 
 } // namespace Pecos
 

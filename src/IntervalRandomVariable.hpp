@@ -65,7 +65,7 @@ public:
   //- Heading: Member functions
   //
 
-  void update(const std::map<T, Real>& vals_probs);
+  void update(const std::map<std::pair<T, T>, Real>& bpa);
 
   //
   //- Heading: Static member functions (global utilities)

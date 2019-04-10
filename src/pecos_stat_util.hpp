@@ -26,7 +26,10 @@
 #include "NegBinomialRandomVariable.hpp"
 #include "GeometricRandomVariable.hpp"
 #include "HypergeometricRandomVariable.hpp"
-#include "HistogramPtRandomVariable.hpp"
+#include "RangeVariable.hpp"
+#include "SetVariable.hpp"
+#include "IntervalRandomVariable.hpp"
+#include "DiscreteSetRandomVariable.hpp"
 
 
 namespace Pecos {

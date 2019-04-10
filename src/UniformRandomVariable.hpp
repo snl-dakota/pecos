@@ -284,8 +284,8 @@ inline void UniformRandomVariable::
 pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: val = lowerBnd; break;
-  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND: val = upperBnd; break;
+  case U_LWR_BND: case CR_LWR_BND: val = lowerBnd; break;
+  case U_UPR_BND: case CR_UPR_BND: val = upperBnd; break;
   //case U_LOCATION: - TO DO
   //case U_SCALE:    - TO DO
   default:
@@ -299,8 +299,8 @@ pull_parameter(short dist_param, Real& val) const
 inline void UniformRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: lowerBnd = val; break;
-  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND: upperBnd = val; break;
+  case U_LWR_BND: case CR_LWR_BND: lowerBnd = val; break;
+  case U_UPR_BND: case CR_UPR_BND: upperBnd = val; break;
   //case U_LOCATION: - TO DO
   //case U_SCALE:    - TO DO
   default:
@@ -383,7 +383,7 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   // to STD_UNIFORM: x = L + (z + 1)*(U - L)/2
   bool u_type_err = false, dist_err = false;
   switch (dist_param) {
-  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND:
+  case U_LWR_BND: case CR_LWR_BND:
     // Deriv of Uniform w.r.t. its Lower Bound
     switch (u_type) {
     //case STD_NORMAL:  return NormalRandomVariable::std_ccdf(z); break;
@@ -393,7 +393,7 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
     default: u_type_err = true;                        break;
     }
     break;
-  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND:
+  case U_UPR_BND: case CR_UPR_BND:
     // Deriv of Uniform w.r.t. its Upper Bound
     switch (u_type) {
     //case STD_NORMAL:  return NormalRandomVariable::std_cdf(z); break;
@@ -406,9 +406,8 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   //case U_LOCATION: - TO DO
   //case U_SCALE:    - TO DO
   case NO_TARGET: // can occur for all_variables Jacobians
-    if (ranVarType == CONTINUOUS_DESIGN             ||
-	ranVarType == CONTINUOUS_INTERVAL_UNCERTAIN ||
-	ranVarType == CONTINUOUS_STATE)
+    if (ranVarType == CONTINUOUS_RANGE ||
+	ranVarType == CONTINUOUS_INTERVAL_UNCERTAIN)
       return 0.;
     else dist_err = true;
     break;

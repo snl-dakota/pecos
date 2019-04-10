@@ -57,14 +57,14 @@ public:
 
   Real coefficient_of_variation() const;
 
-  void pull_parameter(short dist_param, std::map<T, Real>& val) const;
-  void push_parameter(short dist_param, const std::map<T, Real>& val);
+  void pull_parameter(short dist_param, std::set<T>& vals) const;
+  void push_parameter(short dist_param, const std::set<T>& vals);
 
   //
   //- Heading: Member functions
   //
 
-  void update(const std::map<T, Real>& vals);
+  void update(const std::set<T>& vals);
 
   //
   //- Heading: Static member functions (global utilities)
@@ -96,8 +96,8 @@ SetVariable<T>::SetVariable():
 template <typename T>
 SetVariable<T>::
 SetVariable(const std::set<T>& vals):
-  RandomVariable(BaseConstructor())
-{ update(vals); }
+  RandomVariable(BaseConstructor()), setValues(vals)
+{ }
 
 
 template <typename T>
@@ -114,13 +114,13 @@ void SetVariable<T>::update(const std::set<T>& vals)
 
 
 template <typename T>
-void SetVariable<T>::pull_parameter(short dist_param, std::set<T>& val) const
+void SetVariable<T>::pull_parameter(short dist_param, std::set<T>& vals) const
 {
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
   case DSI_VALUES: case DSS_VALUES: case DSR_VALUES:
-    val = setValues; break;
+    vals = setValues; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in SetVariable::pull_parameter(T)." << std::endl;
@@ -130,13 +130,13 @@ void SetVariable<T>::pull_parameter(short dist_param, std::set<T>& val) const
 
 
 template <typename T>
-void SetVariable<T>::push_parameter(short dist_param, const std::set<T>& val)
+void SetVariable<T>::push_parameter(short dist_param, const std::set<T>& vals)
 {
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
   case DSI_VALUES: case DSS_VALUES: case DSR_VALUES:
-    setValues = val; break;
+    setValues = vals; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in SetVariable::push_parameter(T)." << std::endl;
@@ -197,10 +197,9 @@ Real SetVariable<T>::mode() const
 template <typename T>
 RealRealPair SetVariable<T>::bounds() const
 {
-  RealRealPair bnds;
-  bnds.first  = (Real)setValues.begin();   // lower bound
-  bnds.second = (Real)(--setValues.end()); // upper bound
-  return bnds;
+  // set values are sorted
+  T l_bnd = *setValues.begin(), u_bnd = *(--setValues.end());
+  return RealRealPair((Real)l_bnd, (Real)u_bnd);
 }
 
 
