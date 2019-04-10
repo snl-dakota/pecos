@@ -40,7 +40,12 @@ public:
 
   void initialize_correlations();
 
-  // *** migrated from NormalRandomVariable static fns:
+  /// update vector values
+  void parameters(short dist_param, const RealVector& values);
+  /// update symmetric matrix values
+  void parameters(short dist_param, const RealSymMatrix& values)
+
+  // migrated from NormalRandomVariable static fns:
   static Real std_pdf(Real beta, size_t n);
   static Real std_pdf(const RealVector& u);
 
@@ -99,18 +104,14 @@ inline void MultivariateNormalDistribution::initialize_correlations()
 }
 
 
-/*
 inline void MultivariateNormalDistribution::
-pull_parameter(short dist_param, Real& val) const
+parameters(short dist_param, const RealVector& values) const
 {
   switch (dist_param) {
-  case N_MEAN:    case N_LOCATION: val = gaussMean;   break;
-  case N_STD_DEV: case N_SCALE:    val = gaussStdDev; break;
-  case N_LWR_BND: val = -std::numeric_limits<Real>::infinity(); break;
-  case N_UPR_BND: val =  std::numeric_limits<Real>::infinity(); break;
+  case N_MEAN: case N_LOCATION:  mvnMeans = values;  break;
   default:
     PCerr << "Error: lookup failure for distribution parameter " << dist_param
-	  << " in MultivariateNormalDistribution::pull_parameter(Real)."
+	  << " in MultivariateNormalDistribution::parameters(RealVector)."
 	  << std::endl;
     abort_handler(-1); break;
   }
@@ -118,29 +119,37 @@ pull_parameter(short dist_param, Real& val) const
 
 
 inline void MultivariateNormalDistribution::
-push_parameter(short dist_param, Real val)
+parameters(short dist_param, const RealSymMatrix& values)
 {
   bool err_flag = false;
   switch (dist_param) {
-  case N_MEAN:    case N_LOCATION: gaussMean   = val; break;
-  case N_STD_DEV: case N_SCALE:    gaussStdDev = val; break;
-  case N_LWR_BND:
-    if (val != -std::numeric_limits<Real>::infinity()) err_flag = true;
-    break;
-  case N_UPR_BND:
-    if (val !=  std::numeric_limits<Real>::infinity()) err_flag = true;
-    break;
+  case N_VARIANCE: //case N_STD_DEV: case N_SCALE:
+    mvnCovariance = values;  initialize_correlations();  break;
   default:
-    err_flag = true; break;
-  }
-  if (err_flag) {
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in MultivariateNormalDistribution::push_parameter(Real)."
+	  << " in MultivariateNormalDistribution::parameters(RealSymMatrix)."
 	  << std::endl;
-    abort_handler(-1);
+    abort_handler(-1); break;
   }
 }
-*/
+
+
+inline Real MultivariateNormalDistribution::pdf(const RealVector& x) const
+{
+  // *** TO DO:
+  //   std::exp(- (x-mvnMeans)^T inverse_mvnCovar * (x-mvnMeans) / 2.)
+  // / std::sqrt( determinant(mvnCovar) * (2.*Pi)^d )
+  return 0.; //
+}
+
+
+// Multivariate standard normal density function from vector.
+inline Real MultivariateNormalDistribution::log_pdf(const RealVector& x) const
+{
+  // *** TO DO:
+  //   std::log(term) - (x-mvnMeans)^T inverse_mvnCovar * (x-mvnMeans) / 2.
+  return 0.;
+}
 
 
 // *** The following are fns migrated from NormalRandomVariable::mvn_*()

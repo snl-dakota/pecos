@@ -303,8 +303,9 @@ pull_parameter(short dist_param, Real& val) const
   switch (dist_param) {
   case N_MEAN:    case N_LOCATION: val = gaussMean;   break;
   case N_STD_DEV: case N_SCALE:    val = gaussStdDev; break;
-  case N_LWR_BND: val = -std::numeric_limits<Real>::infinity(); break;
-  case N_UPR_BND: val =  std::numeric_limits<Real>::infinity(); break;
+  case N_VARIANCE:                 val = gaussStdDev * gaussStdDev; break;
+  case N_LWR_BND: val = -std::numeric_limits<Real>::infinity();     break;
+  case N_UPR_BND: val =  std::numeric_limits<Real>::infinity();     break;
   default:
     PCerr << "Error: lookup failure for distribution parameter " << dist_param
 	  << " in NormalRandomVariable::pull_parameter(Real)." << std::endl;
@@ -319,6 +320,7 @@ inline void NormalRandomVariable::push_parameter(short dist_param, Real val)
   switch (dist_param) {
   case N_MEAN:    case N_LOCATION: gaussMean   = val; break;
   case N_STD_DEV: case N_SCALE:    gaussStdDev = val; break;
+  case N_VARIANCE:                 gaussStdDev = std::sqrt(val); break;
   case N_LWR_BND:
     if (val != -std::numeric_limits<Real>::infinity()) err_flag = true;
     break;
