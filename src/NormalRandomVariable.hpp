@@ -95,8 +95,6 @@ public:
 
   static Real std_pdf(Real z);
   //static Real phi(Real z);
-  static Real mvn_std_pdf(Real beta, size_t n);
-  static Real mvn_std_pdf(const RealVector& u);
 
   static Real std_cdf(Real z);
   static Real std_ccdf(Real z);
@@ -409,29 +407,6 @@ inline Real NormalRandomVariable::std_pdf(Real z)
   normal_dist norm(0., 1.);
   return bmth::pdf(norm, z);
   //return std::exp(-z*z/2.)/std::sqrt(2.*PI);
-}
-
-
-// Multivariate standard normal density function with aggregate distance.
-inline Real NormalRandomVariable::mvn_std_pdf(Real beta, size_t n)
-{
-  // need n instances of 1/sqrt(2Pi), but 1D pdf only includes 1:
-  return (n > 1) ?
-    std_pdf(beta) * std::pow(2.*PI, -((Real)(n-1))/2.) :// correct 1D pdf for nD
-    std_pdf(beta);
-}
-
-
-// Multivariate standard normal density function from vector.
-inline Real NormalRandomVariable::mvn_std_pdf(const RealVector& u)
-{
-  return mvn_std_pdf(u.normFrobenius(), u.length());
-
-  // Alternate implementation invokes exp() repeatedly:
-  //normal_dist norm(0., 1.);
-  //size_t i, n = u.length(); Real pdf = 1.;
-  //for (i=0; i<n; ++i)
-  //  pdf *= bmth::pdf(norm, u[i]);
 }
 
 

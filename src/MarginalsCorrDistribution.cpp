@@ -16,7 +16,7 @@ static const char rcsId[]="@(#) $Id: MarginalsCorrDistribution.cpp 4768 2007-12-
 
 namespace Pecos {
 
-void MarginalsCorrDistribution::initialize(const ShortArray& rv_types)
+void MarginalsCorrDistribution::initialize_types(const ShortArray& rv_types)
 {
   ranVarTypes = rv_types;
 
@@ -29,7 +29,8 @@ void MarginalsCorrDistribution::initialize(const ShortArray& rv_types)
 }
 
 
-void MarginalsCorrDistribution::correlations(const RealSymMatrix& corr)
+void MarginalsCorrDistribution::
+initialize_correlations(const RealSymMatrix& corr)
 {
   corrMatrix = corr;
 

@@ -7,6 +7,8 @@
     _______________________________________________________________________ */
 
 #include "pecos_stat_util.hpp"
+#include "MarginalsCorrDistribution.hpp"
+#include "MultivariateNormalDistribution.hpp"
 
 static const char rcsId[]="@(#) $Id: MultivariateDistribution.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -71,12 +73,15 @@ get_distribution(short mv_dist_type)
 	<< std::endl;
 #endif
 
-  if (mv_dist_type == MARGINALS_CORRELATIONS)
-    return new MarginalsCorrDistribution();
-  //else if (mv_dist_type == MULTIVARIATE_NORMAL)
-  //  return new MultivariateNormalDistribution();
-  //else if (mv_dist_type == JOINT_KDE)
-  //  return new JointKDEDistribution();
+  switch (mv_dist_type) {
+  case MARGINALS_CORRELATIONS:
+    return new MarginalsCorrDistribution();      break;
+  case MULTIVARIATE_NORMAL:
+    return new MultivariateNormalDistribution(); break;
+  //case JOINT_KDE:
+  //  return new JointKDEDistribution();         break;
+  //case GAUSSIAN_COPULA:
+  //  return new CopulaDistribution<Gaussian>(); break; // if templated...
   //etc.
   else {
     PCerr << "Error: MultivariateDistribution type " << mv_dist_type

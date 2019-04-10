@@ -46,7 +46,11 @@ enum { DEFAULT_COPY=0, SHALLOW_COPY, DEEP_COPY };
 enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
        DEBUG_OUTPUT };
 
-// define special values for ranVarTypesX/U
+// define special values for multivariate distribution types
+enum { NO_DIST=0, MARGINALS_CORRELATIONS, MULTIVARIATE_NORMAL, JOINT_KDE };
+     //GAUSSIAN_COPULA, ...
+
+// define special values for univariate RandomVariable types
 enum { NO_TYPE=0,
        // continuous + discrete design / state / other
        CONTINUOUS_RANGE, DISCRETE_RANGE,

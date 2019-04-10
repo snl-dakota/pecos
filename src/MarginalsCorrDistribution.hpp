@@ -36,7 +36,9 @@ public:
   //
 
   /// set ranVarTypes and initialize randomVars
-  void initialize(const ShortArray& rv_types);
+  void initialize_types(const ShortArray& rv_types);
+  /// initializes corrMatrix and correlationFlag
+  void initialize_correlations(const RealSymMatrix& corr);
 
   /// update a scalar distribution parameter within randomVars[v]
   template <typename ValueType>
@@ -70,8 +72,6 @@ public:
   template <typename ValueType>
   std::vector<ValueType> parameters(short rv_type, short dist_param);
 
-  /// initializes corrMatrixX and correlationFlagX
-  void correlations(const RealSymMatrix& x_corr);
   /// expand corrMatrix from probabilistic variables to combined variables
   void reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 				  size_t num_trail_v);

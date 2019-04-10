@@ -112,7 +112,8 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
   case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
   case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
-  // continuous / discrete epistemic intervals:
+  // continuous / discrete epistemic intervals: distinct from HistogramBin
+  // in ability to support overlapping/disjoint intervals
   case CONTINUOUS_INTERVAL_UNCERTAIN:
     ran_var_rep = new IntervalRandomVariable<Real>();                     break;
   case DISCRETE_INTERVAL_UNCERTAIN:
