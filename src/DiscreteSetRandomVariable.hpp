@@ -96,8 +96,8 @@ DiscreteSetRandomVariable<T>::DiscreteSetRandomVariable():
 template <typename T>
 DiscreteSetRandomVariable<T>::
 DiscreteSetRandomVariable(const std::map<T, Real>& vals_probs):
-  RandomVariable(BaseConstructor())
-{ update(vals_probs); }
+  RandomVariable(BaseConstructor()), valueProbPairs(vals_probs)
+{ }
 
 
 template <typename T>
@@ -120,7 +120,8 @@ pull_parameter(short dist_param, std::map<T, Real>& val) const
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
-  case H_PT_INT_PAIRS: case H_PT_STR_PAIRS: case H_PT_REAL_PAIRS:
+  case H_PT_INT_PAIRS:    case H_PT_STR_PAIRS:    case H_PT_REAL_PAIRS:
+  case DUSI_VALUES_PROBS: case DUSS_VALUES_PROBS: case DUSR_VALUES_PROBS:
     val = valueProbPairs; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
@@ -137,7 +138,8 @@ push_parameter(short dist_param, const std::map<T, Real>& val)
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
-  case H_PT_INT_PAIRS: case H_PT_STR_PAIRS: case H_PT_REAL_PAIRS:
+  case H_PT_INT_PAIRS:    case H_PT_STR_PAIRS:    case H_PT_REAL_PAIRS:
+  case DUSI_VALUES_PROBS: case DUSS_VALUES_PROBS: case DUSR_VALUES_PROBS:
     valueProbPairs = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param

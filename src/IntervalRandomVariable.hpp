@@ -122,8 +122,7 @@ pull_parameter(short dist_param, std::map<std::pair<T, T>, Real>& bpa) const
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
-  case CIU_BASIC_PROBS: case DIU_BASIC_PROBS:
-    bpa = intervalBPA; break;
+  case CIU_BPA: case DIU_BPA:  bpa = intervalBPA;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in IntervalRandomVariable::pull_parameter(T)." << std::endl;
@@ -139,8 +138,7 @@ push_parameter(short dist_param, const std::map<std::pair<T, T>, Real>& bpa)
   // could specialize template, but case aggregation seems adequate
 
   switch (dist_param) {
-  case CIU_BASIC_PROBS: case DIU_BASIC_PROBS:
-    intervalBPA = bpa; break;
+  case CIU_BPA: case DIU_BPA:  intervalBPA = bpa;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in IntervalRandomVariable::push_parameter(T)." << std::endl;
