@@ -83,7 +83,7 @@ get_distribution(short mv_dist_type)
   //case GAUSSIAN_COPULA:
   //  return new CopulaDistribution<Gaussian>(); break; // if templated...
   //etc.
-  else {
+  default:
     PCerr << "Error: MultivariateDistribution type " << mv_dist_type
 	  << " not available." << std::endl;
     return NULL;
