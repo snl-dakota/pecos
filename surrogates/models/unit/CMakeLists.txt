@@ -26,7 +26,6 @@ if (${CMAKE_CXX_COMPILER_ID} MATCHES "XL" OR
   add_definitions("-DBOOST_MPL_CFG_ASSERT_USE_RELATION_NAMES")
 endif()
 
-
 if(HAVE_SPARSE_GRID)
   include_directories(${VPISparseGrid_SOURCE_DIR}/src)
 endif(HAVE_SPARSE_GRID)
@@ -35,7 +34,15 @@ set(polynomial_approx_test
   polynomial_approximation.cpp
 )
 
+set(directANN_test
+  directANN_approximation.cpp
+)
+
 add_executable(polynomial_approx_test teuchos_unit_test_driver.cpp ${polynomial_approx_test} )
 target_link_libraries(polynomial_approx_test pecos_models pecos_util ${Pecos_TPL_LIBS})
 
+add_executable(directANN_test teuchos_unit_test_driver.cpp ${directANN_test} )
+target_link_libraries(directANN_test pecos_models pecos_util ${Pecos_TPL_LIBS})
+
 add_test(polynomial_approx_test polynomial_approx_test)
+add_test(directANN_test directANN_test)
