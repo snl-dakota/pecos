@@ -161,6 +161,9 @@ private:
   /// type of sampling: random, lhs, incremental_lhs, or incremental_random
   String sampleType;
 
+  /// variable labels passed to LHS; required for specification of correlations
+  StringArray lhsNames;
+
   /// the current random number seed
   int randomSeed;
 
@@ -393,14 +396,66 @@ generate_uniform_index_samples(const IntVector& index_l_bnds,
 }
 
 
-inline void LHSDriver::check_error(int err_code, const char* err_source) const
+/** Helper function to create labels that Fortran will see as character*16
+    values which are NOT null-terminated.  For convenience, the lhsNames is
+    also populated. */
+inline void LHSDriver::f77name16(const char* name, size_t index, String& label)
 {
-  if (err_code) {
-    PCerr << "Error: code " << err_code << " returned from " << err_source 
-	  << " in LHSDriver." << std::endl;
+  label = name + boost::lexical_cast<String>(index+1);
+  label.resize(16, ' '); // NOTE: no NULL terminator
+}
+
+
+inline void LHSDriver::check_range(Real l_bnd, Real u_bnd) const
+{
+  if (l_bnd >= u_bnd) {
+    PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
+	  << "than upper bounds." << std::endl;
     abort_handler(-1);
   }
 }
+
+
+inline void LHSDriver::check_finite(Real l_bnd, Real u_bnd) const
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  if (l_bnd <= -dbl_inf || u_bnd >= dbl_inf) {
+    PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
+	  << "continuous range." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void LHSDriver::
+check_error(int err_code, const char* err_source, const char* err_case) const
+{
+  if (err_code) {
+    PCerr << "Error: code " << err_code << " in LHSDriver";
+    if (err_source != NULL) PCerr << " returned from " << err_source;
+    if (err_case   != NULL) PCerr << " for case "      << err_case;
+    PCerr << "." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void LHSDriver::
+lhs_register(const char* var_name, const char* dist_name, size_t rv,
+	     const RealArray& dist_params) const
+{
+  String dist_string(dist_name);  dist_string.resize(32, ' ');
+  String& var_string = lhsNames[rv];
+  f77name16(var_name, rv, var_string);
+  int num_params = dist_params.size(), err_code = 0, ptval_flag = 0, // inputs
+      dist_num, pv_num; // outputs (not used)
+  Real ptval = 0.;
+
+  LHS_DIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
+	       &dist_params[0], num_params, err_code, dist_num, pv_num);
+  check_error(err_code, "lhs_dist()", var_string.data());
+}
+
 
 } // namespace Pecos
 

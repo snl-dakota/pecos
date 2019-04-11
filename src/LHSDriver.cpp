@@ -112,19 +112,6 @@ Pecos::Real defaultrnum2( void );
 
 namespace Pecos {
 
-/** Helper function to create labels that Fortran will see as
-    character*16 values which are NOT null-terminated.  For convenience,
-    the StringArray, lhs_names, is also populated. */
-static const char* f77name16(const String& name, size_t index,
-                             StringArray& lhs_names)
-{
-  String label = name + boost::lexical_cast<String>(index+1);
-  label.resize(16, ' ');
-  lhs_names[index] = label;
-  return lhs_names[index].data();  // NOTE: no NULL terminator
-}
-
-
 void LHSDriver::seed(int seed)
 {
   randomSeed = seed;
@@ -217,17 +204,8 @@ void LHSDriver::abort_if_no_lhs()
     re-seed multiple generate_samples() calls, rather than continuing
     an existing random number sequence. */
 void LHSDriver::
-generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
-		 const IntVector&  ddri_l_bnds, const IntVector&  ddri_u_bnds,
-		 const IntSetArray& ddsi_values,
-		 const StringSetArray& ddss_values,
-		 const RealSetArray& ddsr_values,
-		 const RealVector& cs_l_bnds,   const RealVector& cs_u_bnds,
-		 const IntVector&  dsri_l_bnds, const IntVector&  dsri_u_bnds,
-		 const IntSetArray& dssi_values,
-		 const StringSetArray& dsss_values,
-		 const RealSetArray& dssr_values, const AleatoryDistParams& adp,
-		 const EpistemicDistParams& edp, int num_samples,
+generate_samples(const std::vector<RandomVariables>& random_vars,
+		 const RealSymMatrix& correlations, int num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks)
 {
 #ifdef HAVE_LHS
@@ -240,84 +218,157 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     abort_handler(-1);
   }
 
-  const RealVector& n_means = adp.normal_means();
-  const RealVector& n_std_devs = adp.normal_std_deviations();
-  const RealVector& n_l_bnds = adp.normal_lower_bounds();
-  const RealVector& n_u_bnds = adp.normal_upper_bounds();
-  const RealVector& ln_means = adp.lognormal_means();
-  const RealVector& ln_std_devs = adp.lognormal_std_deviations();
-  const RealVector& ln_lambdas = adp.lognormal_lambdas();
-  const RealVector& ln_zetas = adp.lognormal_zetas();
-  const RealVector& ln_err_facts = adp.lognormal_error_factors();
-  const RealVector& ln_l_bnds = adp.lognormal_lower_bounds();
-  const RealVector& ln_u_bnds = adp.lognormal_upper_bounds();
-  const RealVector& u_l_bnds = adp.uniform_lower_bounds();
-  const RealVector& u_u_bnds = adp.uniform_upper_bounds();
-  const RealVector& lu_l_bnds = adp.loguniform_lower_bounds();
-  const RealVector& lu_u_bnds = adp.loguniform_upper_bounds();
-  const RealVector& t_modes = adp.triangular_modes();
-  const RealVector& t_l_bnds = adp.triangular_lower_bounds();
-  const RealVector& t_u_bnds = adp.triangular_upper_bounds();
-  const RealVector& e_betas = adp.exponential_betas();
-  const RealVector& b_alphas = adp.beta_alphas();
-  const RealVector& b_betas = adp.beta_betas();
-  const RealVector& b_l_bnds = adp.beta_lower_bounds();
-  const RealVector& b_u_bnds = adp.beta_upper_bounds();
-  const RealVector& ga_alphas = adp.gamma_alphas();
-  const RealVector& ga_betas = adp.gamma_betas();
-  const RealVector& gu_alphas = adp.gumbel_alphas();
-  const RealVector& gu_betas = adp.gumbel_betas();
-  const RealVector& f_alphas = adp.frechet_alphas();
-  const RealVector& f_betas  = adp.frechet_betas();
-  const RealVector& w_alphas = adp.weibull_alphas();
-  const RealVector& w_betas = adp.weibull_betas();
-  const RealRealMapArray& h_bin_prs = adp.histogram_bin_pairs();
-  const RealVector& p_lambdas = adp.poisson_lambdas();
-  const RealVector& bi_prob_per_tr = adp.binomial_probability_per_trial();
-  const IntVector&  bi_num_tr = adp.binomial_num_trials();
-  const RealVector& nb_prob_per_tr
-    = adp.negative_binomial_probability_per_trial();
-  const IntVector&  nb_num_tr = adp.negative_binomial_num_trials();
-  const RealVector& ge_prob_per_tr = adp.geometric_probability_per_trial();
-  const IntVector&  hg_total_pop = adp.hypergeometric_total_population();
-  const IntVector&  hg_selected_pop = adp.hypergeometric_selected_population();
-  const IntVector&  hg_num_drawn = adp.hypergeometric_num_drawn();
-  const IntRealMapArray& h_pt_int_prs = adp.histogram_point_int_pairs();
-  const StringRealMapArray& h_pt_string_prs
-    = adp.histogram_point_string_pairs();
-  const RealRealMapArray& h_pt_real_prs = adp.histogram_point_real_pairs();
-  const RealSymMatrix& correlations = adp.uncertain_correlations();
+  size_t i, num_rv = random_vars.size();
+  RealArray dist_params;
+  for (i=0; i<num_rv; ++i) {
+    const RandomVariable& rv_i = random_vars[i];
+    switch (rv_i.type()) {
+    case CONTINUOUS_RANGE:
+      dist_params.resize(2);
+      rv_i.pull_parameter(CR_LWR_BND, dist_params[0]);
+      rv_i.pull_parameter(CR_UPR_BND, dist_params[1]);
+      check_range(dist_params[0], dist_params[1]);
+      check_finite(dist_params[0], dist_params[1]);
+      lhs_register("ContRange", "uniform", i, dist_params);
+      break;
+    case NORMAL:
+      dist_params.resize(2);
+      rv_i.pull_parameter(N_MEAN,    dist_params[0]);
+      rv_i.pull_parameter(N_STD_DEV, dist_params[1]);
+      lhs_register("Normal", "normal", i, dist_params);
+      break;
+    case BOUNDED_NORMAL:
+      dist_params.resize(4);
+      rv_i.pull_parameter(N_MEAN,    dist_params[0]);
+      rv_i.pull_parameter(N_STD_DEV, dist_params[1]);
+      rv_i.pull_parameter(N_LWR_BND, dist_params[2]);
+      rv_i.pull_parameter(N_UPR_BND, dist_params[3]);
+      check_range(dist_params[2], dist_params[3]);
+      lhs_register("Normal", "bounded normal", i, dist_params);
+      break;
+    case LOGNORMAL:     // LognormalRandomVariable standardizes on Lambda/Zeta
+      dist_params.resize(2);
+      rv_i.pull_parameter(LN_LAMBDA,  dist_params[0]);
+      rv_i.pull_parameter(LN_ZETA,    dist_params[1]);
+      lhs_register("Lognormal", "lognormal-n", i, dist_params);
+      break;
+    case BOUNDED_LOGNORMAL: // BoundedLognormalRandomVariable uses Lambda/Zeta
+      dist_params.resize(4);
+      rv_i.pull_parameter(LN_LAMBDA,  dist_params[0]);
+      rv_i.pull_parameter(LN_ZETA,    dist_params[1]);
+      rv_i.pull_parameter(LN_LWR_BND, dist_params[2]);
+      rv_i.pull_parameter(LN_UPR_BND, dist_params[3]);
+      check_range(dist_params[2], dist_params[3]);
+      lhs_register("Lognormal", "bounded lognormal-n", i, dist_params);
+      break;
+    case UNIFORM:
+      dist_params.resize(2);
+      rv_i.pull_parameter(U_LWR_BND, dist_params[0]);
+      rv_i.pull_parameter(U_UPR_BND, dist_params[1]);
+      check_range(dist_params[0],  dist_params[1]);
+      check_finite(dist_params[0], dist_params[1]);
+      lhs_register("Uniform", "uniform", i, dist_params);
+      break;
+    case LOGUNIFORM:
+      dist_params.resize(2);
+      rv_i.pull_parameter(LU_LWR_BND, dist_params[0]);
+      rv_i.pull_parameter(LU_UPR_BND, dist_params[1]);
+      check_range(dist_params[0],  dist_params[1]);
+      check_finite(dist_params[0], dist_params[1]);
+      lhs_register("Loguniform", "loguniform", i, dist_params);
+      break;
+    case TRIANGULAR:
+      dist_params.resize(3);
+      rv_i.pull_parameter(T_LWR_BND, dist_params[0]);
+      rv_i.pull_parameter(T_MODE,    dist_params[1]);
+      rv_i.pull_parameter(T_UPR_BND, dist_params[2]);
+      check_range(dist_params[0],  dist_params[2]);
+      check_finite(dist_params[0], dist_params[2]);
+      lhs_register("Triangular", "triangular", i, dist_params);
+      break;
+    case EXPONENTIAL:
+      dist_params.resize(1);
+      Real e_beta; rv_i.pull_parameter(E_BETA, e_beta);
+      dist_params[0] = 1./e_beta; // convert to LHS convention
+      lhs_register("Exponential", "exponential", i, dist_params);
+      break;
+    case BETA:
+      dist_params.resize(4);
+      rv_i.pull_parameter(BE_LWR_BND, dist_params[0]);
+      rv_i.pull_parameter(BE_UPR_BND, dist_params[1]);
+      rv_i.pull_parameter(BE_ALPHA,   dist_params[2]);
+      rv_i.pull_parameter(BE_BETA,    dist_params[3]);
+      check_range(dist_params[0],  dist_params[1]);
+      check_finite(dist_params[0], dist_params[1]);
+      lhs_register("Beta", "beta", i, dist_params);
+      break;
+    case GAMMA:
+      dist_params.resize(2);
+      rv_i.pull_parameter(GA_ALPHA, dist_params[0]);
+      Real ga_beta; rv_i.pull_parameter(GA_BETA, ga_beta);
+      dist_params[1] = 1./ga_beta; // convert to LHS convention
+      lhs_register("Gamma", "gamma", i, dist_params);
+      break;
+    case GUMBEL:
+      dist_params.resize(2);
+      rv_i.pull_parameter(GU_ALPHA, dist_params[0]);
+      rv_i.pull_parameter(GU_BETA,  dist_params[1]);
+      lhs_register("Gumbel", "gumbel", i, dist_params);
+      break;
+    case FRECHET:
+      dist_params.resize(2);
+      rv_i.pull_parameter(F_ALPHA, dist_params[0]);
+      rv_i.pull_parameter(F_BETA,  dist_params[1]);
+      lhs_register("Frechet", "frechet", i, dist_params);
+      break;
+    case WEIBULL:
+      dist_params.resize(2);
+      rv_i.pull_parameter(W_ALPHA, dist_params[0]);
+      rv_i.pull_parameter(W_BETA,  dist_params[1]);
+      lhs_register("Weibull", "weibull", i, dist_params);
+      break;
+      
+    // ...
+      
+    case POISSON:
+      dist_params.resize(1);
+      rv_i.pull_parameter(P_LAMBDA, dist_params[0]);
+      lhs_register("Poisson", "poisson", i, dist_params);
+      break;
+    case BINOMIAL:
+      dist_params.resize(2);
+      rv_i.pull_parameter(BI_P_PER_TRIAL, dist_params[0]);
+      rv_i.pull_parameter(BI_TRIALS,      dist_params[1]);
+      lhs_register("Binomial", "binomial", i, dist_params);
+      break;
+    case NEGATIVE_BINOMIAL:
+      dist_params.resize(2);
+      rv_i.pull_parameter(NBI_P_PER_TRIAL, dist_params[0]);
+      rv_i.pull_parameter(NBI_TRIALS,      dist_params[1]);
+      lhs_register("NegBinomial", "negative binomial", i, dist_params);
+      break;
+    case GEOMETRIC:
+      dist_params.resize(1);
+      rv_i.pull_parameter(GE_P_PER_TRIAL, dist_params[0]);
+      lhs_register("Geometric", "geometric", i, dist_params);
+      break;
+    case HYPERGEOMETRIC:
+      dist_params.resize(3);
+      rv_i.pull_parameter(HGE_TOT_POP, dist_params[0]);
+      rv_i.pull_parameter(HGE_DRAWN,   dist_params[1]);
+      rv_i.pull_parameter(HGE_SEL_POP, dist_params[2]);
+      lhs_register("Hypergeom", "hypergeometric", i, dist_params);
+      break;
+      
+    // ...
+      
+    }
+  }
 
-  const RealRealPairRealMapArray& ci_bpa
-    = edp.continuous_interval_basic_probabilities();
-  const IntIntPairRealMapArray&   di_bpa
-    = edp.discrete_interval_basic_probabilities();
-  const IntRealMapArray& dusi_vals_probs
-    = edp.discrete_set_int_values_probabilities();
-  const StringRealMapArray& duss_vals_probs
-    = edp.discrete_set_string_values_probabilities();
-  const RealRealMapArray& dusr_vals_probs
-    = edp.discrete_set_real_values_probabilities();
+  /////////////////////////////////////////////////////////////
 
   bool correlation_flag = !correlations.empty();
-  size_t i, j, num_cdv = cd_l_bnds.length(), num_ddriv = ddri_l_bnds.length(),
-    num_ddsiv = ddsi_values.size(), num_ddssv = ddss_values.size(),
-    num_ddsrv = ddsr_values.size(), num_nuv  = n_means.length(),
-    num_lnuv  = std::max(ln_means.length(), ln_lambdas.length()),
-    num_uuv   = u_l_bnds.length(),  num_luuv = lu_l_bnds.length(),
-    num_tuv   = t_modes.length(),   num_exuv = e_betas.length(),
-    num_beuv  = b_alphas.length(),  num_gauv = ga_alphas.length(),
-    num_guuv  = gu_alphas.length(), num_fuv  = f_alphas.length(),
-    num_wuv   = w_alphas.length(),  num_hbuv = h_bin_prs.size(),
-    num_puv   = p_lambdas.length(),      num_biuv  = bi_prob_per_tr.length(),
-    num_nbuv  = nb_prob_per_tr.length(), num_geuv  = ge_prob_per_tr.length(),
-    num_hguv  = hg_num_drawn.length(),   num_hpuiv = h_pt_int_prs.size(),
-    num_hpusv = h_pt_string_prs.size(),  num_hpurv = h_pt_real_prs.size(),
-    num_ciuv  = ci_bpa.size(), num_diuv = di_bpa.size(),
-    num_dusiv = dusi_vals_probs.size(),  num_dussv = duss_vals_probs.size(),
-    num_dusrv = dusr_vals_probs.size(),  num_csv   = cs_l_bnds.length(),
-    num_dsriv = dsri_l_bnds.length(),    num_dssiv = dssi_values.size(),
-    num_dsssv = dsss_values.size(), num_dssrv = dssr_values.size(),
+  size_t i, j,
     num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddssv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
@@ -403,266 +454,13 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
   int num_params, cntr = 0, ptval_flag = 0;
   int dist_num, pv_num; // outputs (ignored)
   Real ptval = 0., dist_params[4];
-  StringArray lhs_names(num_av);
+  lhsNames.resize(num_av);
   const char *name_string, *distname;
   Real dbl_inf = std::numeric_limits<Real>::infinity();
 
   // --------------------
   // CONTINUOUS VARIABLES
   // --------------------
-  // continuous design (treated as uniform)
-  for (i=0; i<num_cdv; ++i, ++cntr) {
-    name_string = f77name16("ContDesign", cntr, lhs_names);
-    String dist_string("uniform");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    Real l_bnd = cd_l_bnds[i], u_bnd = cd_u_bnds[i];
-    if (l_bnd > -dbl_inf && u_bnd < dbl_inf) {
-      if (l_bnd >= u_bnd) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample continuous design "
-	      << "variables using uniform distributions." << std::endl;
-	abort_handler(-1);
-      }
-      dist_params[0] = l_bnd;
-      dist_params[1] = u_bnd;
-    }
-    else {
-      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample design "
-	    << "variables using uniform\n       distributions." << std::endl;
-      abort_handler(-1);
-    }
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(continuous design)");
-  }
-
-  // normal uncertain
-  bool n_bnd_spec = (!n_l_bnds.empty() && !n_u_bnds.empty());
-  for (i=0; i<num_nuv; ++i, ++cntr) {
-    name_string = f77name16("Normal", cntr, lhs_names);
-    dist_params[0] = n_means[i];
-    dist_params[1] = n_std_devs[i];
-    // check for bounded normal
-    if (n_bnd_spec && (n_l_bnds[i] > -dbl_inf || n_u_bnds[i] < dbl_inf) ) {
-      if (n_l_bnds[i] >= n_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample using bounded "
-	      << "normal distributions." << std::endl;
-	abort_handler(-1);
-      }
-      num_params = 4;
-      dist_params[2] = n_l_bnds[i];
-      dist_params[3] = n_u_bnds[i];
-      distname = "bounded normal";
-    }
-    else { // normal
-      num_params = 2;
-      distname = "normal";
-    }
-    String dist_string(distname);
-    dist_string.resize(32, ' ');
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(normal)");
-  }
-
-  // lognormal uncertain
-  bool ln_bnd_spec = (!ln_l_bnds.empty()  && !ln_u_bnds.empty());
-  bool n_dist      = (!ln_lambdas.empty() || !ln_std_devs.empty());
-  for (i=0; i<num_lnuv; ++i, ++cntr) {
-    name_string = f77name16("Lognormal", cntr, lhs_names);
-    if (n_dist) {
-      // In the mean/std dev specification case, LHS expects the mean/std dev
-      // of the underlying normal distribution (LHS manual, SAND#98-0210, p.39).
-      // Therefore, map from the DAKOTA spec (mean/std_dev or lambda/zeta) to
-      // the LHS input requirements (lambda/zeta), if required.
-      if (!ln_lambdas.empty()) {
-	dist_params[0] = ln_lambdas[i];
-	dist_params[1] = ln_zetas[i];
-      }
-      else
-	LognormalRandomVariable::params_from_moments(ln_means[i],
-	  ln_std_devs[i], dist_params[0], dist_params[1]);
-    }
-    else {
-      // In the mean/err factor specification case, DAKOTA and LHS are
-      // consistent (LHS manual, SAND#98-0210, p.39) and no mapping is required.
-      dist_params[0] = ln_means[i];
-      dist_params[1] = ln_err_facts[i];
-    }
-    // check for bounded lognormal
-    if (ln_bnd_spec && (ln_l_bnds[i] > 0. || ln_u_bnds[i] < dbl_inf) ) {
-      if (ln_l_bnds[i] >= ln_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample using bounded "
-	      << "lognormal distributions." << std::endl;
-	abort_handler(-1);
-      }
-      num_params = 4;
-      dist_params[2] = ln_l_bnds[i];
-      dist_params[3] = ln_u_bnds[i];
-      if (n_dist)
-	distname = "bounded lognormal-n";
-      else
-	distname = "bounded lognormal";
-    }
-    else {
-      num_params = 2;
-      if (n_dist)
-	distname = "lognormal-n";
-      else
-	distname = "lognormal";
-    }
-    String dist_string(distname);
-    dist_string.resize(32, ' ');
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(lognormal)");
-  }
-
-  // uniform uncertain
-  for (i=0; i<num_uuv; ++i, ++cntr) {
-    name_string = f77name16("Uniform", cntr, lhs_names);
-    String dist_string("uniform");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    if (u_l_bnds[i] >= u_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample using uniform "
-	      << "distributions." << std::endl;
-	abort_handler(-1);
-    }
-    dist_params[0] = u_l_bnds[i];
-    dist_params[1] = u_u_bnds[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(uniform)");
-  }
-
-  // loguniform uncertain
-  for (i=0; i<num_luuv; ++i, ++cntr) {
-    name_string = f77name16("Loguniform", cntr, lhs_names);
-    String dist_string("loguniform");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    if (lu_l_bnds[i] >= lu_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample using loguniform "
-	      << "distributions." << std::endl;
-	abort_handler(-1);
-    }
-    dist_params[0] = lu_l_bnds[i];
-    dist_params[1] = lu_u_bnds[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(loguniform)");
-  }
-
-  // triangular uncertain
-  for (i=0; i<num_tuv; ++i, ++cntr) {
-    name_string = f77name16("Triangular", cntr, lhs_names);
-    String dist_string("triangular");
-    dist_string.resize(32, ' ');
-    num_params = 3;
-    if (t_l_bnds[i] >= t_u_bnds[i]) {
-      PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
-	    << "than upper bounds to\n       sample using triangular "
-	    << "distributions." << std::endl;
-      abort_handler(-1);
-    }
-    dist_params[0] = t_l_bnds[i];
-    dist_params[1] = t_modes[i];
-    dist_params[2] = t_u_bnds[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(triangular)");
-  }
-
-  // exponential uncertain
-  for (i=0; i<num_exuv; ++i, ++cntr) {
-    name_string = f77name16("Exponential", cntr, lhs_names);
-    String dist_string("exponential");
-    dist_string.resize(32, ' ');
-    num_params = 1;
-    dist_params[0] = 1./e_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(exponential)");
-  }
-
-  // beta uncertain
-  for (i=0; i<num_beuv; ++i, ++cntr) {
-    name_string = f77name16("Beta", cntr, lhs_names);
-    String dist_string("beta");
-    dist_string.resize(32, ' ');
-    num_params = 4;
-    if (b_l_bnds[i] >= b_u_bnds[i]) {
-      PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
-	    << "than upper bounds to\n       sample using beta "
-	    << "distributions." << std::endl;
-      abort_handler(-1);
-    }
-    dist_params[0] = b_l_bnds[i];
-    dist_params[1] = b_u_bnds[i];
-    dist_params[2] = b_alphas[i];
-    dist_params[3] = b_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(beta)");
-  }
-
-  // gamma uncertain
-  for (i=0; i<num_gauv; ++i, ++cntr) {
-    name_string = f77name16("Gamma", cntr, lhs_names);
-    String dist_string("gamma");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    dist_params[0] = ga_alphas[i];
-    dist_params[1] = 1./ga_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(gamma)");
-  }
-
-  // gumbel uncertain
-  for (i=0; i<num_guuv; ++i, ++cntr) {
-    name_string = f77name16("Gumbel", cntr, lhs_names);
-    String dist_string("gumbel");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    dist_params[0] = gu_alphas[i];
-    dist_params[1] = gu_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(gumbel)");
-  }
-
-  // frechet uncertain
-  for (i=0; i<num_fuv; ++i, ++cntr) {
-    name_string = f77name16("Frechet", cntr, lhs_names);
-    String dist_string("frechet");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    dist_params[0] = f_alphas[i];
-    dist_params[1] = f_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(frechet)");
-  }
-
-  // weibull uncertain
-  for (i=0; i<num_wuv; ++i, ++cntr) {
-    name_string = f77name16("Weibull", cntr, lhs_names);
-    String dist_string("weibull");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    dist_params[0] = w_alphas[i];
-    dist_params[1] = w_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(weibull)");
-  }
 
   // histogram bin uncertain: pairs are defined from an abscissa in the first
   // field and a count (not a density) in the second field.  The distinction
@@ -869,69 +667,6 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     }
   }
 
-  // poisson uncertain
-  for (i=0; i<num_puv; ++i, ++cntr) {
-    name_string = f77name16("Poisson", cntr, lhs_names);
-    String dist_string("poisson");
-    dist_string.resize(32, ' ');
-    num_params = 1;
-    dist_params[0] = p_lambdas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(poisson)");
-  }
-
-  // binomial uncertain
-  for (i=0; i<num_biuv; ++i, ++cntr) {
-    name_string = f77name16("Binomial", cntr, lhs_names);
-    String dist_string("binomial");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    dist_params[0] = bi_prob_per_tr[i];
-    dist_params[1] = bi_num_tr[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(binomial)");
-  }
-
-  // negative binomial uncertain
-  for (i=0; i<num_nbuv; ++i, ++cntr) {
-    name_string = f77name16("NegBinomial", cntr, lhs_names);
-    String dist_string("negative binomial");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    dist_params[0] = nb_prob_per_tr[i];
-    dist_params[1] = nb_num_tr[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(negative binomial)");
-  }
-
-  // geometric uncertain
-  for (i=0; i<num_geuv; ++i, ++cntr) {
-    name_string = f77name16("Geometric", cntr, lhs_names);
-    String dist_string("geometric");
-    dist_string.resize(32, ' ');
-    num_params = 1;
-    dist_params[0] = ge_prob_per_tr[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(geometric)");
-  }
-
-  // hypergeometric uncertain
-  for (i=0; i<num_hguv; ++i, ++cntr) {
-    name_string = f77name16("Hypergeom", cntr, lhs_names);
-    String dist_string("hypergeometric");
-    dist_string.resize(32, ' ');
-    num_params = 3;
-    dist_params[0] = hg_total_pop[i];
-    dist_params[1] = hg_num_drawn[i];
-    dist_params[2] = hg_selected_pop[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(hypergeometric)");
-  }
 
   // histogram point int: map from an integer abscissa to a probability
   for (i=0; i<num_hpuiv; ++i, ++cntr) {

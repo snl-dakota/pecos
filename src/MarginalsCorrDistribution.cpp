@@ -61,6 +61,7 @@ expand_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
   }
 
   // expand from num_prob_v to num_total_v
+  // Note: a reshape is not helpful due to num_lead_v
 
   size_t i, j, offset;
   RealSymMatrix old_corr_matrix(corrMatrix); // copy
@@ -95,6 +96,7 @@ contract_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
   }
 
   // contract from num_total_v to num_prob_v
+  // Note: a reshape is not helpful due to num_lead_v
 
   size_t i, j;
   RealSymMatrix old_corr_matrix(corrMatrix); // copy
