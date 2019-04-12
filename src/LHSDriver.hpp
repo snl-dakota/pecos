@@ -396,9 +396,8 @@ generate_uniform_index_samples(const IntVector& index_l_bnds,
 }
 
 
-/** Helper function to create labels that Fortran will see as character*16
-    values which are NOT null-terminated.  For convenience, the lhsNames is
-    also populated. */
+/** Helper function to create labels with appended tags that Fortran
+    will see as character*16 values which are NOT null-terminated. */
 inline void LHSDriver::f77name16(const char* name, size_t index, String& label)
 {
   label = name + boost::lexical_cast<String>(index+1);
@@ -406,20 +405,39 @@ inline void LHSDriver::f77name16(const char* name, size_t index, String& label)
 }
 
 
-inline void LHSDriver::check_range(Real l_bnd, Real u_bnd) const
+/** Helper function to create labels that Fortran will see as character*32
+    values which are NOT null-terminated. */
+inline void LHSDriver::f77name32(const char* name, String& label)
 {
-  if (l_bnd >= u_bnd) {
-    PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
-	  << "than upper bounds." << std::endl;
+  label = name;
+  label.resize(32, ' '); // NOTE: no NULL terminator
+}
+
+
+template <typename T>
+void LHSDriver::check_range(T l_bnd, T u_bnd, bool allow_equal) const
+{
+  if (l_bnd > u_bnd) {
+    PCerr << "\nError: lower bound exceeds upper bound in Pecos::LHSDriver."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  else if (!allow_equal && l_bnd == u_bnd) {
+    PCerr << "\nError: Pecos::LHSDriver requires non-zero range between lower "
+	  << "and upper bounds." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-inline void LHSDriver::check_finite(Real l_bnd, Real u_bnd) const
+template <typename T>
+void LHSDriver::check_finite<T>(T l_bnd, T u_bnd) const
 {
-  Real dbl_inf = std::numeric_limits<Real>::infinity();
-  if (l_bnd <= -dbl_inf || u_bnd >= dbl_inf) {
+  // *** if (lb_i > INT_MIN && ub_i < INT_MAX) { // ***
+
+
+  typename T T_inf = std::numeric_limits<T>::infinity();
+  if (l_bnd <= -T_inf || u_bnd >= T_inf) { // *** for Real ***
     PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
 	  << "continuous range." << std::endl;
     abort_handler(-1);
@@ -441,12 +459,67 @@ check_error(int err_code, const char* err_source, const char* err_case) const
 
 
 inline void LHSDriver::
-lhs_register(const char* var_name, const char* dist_name, size_t rv,
-	     const RealArray& dist_params) const
+int_range_to_udist_params(int l_bnd,        int u_bnd,
+			  RealArray& x_val, RealArray& y_val)
 {
-  String dist_string(dist_name);  dist_string.resize(32, ' ');
-  String& var_string = lhsNames[rv];
-  f77name16(var_name, rv, var_string);
+  // supports either discrete integer range or range of set indices
+
+  int i, num_params = ub_i - lb_i + 1;
+  x_val.resize(num_params);  y_val.assign(num_params, 1.);
+  for (i=0; i<num_params; ++i)
+    x_val[i] = (Real)(l_bnd + i);
+}
+
+
+inlinetemplate <typename T>
+void LHSDriver::
+set_to_udist_params(const std::set<T>& values,
+		    RealArray& x_val, RealArray& y_val)
+{
+  int i, num_params = values.size();
+  x_val.resize(num_params);  y_val.assign(num_params, 1.);
+  typename std::set<T>::const_iterator cit;
+  for (cit=values.begin(), i=0; cit!=values.end(); ++cit, ++i)
+    x_val[i] = (Real)(*cit); // value
+}
+
+
+template <typename T>
+void LHSDriver::
+map_to_udist_params(const std::map<T, Real>& vals_probs,
+		    RealArray& x_val, RealArray& y_val)
+{
+  int i, num_params = vals_probs.size();
+  x_val.resize(num_params);  y_val.resize(num_params);
+  typename std::set<T>::const_iterator cit;
+  for (cit=vals_probs.begin(), i=0; cit!=vals_probs.end(); ++cit, ++i) {
+    x_val[i] = (Real)cit->first;  // value
+    y_val[i] =       cit->second; // probability
+  }
+}
+
+
+template <typename T>
+void LHSDriver::
+map_indices_to_udist_params(const std::map<T, Real>& vals_probs,
+			    RealArray& x_val, RealArray& y_val)
+{
+  int i, num_params = vals_probs.size();
+  x_val.resize(num_params);  y_val.resize(num_params);
+  typename std::set<T>::const_iterator cit;
+  for (cit=vals_probs.begin(), i=0; cit!=vals_probs.end(); ++cit, ++i) {
+    x_val[i] = (Real)i;     // index rather than value
+    y_val[i] = cit->second; // probability
+  }
+}
+
+
+inline void LHSDriver::
+lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
+		  const RealArray& dist_params) const
+{
+  String dist_string;                 f77name32(dist_name,   dist_string);
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
   int num_params = dist_params.size(), err_code = 0, ptval_flag = 0, // inputs
       dist_num, pv_num; // outputs (not used)
   Real ptval = 0.;
@@ -456,6 +529,31 @@ lhs_register(const char* var_name, const char* dist_name, size_t rv,
   check_error(err_code, "lhs_dist()", var_string.data());
 }
 
+
+inline void LHSDriver::
+lhs_udist_register(const char* var_name, const char* dist_name, size_t rv,
+		   const RealArray& x_val, const RealArray& y_val) const
+{
+  String dist_string;                 f77name32(dist_name,   dist_string);
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int num_params = std::min(x_val.size(), y_val.size()), err_code = 0,
+    ptval_flag = 0, dist_num, pv_num;
+  Real ptval = 0.;
+
+  LHS_UDIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
+		num_params, &x_val[0], &y_val[0], err_code, dist_num, pv_num);
+  check_error(err_code, "lhs_udist()", var_string.data());
+}
+
+
+template <typename T>
+void LHSDriver::lhs_const_register(const char* var_name, size_t rv, T val)
+{
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int err_code = 0, pv_num;           Real pt_val = (Real)val;
+  LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
+  check_error(err_code, "lhs_const()", var_string.data());
+}
 
 } // namespace Pecos
 

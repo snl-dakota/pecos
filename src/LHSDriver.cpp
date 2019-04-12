@@ -223,19 +223,77 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
   for (i=0; i<num_rv; ++i) {
     const RandomVariable& rv_i = random_vars[i];
     switch (rv_i.type()) {
-    case CONTINUOUS_RANGE:
-      dist_params.resize(2);
-      rv_i.pull_parameter(CR_LWR_BND, dist_params[0]);
-      rv_i.pull_parameter(CR_UPR_BND, dist_params[1]);
-      check_range(dist_params[0], dist_params[1]);
-      check_finite(dist_params[0], dist_params[1]);
-      lhs_register("ContRange", "uniform", i, dist_params);
+    case CONTINUOUS_RANGE: {
+      Real l_bnd;  rv_i.pull_parameter(CR_LWR_BND, l_bnd);
+      Real u_bnd;  rv_i.pull_parameter(CR_UPR_BND, u_bnd);
+      check_finite(l_bnd, u_bnd);
+      if (u_bnd > l_bnd) {
+	dist_params.resize(2);
+	dist_params[0] = l_bnd;  dist_params[1] = u_bnd;
+	lhs_dist_register("ContRange", "uniform", i, dist_params);
+      }
+      else {
+	check_range(l_bnd, u_bnd, true); // allow equal
+	lhs_const_register("ContRange", i, l_bnd);
+      }
       break;
-    case NORMAL:
+    }
+    case DISCRETE_RANGE: {
+      int l_bnd;  rv_i.pull_parameter(DR_LWR_BND, l_bnd);
+      int u_bnd;  rv_i.pull_parameter(DR_UPR_BND, u_bnd);
+      check_finite(l_bnd, u_bnd);
+      if (u_bnd > l_bnd) {
+	RealArray x_val, y_val;
+	int_range_to_udist_params(l_bnd, u_bnd, x_val, y_val);
+	lhs_udist_register("DiscRange", "discrete histogram", i, x_val, y_val);
+      }
+      else {
+	check_range(l_bnd, u_bnd, true); // allow equal
+	lhs_const_register("DiscRange", i, l_bnd);
+      }
+      break;
+    }
+    case DISCRETE_SET_INT: {
+      IntSet int_set;  rv_i.pull_parameter(DSI_VALUES, int_set);
+      size_t set_size = int_set.size();
+      if (set_size > 1) {
+	RealArray x_val, y_val;
+	set_to_udist_params(int_set, x_val, y_val); // set values
+	lhs_udist_register("DiscSetI", "discrete histogram", i, x_val, y_val);
+      }
+      else if (set_size)
+	lhs_const_register("DiscSetI", i, *int_set.begin());
+      break;
+    }
+    case DISCRETE_SET_STRING: {
+      StringSet str_set;  rv_i.pull_parameter(DSS_VALUES, str_set);
+      int set_size = str_set.size();
+      if (set_size > 1) {
+	RealArray x_val, y_val;
+	int_range_to_udist_params(0, set_size - 1, x_val, y_val); // indices
+	lhs_udist_register("DiscSetS", "discrete histogram", i, x_val, y_val);
+      }
+      else if (set_size)
+	lhs_const_register("DiscSetS", i, 0);
+      break;
+    }
+    case DISCRETE_SET_REAL: {
+      RealSet real_set;  rv_i.pull_parameter(DSR_VALUES, real_set);
+      size_t set_size = real_set.size();
+      if (set_size > 1) {
+	RealArray x_val, y_val;
+	set_to_udist_params(real_set, x_val, y_val); // set values
+	lhs_udist_register("DiscSetR", "discrete histogram", i, x_val, y_val);
+      }
+      else if (set_size)
+	lhs_const_register("DiscSetR", i, *real_set.begin());
+      break;
+    }
+    case NORMAL: case STD_NORMAL:
       dist_params.resize(2);
       rv_i.pull_parameter(N_MEAN,    dist_params[0]);
       rv_i.pull_parameter(N_STD_DEV, dist_params[1]);
-      lhs_register("Normal", "normal", i, dist_params);
+      lhs_dist_register("Normal", "normal", i, dist_params);
       break;
     case BOUNDED_NORMAL:
       dist_params.resize(4);
@@ -243,14 +301,14 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       rv_i.pull_parameter(N_STD_DEV, dist_params[1]);
       rv_i.pull_parameter(N_LWR_BND, dist_params[2]);
       rv_i.pull_parameter(N_UPR_BND, dist_params[3]);
-      check_range(dist_params[2], dist_params[3]);
-      lhs_register("Normal", "bounded normal", i, dist_params);
+      check_range(dist_params[2], dist_params[3], false);
+      lhs_dist_register("Normal", "bounded normal", i, dist_params);
       break;
     case LOGNORMAL:     // LognormalRandomVariable standardizes on Lambda/Zeta
       dist_params.resize(2);
       rv_i.pull_parameter(LN_LAMBDA,  dist_params[0]);
       rv_i.pull_parameter(LN_ZETA,    dist_params[1]);
-      lhs_register("Lognormal", "lognormal-n", i, dist_params);
+      lhs_dist_register("Lognormal", "lognormal-n", i, dist_params);
       break;
     case BOUNDED_LOGNORMAL: // BoundedLognormalRandomVariable uses Lambda/Zeta
       dist_params.resize(4);
@@ -258,110 +316,189 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       rv_i.pull_parameter(LN_ZETA,    dist_params[1]);
       rv_i.pull_parameter(LN_LWR_BND, dist_params[2]);
       rv_i.pull_parameter(LN_UPR_BND, dist_params[3]);
-      check_range(dist_params[2], dist_params[3]);
-      lhs_register("Lognormal", "bounded lognormal-n", i, dist_params);
+      check_range(dist_params[2], dist_params[3], false);
+      lhs_dist_register("Lognormal", "bounded lognormal-n", i, dist_params);
       break;
-    case UNIFORM:
+    case UNIFORM: case STD_UNIFORM:
       dist_params.resize(2);
       rv_i.pull_parameter(U_LWR_BND, dist_params[0]);
       rv_i.pull_parameter(U_UPR_BND, dist_params[1]);
-      check_range(dist_params[0],  dist_params[1]);
+      check_range(dist_params[0],  dist_params[1], false);
       check_finite(dist_params[0], dist_params[1]);
-      lhs_register("Uniform", "uniform", i, dist_params);
+      lhs_dist_register("Uniform", "uniform", i, dist_params);
       break;
     case LOGUNIFORM:
       dist_params.resize(2);
       rv_i.pull_parameter(LU_LWR_BND, dist_params[0]);
       rv_i.pull_parameter(LU_UPR_BND, dist_params[1]);
-      check_range(dist_params[0],  dist_params[1]);
+      check_range(dist_params[0],  dist_params[1], false);
       check_finite(dist_params[0], dist_params[1]);
-      lhs_register("Loguniform", "loguniform", i, dist_params);
+      lhs_dist_register("Loguniform", "loguniform", i, dist_params);
       break;
     case TRIANGULAR:
-      dist_params.resize(3);
+      dist_params.resize(2);
       rv_i.pull_parameter(T_LWR_BND, dist_params[0]);
       rv_i.pull_parameter(T_MODE,    dist_params[1]);
       rv_i.pull_parameter(T_UPR_BND, dist_params[2]);
-      check_range(dist_params[0],  dist_params[2]);
+      check_range(dist_params[0],  dist_params[2], false);
       check_finite(dist_params[0], dist_params[2]);
-      lhs_register("Triangular", "triangular", i, dist_params);
+      lhs_dist_register("Triangular", "triangular", i, dist_params);
       break;
-    case EXPONENTIAL:
+    case EXPONENTIAL: case STD_EXPONENTIAL:
       dist_params.resize(1);
       Real e_beta; rv_i.pull_parameter(E_BETA, e_beta);
       dist_params[0] = 1./e_beta; // convert to LHS convention
-      lhs_register("Exponential", "exponential", i, dist_params);
+      lhs_dist_register("Exponential", "exponential", i, dist_params);
       break;
-    case BETA:
+    case BETA: case STD_BETA:
       dist_params.resize(4);
       rv_i.pull_parameter(BE_LWR_BND, dist_params[0]);
       rv_i.pull_parameter(BE_UPR_BND, dist_params[1]);
       rv_i.pull_parameter(BE_ALPHA,   dist_params[2]);
       rv_i.pull_parameter(BE_BETA,    dist_params[3]);
-      check_range(dist_params[0],  dist_params[1]);
+      check_range(dist_params[0],  dist_params[1], false);
       check_finite(dist_params[0], dist_params[1]);
-      lhs_register("Beta", "beta", i, dist_params);
+      lhs_dist_register("Beta", "beta", i, dist_params);
       break;
-    case GAMMA:
+    case GAMMA: case STD_GAMMA:
       dist_params.resize(2);
       rv_i.pull_parameter(GA_ALPHA, dist_params[0]);
       Real ga_beta; rv_i.pull_parameter(GA_BETA, ga_beta);
       dist_params[1] = 1./ga_beta; // convert to LHS convention
-      lhs_register("Gamma", "gamma", i, dist_params);
+      lhs_dist_register("Gamma", "gamma", i, dist_params);
       break;
     case GUMBEL:
       dist_params.resize(2);
       rv_i.pull_parameter(GU_ALPHA, dist_params[0]);
       rv_i.pull_parameter(GU_BETA,  dist_params[1]);
-      lhs_register("Gumbel", "gumbel", i, dist_params);
+      lhs_dist_register("Gumbel", "gumbel", i, dist_params);
       break;
     case FRECHET:
       dist_params.resize(2);
       rv_i.pull_parameter(F_ALPHA, dist_params[0]);
       rv_i.pull_parameter(F_BETA,  dist_params[1]);
-      lhs_register("Frechet", "frechet", i, dist_params);
+      lhs_dist_register("Frechet", "frechet", i, dist_params);
       break;
     case WEIBULL:
       dist_params.resize(2);
       rv_i.pull_parameter(W_ALPHA, dist_params[0]);
       rv_i.pull_parameter(W_BETA,  dist_params[1]);
-      lhs_register("Weibull", "weibull", i, dist_params);
+      lhs_dist_register("Weibull", "weibull", i, dist_params);
       break;
-      
-    // ...
-      
+    case HISTOGRAM_BIN:
+      RealRealMap h_bin_pairs;  rv_i.pull_parameter(H_BIN_PAIRS, h_bin_pairs);
+      bins_to_dist_params(h_bin_pairs, x_val, y_val); // ***
+      lhs_udist_register("HistBin", "continuous linear", i, x_val, y_val);
+      break;
     case POISSON:
       dist_params.resize(1);
       rv_i.pull_parameter(P_LAMBDA, dist_params[0]);
-      lhs_register("Poisson", "poisson", i, dist_params);
+      lhs_dist_register("Poisson", "poisson", i, dist_params);
       break;
     case BINOMIAL:
-      dist_params.resize(2);
+      dist_params.resize(2);  int num_tr;
       rv_i.pull_parameter(BI_P_PER_TRIAL, dist_params[0]);
-      rv_i.pull_parameter(BI_TRIALS,      dist_params[1]);
-      lhs_register("Binomial", "binomial", i, dist_params);
+      rv_i.pull_parameter(BI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
+      lhs_dist_register("Binomial", "binomial", i, dist_params);
       break;
     case NEGATIVE_BINOMIAL:
-      dist_params.resize(2);
+      dist_params.resize(2);  int num_tr;
       rv_i.pull_parameter(NBI_P_PER_TRIAL, dist_params[0]);
-      rv_i.pull_parameter(NBI_TRIALS,      dist_params[1]);
-      lhs_register("NegBinomial", "negative binomial", i, dist_params);
+      rv_i.pull_parameter(NBI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
+      lhs_dist_register("NegBinomial", "negative binomial", i, dist_params);
       break;
     case GEOMETRIC:
       dist_params.resize(1);
       rv_i.pull_parameter(GE_P_PER_TRIAL, dist_params[0]);
-      lhs_register("Geometric", "geometric", i, dist_params);
+      lhs_dist_register("Geometric", "geometric", i, dist_params);
       break;
     case HYPERGEOMETRIC:
-      dist_params.resize(3);
-      rv_i.pull_parameter(HGE_TOT_POP, dist_params[0]);
-      rv_i.pull_parameter(HGE_DRAWN,   dist_params[1]);
-      rv_i.pull_parameter(HGE_SEL_POP, dist_params[2]);
-      lhs_register("Hypergeom", "hypergeometric", i, dist_params);
+      dist_params.resize(3);  int tot_pop, num_drw, sel_pop;
+      rv_i.pull_parameter(HGE_TOT_POP, tot_pop); dist_params[0] = (Real)tot_pop;
+      rv_i.pull_parameter(HGE_DRAWN,   num_drw); dist_params[1] = (Real)num_drw;
+      rv_i.pull_parameter(HGE_SEL_POP, sel_pop); dist_params[2] = (Real)sel_pop;
+      lhs_dist_register("Hypergeom", "hypergeometric", i, dist_params);
       break;
-      
-    // ...
-      
+    case HISTOGRAM_PT_INT: {
+      IntRealMap ir_map;  rv_i.pull_parameter(H_PT_INT_PAIRS, ir_map);
+      size_t map_size = ir_map.size();
+      if (map_size > 1) {
+	RealArray x_val, y_val;
+	map_to_udist_params(ir_map, x_val, y_val);
+	lhs_udist_register("HistPtInt", "discrete histogram", i, x_val, y_val);
+      }
+      else if (map_size)
+	lhs_const_register("HistPtInt", i, ir_map.begin()->first);
+      break;
+    }
+    case HISTOGRAM_PT_STRING: {
+      StringRealMap sr_map;  rv_i.pull_parameter(H_PT_STR_PAIRS, sr_map);
+      int map_size = sr_map.size();
+      if (map_size > 1) {
+	RealArray x_val, y_val;
+	map_indices_to_udist_params(sr_map, x_val, y_val);
+	lhs_udist_register("HistPtString","discrete histogram",i, x_val, y_val);
+      }
+      else if (map_size)
+	lhs_const_register("HistPtString", i, 0);
+      break;
+    }
+    case HISTOGRAM_PT_REAL: {
+      RealRealMap rr_map;  rv_i.pull_parameter(H_PT_REAL_PAIRS, rr_map);
+      size_t map_size = rr_map.size();
+      if (map_size > 1) {
+	RealArray x_val, y_val;
+	map_to_udist_params(rr_map, x_val, y_val);
+	lhs_udist_register("HistPtReal", "discrete histogram", i, x_val, y_val);
+      }
+      else if (map_size)
+	lhs_const_register("HistPtReal", i, rr_map.begin()->first);
+      break;
+    }
+    case CONTINUOUS_INTERVAL_UNCERTAIN:
+      intervals_to_dist_params(, x_val, y_val); // ***
+      lhs_udist_register("ContInterval", "continuous linear", i, x_val, y_val);
+      break;
+    case DISCRETE_INTERVAL_UNCERTAIN:
+      intervals_to_dist_params(, x_val, y_val); // ***
+      lhs_udist_register("DiscInterval", "discrete histogram", i, x_val, y_val);
+      break;
+    case DISCRETE_UNCERTAIN_SET_INT: {
+      IntRealMap ir_map;  rv_i.pull_parameter(DUSI_VALUES_PROBS, ir_map);
+      size_t map_size = ir_map.size();
+      if (map_size > 1) {
+	RealArray x_val, y_val;
+	map_to_udist_params(ir_map, x_val, y_val);
+	lhs_udist_register("DiscUncSetI","discrete histogram", i, x_val, y_val);
+      }
+      else if (map_size)
+	lhs_const_register("DiscUncSetI", i, ir_map.begin()->first);
+      break;
+    }
+    case DISCRETE_UNCERTAIN_SET_STRING: {
+      StringRealMap sr_map;  rv_i.pull_parameter(DUSS_VALUES_PROBS, sr_map);
+      int map_size = sr_map.size();
+      if (map_size > 1) {
+	RealArray x_val, y_val;
+	map_indices_to_udist_params(sr_map, x_val, y_val);
+	lhs_udist_register("DiscUncSetS","discrete histogram", i, x_val, y_val);
+      }
+      else if (map_size)
+	lhs_const_register("DiscUncSetS", i, 0);
+      break;
+    }
+    case DISCRETE_UNCERTAIN_SET_REAL: {
+      RealRealMap rr_map;  rv_i.pull_parameter(DUSR_VALUES_PROBS, rr_map);
+      size_t map_size = rr_map.size();
+      if (map_size > 1) {
+	RealArray x_val, y_val;
+	map_to_udist_params(rr_map, x_val, y_val);
+	lhs_udist_register("DiscUncSetR","discrete histogram", i, x_val, y_val);
+      }
+      else if (map_size)
+	lhs_const_register("DiscUncSetR", i, rr_map.begin()->first);
+      break;
+    }
     }
   }
 
@@ -458,24 +595,20 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
   const char *name_string, *distname;
   Real dbl_inf = std::numeric_limits<Real>::infinity();
 
+
   // --------------------
   // CONTINUOUS VARIABLES
   // --------------------
-
+  
   // histogram bin uncertain: pairs are defined from an abscissa in the first
   // field and a count (not a density) in the second field.  The distinction
   // in the second field is only important for unequal bin widths.
   for (i=0; i<num_hbuv; ++i, ++cntr) {
-    name_string = f77name16("HistBin", cntr, lhs_names);
-    String dist_string("continuous linear");
-    dist_string.resize(32, ' ');
 
     const RealRealMap& h_bin_prs_i = h_bin_prs[i];
     RRMCIter cit;
 
     num_params = h_bin_prs_i.size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     // LHS requires accumulation of CDF with first y at 0 and last y at 1
     // Assume already normalized with sum = 1
     //Real sum = 0.;
@@ -489,18 +622,12 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       y_val[j+1] = y_val[j] + cit->second/* /sum */;
     }
     x_val[end] = cit->first; // last prob value (cit->second) must be zero
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(histogram bin)");
-    delete [] x_val;
-    delete [] y_val;
   }
 
+
+  
   // continuous interval uncertain: convert to histogram for sampling
   for (i=0; i<num_ciuv; ++i, ++cntr) {
-    name_string = f77name16("ContInterval", cntr, lhs_names);
-    String dist_string("continuous linear");
-    dist_string.resize(32, ' ');
 
     const RealRealPairRealMap& ci_bpa_i = ci_bpa[i];
     RRPRMCIter cit;
@@ -562,142 +689,11 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       PCout << "ciuv[" << i << "]: x_val[" << j << "] is " << x_val[j]
 	    << " y_val[" << j << "] is " << y_val[j] << '\n';
 #endif // DEBUG
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(continuous interval)");
-    delete [] x_val;
-    delete [] y_val;
-  }
-
-  // continuous state (treated as uniform)
-  for (i=0; i<num_csv; ++i, ++cntr) {
-    name_string = f77name16("State", cntr, lhs_names);
-    String dist_string("uniform");
-    dist_string.resize(32, ' ');
-    num_params = 2;
-    if (cs_l_bnds[i] > -dbl_inf && cs_u_bnds[i] < dbl_inf) {
-      if (cs_l_bnds[i] >= cs_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample state variables "
-	      << "using uniform distributions." << std::endl;
-	abort_handler(-1);
-      }
-      dist_params[0] = cs_l_bnds[i];
-      dist_params[1] = cs_u_bnds[i];
-    }
-    else {
-      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample state "
-	    << "variables using uniform\n       distributions." << std::endl;
-      abort_handler(-1);
-    }
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		 dist_params, num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(state)");
   }
 
   // --------------------------
   // DISCRETE INTEGER VARIABLES
   // --------------------------
-  // discrete design range (treated as discrete histogram)
-  for (i=0; i<num_ddriv; ++i, ++cntr) {
-    name_string = f77name16("DiscDesRange", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-    int lb_i = ddri_l_bnds[i], ub_i = ddri_u_bnds[i];
-    if (lb_i > INT_MIN && ub_i < INT_MAX) {
-      if (lb_i > ub_i) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
-	      << "bounds to\n       sample discrete design variables using "
-	      << "discrete histogram distributions." << std::endl;
-	abort_handler(-1);
-      }
-      num_params = ub_i - lb_i + 1;
-      if (num_params == 1) {
-	Real pt_val = (Real)lb_i;
-	LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-	check_error(err_code, "lhs_const(discrete design range)");
-      }
-      else {
-	Real* x_val = new Real [num_params];
-	Real* y_val = new Real [num_params];
-	for (j=0; j<num_params; ++j) {
-	  x_val[j] = (Real)(lb_i+j);
-	  y_val[j] = 1.;
-	}
-	LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		      num_params, x_val, y_val, err_code, dist_num, pv_num);
-	check_error(err_code, "lhs_udist(discrete design range)");
-	delete [] x_val;
-	delete [] y_val;
-      }
-    }
-    else {
-      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
-	    << "design variables\n       using discrete histogram "
-	    << "distributions." << std::endl;
-      abort_handler(-1);
-    }
-  }
-
-  // discrete design set integer (treated as discrete histogram)
-  for (i=0; i<num_ddsiv; ++i, ++cntr) {
-    name_string = f77name16("DiscDesSetI", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-    const IntSet& ddsi_vals_i = ddsi_values[i];
-    num_params  = ddsi_vals_i.size();
-    ISCIter cit = ddsi_vals_i.begin();
-    if (num_params == 1) {
-      Real pt_val = (Real)(*cit);
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete design set int)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = (Real)(*cit);
-	y_val[j] = 1.;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete design set int)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-
-  // histogram point int: map from an integer abscissa to a probability
-  for (i=0; i<num_hpuiv; ++i, ++cntr) {
-    name_string = f77name16("HistPtInt", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const IntRealMap& h_pt_int_prs_i = h_pt_int_prs[i];
-    num_params = h_pt_int_prs_i.size();
-    IRMCIter cit = h_pt_int_prs_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = (Real)cit->first; // frequency is 1
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(histogram pt int)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      // LHS can use discrete frequency information directly
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = (Real)cit->first;
-	y_val[j] = cit->second;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(histogram pt int)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
 
   // discrete interval uncertain
   for (i=0; i<num_diuv; ++i, ++cntr) {
@@ -759,356 +755,6 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
     delete [] y_val;
   }
 
-  // discrete uncertain set integer (treated as discrete histogram)
-  for (i=0; i<num_dusiv; ++i, ++cntr) {
-    name_string = f77name16("DiscUncSetI", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const IntRealMap& dusi_v_p_i = dusi_vals_probs[i];
-    num_params = dusi_v_p_i.size();
-    IRMCIter cit = dusi_v_p_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = (Real)(cit->first);
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete uncertain set int)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = (Real)(cit->first); // discrete uncertain set value
-	y_val[j] = cit->second;        // basic probability
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete uncertain set int)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // discrete state range (treated as discrete histogram)
-  for (i=0; i<num_dsriv; ++i, ++cntr) {
-    name_string = f77name16("DiscStateRange", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-    int l_bnd = dsri_l_bnds[i], u_bnd = dsri_u_bnds[i];
-    if (l_bnd > INT_MIN && u_bnd < INT_MAX) {
-      if (l_bnd > u_bnd) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
-	      << "bounds to\n       sample discrete state variables using "
-	      << "discrete histogram distributions." << std::endl;
-	abort_handler(-1);
-      }
-      num_params = u_bnd - l_bnd + 1;
-      if (num_params == 1) {
-	Real pt_val = (Real)l_bnd;
-	LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-	check_error(err_code, "lhs_const(discrete state range)");
-      }
-      else {
-	Real* x_val = new Real [num_params];
-	Real* y_val = new Real [num_params];
-	for (j=0; j<num_params; ++j) {
-	  x_val[j] = (Real)(l_bnd+j);
-	  y_val[j] = 1.;
-	}
-	LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		      num_params, x_val, y_val, err_code, dist_num, pv_num);
-	check_error(err_code, "lhs_udist(discrete state range)");
-	delete [] x_val;
-	delete [] y_val;
-      }
-    }
-    else {
-      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
-	    << "state variables\n       using discrete histogram distributions."
-	    << std::endl;
-      abort_handler(-1);
-    }
-  }
-
-  // discrete state set integer (treated as discrete histogram)
-  for (i=0; i<num_dssiv; ++i, ++cntr) {
-    name_string = f77name16("DiscStateSetI", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const IntSet& dssi_vals_i = dssi_values[i];
-    num_params = dssi_vals_i.size();
-    ISCIter cit = dssi_vals_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = (Real)(*cit);
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete state set int)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = (Real)(*cit);
-	y_val[j] = 1.;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete state set int)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // -------------------------
-  // DISCRETE STRING VARIABLES
-  // -------------------------
-  // discrete design set string (treated as discrete histogram)
-  for (i=0; i<num_ddssv; ++i, ++cntr) {
-    name_string = f77name16("DiscDesSetS", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const StringSet& ddss_vals_i = ddss_values[i];
-    num_params = ddss_vals_i.size();
-    //SSCIter cit = ddss_vals_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = 0.;//*cit; // index value used to define string
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete design set string)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j) {//, ++cit) {
-	x_val[j] = (Real)j;//*cit; // index value used to define string
-	y_val[j] = 1.;             // equal probability
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete design set string)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // histogram point string: map from a string abscissa to a probability
-  for (i=0; i<num_hpusv; ++i, ++cntr) {
-    name_string = f77name16("HistPtString", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const StringRealMap& h_pt_string_prs_i = h_pt_string_prs[i];
-    num_params = h_pt_string_prs_i.size();
-    SRMCIter cit = h_pt_string_prs_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = 0.;//cit->first; // index value used to define string
-      // probability information in cit->second is discarded
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(histogram pt string)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      // LHS can use discrete frequency information directly
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = (Real)j;//cit->first; // index value used to define string
-	y_val[j] = cit->second;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(histogram pt string)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // discrete uncertain set string (treated as discrete histogram)
-  for (i=0; i<num_dussv; ++i, ++cntr) {
-    name_string = f77name16("DiscUncSetR", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const StringRealMap& duss_v_p_i = duss_vals_probs[i];
-    num_params = duss_v_p_i.size();
-    SRMCIter cit = duss_v_p_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = 0.;//cit->first; // index value used to define string
-      // probability information in cit->second is discarded
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete uncertain set string)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = (Real)j;//cit->first; // index value used to define string
-	y_val[j] = cit->second; // basic probability
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete uncertain set string)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // discrete state set string (treated as discrete histogram)
-  for (i=0; i<num_dsssv; ++i, ++cntr) {
-    name_string = f77name16("DiscStateSetR", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const StringSet& dsss_vals_i = dsss_values[i];
-    num_params = dsss_vals_i.size();
-    //SSCIter cit = dsss_vals_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = 0.;//*cit; // index value used to define string
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete state set string)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j) {//, ++cit) {
-	x_val[j] = (Real)j;//*cit; // index value used to define string
-	y_val[j] = 1.;             // equal probability
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete state set string)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // -----------------------
-  // DISCRETE REAL VARIABLES
-  // -----------------------
-  // discrete design set real (treated as discrete histogram)
-  for (i=0; i<num_ddsrv; ++i, ++cntr) {
-    name_string = f77name16("DiscDesSetR", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const RealSet& ddsr_vals_i = ddsr_values[i];
-    num_params = ddsr_vals_i.size();
-    RSCIter cit = ddsr_vals_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = *cit;
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete design set real)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = *cit;
-	y_val[j] = 1.;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete design set real)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // histogram point real: map from a real abscissa to a probability
-  for (i=0; i<num_hpurv; ++i, ++cntr) {
-    name_string = f77name16("HistPtReal", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const RealRealMap& h_pt_real_prs_i = h_pt_real_prs[i];
-    num_params = h_pt_real_prs_i.size();
-    RRMCIter cit = h_pt_real_prs_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = cit->first; // frequency is 1
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(histogram pt real)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      // LHS can use discrete frequency information directly
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = cit->first;
-	y_val[j] = cit->second;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(histogram pt real)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // discrete uncertain set real (treated as discrete histogram)
-  for (i=0; i<num_dusrv; ++i, ++cntr) {
-    name_string = f77name16("DiscUncSetR", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const RealRealMap& dusr_v_p_i = dusr_vals_probs[i];
-    num_params = dusr_v_p_i.size();
-    RRMCIter cit = dusr_v_p_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = cit->first; // basic probability is 1
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete uncertain set real)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = cit->first;  // discrete uncertain set value
-	y_val[j] = cit->second; // basic probability
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete uncertain set real)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
-
-  // discrete state set real (treated as discrete histogram)
-  for (i=0; i<num_dssrv; ++i, ++cntr) {
-    name_string = f77name16("DiscStateSetR", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const RealSet& dssr_vals_i = dssr_values[i];
-    num_params = dssr_vals_i.size();
-    RSCIter cit = dssr_vals_i.begin();
-
-    if (num_params == 1) {
-      Real pt_val = *cit;
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(discrete state set real)");
-    }
-    else {
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j, ++cit) {
-	x_val[j] = *cit;
-	y_val[j] = 1.;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete state set real)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-  }
 
   // specify the rank correlations among the uncertain vars (no correlation
   // currently supported for design and state vars in allVars mode).  Only
@@ -1188,6 +834,7 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
   delete [] dist_name_list;
 #endif // HAVE_LHS
 }
+
 
 void LHSDriver::
 generate_unique_samples( const RealVector& cd_l_bnds,
