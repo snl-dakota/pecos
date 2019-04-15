@@ -64,82 +64,65 @@ public:
   void advance_seed_sequence();
 
   /// generates the desired set of parameter samples from within general
-  /// user-specified probabilistic distributions (AleatoryDistParams and
-  /// EpistemicDistParams instances augmented with design and state variables)
-  void generate_samples(const RealVector& cd_l_bnds,
-			const RealVector& cd_u_bnds,
-			const IntVector& ddr_l_bnds,
-			const IntVector& ddr_u_bnds,
-			const IntSetArray& ddsi_values,
-			const StringSetArray& ddss_values,
-			const RealSetArray& ddsr_values,
-			const RealVector& cs_l_bnds,
-			const RealVector& cs_u_bnds,
-			const IntVector& dsr_l_bnds,
-			const IntVector& dsr_u_bnds,
-			const IntSetArray& dssi_values,
-			const StringSetArray& dsss_values,
-			const RealSetArray& dssr_values,
-			const AleatoryDistParams& adp,
-			const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, RealMatrix& rank_array);
+  /// user-specified probabilistic distributions
+  void generate_samples(const std::vector<RandomVariables>& random_vars,
+			const RealSymMatrix& correlations, int num_samples,
+			RealMatrix& samples, RealMatrix& sample_ranks,
+			const BitArray& active_vars,
+			const BitArray& active_corr);
 
   /// generates the desired set of parameter samples from within
   /// AleatoryDistParams and EpistemicDistParams specifications
-  void generate_samples(const AleatoryDistParams&  adp,
-			const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, bool backfill_flag=false);
+  void generate_uncertain_samples(
+    const std::vector<RandomVariables>& random_vars,
+    const RealSymMatrix& correlations, int num_samples,
+    RealMatrix& samples_array, bool backfill_flag = false);
   /// generates the desired set of parameter samples from within an
   /// AleatoryDistParams specification
-  void generate_samples(const AleatoryDistParams& adp, int num_samples,
-			RealMatrix& samples_array, bool backfill_flag=false);
+  void generate_aleatory_samples(
+    const std::vector<RandomVariables>& random_vars,
+    const RealSymMatrix& correlations, int num_samples,
+    RealMatrix& samples_array, bool backfill_flag = false);
   /// generates the desired set of parameter samples from within a
   /// EpistemicDistParams specification
-  void generate_samples(const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, bool backfill_flag=false);
+  void generate_epistemic_samples(
+    const std::vector<RandomVariables>& random_vars,
+    const RealSymMatrix& correlations, int num_samples,
+    RealMatrix& samples_array, bool backfill_flag = false);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated normal distributions
   void generate_normal_samples(const RealVector& n_means,
-			       const RealVector& n_std_devs,
-			       const RealVector& n_l_bnds,
-			       const RealVector& n_u_bnds, int num_samples,
-                               RealSymMatrix& correl_matrix,
-			       RealMatrix& samples_array);
+    const RealVector& n_std_devs, const RealVector& n_l_bnds,
+    const RealVector& n_u_bnds,	RealSymMatrix& corr, int num_samples,
+    RealMatrix& samples_array);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated uniform distributions
   void generate_uniform_samples(const RealVector& u_l_bnds,
-				const RealVector& u_u_bnds, int num_samples,
-				RealMatrix& samples_array, 
-				bool backfill_flag=false);
+    const RealVector& u_u_bnds, RealSymMatrix& corr, int num_samples,
+    RealMatrix& samples_array);
 
   /// generates integer index samples from within uncorrelated uniform
   /// distributions
   void generate_uniform_index_samples(const IntVector& index_l_bnds,
-    const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples);
+    const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples,
+    bool backfill_flag = false);
 
   /// generates unique integer index samples from within uncorrelated
   /// uniform distributions (more expensive than non-unique case)
-  //  void generate_unique_index_samples(const IntVector& index_l_bnds,
+  //void generate_unique_index_samples(const IntVector& index_l_bnds,
   //  const IntVector& index_u_bnds, int num_samples,
-    //				     std::set<IntArray>& sorted_samples);
+  //  std::set<IntArray>& sorted_samples);
   void generate_unique_index_samples(const IntVector& index_l_bnds,
-    const IntVector& index_u_bnds, int num_samples,
-    IntMatrix& sorted_samples);
+    const IntVector& index_u_bnds, int num_samples, IntMatrix& sorted_samples);
 
   /// Similar to generate_samples but this function ensures that all discrete 
   /// samples are unique
-  void generate_unique_samples( const RealVector& cd_l_bnds,
-     const RealVector& cd_u_bnds, const IntVector&  ddri_l_bnds, 
-     const IntVector&  ddri_u_bnds, const IntSetArray& ddsi_values,
-     const StringSetArray& ddss_values, const RealSetArray& ddsr_values,
-     const RealVector& cs_l_bnds, const RealVector& cs_u_bnds,
-     const IntVector&  dsri_l_bnds, const IntVector&  dsri_u_bnds,
-     const IntSetArray& dssi_values, const StringSetArray& dsss_values,
-     const RealSetArray& dssr_values, const AleatoryDistParams& adp,
-     const EpistemicDistParams& edp, int num_samples,
-     RealMatrix& samples, RealMatrix& sample_ranks );
+  void generate_unique_samples(const std::vector<RandomVariables>& random_vars,
+			       const RealSymMatrix& correlations,
+			       int num_samples, RealMatrix& samples,
+			       RealMatrix& sample_ranks);
 
 private:
 
@@ -182,13 +165,11 @@ private:
 
 inline LHSDriver::LHSDriver() : sampleType("lhs"), randomSeed(0),
   sampleRanksMode(IGNORE_RANKS), reportFlag(true), allowSeedAdvance(1)
-{
-  abort_if_no_lhs();
-}
+{ abort_if_no_lhs(); }
 
 
 inline LHSDriver::~LHSDriver()
-{}
+{ }
 
 
 inline void LHSDriver::
@@ -230,168 +211,197 @@ inline void LHSDriver::advance_seed_sequence()
 
 
 inline void LHSDriver::
-generate_samples(const AleatoryDistParams& adp, const EpistemicDistParams& edp,
-		 int num_samples, RealMatrix& samples_array, bool backfill_flag)
+uncertain_subset(const std::vector<RandomVariables>& random_vars,
+		 BitArray& subset)
 {
-  if (sampleRanksMode) {
-    PCerr << "Error: generate_samples(AleatoryDistParams&, "
-	  << "EpistemicDistParams&) does not support sample rank input/output."
-	  << std::endl;
-    abort_handler(-1);
-  }
-  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
-  else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
+  size_t i, num_rv = random_vars.size();
+  subset.resize(num_rv, true); // init bits to true
+  for (i=0; i<num_rv; ++i)
+    // deactivate complement of uncertain vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
+    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+      subset.reset(i); break;
+    }
 }
 
+
 inline void LHSDriver::
-generate_samples(const AleatoryDistParams& adp, int num_samples,
-		 RealMatrix& samples_array, bool backfill_flag)
+aleatory_uncertain_subset(const std::vector<RandomVariables>& random_vars,
+			  BitArray& subset)
+{
+  size_t i, num_rv = random_vars.size();
+  subset.resize(num_rv, true); // init bits to true
+  for (i=0; i<num_rv; ++i)
+    // deactivate complement of aleatory uncertain vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
+    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+    case CONTINUOUS_INTERVAL_UNCERTAIN: case DISCRETE_INTERVAL_UNCERTAIN:
+    case DISCRETE_UNCERTAIN_SET_INT:    case DISCRETE_UNCERTAIN_SET_STRING:
+    case DISCRETE_UNCERTAIN_SET_REAL:
+      subset.reset(i); break;
+    }
+}
+
+
+inline void LHSDriver::
+epistemic_uncertain_subset(const std::vector<RandomVariables>& random_vars,
+			   BitArray& subset)
+{
+  size_t i, num_rv = random_vars.size();
+  subset.resize(num_rv, false); // init bits to false
+  for (i=0; i<num_rv; ++i)
+    // activate epistemic uncertain vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_INTERVAL_UNCERTAIN: case DISCRETE_INTERVAL_UNCERTAIN:
+    case DISCRETE_UNCERTAIN_SET_INT:    case DISCRETE_UNCERTAIN_SET_STRING:
+    case DISCRETE_UNCERTAIN_SET_REAL:
+      subset.set(i); break;
+    }
+}
+
+
+inline void LHSDriver::
+generate_uncertain_samples(const std::vector<RandomVariables>& random_vars,
+			   const RealSymMatrix& correlations, int num_samples,
+			   RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
-    PCerr << "Error: generate_samples(AleatoryDistParams&) does not support "
+    PCerr << "Error: LHSDriver::generate_uncertain_samples() does not support "
 	  << "sample rank input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  EpistemicDistParams edp;
+  RealMatrix ranks;
+  BitArray active_rv;            uncertain_subset(random_vars, active_rv);
+  BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
   if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
+    generate_unique_samples(random_vars, correlations, num_samples,
+			    samples_array, ranks, active_rv, active_corr);
   else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
+    generate_samples(random_vars, correlations, num_samples,
+		     samples_array, ranks, active_rv, active_corr);
 }
 
+
 inline void LHSDriver::
-generate_samples(const EpistemicDistParams& edp, int num_samples,
-		 RealMatrix& samples_array, bool backfill_flag)
+generate_aleatory_samples(const std::vector<RandomVariables>& random_vars,
+			  const RealSymMatrix& correlations, int num_samples,
+			  RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
-    PCerr << "Error: generate_samples(EpistemicDistParams&) does not support "
-	  << "sample rank input/output." << std::endl;
+    PCerr << "Error: generate_aleatory_samples() does not support sample rank "
+	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  AleatoryDistParams adp;
+  RealMatrix ranks;
+  BitArray active_rv; aleatory_uncertain_subset(random_vars, active_rv);
   if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv,
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
+    generate_unique_samples(random_vars, correlations, num_samples,
+			    samples_array, ranks, active_rv, active_rv);
   else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv,
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-		     num_samples, samples_array, empty_rm);
+    generate_samples(random_vars, correlations, num_samples,
+		     samples_array, ranks, active_rv, active_rv);
+}
+
+
+inline void LHSDriver::
+generate_epistemic_samples(const std::vector<RandomVariables>& random_vars,
+			   const RealSymMatrix& correlations, int num_samples,
+			   RealMatrix& samples_array, bool backfill_flag)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_epistemic_samples() does not support sample rank "
+	  << "input/output." << std::endl;
+    abort_handler(-1);
+  }
+  RealMatrix ranks;
+  BitArray active_rv;  epistemic_uncertain_subset(random_vars, active_rv);
+  BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
+  if (backfill_flag)
+    generate_unique_samples(random_vars, correlations, num_samples,
+			    samples_array, ranks, active_rv, active_corr);
+  else
+    generate_samples(random_vars, correlations, num_samples,
+		     samples_array, ranks, active_rv, active_corr);
 }
 
 
 inline void LHSDriver::
 generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
-			int num_samples, RealSymMatrix& correl, RealMatrix& samples_array)
+			RealSymMatrix& corr, int num_samples,
+			RealMatrix& samples_array)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_normal_samples() does not support sample rank "
   	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector     empty_rv;  IntVector          empty_iv;
-  RealMatrix     empty_rm;  //RealSymMatrix      empty_rsm;
-  IntSetArray    empty_isa; IntRealMapArray    empty_irma;
-  StringSetArray empty_ssa; StringRealMapArray empty_srma;
-  RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
-  AleatoryDistParams adp(n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
-			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			 empty_iv, empty_irma, empty_srma, empty_rrma,
-			 correl);
-  EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
-		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
-		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
-		   empty_rm);
+  size_t i, num_rv = n_means.length();
+  std::vector<RandomVariables> random_vars(num_rv);
+  bool l_bnd = !n_l_bnds.empty(), u_bnd = !n_u_bnds.empty();
+  for (i=0; i<num_rv; ++i) {
+    RandomVariable& rv_i = randomVars[i];
+    rv_i = RandomVariable(NORMAL);
+    rv_i.push_parameter(N_MEAN,    n_means[i]);
+    rv_i.push_parameter(N_STD_DEV, n_std_devs[i]);
+    if (l_bnd) rv_i.push_parameter(N_LWR_BND, n_l_bnds[i]);
+    if (u_bnd) rv_i.push_parameter(N_UPR_BND, n_u_bnds[i]);
+  }
+  RealMatrix ranks;
+  generate_samples(random_vars, corr, num_samples, samples_array, ranks);
 }
 
 
 inline void LHSDriver::
 generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
-			 int num_samples, RealMatrix& samples_array, 
-			 bool backfill_flag)
+			 RealSymMatrix& corr, int num_samples,
+			 RealMatrix& samples_array)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_samples() does not support sample rank "
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector     empty_rv;  IntVector          empty_iv;
-  RealMatrix     empty_rm;  RealSymMatrix      empty_rsm; 
-  IntSetArray    empty_isa; IntRealMapArray    empty_irma;
-  StringSetArray empty_ssa; StringRealMapArray empty_srma;
-  RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
-  AleatoryDistParams adp(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, u_l_bnds, u_u_bnds, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
-			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			 empty_iv, empty_irma, empty_srma, empty_rrma,
-			 empty_rsm);
-  EpistemicDistParams edp;
-  if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
-  else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
+  size_t i, num_rv = u_l_bnds.length();
+  std::vector<RandomVariables> random_vars(num_rv);
+  for (i=0; i<num_rv; ++i) {
+    RandomVariable& rv_i = randomVars[i];
+    rv_i = RandomVariable(UNIFORM);
+    rv_i.push_parameter(U_LWR_BND, u_l_bnds[i]);
+    rv_i.push_parameter(U_UPR_BND, u_u_bnds[i]);
+  }
+  RealMatrix ranks;
+  generate_samples(random_vars, corr, num_samples, samples_array, ranks);
 }
+
 
 inline void LHSDriver::
 generate_uniform_index_samples(const IntVector& index_l_bnds,
-			       const IntVector& index_u_bnds,
-			       int num_samples, IntMatrix& index_samples)
+			       const IntVector& index_u_bnds, int num_samples,
+			       IntMatrix& index_samples, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_index_samples() does not support sample "
 	  << "rank input/output." << std::endl;
     abort_handler(-1);
   }
-  // For    uniform probability, model as discrete design range (this fn).
+  // For    uniform probability, model as discrete range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
-  RealVector empty_rv; IntVector empty_iv; RealMatrix empty_rm, samples_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  AleatoryDistParams adp; EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
-		   empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
-		   empty_isa, empty_ssa, empty_rsa, adp, edp, num_samples,
-		   samples_rm, empty_rm);
+  size_t i, num_rv = index_l_bnds.length();
+  std::vector<RandomVariables> random_vars(num_rv);
+  for (i=0; i<num_rv; ++i) {
+    RandomVariable& rv_i = randomVars[i];
+    rv_i = RandomVariable(DISCRETE_RANGE);
+    rv_i.push_parameter(DR_LWR_BND, index_l_bnds[i]);
+    rv_i.push_parameter(DR_UPR_BND, index_u_bnds[i]);
+  }
+  RealMatrix ranks, samples_rm;  RealSymMatrix corr; // assume uncorrelated
+  if (backfill_flag)
+    generate_unique_samples(random_vars, corr, num_samples, samples_rm, ranks);
+  else
+    generate_samples(random_vars, corr, num_samples, samples_rm, ranks);
   copy_data(samples_rm, index_samples);
 }
 
@@ -433,13 +443,18 @@ void LHSDriver::check_range(T l_bnd, T u_bnd, bool allow_equal) const
 template <typename T>
 void LHSDriver::check_finite<T>(T l_bnd, T u_bnd) const
 {
-  // *** if (lb_i > INT_MIN && ub_i < INT_MAX) { // ***
-
-
-  typename T T_inf = std::numeric_limits<T>::infinity();
-  if (l_bnd <= -T_inf || u_bnd >= T_inf) { // *** for Real ***
+  if (std::numeric_limits<T>::has_infinity) { // floating point types
+    typename T T_inf = std::numeric_limits<T>::infinity();
+    if (l_bnd <= -T_inf || u_bnd >= T_inf) {
+      PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
+	    << "continuous range." << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else if (l_bnd <= std::numeric_limits<T>::min() ||
+	   u_bnd >= std::numeric_limits<T>::max()) { // INT_{MIN,MAX}
     PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
-	  << "continuous range." << std::endl;
+	  << "discrete range." << std::endl;
     abort_handler(-1);
   }
 }
@@ -455,6 +470,34 @@ check_error(int err_code, const char* err_source, const char* err_case) const
     PCerr << "." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+inline void LHSDriver::
+bins_to_udist_params(const RealRealMap& h_bin_prs,
+		     RealArray& x_val, RealArray& y_val)
+{
+  // histogram bins: pairs are defined from an abscissa in the first field
+  // and a count (not a density) in the second field.  This distinction is
+  // important for unequal bin widths.
+
+  size_t i, num_params = h_bin_prs.size(), end = num_params - 1;
+  RRMCIter cit = h_bin_prs.begin();
+
+  // Assume already normalized with sum = 1
+  //Real sum = 0.;
+  //RRMCIter end = --h_bin_prs.end(); // last y from DAKOTA must be zero
+  //for (; cit!=end; ++cit)
+  //  sum += cit->second;
+
+  // LHS requires accumulation of CDF with first y at 0 and last y at 1
+  x_val.resize(num_params);  y_val.resize(num_params);
+  y_val[0] = 0.;
+  for (i=0; i<end; ++i, ++cit) {
+    x_val[i]   = cit->first;
+    y_val[i+1] = y_val[i] + cit->second/* /sum */;
+  }
+  x_val[end] = cit->first; // last prob value (cit->second) must be zero
 }
 
 
@@ -511,6 +554,116 @@ map_indices_to_udist_params(const std::map<T, Real>& vals_probs,
     x_val[i] = (Real)i;     // index rather than value
     y_val[i] = cit->second; // probability
   }
+}
+
+
+void LHSDriver::
+intervals_to_udist_params(const RealRealPairRealMap& ci_bpa,
+			  RealArray& x_val, RealArray& y_val)
+{
+  // x_sort_unique is a set with ALL of the interval bounds for this variable
+  // in increasing order and unique.  For example, if there are 2 intervals
+  // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
+  // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
+  // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
+  RRPRMCIter cit;  RealSet x_sort_unique;
+  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    x_sort_unique.insert(bounds.first);
+    x_sort_unique.insert(bounds.second);
+  }
+  // convert sorted RealSet to x_val
+  num_params = x_sort_unique.size();
+  x_val.reshape(num_params);  y_val.reshape(num_params);
+  RSIter it = x_sort_unique.begin();
+  for (j=0; j<num_params; ++j, ++it)
+    x_val[j] = *it;
+
+  // Calculate the probability densities, and account for the cases where
+  // there are intervals that are overlapping.  This section of code goes
+  // through the original intervals and see where they fall relative to the
+  // new, sorted intervals for the density calculation.
+  RealVector prob_dens(num_params); // initialize to 0.
+  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    Real l_bnd = bounds.first, u_bnd = bounds.second;
+    Real ci_density = cit->second / (u_bnd - l_bnd);
+    int cum_int_index = 0;
+    while (l_bnd > x_val[cum_int_index])
+      ++cum_int_index;
+    ++cum_int_index;
+    while (cum_int_index < num_params && x_val[cum_int_index] <= u_bnd)
+      { prob_dens[cum_int_index] += ci_density; ++cum_int_index; }
+  }
+
+  // put the densities in a cumulative format necessary for LHS histograms.
+  // Note that x_val and y_val are defined as Real* for input to f77.
+  y_val[0] = 0.;
+  for (j=1; j<num_params; ++j)
+    y_val[j] = (prob_dens[j] > 0.0) ?
+      y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]) :
+      y_val[j-1] + 0.0001; // handle case where there is a gap
+  // normalize if necessary
+  if (y_val[num_params-1] != 1.) {
+    Real y_total = y_val[num_params-1];
+    for (j=1; j<num_params; ++j)
+      y_val[j] /= y_total;
+  }
+#ifdef DEBUG
+  for (j=0; j<num_params; ++j)
+    PCout << "ciuv: x_val[" << j << "] is " << x_val[j]
+	  << " y_val[" << j << "] is " << y_val[j] << '\n';
+#endif // DEBUG
+}
+
+
+void LHSDriver::
+intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
+			  RealArray& x_val, RealArray& y_val)
+{
+  // x_sort_unique contains ALL of the unique integer values for this
+  // x_sort_unique contains ALL of the unique integer values for this
+  // discrete interval variable in increasing order.  For example, if
+  // there are 3 intervals for a variable and the bounds are (1,4),
+  // (3,6), and (9,10), x_sorted will be (1,2,3,4,5,6,9,10).
+  IIPRMCIter cit; IntSet x_sort_unique;
+  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    int val, u_bnd = bounds.second;
+    for (val=bounds.first; val<=u_bnd; ++val)
+      x_sort_unique.insert(val);
+  }
+  // copy sorted IntSet to x_val
+  num_params = x_sort_unique.size();
+  x_val.reshape(num_params);  y_val.reshape(num_params);
+  ISIter it = x_sort_unique.begin();
+  for (j=0; j<num_params; ++j, ++it)
+    x_val[j] = *it;
+
+  // Calculate probability densities and account for overlapping intervals.
+  // Loop over the original intervals and see where they fall relative to
+  // the new, sorted intervals for the density calculation.
+  for (j=0; j<num_params; ++j) y_val[j] = 0.;
+  int l_bnd, u_bnd; size_t index;
+  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    int val, l_bnd = bounds.first, u_bnd = bounds.second;
+    Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
+    it = x_sort_unique.find(l_bnd);
+    if (it == x_sort_unique.end()) {
+      PCerr << "Error: lower bound not found in sorted set within LHSDriver "
+	    << "mapping of discrete interval uncertain variable."<< std::endl;
+      abort_handler(-1);
+    }
+    index = std::distance(x_sort_unique.begin(), it);
+    for (val=l_bnd; val<=u_bnd; ++val, ++index)
+      y_val[index] += di_density;
+  }
+#ifdef DEBUG
+  for (j=0; j<num_params; ++j)
+    PCout << "diuv: x_val[" << j << "] is " << x_val[j]
+	  << " y_val[" << j << "] is " << y_val[j] << '\n';
+#endif // DEBUG
 }
 
 

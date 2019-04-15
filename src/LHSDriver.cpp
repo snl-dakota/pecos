@@ -206,7 +206,8 @@ void LHSDriver::abort_if_no_lhs()
 void LHSDriver::
 generate_samples(const std::vector<RandomVariables>& random_vars,
 		 const RealSymMatrix& correlations, int num_samples,
-		 RealMatrix& samples, RealMatrix& sample_ranks)
+		 RealMatrix& samples, RealMatrix& sample_ranks,
+		 const BitArray& active_vars, const BitArray& active_corr)
 {
 #ifdef HAVE_LHS
   // generate samples within user-specified parameter distributions
@@ -218,9 +219,116 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
     abort_handler(-1);
   }
 
-  size_t i, num_rv = random_vars.size();
+  // active_vars identifies the active subset of random_vars for which we will
+  // generate samples; it will vary based on sampling context.
+  size_t i, num_rv = random_vars.size(), num_active_rv;
+  bool subset_rv = false;
+  if (active_vars.empty())
+    num_active_rv = num_rv;
+  else {
+    num_active_rv = active_vars.count();
+    if (num_active_rv < num_rv) subset_rv = true;
+  }
+  lhsNames.resize(num_active_rv);
+
+  // active_corr identifies the subset of random_vars for which we specify
+  // correlations; it need not vary based on sampling context, potentially
+  // indicating a static subset that admits correlations in general (e.g.,
+  // cont/disc aleatory RV in the current Dakota XML spec).
+  // > Both active subsets are relative to the full RV vector (i.e., not
+  //   nested subsets) such that they overlay when specifying correlations
+  //   to LHS, e.g., uncertain vars are (currently) active for sampling and
+  //   correlations are (always) bound to aleatory uncertain vars, so both
+  //   bits must be on to call LHS_CORR2.
+  // > avoid resizing the correlation matrix (inflating with 1's on diagonal)
+  //   for active sampling context: the size of the corr matrix is defined by
+  //   the (static) RV subset that admits correlations (correlations.numRows()
+  //   == active_corr.count()).  Since this is independent of the active
+  //   sampling context, a subset of corr matrix could be passed to LHS_CORR2.
+  bool correlation_flag = !correlations.empty(), subset_corr = false;
+  int  num_corr = 0, num_active_corr = 0;
+  if (correlation_flag) {
+    if (active_corr.empty())
+      num_corr = correlations.numRows();
+    else {
+      for (i=0; i<num_rv; ++i)
+	if (active_corr[i])
+	  { ++num_active_corr; if (active_vars[i]) ++num_corr; }
+      if (num_active_corr < num_rv) subset_corr = true;
+    }
+  }
+
+  int max_corr_size = (num_corr > 1) ? num_corr * (num_corr - 1) / 2 : -1,
+      max_var = num_active_rv, max_samp_size = max_var * num_samples,
+      max_interval = -1, max_table = -1, err_code = 0, print_level = 0,
+      output_width = 1;
+  // randomSeed passed below propagates to ISeed in the f77 rnum2, but does
+  // not propagate to Boost RNGs (LHSDriver::seed() must be used for that).
+  LHS_INIT_MEM_FC(num_samples, randomSeed, num_samples, max_samp_size, max_var,
+		  max_interval, max_corr_size, max_table, print_level,
+		  output_width, err_code);
+  check_error(err_code, "lhs_init_mem");
+
+  // set sample type to either LHS (default) or random Monte Carlo (optional)
+  bool call_lhs_option = false;
+  String option_string("              ");
+  if (sampleType == "random" || sampleType == "incremental_random")
+    { option_string = "RANDOM SAMPLE "; call_lhs_option = true; }
+  // set mixing option to either restricted pairing (default) or random pairing
+  // (optional).  For enforcing user-specified correlation, restricted pairing
+  // is required.  And for uncorrelated variables, restricted pairing results
+  // in lower correlation values than random pairing.  For these reasons, the
+  // random pairing option is not currently active, although a specification
+  // option for it could be added in the future if a use arises.
+  bool random_pairing_flag = false; // this option hard-wired off for now
+  if (!correlation_flag && random_pairing_flag)
+    { option_string += "RANDOM PAIRING"; call_lhs_option = true; }
+  // else // use default of restricted pairing
+  option_string.resize(32, ' ');
+  if (call_lhs_option) {
+    // Don't null-terminate the string since the '\0' is not used in Fortran
+    int num_replic = 1, ptval_option = 1;
+    LHS_OPTIONS2_FC(num_replic, ptval_option, option_string.data(), err_code);
+    check_error(err_code, "lhs_options");
+  }
+
+  // Create files showing distributions and associated statistics.  Avoid
+  // issues with null-terminated strings from C++ (which mess up the Fortran
+  // output) by using std::string::data().
+  String output_string("LHS_samples.out");
+  output_string.resize(32, ' ');
+  String message_string("LHS_distributions.out");
+  message_string.resize(32, ' ');
+  String title_string("Pecos::LHSDriver");
+  title_string.resize(32, ' ');
+  // From the LHS manual (p. 100): LHSRPTS is used to specify which reports LHS
+  // will print in the message output file. If LHSRPTS is omitted, the message
+  // file will contain only the title, run specifications, and descriptions of
+  // the distributions sampled. If LHSRPTS is included, it must be followed by
+  // one or more of the following three additional keywords:
+  //   > CORR: Print both the achieved raw correlation matrix and the achieved
+  //           rank correlation matrix.
+  //   > HIST: Print a text-based histogram for each random variable.
+  //   > DATA: Print the complete set of all data samples and their ranks.
+  // Pecos::LHSDriver::reportFlag is set from Dakota::Iterator::subIteratorFlag,
+  // which accomplishes two things: (1) it reduces some output when generating
+  // multiple sample sets (the report files get overwritten anyway), and (2) it
+  // avoids numerical problems with generating input variable histogram plots
+  // as trust regions become small in SBO (mainly an issue before conversion of
+  // f90 LHS to double precision).
+  String options_string = (reportFlag) ? "LHSRPTS CORR HIST DATA" : " ";
+  options_string.resize(32, ' ');
+  LHS_FILES2_FC(output_string.data(), message_string.data(),
+                title_string.data(), options_string.data(), err_code);
+  check_error(err_code, "lhs_files");
+
+  //////////////////////////////////////////////////////////
+  // Register RandomVariables with lhs_{dist,udist,const} //
+  //////////////////////////////////////////////////////////
   RealArray dist_params;
   for (i=0; i<num_rv; ++i) {
+    if (subset_rv && !active_vars[i]) continue; // skip this RV if not active
+
     const RandomVariable& rv_i = random_vars[i];
     switch (rv_i.type()) {
     case CONTINUOUS_RANGE: {
@@ -344,12 +452,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       check_finite(dist_params[0], dist_params[2]);
       lhs_dist_register("Triangular", "triangular", i, dist_params);
       break;
-    case EXPONENTIAL: case STD_EXPONENTIAL:
+    case EXPONENTIAL: case STD_EXPONENTIAL: {
       dist_params.resize(1);
       Real e_beta; rv_i.pull_parameter(E_BETA, e_beta);
       dist_params[0] = 1./e_beta; // convert to LHS convention
       lhs_dist_register("Exponential", "exponential", i, dist_params);
       break;
+    }
     case BETA: case STD_BETA:
       dist_params.resize(4);
       rv_i.pull_parameter(BE_LWR_BND, dist_params[0]);
@@ -360,13 +469,14 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       check_finite(dist_params[0], dist_params[1]);
       lhs_dist_register("Beta", "beta", i, dist_params);
       break;
-    case GAMMA: case STD_GAMMA:
+    case GAMMA: case STD_GAMMA: {
       dist_params.resize(2);
       rv_i.pull_parameter(GA_ALPHA, dist_params[0]);
       Real ga_beta; rv_i.pull_parameter(GA_BETA, ga_beta);
       dist_params[1] = 1./ga_beta; // convert to LHS convention
       lhs_dist_register("Gamma", "gamma", i, dist_params);
       break;
+    }
     case GUMBEL:
       dist_params.resize(2);
       rv_i.pull_parameter(GU_ALPHA, dist_params[0]);
@@ -385,40 +495,44 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       rv_i.pull_parameter(W_BETA,  dist_params[1]);
       lhs_dist_register("Weibull", "weibull", i, dist_params);
       break;
-    case HISTOGRAM_BIN:
+    case HISTOGRAM_BIN: {
       RealRealMap h_bin_pairs;  rv_i.pull_parameter(H_BIN_PAIRS, h_bin_pairs);
-      bins_to_dist_params(h_bin_pairs, x_val, y_val); // ***
+      bins_to_udist_params(h_bin_pairs, x_val, y_val);
       lhs_udist_register("HistBin", "continuous linear", i, x_val, y_val);
       break;
+    }
     case POISSON:
       dist_params.resize(1);
       rv_i.pull_parameter(P_LAMBDA, dist_params[0]);
       lhs_dist_register("Poisson", "poisson", i, dist_params);
       break;
-    case BINOMIAL:
+    case BINOMIAL: {
       dist_params.resize(2);  int num_tr;
       rv_i.pull_parameter(BI_P_PER_TRIAL, dist_params[0]);
       rv_i.pull_parameter(BI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
       lhs_dist_register("Binomial", "binomial", i, dist_params);
       break;
-    case NEGATIVE_BINOMIAL:
+    }
+    case NEGATIVE_BINOMIAL: {
       dist_params.resize(2);  int num_tr;
       rv_i.pull_parameter(NBI_P_PER_TRIAL, dist_params[0]);
       rv_i.pull_parameter(NBI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
       lhs_dist_register("NegBinomial", "negative binomial", i, dist_params);
       break;
+    }
     case GEOMETRIC:
       dist_params.resize(1);
       rv_i.pull_parameter(GE_P_PER_TRIAL, dist_params[0]);
       lhs_dist_register("Geometric", "geometric", i, dist_params);
       break;
-    case HYPERGEOMETRIC:
+    case HYPERGEOMETRIC: {
       dist_params.resize(3);  int tot_pop, num_drw, sel_pop;
       rv_i.pull_parameter(HGE_TOT_POP, tot_pop); dist_params[0] = (Real)tot_pop;
       rv_i.pull_parameter(HGE_DRAWN,   num_drw); dist_params[1] = (Real)num_drw;
       rv_i.pull_parameter(HGE_SEL_POP, sel_pop); dist_params[2] = (Real)sel_pop;
       lhs_dist_register("Hypergeom", "hypergeometric", i, dist_params);
       break;
+    }
     case HISTOGRAM_PT_INT: {
       IntRealMap ir_map;  rv_i.pull_parameter(H_PT_INT_PAIRS, ir_map);
       size_t map_size = ir_map.size();
@@ -455,14 +569,18 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_const_register("HistPtReal", i, rr_map.begin()->first);
       break;
     }
-    case CONTINUOUS_INTERVAL_UNCERTAIN:
-      intervals_to_dist_params(, x_val, y_val); // ***
+    case CONTINUOUS_INTERVAL_UNCERTAIN: {
+      RealRealPairRealMap ci_bpa;  RealArray x_val, y_val;
+      intervals_to_udist_params(ci_bpa, x_val, y_val);
       lhs_udist_register("ContInterval", "continuous linear", i, x_val, y_val);
       break;
-    case DISCRETE_INTERVAL_UNCERTAIN:
-      intervals_to_dist_params(, x_val, y_val); // ***
+    }
+    case DISCRETE_INTERVAL_UNCERTAIN: {
+      IntIntPairRealMap di_bpa;  RealArray x_val, y_val;
+      intervals_to_udist_params(di_bpa, x_val, y_val);
       lhs_udist_register("DiscInterval", "discrete histogram", i, x_val, y_val);
       break;
+    }
     case DISCRETE_UNCERTAIN_SET_INT: {
       IntRealMap ir_map;  rv_i.pull_parameter(DUSI_VALUES_PROBS, ir_map);
       size_t map_size = ir_map.size();
@@ -502,298 +620,49 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
     }
   }
 
-  /////////////////////////////////////////////////////////////
-
-  bool correlation_flag = !correlations.empty();
-  size_t i, j,
-    num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddssv + num_ddsrv,
-    num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
-             + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
-    num_dauiv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv + num_hpuiv,
-    num_dausv = num_hpusv, num_daurv = num_hpurv,
-    num_auv = num_cauv + num_dauiv + num_dausv + num_daurv,
-    num_ceuv  = num_ciuv, num_deuiv = num_diuv + num_dusiv,
-    num_deusv = num_dussv, num_deurv = num_dusrv, 
-    num_euv = num_ceuv + num_deuiv + num_deusv + num_deurv,
-    num_uv = num_auv + num_euv,
-    num_sv = num_csv + num_dsriv + num_dssiv + num_dsssv + num_dssrv,
-    num_av = num_dv  + num_uv    + num_sv;
-
-  int err_code = 0, max_var = num_av, max_obs = num_samples,
-      max_samp_size = num_av*num_samples, max_interval = -1,
-      max_unc_corr = (num_uv*num_uv - num_uv)/2,
-      max_table = -1, print_level = 0, output_width = 1;
-  int max_corr = (num_uv > 1) ? max_unc_corr : -1;
-  // randomSeed passed below propagates to ISeed in the f77 rnum2, but does
-  // not propagate to Boost RNGs (LHSDriver::seed() must be used for that).
-  LHS_INIT_MEM_FC(num_samples, randomSeed, max_obs, max_samp_size, max_var,
-		  max_interval, max_corr, max_table, print_level, output_width,
-		  err_code);
-  check_error(err_code, "lhs_init_mem");
-
-  // set sample type to either LHS (default) or random Monte Carlo (optional)
-  bool call_lhs_option = false;
-  String option_string("              ");
-  if (sampleType == "random" || sampleType == "incremental_random") {
-    option_string   = "RANDOM SAMPLE ";
-    call_lhs_option = true;
-  }
-  // set mixing option to either restricted pairing (default) or random pairing
-  // (optional).  For enforcing user-specified correlation, restricted pairing
-  // is required.  And for uncorrelated variables, restricted pairing results
-  // in lower correlation values than random pairing.  For these reasons, the
-  // random pairing option is not currently active, although a specification
-  // option for it could be added in the future if a use arises.
-  bool random_pairing_flag = false; // this option hard-wired off for now
-  if (!correlation_flag && random_pairing_flag) {
-    option_string += "RANDOM PAIRING";
-    call_lhs_option = true;
-  }
-  // else // use default of restricted pairing
-  option_string.resize(32, ' ');
-  if (call_lhs_option) {
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    int num_replic = 1, ptval_option = 1;
-    LHS_OPTIONS2_FC(num_replic, ptval_option, option_string.data(), err_code);
-    check_error(err_code, "lhs_options");
-  }
-
-  // Create files showing distributions and associated statistics.  Avoid
-  // issues with null-terminated strings from C++ (which mess up the Fortran
-  // output) by using std::string::data().
-  String output_string("LHS_samples.out");
-  output_string.resize(32, ' ');
-  String message_string("LHS_distributions.out");
-  message_string.resize(32, ' ');
-  String title_string("Pecos::LHSDriver");
-  title_string.resize(32, ' ');
-  // From the LHS manual (p. 100): LHSRPTS is used to specify which reports LHS
-  // will print in the message output file. If LHSRPTS is omitted, the message
-  // file will contain only the title, run specifications, and descriptions of
-  // the distributions sampled. If LHSRPTS is included, it must be followed by
-  // one or more of the following three additional keywords:
-  //   > CORR: Print both the achieved raw correlation matrix and the achieved
-  //           rank correlation matrix.
-  //   > HIST: Print a text-based histogram for each random variable.
-  //   > DATA: Print the complete set of all data samples and their ranks.
-  // Pecos::LHSDriver::reportFlag is set from Dakota::Iterator::subIteratorFlag,
-  // which accomplishes two things: (1) it reduces some output when generating
-  // multiple sample sets (the report files get overwritten anyway), and (2) it
-  // avoids numerical problems with generating input variable histogram plots
-  // as trust regions become small in SBO (mainly an issue before conversion of
-  // f90 LHS to double precision).
-  String options_string = (reportFlag) ? "LHSRPTS CORR HIST DATA" : " ";
-  options_string.resize(32, ' ');
-  LHS_FILES2_FC(output_string.data(), message_string.data(),
-                title_string.data(), options_string.data(), err_code);
-  check_error(err_code, "lhs_files");
-
-  int num_params, cntr = 0, ptval_flag = 0;
-  int dist_num, pv_num; // outputs (ignored)
-  Real ptval = 0., dist_params[4];
-  lhsNames.resize(num_av);
-  const char *name_string, *distname;
-  Real dbl_inf = std::numeric_limits<Real>::infinity();
-
-
-  // --------------------
-  // CONTINUOUS VARIABLES
-  // --------------------
-  
-  // histogram bin uncertain: pairs are defined from an abscissa in the first
-  // field and a count (not a density) in the second field.  The distinction
-  // in the second field is only important for unequal bin widths.
-  for (i=0; i<num_hbuv; ++i, ++cntr) {
-
-    const RealRealMap& h_bin_prs_i = h_bin_prs[i];
-    RRMCIter cit;
-
-    num_params = h_bin_prs_i.size();
-    // LHS requires accumulation of CDF with first y at 0 and last y at 1
-    // Assume already normalized with sum = 1
-    //Real sum = 0.;
-    //RRMCIter end = --h_bin_prs_i.end(); // last y from DAKOTA must be zero
-    //for (cit=h_bin_prs_i.begin(); cit!=end; ++cit)
-    //  sum += cit->second;
-    size_t end = num_params - 1;
-    y_val[0] = 0.;
-    for (j=0, cit=h_bin_prs_i.begin(); j<end; ++j, ++cit) {
-      x_val[j]   = cit->first;
-      y_val[j+1] = y_val[j] + cit->second/* /sum */;
-    }
-    x_val[end] = cit->first; // last prob value (cit->second) must be zero
-  }
-
-
-  
-  // continuous interval uncertain: convert to histogram for sampling
-  for (i=0; i<num_ciuv; ++i, ++cntr) {
-
-    const RealRealPairRealMap& ci_bpa_i = ci_bpa[i];
-    RRPRMCIter cit;
-
-    // x_sort_unique is a set with ALL of the interval bounds for this variable
-    // in increasing order and unique.  For example, if there are 2 intervals
-    // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
-    // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
-    // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-    RealSet x_sort_unique;
-    for (cit=ci_bpa_i.begin(); cit!=ci_bpa_i.end(); ++cit) {
-      const RealRealPair& bounds = cit->first;
-      x_sort_unique.insert(bounds.first);
-      x_sort_unique.insert(bounds.second);
-    }
-    // convert sorted RealSet to x_val
-    num_params = x_sort_unique.size();
-    Real* x_val = new Real [num_params];
-    RSIter it = x_sort_unique.begin();
-    for (j=0; j<num_params; ++j, ++it)
-      x_val[j] = *it;
-
-    // Calculate the probability densities, and account for the cases where
-    // there are intervals that are overlapping.  This section of code goes
-    // through the original intervals and see where they fall relative to the
-    // new, sorted intervals for the density calculation.
-    RealVector prob_dens(num_params); // initialize to 0.
-    for (cit=ci_bpa_i.begin(); cit!=ci_bpa_i.end(); ++cit) {
-      const RealRealPair& bounds = cit->first;
-      Real l_bnd = bounds.first, u_bnd = bounds.second;
-      Real ci_density = cit->second / (u_bnd - l_bnd);
-      int cum_int_index = 0;
-      while (l_bnd > x_val[cum_int_index])
-	++cum_int_index;
-      ++cum_int_index;
-      while (cum_int_index < num_params && x_val[cum_int_index] <= u_bnd)
-	{ prob_dens[cum_int_index] += ci_density; ++cum_int_index; }
-    }
-
-    // put the densities in a cumulative format necessary for LHS histograms.
-    // Note that x_val and y_val are defined as Real* for input to f77.
-    Real* y_val = new Real [num_params];
-    y_val[0] = 0.;
-    for (j=1; j<num_params; ++j) {
-      if (prob_dens[j] > 0.0)
-	y_val[j] = y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]);
-      else // handle case where there is a gap
-	y_val[j] = y_val[j-1] + 0.0001;
-    }
-    // normalize if necessary
-    if (y_val[num_params-1] != 1.) {
-      Real y_total = y_val[num_params-1];
-      for (j=1; j<num_params; ++j)
-	y_val[j] /= y_total;
-    }
-
-#ifdef DEBUG
-    for (j=0; j<num_params; ++j)
-      PCout << "ciuv[" << i << "]: x_val[" << j << "] is " << x_val[j]
-	    << " y_val[" << j << "] is " << y_val[j] << '\n';
-#endif // DEBUG
-  }
-
-  // --------------------------
-  // DISCRETE INTEGER VARIABLES
-  // --------------------------
-
-  // discrete interval uncertain
-  for (i=0; i<num_diuv; ++i, ++cntr) {
-    name_string = f77name16("DiscInterval", cntr, lhs_names);
-    String dist_string("discrete histogram");
-    dist_string.resize(32, ' ');
-
-    const IntIntPairRealMap& di_bpa_i = di_bpa[i];
-    IIPRMCIter cit;
-
-    // x_sort_unique contains ALL of the unique integer values for this
-    // discrete interval variable in increasing order.  For example, if
-    // there are 3 intervals for a variable and the bounds are (1,4),
-    // (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
-    IntSet x_sort_unique;
-    for (cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
-      const RealRealPair& bounds = cit->first;
-      int val, u_bnd = bounds.second;
-      for (val=bounds.first; val<=u_bnd; ++val)
-	x_sort_unique.insert(val);
-    }
-    // copy sorted IntSet to x_val
-    num_params = x_sort_unique.size();
-    Real* x_val = new Real [num_params];
-    ISIter it = x_sort_unique.begin();
-    for (j=0; j<num_params; ++j, ++it)
-      x_val[j] = *it;
-
-    // Calculate probability densities and account for overlapping intervals.
-    // Loop over the original intervals and see where they fall relative to
-    // the new, sorted intervals for the density calculation.
-    Real* y_val = new Real [num_params];
-    for (j=0; j<num_params; ++j) y_val[j] = 0.;
-    int l_bnd, u_bnd; size_t index;
-    for (cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
-      const RealRealPair& bounds = cit->first;
-      int val, l_bnd = bounds.first, u_bnd = bounds.second;
-      Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
-      it = x_sort_unique.find(l_bnd);
-      if (it == x_sort_unique.end()) {
-	PCerr << "Error: lower bound not found in sorted set within LHSDriver "
-	      << "mapping of discrete interval uncertain variable."<< std::endl;
-	abort_handler(-1);
-      }
-      index = std::distance(x_sort_unique.begin(), it);
-      for (val=l_bnd; val<=u_bnd; ++val, ++index)
-	y_val[index] += di_density;
-    }
-
-#ifdef DEBUG
-    for (j=0; j<num_params; ++j)
-      PCout << "diuv[" << i << "]: x_val[" << j << "] is " << x_val[j]
-	    << " y_val[" << j << "] is " << y_val[j] << '\n';
-#endif // DEBUG
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete interval)");
-    delete [] x_val;
-    delete [] y_val;
-  }
-
-
-  // specify the rank correlations among the uncertain vars (no correlation
-  // currently supported for design and state vars in allVars mode).  Only
-  // non-zero values in the lower triangular portion of the rank correlation
-  // matrix are specified.
+  /////////////////////////////////////////
+  // Register correlations with lhs_corr //
+  /////////////////////////////////////////
+  // specify the rank correlations among the RV.  Only non-zero values in the
+  // lower triangular portion of the rank correlation matrix are specified.
   if (correlation_flag) {
-    for (i=1; i<num_auv; ++i) {
-      for (j=0; j<i; ++j) {
-	Real corr_val = correlations(i,j);
-	if (fabs(corr_val) > SMALL_NUMBER) {
-	  // jump over cdv, ceuv, csv, ddv int, dsv int, and ddv real as needed:
-	  size_t offset_i = num_cdv, offset_j = num_cdv;
-	  if (i>=num_cauv)
-	    offset_i += num_ceuv + num_csv + num_ddriv + num_ddsiv;
-	  if (i>=num_cauv+num_dauiv)
-	    offset_i += num_dsriv + num_dssiv + num_ddsrv;
-	  if (j>=num_cauv)
-	    offset_j += num_ceuv + num_csv + num_ddriv + num_ddsiv;
-	  if (j>=num_cauv+num_dauiv)
-	    offset_j += num_dsriv + num_dssiv + num_ddsrv;
-	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+offset_i].data()),
-		       const_cast<char*>(lhs_names[j+offset_j].data()),
-		       corr_val, err_code);
-	  check_error(err_code, "lhs_corr");
+    // Spec order: {cdv, ddv}, {cauv, dauv, corr}, {ceuv, deuv}, {csv, dsv}
+    // > pass in a bit array for RV's to sample + another for keying corr's
+    // > Default empty arrays --> all RVs active; corr matrix applies to all RVs
+    size_t j, cntr_i, cntr_j;
+    for (i=1, cntr_i=1; i<num_rv; ++i) {
+      if (!subset_corr || active_corr[i]) {
+	for (j=0, cntr_j=0; j<i; ++j) {
+	  if (!subset_corr || active_corr[j]) {
+	    if (!subset_rv || (active_vars[i] && active_vars[j])) {
+	      Real corr_val = correlations(cntr_i,cntr_j);
+	      if (std::abs(corr_val) > SMALL_NUMBER) {
+		LHS_CORR2_FC(const_cast<char*>(lhsNames[i].data()),
+			     const_cast<char*>(lhsNames[j].data()),
+			     corr_val, err_code);
+		check_error(err_code, "lhs_corr");
+	      }
+	    }
+	    ++cntr_j;
+	  }
 	}
+	++cntr_i;
       }
     }
   }
 
+  /////////////////////
+  // RUN THE SAMPLER //
+  /////////////////////
   // perform internal checks on input to LHS
-  int num_nam = num_av, num_var = num_av;
+  int num_nam = num_rv, num_var = num_rv;
   LHS_PREP_FC(err_code, num_nam, num_var);
   check_error(err_code, "lhs_prep");
 
   // allocate the memory to hold samples, pt values, variable names, etc.
-  int   max_nam        = num_av;
-  int*  index_list     = new int    [max_nam];       // output
-  Real* ptval_list     = new Real   [max_nam];       // output
-  char* dist_name_list = new char   [16*max_nam];    // output
+  int*      index_list = new  int    [num_nam];  // output
+  Real*     ptval_list = new Real    [num_nam];  // output
+  char* dist_name_list = new char [16*num_nam];  // output
   // dist_name_list is a bit tricky since the f90 array is declared as
   // CHARACTER(LEN=16) :: LSTNAME(MAXNAM), which would seem to be a
   // noncontiguous memory model.  However, a char** does not map correctly to
@@ -805,8 +674,8 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
   // order with all variables for sample 1, followed by all variables for
   // sample 2, etc.  Teuchos::SerialDenseMatrix using column-major memory layout
   // as well, so use samples(var#,sample#) or samples[sample#][var#] for access.
-  if (samples.numRows() != num_av || samples.numCols() != num_samples)
-    samples.shapeUninitialized(num_av, num_samples);
+  if (samples.numRows() != num_var || samples.numCols() != num_samples)
+    samples.shapeUninitialized(num_var, num_samples);
   if (sampleRanksMode && sample_ranks.empty()) {
     if (sampleRanksMode == SET_RANKS || sampleRanksMode == SET_GET_RANKS) {
       PCerr << "Error: empty sample ranks array cannot be set in Pecos::"
@@ -814,12 +683,12 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       abort_handler(-1);
     }
     else if (sampleRanksMode == GET_RANKS)
-      sample_ranks.shapeUninitialized(num_av, num_samples);
+      sample_ranks.shapeUninitialized(num_var, num_samples);
   }
 
   // generate the samples
   int rflag = sampleRanksMode; // short -> int
-  LHS_RUN_FC(max_var, max_obs, max_nam, err_code, dist_name_list,
+  LHS_RUN_FC(max_var, num_samples, num_nam, err_code, dist_name_list,
 	     index_list, ptval_list, num_nam, samples.values(), num_var,
 	     sample_ranks.values(), rflag);
   check_error(err_code, "lhs_run");
@@ -837,23 +706,9 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 
 
 void LHSDriver::
-generate_unique_samples( const RealVector& cd_l_bnds,
-			 const RealVector& cd_u_bnds,
-			 const IntVector&  ddri_l_bnds, 
-			 const IntVector&  ddri_u_bnds,
-			 const IntSetArray& ddsi_values,
-			 const StringSetArray& ddss_values,
-			 const RealSetArray& ddsr_values,
-			 const RealVector& cs_l_bnds,
-			 const RealVector& cs_u_bnds,
-			 const IntVector&  dsri_l_bnds,
-			 const IntVector&  dsri_u_bnds,
-			 const IntSetArray& dssi_values,
-			 const StringSetArray& dsss_values,
-			 const RealSetArray& dssr_values, 
-			 const AleatoryDistParams& adp,
-			 const EpistemicDistParams& edp, int num_samples,
-			 RealMatrix& samples, RealMatrix& sample_ranks )
+generate_unique_samples(const std::vector<RandomVariables>& random_vars,
+			const RealSymMatrix& correlations, int num_samples,
+			RealMatrix& samples, RealMatrix& sample_ranks )
 {
   // NonDSampling ordering of variables
   // Design    - continuous, discrete range, discrete set integer, 
@@ -1045,21 +900,18 @@ generate_unique_samples( const RealVector& cd_l_bnds,
       bool complete = false, initial = true;
       int num_unique_samples = 0;
       while (!complete) {
-	generate_samples(cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds, 
-			 ddsi_values, ddss_values, ddsr_values, 
-			 cs_l_bnds, cs_u_bnds, dsri_l_bnds, dsri_u_bnds,
-			 dssi_values, dsss_values, dssr_values, adp, edp,
-			 num_samples, samples_rm, sample_ranks_rm);
+	generate_samples(random_vars, correlations, num_samples,
+			 samples_rm, sample_ranks_rm);
 
 	if (initial) { // pack initial sample set
 	  for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
-	    //std::cout << "[";
+	    //PCout << "[";
 	    for (int j=0; j<num_discrete_vars; j++) {
 	      int index = discrete_samples_map[j];
 	      discrete_sample[j] = samples_rm(index,i);
-	      //std::cout << discrete_sample[j] << ",";
+	      //PCout << discrete_sample[j] << ",";
 	    }
-	    //std::cout << "]\n";
+	    //PCout << "]\n";
 	    sorted_discrete_samples.insert(discrete_sample);
 	    if ( sorted_discrete_samples.size() > num_unique_samples ){
 	      // copy sample into samples matrix
@@ -1072,17 +924,19 @@ generate_unique_samples( const RealVector& cd_l_bnds,
 	  else initial = false;
 	}
 	else { // backfill duplicates with new samples
-	  //std::cout << num_unique_samples << "," << sorted_discrete_samples.size() << "," << num_discrete_vars << "," << num_vars << "," << num_continuous_vars << std::endl;
+	  //PCout << num_unique_samples << "," << sorted_discrete_samples.size()
+	  //      << "," << num_discrete_vars << "," << num_vars << ","
+	  //      << num_continuous_vars << std::endl;
 
 	  for (int i=0; i<num_samples; ++i) {
 	    if (num_unique_samples < num_samples) {
-	      //std::cout << "[";
+	      //PCout << "[";
 	      for (int j=0; j<num_discrete_vars; j++) {
 		int index = discrete_samples_map[j];
 		discrete_sample[j] = samples_rm(index,i);
-		//std::cout << discrete_sample[j] << ",";
+		//PCout << discrete_sample[j] << ",";
 	      }
-	      //std::cout << "]\n";
+	      //PCout << "]\n";
 	      sorted_discrete_samples.insert(discrete_sample);
 	      if ( sorted_discrete_samples.size() > num_unique_samples ){
 		// copy sample into samples matrix
@@ -1097,19 +951,15 @@ generate_unique_samples( const RealVector& cd_l_bnds,
 	}
       }
     }
-  else
-    {
-      PCout << "LHS backfill was requested, but the discrete variables "
-	    << "specified do not have enough unique values ("
-	    << max_num_unique_discrete_samples
-	    << ") to obtain the number of samples requested so replicated "
-	    << "discrete samples have been allowed.\n";
-      generate_samples( cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds,
-			ddsi_values, ddss_values, ddsr_values, cs_l_bnds,
-			cs_u_bnds, dsri_l_bnds, dsri_u_bnds, dssi_values,
-			dsss_values,dssr_values, adp, edp, num_samples,
-			samples, sample_ranks );
-    }
+  else {
+    PCout << "LHS backfill was requested, but the discrete variables "
+	  << "specified do not have enough unique values ("
+	  << max_num_unique_discrete_samples
+	  << ") to obtain the number of samples requested so replicated "
+	  << "discrete samples have been allowed.\n";
+    generate_samples(random_vars, correlations, num_samples, samples,
+		     sample_ranks);
+  }
 }
 
 
