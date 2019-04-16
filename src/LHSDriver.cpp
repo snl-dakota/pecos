@@ -708,7 +708,9 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 void LHSDriver::
 generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 			const RealSymMatrix& corr, int num_samples,
-			RealMatrix& samples, RealMatrix& sample_ranks )
+			RealMatrix& samples, RealMatrix& sample_ranks,
+			const BitArray& active_vars,
+			const BitArray& active_corr)
 {
   // dakota.xml ordering of variables:
   // Design    - {continuous,discrete} range, discrete set {int,string,real}
@@ -726,15 +728,18 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
   bool finite_combinations = true;
   // track discrete variables that have finite support
   for (i=0; i<num_rv; ++i) {
-    switch (random_vars[i].type()) {
-    case DISCRETE_RANGE:    case DISCRETE_SET_INT:    case DISCRETE_SET_STRING:
-    case DISCRETE_SET_REAL: case BINOMIAL:            case HYPERGEOMETRIC:
-    case HISTOGRAM_PT_INT:  case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
-    case DISCRETE_INTERVAL_UNCERTAIN:   case DISCRETE_UNCERTAIN_SET_INT:
-    case DISCRETE_UNCERTAIN_SET_STRING: case DISCRETE_UNCERTAIN_SET_REAL:
-      ++num_finite_dv; break;
-    default: // any RV with countably/uncountably infinite support
-      finite_combinations = false; break;
+    if (active_vars[i]) {
+      switch (random_vars[i].type()) {
+      case DISCRETE_RANGE:
+      case DISCRETE_SET_INT: case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+      case BINOMIAL:         case HYPERGEOMETRIC:
+      case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
+      case DISCRETE_INTERVAL_UNCERTAIN:   case DISCRETE_UNCERTAIN_SET_INT:
+      case DISCRETE_UNCERTAIN_SET_STRING: case DISCRETE_UNCERTAIN_SET_REAL:
+	++num_finite_dv; break;
+      default: // any RV with countably/uncountably infinite support
+	finite_combinations = false; break;
+      }
     }
     if (!finite_combinations) break;
   }
@@ -743,92 +748,93 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
   //IntArray discrete_strata_1d; discrete_strata_1d.reserve(num_finite_dv);
   if (finite_combinations)
     for (i=0; i<num_rv; ++i)
-      switch (random_vars[i].type()) {
-	// discrete design, state
-      case DISCRETE_RANGE: {
-	int l_bnd;  random_vars[i].pull_parameter(DR_LWR_BND, l_bnd);
-	int u_bnd;  random_vars[i].pull_parameter(DR_UPR_BND, u_bnd);
-	//discrete_strata_1d.push_back(u_bnd - l_bnd + 1);
-	max_unique *= u_bnd - l_bnd + 1; break;
-      }
-      case DISCRETE_SET_INT: {
-	IntSet i_set;  random_vars[i].pull_parameter(DSI_VALUES, i_set);
-	//discrete_strata_1d.push_back(i_set.size());
-	max_unique *= i_set.size(); break;
-      }
-      case DISCRETE_SET_STRING: {
-	StringSet s_set;  random_vars[i].pull_parameter(DSS_VALUES, s_set);
-	//discrete_strata_1d.push_back(s_set.size());
-	max_unique *= s_set.size();  break;
-      }
-      case DISCRETE_SET_REAL: {
-	RealSet r_set;  random_vars[i].pull_parameter(DSR_VALUES, r_set);
-	//discrete_strata_1d.push_back(r_set.size());
-	max_unique *= r_set.size();  break;
-      }
-	// discrete aleatory uncertain
-      case BINOMIAL: { // finite support
-	int num_tr;  random_vars[i].pull_parameter(BI_NUM_TRIALS, num_tr);
-	//discrete_strata_1d.push_back(1 + num_tr);
-	max_unique *= 1 + num_tr;  break;
-      }
-      case HYPERGEOMETRIC: { // finite support
-	int tot_p;  random_vars[i].pull_parameter(HGE_TOT_POP, tot_p);
-	int sel_p;  random_vars[i].pull_parameter(HGE_SEL_POP, sel_p);
-	int num_d;  random_vars[i].pull_parameter(HGE_DRAWN,   num_d);
-	//discrete_strata_1d.push_back(1 + std::min(num_d, sel_p) -
-	//			        std::max(0, sel_p + num_d - tot_p));
-	max_unique *= 1 + std::min(num_d,sel_p) - std::max(0,sel_p+num_d-tot_p);
-	break;
-      }
-      case HISTOGRAM_PT_INT: {
-	IntRealMap ir_map;  rv_i.pull_parameter(H_PT_INT_PAIRS, ir_map);
-	//discrete_strata_1d.push_back(ir_map.size());
-	max_unique *= ir_map.size();   break;
-      }
-      case HISTOGRAM_PT_STRING: {
-	StringRealMap sr_map;  rv_i.pull_parameter(H_PT_STR_PAIRS, sr_map);
-	//discrete_strata_1d.push_back(sr_map.size());
-	max_unique *= sr_map.size();  break;
-      }
-      case HISTOGRAM_PT_REAL: {
-	RealRealMap rr_map;  rv_i.pull_parameter(H_PT_REAL_PAIRS, rr_map);
-	//discrete_strata_1d.push_back(rr_map.size());
-	max_unique *= rr_map.size();  break;
-      }
-	// discrete epistemic uncertain
-      case DISCRETE_INTERVAL_UNCERTAIN: {
-	IntIntPairRealMap di_bpa;  rv_i.pull_parameter(DIU_BPA, di_bpa);
-	// x_sort_unique contains ALL of the unique integer values for this
-	// discrete interval variable in increasing order.  For example, if
-	// there are 3 intervals for a variable and the bounds are (1,4),
-	// (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
-	IntSet x_sort_unique;
-	for (IIPRMCIter cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
-	  const RealRealPair& bounds = cit->first;
-	  int val, u_bnd = bounds.second;
-	  for (val=bounds.first; val<=u_bnd; ++val)
-	    x_sort_unique.insert(val);
+      if (active_vars[i])
+	switch (random_vars[i].type()) {
+	  // discrete design, state
+	case DISCRETE_RANGE: {
+	  int l_bnd;  random_vars[i].pull_parameter(DR_LWR_BND, l_bnd);
+	  int u_bnd;  random_vars[i].pull_parameter(DR_UPR_BND, u_bnd);
+	  //discrete_strata_1d.push_back(u_bnd - l_bnd + 1);
+	  max_unique *= u_bnd - l_bnd + 1; break;
 	}
-	//discrete_strata_1d.push_back(x_sort_unique.size());
-	max_unique *= x_sort_unique.size();  break;
-      }
-      case DISCRETE_UNCERTAIN_SET_INT: {
-	IntRealMap ir_map;  rv_i.pull_parameter(DUSI_VALUES_PROBS, ir_map);
-	//discrete_strata_1d.push_back(ir_map.size());
-	max_unique *= ir_map.size();  break;
-      }
-      case DISCRETE_UNCERTAIN_SET_STRING: {
-	StringRealMap sr_map;  rv_i.pull_parameter(DUSS_VALUES_PROBS, sr_map);
-	//discrete_strata_1d.push_back(sr_map.size());
-	max_unique *= sr_map.size();    break;
-      }
-      case DISCRETE_UNCERTAIN_SET_REAL: {
-	RealRealMap rr_map;  rv_i.pull_parameter(DUSR_VALUES_PROBS, rr_map);
-	//discrete_strata_1d.push_back(rr_map.size());
-	max_unique *= rr_map.size();    break;
-      }
-      }
+	case DISCRETE_SET_INT: {
+	  IntSet i_set;  random_vars[i].pull_parameter(DSI_VALUES, i_set);
+	  //discrete_strata_1d.push_back(i_set.size());
+	  max_unique *= i_set.size(); break;
+	}
+	case DISCRETE_SET_STRING: {
+	  StringSet s_set;  random_vars[i].pull_parameter(DSS_VALUES, s_set);
+	  //discrete_strata_1d.push_back(s_set.size());
+	  max_unique *= s_set.size();  break;
+	}
+	case DISCRETE_SET_REAL: {
+	  RealSet r_set;  random_vars[i].pull_parameter(DSR_VALUES, r_set);
+	  //discrete_strata_1d.push_back(r_set.size());
+	  max_unique *= r_set.size();  break;
+	}
+	  // discrete aleatory uncertain
+	case BINOMIAL: { // finite support
+	  int num_tr;  random_vars[i].pull_parameter(BI_NUM_TRIALS, num_tr);
+	  //discrete_strata_1d.push_back(1 + num_tr);
+	  max_unique *= 1 + num_tr;  break;
+	}
+	case HYPERGEOMETRIC: { // finite support
+	  int tot_p;  random_vars[i].pull_parameter(HGE_TOT_POP, tot_p);
+	  int sel_p;  random_vars[i].pull_parameter(HGE_SEL_POP, sel_p);
+	  int num_d;  random_vars[i].pull_parameter(HGE_DRAWN,   num_d);
+	  //discrete_strata_1d.push_back(1 + std::min(num_d, sel_p) -
+	  //			        std::max(0, sel_p + num_d - tot_p));
+	  max_unique *= 1+std::min(num_d,sel_p)-std::max(0,sel_p+num_d-tot_p);
+	  break;
+	}
+	case HISTOGRAM_PT_INT: {
+	  IntRealMap ir_map;  rv_i.pull_parameter(H_PT_INT_PAIRS, ir_map);
+	  //discrete_strata_1d.push_back(ir_map.size());
+	  max_unique *= ir_map.size();   break;
+	}
+	case HISTOGRAM_PT_STRING: {
+	  StringRealMap sr_map;  rv_i.pull_parameter(H_PT_STR_PAIRS, sr_map);
+	  //discrete_strata_1d.push_back(sr_map.size());
+	  max_unique *= sr_map.size();  break;
+	}
+	case HISTOGRAM_PT_REAL: {
+	  RealRealMap rr_map;  rv_i.pull_parameter(H_PT_REAL_PAIRS, rr_map);
+	  //discrete_strata_1d.push_back(rr_map.size());
+	  max_unique *= rr_map.size();  break;
+	}
+	  // discrete epistemic uncertain
+	case DISCRETE_INTERVAL_UNCERTAIN: {
+	  IntIntPairRealMap di_bpa;  rv_i.pull_parameter(DIU_BPA, di_bpa);
+	  // x_sort_unique contains ALL of the unique integer values for this
+	  // discrete interval variable in increasing order.  For example, if
+	  // there are 3 intervals for a variable and the bounds are (1,4),
+	  // (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
+	  IntSet x_sort_unique;
+	  for (IIPRMCIter cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
+	    const RealRealPair& bounds = cit->first;
+	    int val, u_bnd = bounds.second;
+	    for (val=bounds.first; val<=u_bnd; ++val)
+	      x_sort_unique.insert(val);
+	  }
+	  //discrete_strata_1d.push_back(x_sort_unique.size());
+	  max_unique *= x_sort_unique.size();  break;
+	}
+	case DISCRETE_UNCERTAIN_SET_INT: {
+	  IntRealMap ir_map;  rv_i.pull_parameter(DUSI_VALUES_PROBS, ir_map);
+	  //discrete_strata_1d.push_back(ir_map.size());
+	  max_unique *= ir_map.size();  break;
+	}
+	case DISCRETE_UNCERTAIN_SET_STRING: {
+	  StringRealMap sr_map;  rv_i.pull_parameter(DUSS_VALUES_PROBS, sr_map);
+	  //discrete_strata_1d.push_back(sr_map.size());
+	  max_unique *= sr_map.size();    break;
+	}
+	case DISCRETE_UNCERTAIN_SET_REAL: {
+	  RealRealMap rr_map;  rv_i.pull_parameter(DUSR_VALUES_PROBS, rr_map);
+	  //discrete_strata_1d.push_back(rr_map.size());
+	  max_unique *= rr_map.size();    break;
+	}
+	}
 
   RealMatrix sample_ranks;
   // If the number of samples requested is greater than the maximum possible
@@ -840,7 +846,8 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 	  << "do not have enough unique values (" << max_unique_samples
 	  << ") to obtain the number of samples requested.  Replicated "
 	  << "discrete samples have therefore been allowed.\n";
-    generate_samples(random_vars, corr, num_samples, samples, sample_ranks);
+    generate_samples(random_vars, corr, num_samples, samples, sample_ranks,
+		     active_vars, active_corr);
   }
   else {
     if (samples.numRows() != num_rv || samples.numCols() != num_samples)
@@ -872,14 +879,12 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
     size_t unique_cntr = 0;
     while (!complete) {
       generate_samples(random_vars, corr, num_samples, new_samples,
-		       sample_ranks);
+		       sample_ranks, active_vars, active_corr);
 
-      // *** TO DO: Simplify.  Just sort the Real-valued samples and replace
-      //            until num unique >= num requested.  Don't mess with
-      //            discrete subset.
-      // Preserve original ordering? Yes --> don't want to truncate an ordered
-      // set since this would preferentially omit a region (tail of set).
-
+      // Just sort the Real-valued samples and replace until
+      // num unique >= num requested.  Don't mess with discrete subset.
+      // Preserve original ordering? Yes --> don't truncate an ordered set
+      // since this could bias coverage (omitting tail of ordered set).
       for (i=0; i<num_samples; ++i) {
 	RealVector new_samp_i(Teuchos::Copy, new_samples[i], num_rv);
 	unique = unique_samples.insert(new_samp_i).second;
