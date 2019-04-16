@@ -70,6 +70,14 @@ public:
 			RealMatrix& samples, RealMatrix& sample_ranks,
 			const BitArray& active_vars,
 			const BitArray& active_corr);
+  /// Similar to generate_samples but this function ensures that all discrete 
+  /// samples are unique
+  void generate_unique_samples(const std::vector<RandomVariables>& random_vars,
+			       const RealSymMatrix& correlations,
+			       int num_samples, RealMatrix& samples,
+			       RealMatrix& sample_ranks,
+			       const BitArray& active_vars,
+			       const BitArray& active_corr);
 
   /// generates the desired set of parameter samples from within
   /// AleatoryDistParams and EpistemicDistParams specifications
@@ -96,7 +104,6 @@ public:
     const RealVector& n_std_devs, const RealVector& n_l_bnds,
     const RealVector& n_u_bnds,	RealSymMatrix& corr, int num_samples,
     RealMatrix& samples_array);
-
   /// generates the desired set of parameter samples from within
   /// uncorrelated uniform distributions
   void generate_uniform_samples(const RealVector& u_l_bnds,
@@ -108,21 +115,6 @@ public:
   void generate_uniform_index_samples(const IntVector& index_l_bnds,
     const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples,
     bool backfill_flag = false);
-
-  /// generates unique integer index samples from within uncorrelated
-  /// uniform distributions (more expensive than non-unique case)
-  //void generate_unique_index_samples(const IntVector& index_l_bnds,
-  //  const IntVector& index_u_bnds, int num_samples,
-  //  std::set<IntArray>& sorted_samples);
-  void generate_unique_index_samples(const IntVector& index_l_bnds,
-    const IntVector& index_u_bnds, int num_samples, IntMatrix& sorted_samples);
-
-  /// Similar to generate_samples but this function ensures that all discrete 
-  /// samples are unique
-  void generate_unique_samples(const std::vector<RandomVariables>& random_vars,
-			       const RealSymMatrix& correlations,
-			       int num_samples, RealMatrix& samples,
-			       RealMatrix& sample_ranks);
 
 private:
 
