@@ -66,37 +66,34 @@ public:
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions
   void generate_samples(const std::vector<RandomVariables>& random_vars,
-			const RealSymMatrix& correlations, int num_samples,
+			const RealSymMatrix& corr, int num_samples,
 			RealMatrix& samples, RealMatrix& sample_ranks,
 			const BitArray& active_vars,
 			const BitArray& active_corr);
   /// Similar to generate_samples but this function ensures that all discrete 
   /// samples are unique
   void generate_unique_samples(const std::vector<RandomVariables>& random_vars,
-			       const RealSymMatrix& correlations,
-			       int num_samples, RealMatrix& samples,
-			       RealMatrix& sample_ranks,
+			       const RealSymMatrix& corr, int num_samples,
+			       RealMatrix& samples, RealMatrix& sample_ranks,
 			       const BitArray& active_vars,
 			       const BitArray& active_corr);
 
   /// generates the desired set of parameter samples from within
   /// AleatoryDistParams and EpistemicDistParams specifications
   void generate_uncertain_samples(
-    const std::vector<RandomVariables>& random_vars,
-    const RealSymMatrix& correlations, int num_samples,
-    RealMatrix& samples_array, bool backfill_flag = false);
+    const std::vector<RandomVariables>& random_vars, const RealSymMatrix& corr,
+    int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
   /// generates the desired set of parameter samples from within an
   /// AleatoryDistParams specification
   void generate_aleatory_samples(
     const std::vector<RandomVariables>& random_vars,
-    const RealSymMatrix& correlations, int num_samples,
-    RealMatrix& samples_array, bool backfill_flag = false);
+    const RealSymMatrix& corr, int num_samples, RealMatrix& samples_array,
+    bool backfill_flag = false);
   /// generates the desired set of parameter samples from within a
   /// EpistemicDistParams specification
   void generate_epistemic_samples(
-    const std::vector<RandomVariables>& random_vars,
-    const RealSymMatrix& correlations, int num_samples,
-    RealMatrix& samples_array, bool backfill_flag = false);
+    const std::vector<RandomVariables>& random_vars, const RealSymMatrix& corr,
+    int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated normal distributions
@@ -125,9 +122,67 @@ private:
   /// checks whether LHS is enabled in the build and aborts if not
   static void abort_if_no_lhs();
 
-  /// checks the return codes from LHS routines and aborts if an
-  /// error is returned
-  void check_error(int err_code, const char* err_source) const;
+  /// check for valid range for type T
+  template <typename T>
+  void check_range(T l_bnd, T u_bnd, bool allow_equal) const;
+  /// check for finite bounds for type T
+  template <typename T>
+  void check_finite<T>(T l_bnd, T u_bnd) const;
+  /// checks the return codes from LHS routines and aborts with an
+  /// error message if an error was returned
+  void check_error(int err_code, const char* err_source = NULL,
+		   const char* err_case = NULL) const;
+
+  /// define the subset of uncertain variables from RV type
+  void uncertain_subset(const std::vector<RandomVariables>& random_vars,
+			BitArray& subset);
+  /// define the subset of aleatory uncertain variables from RV type
+  void aleatory_uncertain_subset(
+    const std::vector<RandomVariables>& random_vars, BitArray& subset);
+  /// define the subset of epistemic uncertain variables from RV type
+  void epistemic_uncertain_subset(
+    const std::vector<RandomVariables>& random_vars, BitArray& subset);
+
+  /// convert histogram bin pairs to LHS udist x,y inputs
+  void bins_to_udist_params(const RealRealMap& h_bin_prs,
+			    RealArray& x_val, RealArray& y_val);
+  /// convert int range to LHS udist x,y inputs
+  void int_range_to_udist_params(int l_bnd,        int u_bnd,
+				 RealArray& x_val, RealArray& y_val);
+  /// convert set values to LHS udist x,y inputs
+  template <typename T>
+  void set_to_udist_params(const std::set<T>& values,
+			   RealArray& x_val, RealArray& y_val);
+  /// convert map pairs (value T to Real prob) to LHS udist x,y inputs
+  template <typename T>
+  void map_to_udist_params(const std::map<T, Real>& vals_probs,
+			   RealArray& x_val, RealArray& y_val);
+  /// convert map pairs (string index to Real prob) to LHS udist x,y inputs
+  template <typename T>
+  void map_indices_to_udist_params(const std::map<T, Real>& vals_probs,
+				   RealArray& x_val, RealArray& y_val);
+  /// convert epistemic BPAs to LHS udist x,y inputs
+  void intervals_to_udist_params(const RealRealPairRealMap& ci_bpa,
+				 RealArray& x_val, RealArray& y_val);
+  /// convert epistemic BPAs to LHS udist x,y inputs
+  void intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
+				 RealArray& x_val, RealArray& y_val);
+
+  /// register a random variable with LHS using the DIST format
+  void lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
+			 const RealArray& dist_params) const;
+  /// register a random variable with LHS using the UDIST format
+  void lhs_udist_register(const char* var_name, const char* dist_name,
+			  size_t rv, const RealArray& x_val,
+			  const RealArray& y_val) const;
+  /// register a random variable with LHS using the CONST format
+  template <typename T>
+  void lhs_const_register(const char* var_name, size_t rv, T val);
+
+  /// create F77 string label from base name + tag + padding (field = 16 chars)
+  void f77name16(const char* name, size_t index, String& label);
+  /// create F77 string label from base name + padding (field = 32 chars)
+  void LHSDriver::f77name32(const char* name, String& label);
 
   //
   //- Heading: Data
@@ -139,9 +194,6 @@ private:
   /// variable labels passed to LHS; required for specification of correlations
   StringArray lhsNames;
 
-  /// the current random number seed
-  int randomSeed;
-
   /// mode of sample ranks I/O: IGNORE_RANKS, SET_RANKS, GET_RANKS, or
   /// SET_GET_RANKS
   short sampleRanksMode;
@@ -149,14 +201,17 @@ private:
   /// flag for generating LHS report output
   bool reportFlag;
 
+  /// the current random number seed
+  int randomSeed;
   /// for honoring advance_seed_sequence() calls
   short allowSeedAdvance; // bit 1 = first-time flag
 		          // bit 2 = allow repeated seed update
 };
 
 
-inline LHSDriver::LHSDriver() : sampleType("lhs"), randomSeed(0),
-  sampleRanksMode(IGNORE_RANKS), reportFlag(true), allowSeedAdvance(1)
+inline LHSDriver::LHSDriver():
+  sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true),
+  randomSeed(0), allowSeedAdvance(1)
 { abort_if_no_lhs(); }
 
 
@@ -256,7 +311,7 @@ epistemic_uncertain_subset(const std::vector<RandomVariables>& random_vars,
 
 inline void LHSDriver::
 generate_uncertain_samples(const std::vector<RandomVariables>& random_vars,
-			   const RealSymMatrix& correlations, int num_samples,
+			   const RealSymMatrix& corr, int num_samples,
 			   RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -268,17 +323,17 @@ generate_uncertain_samples(const std::vector<RandomVariables>& random_vars,
   BitArray active_rv;            uncertain_subset(random_vars, active_rv);
   BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
   if (backfill_flag)
-    generate_unique_samples(random_vars, correlations, num_samples,
-			    samples_array, ranks, active_rv, active_corr);
+    generate_unique_samples(random_vars, corr, num_samples, samples_array,
+			    ranks, active_rv, active_corr);
   else
-    generate_samples(random_vars, correlations, num_samples,
-		     samples_array, ranks, active_rv, active_corr);
+    generate_samples(random_vars, corr, num_samples, samples_array, ranks,
+		     active_rv, active_corr);
 }
 
 
 inline void LHSDriver::
 generate_aleatory_samples(const std::vector<RandomVariables>& random_vars,
-			  const RealSymMatrix& correlations, int num_samples,
+			  const RealSymMatrix& corr, int num_samples,
 			  RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -289,17 +344,17 @@ generate_aleatory_samples(const std::vector<RandomVariables>& random_vars,
   RealMatrix ranks;
   BitArray active_rv; aleatory_uncertain_subset(random_vars, active_rv);
   if (backfill_flag)
-    generate_unique_samples(random_vars, correlations, num_samples,
-			    samples_array, ranks, active_rv, active_rv);
+    generate_unique_samples(random_vars, corr, num_samples, samples_array,
+			    ranks, active_rv, active_rv);
   else
-    generate_samples(random_vars, correlations, num_samples,
-		     samples_array, ranks, active_rv, active_rv);
+    generate_samples(random_vars, corr, num_samples, samples_array, ranks,
+		     active_rv, active_rv);
 }
 
 
 inline void LHSDriver::
 generate_epistemic_samples(const std::vector<RandomVariables>& random_vars,
-			   const RealSymMatrix& correlations, int num_samples,
+			   const RealSymMatrix& corr, int num_samples,
 			   RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -311,10 +366,10 @@ generate_epistemic_samples(const std::vector<RandomVariables>& random_vars,
   BitArray active_rv;  epistemic_uncertain_subset(random_vars, active_rv);
   BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
   if (backfill_flag)
-    generate_unique_samples(random_vars, correlations, num_samples,
-			    samples_array, ranks, active_rv, active_corr);
+    generate_unique_samples(random_vars, corr, num_samples, samples_array,
+			    ranks, active_rv, active_corr);
   else
-    generate_samples(random_vars, correlations, num_samples,
+    generate_samples(random_vars, corr, num_samples,
 		     samples_array, ranks, active_rv, active_corr);
 }
 
@@ -506,7 +561,7 @@ int_range_to_udist_params(int l_bnd,        int u_bnd,
 }
 
 
-inlinetemplate <typename T>
+template <typename T>
 void LHSDriver::
 set_to_udist_params(const std::set<T>& values,
 		    RealArray& x_val, RealArray& y_val)

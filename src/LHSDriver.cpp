@@ -171,16 +171,6 @@ void LHSDriver::rng(String unif_gen)
 }
 
 
-void LHSDriver::abort_if_no_lhs()
-{
-#ifndef HAVE_LHS
-  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
-        << std::endl;
-  abort_handler(-1);
-#endif
-}
-
-
 //String LHSDriver::rng()
 //{
 //  if (BoostRNG_Monostate::randomNum == BoostRNG_Monostate::random_num1)
@@ -190,6 +180,16 @@ void LHSDriver::abort_if_no_lhs()
 //  else
 //    return "";
 //}
+
+
+void LHSDriver::abort_if_no_lhs()
+{
+#ifndef HAVE_LHS
+  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
+        << std::endl;
+  abort_handler(-1);
+#endif
+}
 
 
 /** While it would be desirable in some cases to carve this function
@@ -205,7 +205,7 @@ void LHSDriver::abort_if_no_lhs()
     an existing random number sequence. */
 void LHSDriver::
 generate_samples(const std::vector<RandomVariables>& random_vars,
-		 const RealSymMatrix& correlations, int num_samples,
+		 const RealSymMatrix& corr, int num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks,
 		 const BitArray& active_vars, const BitArray& active_corr)
 {
@@ -242,14 +242,14 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
   //   bits must be on to call LHS_CORR2.
   // > avoid resizing the correlation matrix (inflating with 1's on diagonal)
   //   for active sampling context: the size of the corr matrix is defined by
-  //   the (static) RV subset that admits correlations (correlations.numRows()
+  //   the (static) RV subset that admits correlations (corr.numRows()
   //   == active_corr.count()).  Since this is independent of the active
   //   sampling context, a subset of corr matrix could be passed to LHS_CORR2.
-  bool correlation_flag = !correlations.empty(), subset_corr = false;
+  bool correlation_flag = !corr.empty(), subset_corr = false;
   int  num_corr = 0, num_active_corr = 0;
   if (correlation_flag) {
     if (active_corr.empty())
-      num_corr = correlations.numRows();
+      num_corr = corr.numRows();
     else {
       for (i=0; i<num_rv; ++i)
 	if (active_corr[i])
@@ -635,7 +635,7 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	for (j=0, cntr_j=0; j<i; ++j) {
 	  if (!subset_corr || active_corr[j]) {
 	    if (!subset_rv || (active_vars[i] && active_vars[j])) {
-	      Real corr_val = correlations(cntr_i,cntr_j);
+	      Real corr_val = corr(cntr_i,cntr_j);
 	      if (std::abs(corr_val) > SMALL_NUMBER) {
 		LHS_CORR2_FC(const_cast<char*>(lhsNames[i].data()),
 			     const_cast<char*>(lhsNames[j].data()),
@@ -712,19 +712,13 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 			const BitArray& active_vars,
 			const BitArray& active_corr)
 {
-  // dakota.xml ordering of variables:
-  // Design    - {continuous,discrete} range, discrete set {int,string,real}
-  // Aleatory  - continuous {named, histogram bin},
-  //             discrete {named, histogram pt {int,string,real}}
-  // Epistemic - {continuous,discrete} interval, discrete set {int,string,real}
-  // State     - {continuous,discrete} range, discrete set {int,string,real}
- 
   // compute the number of total possible combinations of discrete variables
-  // > for range variables use ub-lb+1
-  // > for set variables use sum_i (ddsi_values[i].size())
-  // > if num_values^d < num_samples then call generate_samples
+  // > for range variables, use ub-lb+1
+  // > for BPA variables, overlay unique ranges
+  // > for {set,map} variables, use {set,map}.size()
+  // > for finite support in other discrete, compute #support pts
 
-  size_t i, num_rv = random_vars.size(), num_finite_dv = 0;
+  size_t i, num_rv = random_vars.size();//, num_finite_dv = 0;
   bool finite_combinations = true;
   // track discrete variables that have finite support
   for (i=0; i<num_rv; ++i) {
@@ -736,7 +730,8 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
       case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
       case DISCRETE_INTERVAL_UNCERTAIN:   case DISCRETE_UNCERTAIN_SET_INT:
       case DISCRETE_UNCERTAIN_SET_STRING: case DISCRETE_UNCERTAIN_SET_REAL:
-	++num_finite_dv; break;
+	//++num_finite_dv; // if count needed, don't break out of for loop
+	break;
       default: // any RV with countably/uncountably infinite support
 	finite_combinations = false; break;
       }
@@ -750,7 +745,7 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
     for (i=0; i<num_rv; ++i)
       if (active_vars[i])
 	switch (random_vars[i].type()) {
-	  // discrete design, state
+	// discrete design, state
 	case DISCRETE_RANGE: {
 	  int l_bnd;  random_vars[i].pull_parameter(DR_LWR_BND, l_bnd);
 	  int u_bnd;  random_vars[i].pull_parameter(DR_UPR_BND, u_bnd);
@@ -772,7 +767,7 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 	  //discrete_strata_1d.push_back(r_set.size());
 	  max_unique *= r_set.size();  break;
 	}
-	  // discrete aleatory uncertain
+	// discrete aleatory uncertain
 	case BINOMIAL: { // finite support
 	  int num_tr;  random_vars[i].pull_parameter(BI_NUM_TRIALS, num_tr);
 	  //discrete_strata_1d.push_back(1 + num_tr);
@@ -802,7 +797,7 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 	  //discrete_strata_1d.push_back(rr_map.size());
 	  max_unique *= rr_map.size();  break;
 	}
-	  // discrete epistemic uncertain
+	// discrete epistemic uncertain
 	case DISCRETE_INTERVAL_UNCERTAIN: {
 	  IntIntPairRealMap di_bpa;  rv_i.pull_parameter(DIU_BPA, di_bpa);
 	  // x_sort_unique contains ALL of the unique integer values for this
@@ -836,7 +831,7 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 	}
 	}
 
-  RealMatrix sample_ranks;
+
   // If the number of samples requested is greater than the maximum possible
   // number of discrete samples then we must allow replicates of the discrete
   // variables to obtain the desired number of variables.  If not then we can
@@ -876,24 +871,24 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
     // stratification that could be intended, so use num_samples for now.
     bool unique, complete = false;
     RealMatrix new_samples;  std::set<RealVector> unique_samples;
-    size_t unique_cntr = 0;
-    while (!complete) {
+    size_t unique_cntr = 0, iter = 0, max_iter = 1000;
+    while (!complete && iter < max_iter) {
       generate_samples(random_vars, corr, num_samples, new_samples,
 		       sample_ranks, active_vars, active_corr);
 
-      // Just sort the Real-valued samples and replace until
+      // Sort the Real-valued samples and replace until
       // num unique >= num requested.  Don't mess with discrete subset.
       // Preserve original ordering? Yes --> don't truncate an ordered set
       // since this could bias coverage (omitting tail of ordered set).
       for (i=0; i<num_samples; ++i) {
 	RealVector new_samp_i(Teuchos::Copy, new_samples[i], num_rv);
-	unique = unique_samples.insert(new_samp_i).second;
-	if (unique) {
+	if (unique_samples.insert(new_samp_i).second) {
 	  copy_data(new_samples[i], num_rv, samples[unique_cntr++]);
-	  if (unique_cntr == num_samples)
+	  if (unique_cntr >= num_samples)
 	    { complete = true; break; }
 	}
       }
+      ++iter;
 
       ////////////////////////////////////////
 
