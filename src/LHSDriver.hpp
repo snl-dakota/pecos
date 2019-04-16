@@ -10,8 +10,7 @@
 #define LHS_DRIVER_H
 
 #include "pecos_data_types.hpp"
-#include "pecos_global_defs.hpp"
-#include "DistributionParams.hpp"
+#include "RandomVariable.hpp"
 
 
 namespace Pecos {
@@ -65,34 +64,34 @@ public:
 
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions
-  void generate_samples(const std::vector<RandomVariables>& random_vars,
+  void generate_samples(const std::vector<RandomVariable>& random_vars,
 			const RealSymMatrix& corr, int num_samples,
 			RealMatrix& samples, RealMatrix& sample_ranks,
-			const BitArray& active_vars,
-			const BitArray& active_corr);
+			const BitArray& active_vars = BitArray(),
+			const BitArray& active_corr = BitArray());
   /// Similar to generate_samples but this function ensures that all discrete 
   /// samples are unique
-  void generate_unique_samples(const std::vector<RandomVariables>& random_vars,
+  void generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 			       const RealSymMatrix& corr, int num_samples,
 			       RealMatrix& samples, RealMatrix& sample_ranks,
-			       const BitArray& active_vars,
-			       const BitArray& active_corr);
+			       const BitArray& active_vars = BitArray(),
+			       const BitArray& active_corr = BitArray());
 
   /// generates the desired set of parameter samples from within
   /// AleatoryDistParams and EpistemicDistParams specifications
   void generate_uncertain_samples(
-    const std::vector<RandomVariables>& random_vars, const RealSymMatrix& corr,
+    const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
     int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
   /// generates the desired set of parameter samples from within an
   /// AleatoryDistParams specification
   void generate_aleatory_samples(
-    const std::vector<RandomVariables>& random_vars,
+    const std::vector<RandomVariable>& random_vars,
     const RealSymMatrix& corr, int num_samples, RealMatrix& samples_array,
     bool backfill_flag = false);
   /// generates the desired set of parameter samples from within a
   /// EpistemicDistParams specification
   void generate_epistemic_samples(
-    const std::vector<RandomVariables>& random_vars, const RealSymMatrix& corr,
+    const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
     int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
 
   /// generates the desired set of parameter samples from within
@@ -127,21 +126,21 @@ private:
   void check_range(T l_bnd, T u_bnd, bool allow_equal) const;
   /// check for finite bounds for type T
   template <typename T>
-  void check_finite<T>(T l_bnd, T u_bnd) const;
+  void check_finite(T l_bnd, T u_bnd) const;
   /// checks the return codes from LHS routines and aborts with an
   /// error message if an error was returned
   void check_error(int err_code, const char* err_source = NULL,
 		   const char* err_case = NULL) const;
 
   /// define the subset of uncertain variables from RV type
-  void uncertain_subset(const std::vector<RandomVariables>& random_vars,
+  void uncertain_subset(const std::vector<RandomVariable>& random_vars,
 			BitArray& subset);
   /// define the subset of aleatory uncertain variables from RV type
   void aleatory_uncertain_subset(
-    const std::vector<RandomVariables>& random_vars, BitArray& subset);
+    const std::vector<RandomVariable>& random_vars, BitArray& subset);
   /// define the subset of epistemic uncertain variables from RV type
   void epistemic_uncertain_subset(
-    const std::vector<RandomVariables>& random_vars, BitArray& subset);
+    const std::vector<RandomVariable>& random_vars, BitArray& subset);
 
   /// convert histogram bin pairs to LHS udist x,y inputs
   void bins_to_udist_params(const RealRealMap& h_bin_prs,
@@ -169,20 +168,19 @@ private:
 				 RealArray& x_val, RealArray& y_val);
 
   /// register a random variable with LHS using the DIST format
-  void lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
-			 const RealArray& dist_params) const;
+  void lhs_dist_register(const char* var_name, const char* dist_name,
+			 size_t rv, const RealArray& dist_params);
   /// register a random variable with LHS using the UDIST format
   void lhs_udist_register(const char* var_name, const char* dist_name,
 			  size_t rv, const RealArray& x_val,
-			  const RealArray& y_val) const;
+			  const RealArray& y_val);
   /// register a random variable with LHS using the CONST format
-  template <typename T>
-  void lhs_const_register(const char* var_name, size_t rv, T val);
+  void lhs_const_register(const char* var_name, size_t rv, Real val);
 
   /// create F77 string label from base name + tag + padding (field = 16 chars)
   void f77name16(const char* name, size_t index, String& label);
   /// create F77 string label from base name + padding (field = 32 chars)
-  void LHSDriver::f77name32(const char* name, String& label);
+  void f77name32(const char* name, String& label);
 
   //
   //- Heading: Data
@@ -258,7 +256,7 @@ inline void LHSDriver::advance_seed_sequence()
 
 
 inline void LHSDriver::
-uncertain_subset(const std::vector<RandomVariables>& random_vars,
+uncertain_subset(const std::vector<RandomVariable>& random_vars,
 		 BitArray& subset)
 {
   size_t i, num_rv = random_vars.size();
@@ -274,7 +272,7 @@ uncertain_subset(const std::vector<RandomVariables>& random_vars,
 
 
 inline void LHSDriver::
-aleatory_uncertain_subset(const std::vector<RandomVariables>& random_vars,
+aleatory_uncertain_subset(const std::vector<RandomVariable>& random_vars,
 			  BitArray& subset)
 {
   size_t i, num_rv = random_vars.size();
@@ -293,7 +291,7 @@ aleatory_uncertain_subset(const std::vector<RandomVariables>& random_vars,
 
 
 inline void LHSDriver::
-epistemic_uncertain_subset(const std::vector<RandomVariables>& random_vars,
+epistemic_uncertain_subset(const std::vector<RandomVariable>& random_vars,
 			   BitArray& subset)
 {
   size_t i, num_rv = random_vars.size();
@@ -310,7 +308,7 @@ epistemic_uncertain_subset(const std::vector<RandomVariables>& random_vars,
 
 
 inline void LHSDriver::
-generate_uncertain_samples(const std::vector<RandomVariables>& random_vars,
+generate_uncertain_samples(const std::vector<RandomVariable>& random_vars,
 			   const RealSymMatrix& corr, int num_samples,
 			   RealMatrix& samples_array, bool backfill_flag)
 {
@@ -332,7 +330,7 @@ generate_uncertain_samples(const std::vector<RandomVariables>& random_vars,
 
 
 inline void LHSDriver::
-generate_aleatory_samples(const std::vector<RandomVariables>& random_vars,
+generate_aleatory_samples(const std::vector<RandomVariable>& random_vars,
 			  const RealSymMatrix& corr, int num_samples,
 			  RealMatrix& samples_array, bool backfill_flag)
 {
@@ -353,7 +351,7 @@ generate_aleatory_samples(const std::vector<RandomVariables>& random_vars,
 
 
 inline void LHSDriver::
-generate_epistemic_samples(const std::vector<RandomVariables>& random_vars,
+generate_epistemic_samples(const std::vector<RandomVariable>& random_vars,
 			   const RealSymMatrix& corr, int num_samples,
 			   RealMatrix& samples_array, bool backfill_flag)
 {
@@ -386,10 +384,10 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
     abort_handler(-1);
   }
   size_t i, num_rv = n_means.length();
-  std::vector<RandomVariables> random_vars(num_rv);
+  std::vector<RandomVariable> random_vars(num_rv);
   bool l_bnd = !n_l_bnds.empty(), u_bnd = !n_u_bnds.empty();
   for (i=0; i<num_rv; ++i) {
-    RandomVariable& rv_i = randomVars[i];
+    RandomVariable& rv_i = random_vars[i];
     rv_i = RandomVariable(NORMAL);
     rv_i.push_parameter(N_MEAN,    n_means[i]);
     rv_i.push_parameter(N_STD_DEV, n_std_devs[i]);
@@ -412,9 +410,9 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
     abort_handler(-1);
   }
   size_t i, num_rv = u_l_bnds.length();
-  std::vector<RandomVariables> random_vars(num_rv);
+  std::vector<RandomVariable> random_vars(num_rv);
   for (i=0; i<num_rv; ++i) {
-    RandomVariable& rv_i = randomVars[i];
+    RandomVariable& rv_i = random_vars[i];
     rv_i = RandomVariable(UNIFORM);
     rv_i.push_parameter(U_LWR_BND, u_l_bnds[i]);
     rv_i.push_parameter(U_UPR_BND, u_u_bnds[i]);
@@ -437,9 +435,9 @@ generate_uniform_index_samples(const IntVector& index_l_bnds,
   // For    uniform probability, model as discrete range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
   size_t i, num_rv = index_l_bnds.length();
-  std::vector<RandomVariables> random_vars(num_rv);
+  std::vector<RandomVariable> random_vars(num_rv);
   for (i=0; i<num_rv; ++i) {
-    RandomVariable& rv_i = randomVars[i];
+    RandomVariable& rv_i = random_vars[i];
     rv_i = RandomVariable(DISCRETE_RANGE);
     rv_i.push_parameter(DR_LWR_BND, index_l_bnds[i]);
     rv_i.push_parameter(DR_UPR_BND, index_u_bnds[i]);
@@ -488,10 +486,10 @@ void LHSDriver::check_range(T l_bnd, T u_bnd, bool allow_equal) const
 
 
 template <typename T>
-void LHSDriver::check_finite<T>(T l_bnd, T u_bnd) const
+void LHSDriver::check_finite(T l_bnd, T u_bnd) const
 {
   if (std::numeric_limits<T>::has_infinity) { // floating point types
-    typename T T_inf = std::numeric_limits<T>::infinity();
+    T T_inf = std::numeric_limits<T>::infinity();
     if (l_bnd <= -T_inf || u_bnd >= T_inf) {
       PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
 	    << "continuous range." << std::endl;
@@ -554,7 +552,7 @@ int_range_to_udist_params(int l_bnd,        int u_bnd,
 {
   // supports either discrete integer range or range of set indices
 
-  int i, num_params = ub_i - lb_i + 1;
+  int i, num_params = u_bnd - l_bnd + 1;
   x_val.resize(num_params);  y_val.assign(num_params, 1.);
   for (i=0; i<num_params; ++i)
     x_val[i] = (Real)(l_bnd + i);
@@ -581,7 +579,7 @@ map_to_udist_params(const std::map<T, Real>& vals_probs,
 {
   int i, num_params = vals_probs.size();
   x_val.resize(num_params);  y_val.resize(num_params);
-  typename std::set<T>::const_iterator cit;
+  typename std::map<T, Real>::const_iterator cit;
   for (cit=vals_probs.begin(), i=0; cit!=vals_probs.end(); ++cit, ++i) {
     x_val[i] = (Real)cit->first;  // value
     y_val[i] =       cit->second; // probability
@@ -596,7 +594,7 @@ map_indices_to_udist_params(const std::map<T, Real>& vals_probs,
 {
   int i, num_params = vals_probs.size();
   x_val.resize(num_params);  y_val.resize(num_params);
-  typename std::set<T>::const_iterator cit;
+  typename std::map<T, Real>::const_iterator cit;
   for (cit=vals_probs.begin(), i=0; cit!=vals_probs.end(); ++cit, ++i) {
     x_val[i] = (Real)i;     // index rather than value
     y_val[i] = cit->second; // probability
@@ -620,8 +618,8 @@ intervals_to_udist_params(const RealRealPairRealMap& ci_bpa,
     x_sort_unique.insert(bounds.second);
   }
   // convert sorted RealSet to x_val
-  num_params = x_sort_unique.size();
-  x_val.reshape(num_params);  y_val.reshape(num_params);
+  size_t j, num_params = x_sort_unique.size();
+  x_val.resize(num_params);  y_val.resize(num_params);
   RSIter it = x_sort_unique.begin();
   for (j=0; j<num_params; ++j, ++it)
     x_val[j] = *it;
@@ -681,8 +679,8 @@ intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
       x_sort_unique.insert(val);
   }
   // copy sorted IntSet to x_val
-  num_params = x_sort_unique.size();
-  x_val.reshape(num_params);  y_val.reshape(num_params);
+  size_t j, num_params = x_sort_unique.size();
+  x_val.resize(num_params);  y_val.resize(num_params);
   ISIter it = x_sort_unique.begin();
   for (j=0; j<num_params; ++j, ++it)
     x_val[j] = *it;
@@ -711,48 +709,6 @@ intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
     PCout << "diuv: x_val[" << j << "] is " << x_val[j]
 	  << " y_val[" << j << "] is " << y_val[j] << '\n';
 #endif // DEBUG
-}
-
-
-inline void LHSDriver::
-lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
-		  const RealArray& dist_params) const
-{
-  String dist_string;                 f77name32(dist_name,   dist_string);
-  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
-  int num_params = dist_params.size(), err_code = 0, ptval_flag = 0, // inputs
-      dist_num, pv_num; // outputs (not used)
-  Real ptval = 0.;
-
-  LHS_DIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
-	       &dist_params[0], num_params, err_code, dist_num, pv_num);
-  check_error(err_code, "lhs_dist()", var_string.data());
-}
-
-
-inline void LHSDriver::
-lhs_udist_register(const char* var_name, const char* dist_name, size_t rv,
-		   const RealArray& x_val, const RealArray& y_val) const
-{
-  String dist_string;                 f77name32(dist_name,   dist_string);
-  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
-  int num_params = std::min(x_val.size(), y_val.size()), err_code = 0,
-    ptval_flag = 0, dist_num, pv_num;
-  Real ptval = 0.;
-
-  LHS_UDIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
-		num_params, &x_val[0], &y_val[0], err_code, dist_num, pv_num);
-  check_error(err_code, "lhs_udist()", var_string.data());
-}
-
-
-template <typename T>
-void LHSDriver::lhs_const_register(const char* var_name, size_t rv, T val)
-{
-  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
-  int err_code = 0, pv_num;           Real pt_val = (Real)val;
-  LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
-  check_error(err_code, "lhs_const()", var_string.data());
 }
 
 } // namespace Pecos

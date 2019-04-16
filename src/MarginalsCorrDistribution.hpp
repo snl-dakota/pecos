@@ -199,8 +199,7 @@ parameter(size_t v, short dist_param, ValueType value)
 
 
 template <typename ValueType>
-ValueType MarginalsCorrDistribution::
-parameter(size_t v, short dist_param)
+ValueType MarginalsCorrDistribution::parameter(size_t v, short dist_param)
 {
   ValueType val;
   randomVars[v].pull_parameter(dist_param, val);

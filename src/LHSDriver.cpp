@@ -8,8 +8,12 @@
 
 #include "LHSDriver.hpp"
 #include "BoostRNG_Monostate.hpp"
-#include "LognormalRandomVariable.hpp"
 #include <boost/lexical_cast.hpp>
+#include "RangeVariable.hpp"
+#include "SetVariable.hpp"
+#include "DiscreteSetRandomVariable.hpp"
+#include "IntervalRandomVariable.hpp"
+#include "HistogramBinRandomVariable.hpp"
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
@@ -17,6 +21,7 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 
 #ifdef HAVE_LHS
 #ifdef HAVE_CONFIG_H
+
 // Use the classic, autotools Fortran name mangling macros in pecos_config.h
 #define LHS_INIT_MEM_FC FC_FUNC_(lhs_init_mem,LHS_INIT_MEM)
 #define LHS_PREP_FC     FC_FUNC_(lhs_prep,LHS_PREP)
@@ -29,10 +34,11 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_CORR2_FC    FC_FUNC_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   FC_FUNC_(lhs_files2,LHS_FILES2)
 
-#define defaultrnum1       FC_FUNC(defaultrnum1,DEFAULTRNUM1)
-#define defaultrnum2       FC_FUNC(defaultrnum2,DEFAULTRNUM2)
+#define defaultrnum1    FC_FUNC(defaultrnum1,DEFAULTRNUM1)
+#define defaultrnum2    FC_FUNC(defaultrnum2,DEFAULTRNUM2)
 
 #else
+
 // Use the CMake-generated PREFIXED, fortran name mangling macros (no warnings)
 #define LHS_INIT_MEM_FC LHS_GLOBAL_(lhs_init_mem,LHS_INIT_MEM)
 #define LHS_PREP_FC     LHS_GLOBAL_(lhs_prep,LHS_PREP)
@@ -49,13 +55,12 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 
 // BMA (20160315): Changed to use Fortran 2003 ISO C bindings.
 // The Fortran symbol will be lowercase with same name as if in C
-#define  LHS_OPTIONS2_FC lhs_options2
-#define  LHS_DIST2_FC lhs_dist2
-#define  LHS_UDIST2_FC lhs_udist2
-#define  LHS_CONST2_FC lhs_const2
-#define  LHS_CORR2_FC lhs_corr2
-#define  LHS_FILES2_FC lhs_files2
-
+#define LHS_OPTIONS2_FC lhs_options2
+#define LHS_DIST2_FC    lhs_dist2
+#define LHS_UDIST2_FC   lhs_udist2
+#define LHS_CONST2_FC   lhs_const2
+#define LHS_CORR2_FC    lhs_corr2
+#define LHS_FILES2_FC   lhs_files2
 
 #endif // HAVE_CONFIG_H
 
@@ -204,7 +209,7 @@ void LHSDriver::abort_if_no_lhs()
     re-seed multiple generate_samples() calls, rather than continuing
     an existing random number sequence. */
 void LHSDriver::
-generate_samples(const std::vector<RandomVariables>& random_vars,
+generate_samples(const std::vector<RandomVariable>& random_vars,
 		 const RealSymMatrix& corr, int num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks,
 		 const BitArray& active_vars, const BitArray& active_corr)
@@ -332,8 +337,10 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
     const RandomVariable& rv_i = random_vars[i];
     switch (rv_i.type()) {
     case CONTINUOUS_RANGE: {
-      Real l_bnd;  rv_i.pull_parameter(CR_LWR_BND, l_bnd);
-      Real u_bnd;  rv_i.pull_parameter(CR_UPR_BND, u_bnd);
+      RangeVariable<Real>* rv_rep
+	= (RangeVariable<Real>*)rv_i.random_variable_rep();
+      Real l_bnd;  rv_rep->pull_parameter(CR_LWR_BND, l_bnd);
+      Real u_bnd;  rv_rep->pull_parameter(CR_UPR_BND, u_bnd);
       check_finite(l_bnd, u_bnd);
       if (u_bnd > l_bnd) {
 	dist_params.resize(2);
@@ -342,13 +349,15 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       }
       else {
 	check_range(l_bnd, u_bnd, true); // allow equal
-	lhs_const_register("ContRange", i, l_bnd);
+	lhs_const_register("ContRange", i, (Real)l_bnd);
       }
       break;
     }
     case DISCRETE_RANGE: {
-      int l_bnd;  rv_i.pull_parameter(DR_LWR_BND, l_bnd);
-      int u_bnd;  rv_i.pull_parameter(DR_UPR_BND, u_bnd);
+      RangeVariable<int>* rv_rep
+	= (RangeVariable<int>*)rv_i.random_variable_rep();
+      int l_bnd;  rv_rep->pull_parameter(DR_LWR_BND, l_bnd);
+      int u_bnd;  rv_rep->pull_parameter(DR_UPR_BND, u_bnd);
       check_finite(l_bnd, u_bnd);
       if (u_bnd > l_bnd) {
 	RealArray x_val, y_val;
@@ -357,12 +366,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       }
       else {
 	check_range(l_bnd, u_bnd, true); // allow equal
-	lhs_const_register("DiscRange", i, l_bnd);
+	lhs_const_register("DiscRange", i, (Real)l_bnd);
       }
       break;
     }
     case DISCRETE_SET_INT: {
-      IntSet int_set;  rv_i.pull_parameter(DSI_VALUES, int_set);
+      SetVariable<int>* rv_rep = (SetVariable<int>*)rv_i.random_variable_rep();
+      IntSet int_set;  rv_rep->pull_parameter(DSI_VALUES, int_set);
       size_t set_size = int_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
@@ -370,11 +380,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_udist_register("DiscSetI", "discrete histogram", i, x_val, y_val);
       }
       else if (set_size)
-	lhs_const_register("DiscSetI", i, *int_set.begin());
+	lhs_const_register("DiscSetI", i, (Real)(*int_set.begin()));
       break;
     }
     case DISCRETE_SET_STRING: {
-      StringSet str_set;  rv_i.pull_parameter(DSS_VALUES, str_set);
+      SetVariable<String>* rv_rep
+	= (SetVariable<String>*)rv_i.random_variable_rep();
+      StringSet str_set;  rv_rep->pull_parameter(DSS_VALUES, str_set);
       int set_size = str_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
@@ -382,11 +394,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_udist_register("DiscSetS", "discrete histogram", i, x_val, y_val);
       }
       else if (set_size)
-	lhs_const_register("DiscSetS", i, 0);
+	lhs_const_register("DiscSetS", i, 0.);
       break;
     }
     case DISCRETE_SET_REAL: {
-      RealSet real_set;  rv_i.pull_parameter(DSR_VALUES, real_set);
+      SetVariable<Real>* rv_rep
+	= (SetVariable<Real>*)rv_i.random_variable_rep();
+      RealSet real_set;  rv_rep->pull_parameter(DSR_VALUES, real_set);
       size_t set_size = real_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
@@ -496,8 +510,10 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       lhs_dist_register("Weibull", "weibull", i, dist_params);
       break;
     case HISTOGRAM_BIN: {
-      RealRealMap h_bin_pairs;  rv_i.pull_parameter(H_BIN_PAIRS, h_bin_pairs);
-      bins_to_udist_params(h_bin_pairs, x_val, y_val);
+      HistogramBinRandomVariable* rv_rep
+	= (HistogramBinRandomVariable*)rv_i.random_variable_rep();
+      RealRealMap h_bin_pairs; rv_rep->pull_parameter(H_BIN_PAIRS, h_bin_pairs);
+      RealArray x_val, y_val;  bins_to_udist_params(h_bin_pairs, x_val, y_val);
       lhs_udist_register("HistBin", "continuous linear", i, x_val, y_val);
       break;
     }
@@ -534,7 +550,9 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       break;
     }
     case HISTOGRAM_PT_INT: {
-      IntRealMap ir_map;  rv_i.pull_parameter(H_PT_INT_PAIRS, ir_map);
+      DiscreteSetRandomVariable<int>* rv_rep
+	= (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+      IntRealMap ir_map;  rv_rep->pull_parameter(H_PT_INT_PAIRS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
 	RealArray x_val, y_val;
@@ -542,11 +560,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_udist_register("HistPtInt", "discrete histogram", i, x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("HistPtInt", i, ir_map.begin()->first);
+	lhs_const_register("HistPtInt", i, (Real)ir_map.begin()->first);
       break;
     }
     case HISTOGRAM_PT_STRING: {
-      StringRealMap sr_map;  rv_i.pull_parameter(H_PT_STR_PAIRS, sr_map);
+      DiscreteSetRandomVariable<String>* rv_rep
+	= (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+      StringRealMap sr_map;  rv_rep->pull_parameter(H_PT_STR_PAIRS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
 	RealArray x_val, y_val;
@@ -554,11 +574,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_udist_register("HistPtString","discrete histogram",i, x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("HistPtString", i, 0);
+	lhs_const_register("HistPtString", i, 0.);
       break;
     }
     case HISTOGRAM_PT_REAL: {
-      RealRealMap rr_map;  rv_i.pull_parameter(H_PT_REAL_PAIRS, rr_map);
+      DiscreteSetRandomVariable<Real>* rv_rep
+	= (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+      RealRealMap rr_map;  rv_rep->pull_parameter(H_PT_REAL_PAIRS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
 	RealArray x_val, y_val;
@@ -570,19 +592,25 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
       break;
     }
     case CONTINUOUS_INTERVAL_UNCERTAIN: {
-      RealRealPairRealMap ci_bpa;  rv_i.pull_parameter(CIU_BPA, ci_bpa);
+      IntervalRandomVariable<Real>* rv_rep
+	= (IntervalRandomVariable<Real>*)rv_i.random_variable_rep();
+      RealRealPairRealMap ci_bpa;  rv_rep->pull_parameter(CIU_BPA, ci_bpa);
       RealArray x_val, y_val;  intervals_to_udist_params(ci_bpa, x_val, y_val);
       lhs_udist_register("ContInterval", "continuous linear", i, x_val, y_val);
       break;
     }
     case DISCRETE_INTERVAL_UNCERTAIN: {
-      IntIntPairRealMap di_bpa;  rv_i.pull_parameter(DIU_BPA, di_bpa);
+      IntervalRandomVariable<int>* rv_rep
+	= (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
+      IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
       RealArray x_val, y_val;  intervals_to_udist_params(di_bpa, x_val, y_val);
       lhs_udist_register("DiscInterval", "discrete histogram", i, x_val, y_val);
       break;
     }
     case DISCRETE_UNCERTAIN_SET_INT: {
-      IntRealMap ir_map;  rv_i.pull_parameter(DUSI_VALUES_PROBS, ir_map);
+      DiscreteSetRandomVariable<int>* rv_rep
+	= (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+      IntRealMap ir_map;  rv_rep->pull_parameter(DUSI_VALUES_PROBS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
 	RealArray x_val, y_val;
@@ -590,11 +618,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_udist_register("DiscUncSetI","discrete histogram", i, x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("DiscUncSetI", i, ir_map.begin()->first);
+	lhs_const_register("DiscUncSetI", i, (Real)ir_map.begin()->first);
       break;
     }
     case DISCRETE_UNCERTAIN_SET_STRING: {
-      StringRealMap sr_map;  rv_i.pull_parameter(DUSS_VALUES_PROBS, sr_map);
+      DiscreteSetRandomVariable<String>* rv_rep
+	= (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+      StringRealMap sr_map;  rv_rep->pull_parameter(DUSS_VALUES_PROBS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
 	RealArray x_val, y_val;
@@ -602,11 +632,13 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 	lhs_udist_register("DiscUncSetS","discrete histogram", i, x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("DiscUncSetS", i, 0);
+	lhs_const_register("DiscUncSetS", i, 0.);
       break;
     }
     case DISCRETE_UNCERTAIN_SET_REAL: {
-      RealRealMap rr_map;  rv_i.pull_parameter(DUSR_VALUES_PROBS, rr_map);
+      DiscreteSetRandomVariable<Real>* rv_rep
+	= (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+      RealRealMap rr_map;  rv_rep->pull_parameter(DUSR_VALUES_PROBS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
 	RealArray x_val, y_val;
@@ -706,7 +738,7 @@ generate_samples(const std::vector<RandomVariables>& random_vars,
 
 
 void LHSDriver::
-generate_unique_samples(const std::vector<RandomVariables>& random_vars,
+generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 			const RealSymMatrix& corr, int num_samples,
 			RealMatrix& samples, RealMatrix& sample_ranks,
 			const BitArray& active_vars,
@@ -743,69 +775,84 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
   //IntArray discrete_strata_1d; discrete_strata_1d.reserve(num_finite_dv);
   if (finite_combinations)
     for (i=0; i<num_rv; ++i)
-      if (active_vars[i])
-	switch (random_vars[i].type()) {
+      if (active_vars[i]) {
+	const RandomVariable& rv_i = random_vars[i];
+	switch (rv_i.type()) {
 	// discrete design, state
 	case DISCRETE_RANGE: {
-	  int l_bnd;  random_vars[i].pull_parameter(DR_LWR_BND, l_bnd);
-	  int u_bnd;  random_vars[i].pull_parameter(DR_UPR_BND, u_bnd);
+	  int l_bnd;  rv_i.pull_parameter(DR_LWR_BND, l_bnd);
+	  int u_bnd;  rv_i.pull_parameter(DR_UPR_BND, u_bnd);
 	  //discrete_strata_1d.push_back(u_bnd - l_bnd + 1);
 	  max_unique *= u_bnd - l_bnd + 1; break;
 	}
 	case DISCRETE_SET_INT: {
-	  IntSet i_set;  random_vars[i].pull_parameter(DSI_VALUES, i_set);
+	  SetVariable<int>* rv_rep
+	    = (SetVariable<int>*)rv_i.random_variable_rep();
+	  IntSet i_set;  rv_rep->pull_parameter(DSI_VALUES, i_set);
 	  //discrete_strata_1d.push_back(i_set.size());
 	  max_unique *= i_set.size(); break;
 	}
 	case DISCRETE_SET_STRING: {
-	  StringSet s_set;  random_vars[i].pull_parameter(DSS_VALUES, s_set);
+	  SetVariable<String>* rv_rep
+	    = (SetVariable<String>*)rv_i.random_variable_rep();
+	  StringSet s_set;  rv_rep->pull_parameter(DSS_VALUES, s_set);
 	  //discrete_strata_1d.push_back(s_set.size());
 	  max_unique *= s_set.size();  break;
 	}
 	case DISCRETE_SET_REAL: {
-	  RealSet r_set;  random_vars[i].pull_parameter(DSR_VALUES, r_set);
+	  SetVariable<Real>* rv_rep
+	    = (SetVariable<Real>*)rv_i.random_variable_rep();
+	  RealSet r_set;  rv_rep->pull_parameter(DSR_VALUES, r_set);
 	  //discrete_strata_1d.push_back(r_set.size());
 	  max_unique *= r_set.size();  break;
 	}
 	// discrete aleatory uncertain
 	case BINOMIAL: { // finite support
-	  int num_tr;  random_vars[i].pull_parameter(BI_NUM_TRIALS, num_tr);
+	  int num_tr;  rv_i.pull_parameter(BI_TRIALS, num_tr);
 	  //discrete_strata_1d.push_back(1 + num_tr);
 	  max_unique *= 1 + num_tr;  break;
 	}
 	case HYPERGEOMETRIC: { // finite support
-	  int tot_p;  random_vars[i].pull_parameter(HGE_TOT_POP, tot_p);
-	  int sel_p;  random_vars[i].pull_parameter(HGE_SEL_POP, sel_p);
-	  int num_d;  random_vars[i].pull_parameter(HGE_DRAWN,   num_d);
+	  int tot_p;  rv_i.pull_parameter(HGE_TOT_POP, tot_p);
+	  int sel_p;  rv_i.pull_parameter(HGE_SEL_POP, sel_p);
+	  int num_d;  rv_i.pull_parameter(HGE_DRAWN,   num_d);
 	  //discrete_strata_1d.push_back(1 + std::min(num_d, sel_p) -
 	  //			        std::max(0, sel_p + num_d - tot_p));
 	  max_unique *= 1+std::min(num_d,sel_p)-std::max(0,sel_p+num_d-tot_p);
 	  break;
 	}
 	case HISTOGRAM_PT_INT: {
-	  IntRealMap ir_map;  rv_i.pull_parameter(H_PT_INT_PAIRS, ir_map);
+	  DiscreteSetRandomVariable<int>* rv_rep
+	    = (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+	  IntRealMap ir_map;  rv_rep->pull_parameter(H_PT_INT_PAIRS, ir_map);
 	  //discrete_strata_1d.push_back(ir_map.size());
 	  max_unique *= ir_map.size();   break;
 	}
 	case HISTOGRAM_PT_STRING: {
-	  StringRealMap sr_map;  rv_i.pull_parameter(H_PT_STR_PAIRS, sr_map);
+	  DiscreteSetRandomVariable<String>* rv_rep
+	    = (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+	  StringRealMap sr_map;  rv_rep->pull_parameter(H_PT_STR_PAIRS, sr_map);
 	  //discrete_strata_1d.push_back(sr_map.size());
 	  max_unique *= sr_map.size();  break;
 	}
 	case HISTOGRAM_PT_REAL: {
-	  RealRealMap rr_map;  rv_i.pull_parameter(H_PT_REAL_PAIRS, rr_map);
+	  DiscreteSetRandomVariable<Real>* rv_rep
+	    = (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+	  RealRealMap rr_map;  rv_rep->pull_parameter(H_PT_REAL_PAIRS, rr_map);
 	  //discrete_strata_1d.push_back(rr_map.size());
 	  max_unique *= rr_map.size();  break;
 	}
 	// discrete epistemic uncertain
 	case DISCRETE_INTERVAL_UNCERTAIN: {
-	  IntIntPairRealMap di_bpa;  rv_i.pull_parameter(DIU_BPA, di_bpa);
+	  IntervalRandomVariable<int>* rv_rep
+	    = (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
+	  IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
 	  // x_sort_unique contains ALL of the unique integer values for this
 	  // discrete interval variable in increasing order.  For example, if
 	  // there are 3 intervals for a variable and the bounds are (1,4),
 	  // (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
 	  IntSet x_sort_unique;
-	  for (IIPRMCIter cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
+	  for (IIPRMCIter cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
 	    const RealRealPair& bounds = cit->first;
 	    int val, u_bnd = bounds.second;
 	    for (val=bounds.first; val<=u_bnd; ++val)
@@ -815,21 +862,29 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
 	  max_unique *= x_sort_unique.size();  break;
 	}
 	case DISCRETE_UNCERTAIN_SET_INT: {
-	  IntRealMap ir_map;  rv_i.pull_parameter(DUSI_VALUES_PROBS, ir_map);
+	  DiscreteSetRandomVariable<int>* rv_rep
+	    = (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+	  IntRealMap ir_map;  rv_rep->pull_parameter(DUSI_VALUES_PROBS, ir_map);
 	  //discrete_strata_1d.push_back(ir_map.size());
 	  max_unique *= ir_map.size();  break;
 	}
 	case DISCRETE_UNCERTAIN_SET_STRING: {
-	  StringRealMap sr_map;  rv_i.pull_parameter(DUSS_VALUES_PROBS, sr_map);
+	  DiscreteSetRandomVariable<String>* rv_rep
+	    = (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+	  StringRealMap sr_map;
+	  rv_rep->pull_parameter(DUSS_VALUES_PROBS, sr_map);
 	  //discrete_strata_1d.push_back(sr_map.size());
 	  max_unique *= sr_map.size();    break;
 	}
 	case DISCRETE_UNCERTAIN_SET_REAL: {
-	  RealRealMap rr_map;  rv_i.pull_parameter(DUSR_VALUES_PROBS, rr_map);
+	  DiscreteSetRandomVariable<Real>* rv_rep
+	    = (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+	  RealRealMap rr_map; rv_rep->pull_parameter(DUSR_VALUES_PROBS, rr_map);
 	  //discrete_strata_1d.push_back(rr_map.size());
 	  max_unique *= rr_map.size();    break;
 	}
 	}
+      }
 
 
   // If the number of samples requested is greater than the maximum possible
@@ -837,8 +892,11 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
   // variables to obtain the desired number of variables.  If not then we can
   // proceed with generating a unique set of discrete samples.
   if (finite_combinations && max_unique < num_samples) {
+
+    // *** TO DO: better to just set max_iter at ~5 to allow improvement?
+
     PCout << "LHS backfill was requested, but the discrete variables provided "
-	  << "do not have enough unique values (" << max_unique_samples
+	  << "do not have enough unique values (" << max_unique
 	  << ") to obtain the number of samples requested.  Replicated "
 	  << "discrete samples have therefore been allowed.\n";
     generate_samples(random_vars, corr, num_samples, samples, sample_ranks,
@@ -870,7 +928,8 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
     // num_samples in anticipation of duplicates, but this would alter LHS
     // stratification that could be intended, so use num_samples for now.
     bool unique, complete = false;
-    RealMatrix new_samples;  std::set<RealVector> unique_samples;
+    RealMatrix new_samples;  RealArray new_samp_i(num_rv);
+    std::set<RealArray> unique_samples;
     size_t unique_cntr = 0, iter = 0, max_iter = 1000;
     while (!complete && iter < max_iter) {
       generate_samples(random_vars, corr, num_samples, new_samples,
@@ -881,7 +940,7 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
       // Preserve original ordering? Yes --> don't truncate an ordered set
       // since this could bias coverage (omitting tail of ordered set).
       for (i=0; i<num_samples; ++i) {
-	RealVector new_samp_i(Teuchos::Copy, new_samples[i], num_rv);
+	copy_data(new_samples[i], num_rv, new_samp_i);// std::vector for sorting
 	if (unique_samples.insert(new_samp_i).second) {
 	  copy_data(new_samples[i], num_rv, samples[unique_cntr++]);
 	  if (unique_cntr >= num_samples)
@@ -942,6 +1001,50 @@ generate_unique_samples(const std::vector<RandomVariables>& random_vars,
       */
     }
   }
+}
+
+
+void LHSDriver::
+lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
+		  const RealArray& dist_params)
+{
+  String dist_string;                 f77name32(dist_name,   dist_string);
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int num_params = dist_params.size(), err_code = 0, ptval_flag = 0, // inputs
+      dist_num, pv_num; // outputs (not used)
+  Real ptval = 0.;
+
+  LHS_DIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
+	       const_cast<Real*>(&dist_params[0]), num_params, err_code,
+	       dist_num, pv_num);
+  check_error(err_code, "lhs_dist()", var_string.data());
+}
+
+
+void LHSDriver::
+lhs_udist_register(const char* var_name, const char* dist_name, size_t rv,
+		   const RealArray& x_val, const RealArray& y_val)
+{
+  String dist_string;                 f77name32(dist_name,   dist_string);
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int num_params = std::min(x_val.size(), y_val.size()), err_code = 0,
+    ptval_flag = 0, dist_num, pv_num;
+  Real ptval = 0.;
+
+  LHS_UDIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
+		num_params, const_cast<Real*>(&x_val[0]),
+		const_cast<Real*>(&y_val[0]), err_code, dist_num, pv_num);
+  check_error(err_code, "lhs_udist()", var_string.data());
+}
+
+
+void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
+{
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int err_code = 0, pv_num;
+
+  LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
+  check_error(err_code, "lhs_const()", var_string.data());
 }
 
 } // namespace Pecos
