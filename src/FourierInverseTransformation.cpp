@@ -155,10 +155,10 @@ void FourierInverseTransformation::compute_sample_shinozuka_deodatis()
   X=m*real(ifft(B));
   */
 
-  size_t i, num_terms = omegaSequence.length();
+  size_t i, num_terms = omegaSequence.length(); RealSymMatrix corr;
   if (ifftSampleCntr)
     lhsSampler.advance_seed_sequence();
-  lhsSampler.generate_uniform_samples(lhsParam1, lhsParam2, num_terms,
+  lhsSampler.generate_uniform_samples(lhsParam1, lhsParam2, corr, num_terms,
 				      lhsSamples);
 
   for (i=0; i<num_terms; i++) {
@@ -200,12 +200,11 @@ void FourierInverseTransformation::compute_sample_grigoriu()
   */
 
   size_t i, num_terms = omegaSequence.length();
-  RealVector empty_rv;
-  RealSymMatrix empty_correl;
+  RealVector bounds;  RealSymMatrix corr;
   if (ifftSampleCntr)
     lhsSampler.advance_seed_sequence();
-  lhsSampler.generate_normal_samples(lhsParam1, lhsParam2, empty_rv, empty_rv,
-				     num_terms, empty_correl, lhsSamples);
+  lhsSampler.generate_normal_samples(lhsParam1, lhsParam2, bounds, bounds,
+				     corr, num_terms, lhsSamples);
 
   for (i=0; i<num_terms; i++) {
     const Real& v_i = lhsSamples(i, 0);

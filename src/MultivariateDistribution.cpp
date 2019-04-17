@@ -162,6 +162,29 @@ MultivariateDistribution::~MultivariateDistribution()
 }
 
 
+Real MultivariateDistribution::pdf(const RealVector& pt) const
+{
+  if (mvDistRep)
+    return mvDistRep->pdf(pt);
+  else { // forward to letter
+    PCerr << "Error: pdf(RealVector) not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+Real MultivariateDistribution::log_pdf(const RealVector& pt) const
+{
+  if (mvDistRep)
+    return mvDistRep->pdf(pt);
+  else // default implementation (exponential-based distribs will override)
+    return std::log(pdf(pt));
+}
+
+
+
 /** This function provides a deep copy (the copy constructor supports
     shallow copies with shared reps) and is commonly used to publish
     tranformation data when the Model variables are in a transformed

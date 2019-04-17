@@ -20,9 +20,7 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
   case 0:
     result = 1.; break;
   case 1:
-    result = (lambdaParam-x)/lambdaParam;
-    break;
-  }
+    result = (lambdaParam-x)/lambdaParam; break;
   case 2:{
     Real alpha2 = lambdaParam*lambdaParam;
     result = (alpha2+x*(-2.*lambdaParam+x-1.))/alpha2;
@@ -46,10 +44,10 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
 	      (1.+lambdaParam+alpha2)*x+(11.+2.*lambdaParam*(7.+3.*lambdaParam))
 	      *x2-2.*(3.+2.*lambdaParam)*x2*x + x2*x2)/(alpha2*alpha2); //4
     for ( size_t i=4; i<order; i++ ) {
-      result = ((i+lambdaParam-x)*Ch_n-i*Ch_nminus1)/lambdaParam; // Ch_nplus1
+      result = ((i+lambdaParam-x)*Ch_n-i*Ch_nm1)/lambdaParam; // Ch_nplus1
       if (i != order-1) {
-	Ch_nminus1 = Ch_n;
-	Ch_n       = result;
+	Ch_nm1 = Ch_n;
+	Ch_n   = result;
       }
     }
     break;
@@ -65,14 +63,10 @@ Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
 {
   Real result = 0.;
   switch ( order ) {
-  case 0:{
-    result = 0.;
-    break;
-  }
-  case 1:{
-    result = -1/lambdaParam;
-    break;
-  }
+  case 0:
+    result = 0.; break;
+  case 1:
+    result = -1/lambdaParam; break;
   case 2:{
     Real alpha2 = lambdaParam*lambdaParam;
     result = (2.*(-lambdaParam+x)-1.)/alpha2;
@@ -90,12 +84,12 @@ Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
   }
   default:{
     // Support higher order polynomials using the 3 point recursion formula:
-    Real dChdx_nminus1 = type1_gradient(x,3), dChdx_n =  type1_gradient(x,4);
+    Real dChdx_nm1 = type1_gradient(x,3), dChdx_n =  type1_gradient(x,4);
     for ( size_t i=4; i<order; i++ ) {
-      result = ((i+lambdaParam-x)*dChdx_n-type1_value(x,order)-i*dChdx_nminus1)/lambdaParam;
+      result = ((i+lambdaParam-x)*dChdx_n-type1_value(x,order)-i*dChdx_nm1)/lambdaParam;
       if (i != order-1) {
-	dChdx_nminus1 = dChdx_n;
-	dChdx_n       = result;
+	dChdx_nm1 = dChdx_n;
+	dChdx_n   = result;
       }
     }
     break;
@@ -133,12 +127,12 @@ Real CharlierOrthogPolynomial::type1_hessian( Real x, unsigned short order )
   }
   default:{
     // Support higher order polynomials using the 3 point recursion formula:
-    Real d2Chdx2_nminus1 = type1_hessian(x,3), d2Chdx2_n = type1_hessian(x,4);
+    Real d2Chdx2_nm1 = type1_hessian(x,3), d2Chdx2_n = type1_hessian(x,4);
     for ( size_t i=4; i<order; i++ ) {
-      result = ((i+lambdaParam-x)*d2Chdx2_n-2.*type1_gradient(x,order)-i*d2Chdx2_nminus1)/lambdaParam;
+      result = ((i+lambdaParam-x)*d2Chdx2_n-2.*type1_gradient(x,order)-i*d2Chdx2_nm1)/lambdaParam;
       if (i != order-1) {
-	d2Chdx2_nminus1 = d2Chdx2_n;
-	d2Chdx2_n       = result;
+	d2Chdx2_nm1 = d2Chdx2_n;
+	d2Chdx2_n   = result;
       }
     }
     break;

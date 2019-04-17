@@ -20,28 +20,28 @@ namespace Pecos {
 Real MeixnerOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
   Real t1_val;
-  Real om1 = Real(order-1);
 
   switch (order) {
-    case 0:
-      t1_val = 1.;
-      break;
+  case 0:
+    t1_val = 1.;
+    break;
 
-    case 1:
-      t1_val = (alphaPoly*betaPoly + (alphaPoly-1.0)*x)/(alphaPoly*betaPoly);
-      break;
+  case 1:
+    t1_val = (probPerTrial*numTrials + (probPerTrial-1.0)*x)/(probPerTrial*numTrials);
+    break;
 
-    case 2:
-      t1_val = (alphaPoly*alphaPoly*betaPoly*(betaPoly+1.0) + (2.0*alphaPoly*(betaPoly+1.0)-alphaPoly+1.0)*(alphaPoly-1.0)*x + (alphaPoly-1)*(alphaPoly-1)*x*x)/(alphaPoly*alphaPoly*betaPoly*(betaPoly+1.0));
-      break;
+  case 2:
+    t1_val = (probPerTrial*probPerTrial*numTrials*(numTrials+1.0) + (2.0*probPerTrial*(numTrials+1.0)-probPerTrial+1.0)*(probPerTrial-1.0)*x + (probPerTrial-1)*(probPerTrial-1)*x*x)/(probPerTrial*probPerTrial*numTrials*(numTrials+1.0));
+    break;
 
-    default: {
-      // Support higher order polynomials using the 3 point recursion formula:
-      Real fm2 = type1_value(x, order-2);
-      Real fm1 = type1_value(x, order-1);
-      t1_val = ((om1+(om1+betaPoly)*alphaPoly+(alphaPoly-1.0)*x)*fm1 - om1*fm2)/(alphaPoly*(om1+betaPoly));
-      break;
-    }
+  default: {
+    // Support higher order polynomials using the 3 point recursion formula:
+    Real om1 = Real(order-1);
+    // TO DO: unroll this call stack with a loop (as for other Polynomials)
+    Real fm2 = type1_value(x, order-2), fm1 = type1_value(x, order-1);
+    t1_val = ((om1+(om1+numTrials)*probPerTrial+(probPerTrial-1.0)*x)*fm1 - om1*fm2)/(probPerTrial*(om1+numTrials));
+    break;
+  }
   }
 
   return t1_val;

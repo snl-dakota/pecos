@@ -41,9 +41,9 @@ public:
   //
 
   /// return the multivariate PDF value for the random variables
-  virtual Real pdf(const RealVector& pt) const = 0;
+  virtual Real pdf(const RealVector& pt) const;
   /// return the multivariate log PDF value for the random variables
-  virtual Real log_pdf(const RealVector& pt) const = 0;
+  virtual Real log_pdf(const RealVector& pt) const;
 
   //
   //- Heading: Member functions
@@ -55,6 +55,9 @@ public:
   /// return correlationFlag
   bool correlation() const;
 
+  /// returns ranVarRep for access to derived class member functions
+  /// that are not mapped to the base level
+  MultivariateDistribution* multivar_dist_rep() const;
   /// function to check modelRep (does this envelope contain a letter)
   bool is_null() const;
 
@@ -99,6 +102,11 @@ private:
 
 inline bool MultivariateDistribution::correlation() const
 { return (mvDistRep) ? mvDistRep->correlationFlag : correlationFlag; }
+
+
+inline MultivariateDistribution* MultivariateDistribution::
+multivar_dist_rep() const
+{ return mvDistRep; }
 
 
 inline bool MultivariateDistribution::is_null() const

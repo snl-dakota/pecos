@@ -15,7 +15,7 @@
 #include "CubatureDriver.hpp"
 #include "sandia_cubature.hpp"
 #include "SharedPolyApproxData.hpp"
-#include "MultivariateDistribution.hpp"
+#include "MarginalsCorrDistribution.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 //#include "pecos_stat_util.hpp"
 
@@ -82,68 +82,84 @@ initialize_grid_parameters(const ShortArray& u_types,
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
+  MarginalsCorrDistribution* mvd_rep
+    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
-    err_flag = (verify_homogeneity(mv_dist.parameters(BETA, BE_ALPHA)) ||
-		verify_homogeneity(mv_dist.parameters(BETA, BE_ALPHA))); break;
+    err_flag =
+      (verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_ALPHA)) ||
+       verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_ALPHA)));
+    break;
   case GEN_GAUSS_LAGUERRE: // STD_GAMMA: check only alpha params
-    err_flag = verify_homogeneity(mv_dist.parameters(GAMMA, GA_ALPHA)); break;
+    err_flag =
+      verify_homogeneity(mvd_rep->pull_parameters<Real>(GAMMA, GA_ALPHA));
+    break;
   case GOLUB_WELSCH: // numerically generated: check all params
     switch (u_types[0]) { // u_types verified in initialize_grid() above
     case BOUNDED_NORMAL:
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(BOUNDED_NORMAL, N_MEAN))    ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_NORMAL, N_STD_DEV)) ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_NORMAL, N_LWR_BND)) ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_NORMAL, N_UPR_BND)));
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_MEAN))    ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_STD_DEV)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_UPR_BND)));
       break;
-    case LOGNORMAL:
+    case LOGNORMAL: // standardized on lambda, zeta
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(LOGNORMAL, LN_MEAN)) ||
-	 verify_homogeneity(mv_dist.parameters(LOGNORMAL, LN_STD_DEV)) ||
-	 verify_homogeneity(mv_dist.parameters(LOGNORMAL, LN_LAMBDA)) ||
-	 verify_homogeneity(mv_dist.parameters(LOGNORMAL, LN_ZETA)) ||
-	 verify_homogeneity(mv_dist.parameters(LOGNORMAL, LN_ERR_FACT)));
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGNORMAL, LN_LAMBDA)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGNORMAL, LN_ZETA)));
       break;
-    case BOUNDED_LOGNORMAL:
+    case BOUNDED_LOGNORMAL: // standardized on lambda, zeta
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_MEAN))    ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_STD_DEV)) ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_LAMBDA))  ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_ZETA))    ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_ERR_FACT))||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_LWR_BND)) ||
-	 verify_homogeneity(mv_dist.parameters(BOUNDED_LOGNORMAL,LN_UPR_BND)));
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_LAMBDA))  ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_ZETA)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_UPR_BND)));
        break;
     case LOGUNIFORM:
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(LOGUNIFORM, LU_LWR_BND)) ||
-	 verify_homogeneity(mv_dist.parameters(LOGUNIFORM, LU_UPR_BND)));
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGUNIFORM, LU_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGUNIFORM, LU_UPR_BND)));
       break;
     case TRIANGULAR:
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(TRIANGULAR, T_MODE)) ||
-	 verify_homogeneity(mv_dist.parameters(TRIANGULAR, T_LWR_BND)) ||
-	 verify_homogeneity(mv_dist.parameters(TRIANGULAR, T_UPR_BND)));
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(TRIANGULAR, T_MODE)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(TRIANGULAR, T_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(TRIANGULAR, T_UPR_BND)));
       break;
     case GUMBEL:
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(GUMBEL, GU_ALPHA)) ||
-	 verify_homogeneity(mv_dist.parameters(GUMBEL, GU_BETA)));
+	(verify_homogeneity(mvd_rep->pull_parameters<Real>(GUMBEL, GU_ALPHA)) ||
+	 verify_homogeneity(mvd_rep->pull_parameters<Real>(GUMBEL, GU_BETA)));
       break;
     case FRECHET:
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(FRECHET, F_ALPHA)) ||
-	 verify_homogeneity(mv_dist.parameters(FRECHET, F_BETA)));
+	(verify_homogeneity(mvd_rep->pull_parameters<Real>(FRECHET, F_ALPHA)) ||
+	 verify_homogeneity(mvd_rep->pull_parameters<Real>(FRECHET, F_BETA)));
       break;
     case WEIBULL:
       err_flag =
-	(verify_homogeneity(mv_dist.parameters(WEIBULL, W_ALPHA)) ||
-	 verify_homogeneity(mv_dist.parameters(WEIBULL, W_BETA)));
+	(verify_homogeneity(mvd_rep->pull_parameters<Real>(WEIBULL, W_ALPHA)) ||
+	 verify_homogeneity(mvd_rep->pull_parameters<Real>(WEIBULL, W_BETA)));
       break;
     case HISTOGRAM_BIN:
       err_flag =
-	verify_homogeneity(mv_dist.parameters(HISTOGRAM_BIN, H_BIN_PAIRS));
+	verify_homogeneity(
+	  mvd_rep->pull_parameters<RealRealMap>(HISTOGRAM_BIN, H_BIN_PAIRS));
       break;
     default: err_flag = true; break;
     }
@@ -160,8 +176,8 @@ initialize_grid_parameters(const ShortArray& u_types,
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
-  SharedPolyApproxData::update_basis_distribution_parameters(u_types, mv_dist,
-							     polynomialBasis);
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(u_types, mv_dist, polynomialBasis);
 }
 
 

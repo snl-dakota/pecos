@@ -10,6 +10,7 @@
 #define MARGINALS_CORR_DISTRIBUTION_HPP
 
 #include "MultivariateDistribution.hpp"
+#include "RandomVariable.hpp"
 
 
 namespace Pecos {
@@ -42,42 +43,44 @@ public:
 
   /// update a scalar distribution parameter within randomVars[v]
   template <typename ValueType>
-  void parameter(size_t v, short dist_param, ValueType value);
-  /// return a scalar distribution parameter from randomVars[v
-  template <typename ValueType>
-  ValueType parameter(size_t v, short dist_param);
-
+  void push_parameter(size_t v, short dist_param, ValueType value);
   /// update values for one distribution parameter across a sequence
   /// of random variables
   template <typename OrdinalType, typename ScalarType>
-  void parameters(size_t start_v, size_t num_v, short dist_param,
+  void push_parameters(size_t start_v, size_t num_v, short dist_param,
     const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values);
   /// update values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename OrdinalType, typename ScalarType>
-  void parameters(short rv_type, short dist_param,
-    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+  void push_parameters(short rv_type, short dist_param,
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values);
   /// update values for one distribution parameter across a sequence
   /// of random variables
   template <typename ValueType>
-  void parameters(size_t start_v, size_t num_v, short dist_param,
-		  const std::vector<ValueType>& values);
+  void push_parameters(size_t start_v, size_t num_v, short dist_param,
+		       const std::vector<ValueType>& values);
   /// update values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename ValueType>
-  void parameters(short rv_type, short dist_param,
-		  const std::vector<ValueType>& values);
+  void push_parameters(short rv_type, short dist_param,
+		       const std::vector<ValueType>& values);
+
+  /// return a scalar distribution parameter from randomVars[v
+  template <typename ValueType>
+  ValueType pull_parameter(size_t v, short dist_param);
   /// return values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename ValueType>
-  std::vector<ValueType> parameters(short rv_type, short dist_param);
+  std::vector<ValueType> pull_parameters(short rv_type, short dist_param);
 
+  /*
   /// expand corrMatrix from probabilistic variables to combined variables
-  void reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
+  void expand_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 				  size_t num_trail_v);
   /// contract corrMatrix from combined variables to probabilistic variables
-  void reshape_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
+  void contract_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 				  size_t num_trail_v);
+  */
 
   /// return randomVars
   const std::vector<RandomVariable>& random_variables() const;
@@ -93,8 +96,8 @@ public:
 
   /// return corrMatrix
   const RealSymMatrix& correlation_matrix() const;
-  /// return corrCholeskyFactor
-  const RealMatrix& correlation_factor() const;
+  // return corrCholeskyFactor
+  //const RealMatrix& correlation_factor() const;
 
   /// assemble means and standard deviations from RandomVariable::moments()
   RealRealPairArray moments() const;
@@ -118,6 +121,13 @@ public:
   Real log_pdf_gradient(Real val, size_t i) const;
   /// return the Hessian of the univariate log PDF for a random variable
   Real log_pdf_hessian(Real val, size_t i) const;
+
+  /// draw a sample from the i-th RandomVariable
+  template <typename Engine> 
+  Real draw_sample(size_t i, Engine& rng) const;
+  /// draw a sample from the i-th standardized RandomVariable
+  template <typename Engine> 
+  Real draw_standard_sample(size_t i, Engine& rng) const;
 
 protected:
 
@@ -194,23 +204,14 @@ inline void MarginalsCorrDistribution::check_type(size_t i, short rv_type) const
 
 template <typename ValueType>
 void MarginalsCorrDistribution::
-parameter(size_t v, short dist_param, ValueType value)
+push_parameter(size_t v, short dist_param, ValueType value)
 { randomVars[v].push_parameter(dist_param, value); }
-
-
-template <typename ValueType>
-ValueType MarginalsCorrDistribution::parameter(size_t v, short dist_param)
-{
-  ValueType val;
-  randomVars[v].pull_parameter(dist_param, val);
-  return val;
-}
 
 
 template <typename OrdinalType, typename ScalarType>
 void MarginalsCorrDistribution::
-parameters(size_t start_v, size_t num_v, short dist_param,
-	   const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+push_parameters(size_t start_v, size_t num_v, short dist_param,
+  const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
 {
   // set one type of distribution parameter for a range of random variables
   // TO DO: would like to retire this version if Dakota migrates from Teuchos
@@ -224,8 +225,8 @@ parameters(size_t start_v, size_t num_v, short dist_param,
 
 template <typename ValueType>
 void MarginalsCorrDistribution::
-parameters(size_t start_v, size_t num_v, short dist_param,
-	   const std::vector<ValueType>& values)
+push_parameters(size_t start_v, size_t num_v, short dist_param,
+		const std::vector<ValueType>& values)
 {
   // set one distribution parameter type for a range of random variables
 
@@ -237,15 +238,15 @@ parameters(size_t start_v, size_t num_v, short dist_param,
 
 template <typename OrdinalType, typename ScalarType>
 void MarginalsCorrDistribution::
-parameters(short rv_type, short dist_param,
-	   const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+push_parameters(short rv_type, short dist_param,
+  const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
 {
   // rv_type eliminates need to check for dist_param support
   // TO DO: would like to retire this version if Dakota migrates from Teuchos
   //        to std::vector for dist params
 
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
-  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
+  for (rv=0; rv < num_rv && cntr < num_vals; ++rv)
     if (ranVarTypes[rv] == rv_type)
       randomVars[rv].push_parameter(dist_param, values[cntr++]);
 }
@@ -253,29 +254,38 @@ parameters(short rv_type, short dist_param,
 
 template <typename ValueType>
 void MarginalsCorrDistribution::
-parameters(short rv_type, short dist_param,
-	   const std::vector<ValueType>& values)
+push_parameters(short rv_type, short dist_param,
+		const std::vector<ValueType>& values)
 {
   // rv_type eliminates need to check for dist_param support
 
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.size();
-  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
+  for (rv=0; rv < num_rv && cntr < num_vals; ++rv)
     if (ranVarTypes[rv] == rv_type)
       randomVars[rv].push_parameter(dist_param, values[cntr++]);
 }
 
 
 template <typename ValueType>
+ValueType MarginalsCorrDistribution::pull_parameter(size_t v, short dist_param)
+{
+  ValueType val;
+  randomVars[v].pull_parameter(dist_param, val);
+  return val;
+}
+
+
+template <typename ValueType>
 std::vector<ValueType> MarginalsCorrDistribution::
-parameters(short rv_type, short dist_param)
+pull_parameters(short rv_type, short dist_param)
 {
   // rv_type eliminates need to check for dist_param support
 
   std::vector<ValueType> vals;
-  vals.size(count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
+  vals.resize(count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
 
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
-  for (rv=0; i<num_rv; ++rv)
+  for (rv=0; rv<num_rv; ++rv)
     if (ranVarTypes[rv] == rv_type)
       randomVars[rv].pull_parameter(dist_param, vals[cntr++]);
 
@@ -286,7 +296,7 @@ parameters(short rv_type, short dist_param)
 /* These APIs are not currently needed but could be useful in the future:
 template <typename VectorType>
 void MarginalsCorrDistribution::
-parameters(size_t v, const ShortArray& dist_params, const VectorType& values)
+push_parameters(size_t v, const ShortArray& dist_params, const VectorType& values)
 {
   // set multiple distribution parameters for a single variable
 
@@ -299,12 +309,12 @@ parameters(size_t v, const ShortArray& dist_params, const VectorType& values)
 
 template <typename VectorType>
 void MarginalsCorrDistribution::
-parameters(short dist_param, const VectorType& values)
+push_parameters(short dist_param, const VectorType& values)
 {
   // Without rv_type, query RV for dist_param support to match values to RV
 
   size_t rv, num_rv = randomVars.size(), cntr = 0, num_vals = values.length();
-  for (rv=0; i < num_rv && cntr < num_vals; ++rv)
+  for (rv=0; rv < num_rv && cntr < num_vals; ++rv)
     if (randomVars[rv].supports(dist_param))
       randomVars[rv].push_parameter(dist_param, values[cntr++]);
 }
@@ -381,10 +391,7 @@ inline Real MarginalsCorrDistribution::log_pdf(Real val, size_t i) const
 
 inline Real MarginalsCorrDistribution::
 log_pdf_gradient(Real val, size_t i) const
-{
-  return (mvDistRep) ? mvDistRep->randomVars[i].log_pdf_gradient(val) :
-    randomVars[i].log_pdf_gradient(val);
-}
+{ return randomVars[i].log_pdf_gradient(val); }
 
 
 inline Real MarginalsCorrDistribution::
@@ -431,8 +438,8 @@ correlation_matrix() const
 { return corrMatrix; }
 
 
-inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
-{ return corrCholeskyFactor; }
+//inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
+//{ return corrCholeskyFactor; }
 
 
 template <typename Engine> 

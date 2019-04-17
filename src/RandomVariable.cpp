@@ -419,6 +419,18 @@ void RandomVariable::pull_parameter(short dist_param, int& val) const
 }
 
 
+void RandomVariable::pull_parameter(short dist_param, RealRealMap& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(RealRealMap) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void RandomVariable::push_parameter(short dist_param, Real val)
 {
   if (ranVarRep)

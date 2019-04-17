@@ -41,9 +41,9 @@ public:
   void initialize_correlations();
 
   /// update vector values
-  void parameters(short dist_param, const RealVector& values);
+  void push_parameters(short dist_param, const RealVector& values);
   /// update symmetric matrix values
-  void parameters(short dist_param, const RealSymMatrix& values)
+  void push_parameters(short dist_param, const RealSymMatrix& values);
 
   // migrated from NormalRandomVariable static fns:
   static Real std_pdf(Real beta, size_t n);
@@ -105,7 +105,7 @@ inline void MultivariateNormalDistribution::initialize_correlations()
 
 
 inline void MultivariateNormalDistribution::
-parameters(short dist_param, const RealVector& values) const
+push_parameters(short dist_param, const RealVector& values)
 {
   switch (dist_param) {
   case N_MEAN: case N_LOCATION:  mvnMeans = values;  break;
@@ -119,7 +119,7 @@ parameters(short dist_param, const RealVector& values) const
 
 
 inline void MultivariateNormalDistribution::
-parameters(short dist_param, const RealSymMatrix& values)
+push_parameters(short dist_param, const RealSymMatrix& values)
 {
   bool err_flag = false;
   switch (dist_param) {
@@ -167,7 +167,7 @@ inline Real MultivariateNormalDistribution::std_pdf(Real beta, size_t n)
 // Multivariate standard normal density function from vector.
 inline Real MultivariateNormalDistribution::std_pdf(const RealVector& u)
 {
-  return mvn_std_pdf(u.normFrobenius(), u.length());
+  return std_pdf(u.normFrobenius(), u.length());
 
   // Alternate implementation invokes exp() repeatedly:
   //normal_dist norm(0., 1.);

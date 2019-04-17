@@ -8,7 +8,6 @@
 
 #include "pecos_stat_util.hpp"
 #include "NatafTransformation.hpp"
-#include "DistributionParams.hpp"
 
 static const char rcsId[]="@(#) $Id: ProbabilityTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 

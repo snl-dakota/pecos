@@ -199,47 +199,46 @@ public:
   virtual void pull_parameter(short dist_param, Real& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, int&  val) const;
-  /* Can't override with a template instantiation -> client access via ranVarRep
+  // Can't override with a template instantiation -> client access via ranVarRep
   /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, IntSet& val) const;
-  /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, StringSet& val) const;
-  /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, RealSet& val) const;
-  /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, IntRealMap& val) const;
-  /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, StringRealMap& val) const;
+  //virtual void pull_parameter(short dist_param, IntSet& val) const;
+  // return the value of the named distribution parameter
+  //virtual void pull_parameter(short dist_param, StringSet& val) const;
+  // return the value of the named distribution parameter
+  //virtual void pull_parameter(short dist_param, RealSet& val) const;
+  // return the value of the named distribution parameter
+  //virtual void pull_parameter(short dist_param, IntRealMap& val) const;
+  // return the value of the named distribution parameter
+  //virtual void pull_parameter(short dist_param, StringRealMap& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, RealRealMap& val) const;
-  /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, IntIntPairRealMap& val) const;
-  /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, RealRealPairRealMap& val) const;
-  */
+  // return the value of the named distribution parameter
+  //virtual void pull_parameter(short dist_param, IntIntPairRealMap& val) const;
+  // return the value of the named distribution parameter
+  //virtual void pull_parameter(short dist_param,RealRealPairRealMap& val)const;
 
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, Real val);
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, int  val);
-  /* Can't override with a template instantiation -> client access via ranVarRep
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const IntSet& val) ;
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const StringSet& val);
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const RealSet& val);
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const IntRealMap& val);
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const StringRealMap& val);
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const RealRealMap& val);
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const IntIntPairRealMap& val);
-  /// return the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const RealRealPairRealMap& val);
-  */
+  // Can't override with a template instantiation -> client access via ranVarRep
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const IntSet& val) ;
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const StringSet& val);
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const RealSet& val);
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const IntRealMap& val);
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const StringRealMap& val);
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const RealRealMap& val);
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param, const IntIntPairRealMap& val);
+  // return the value of the named distribution parameter
+  //virtual void push_parameter(short dist_param,
+  //                            const RealRealPairRealMap& val);
 
   /// return the distribution mean
   virtual Real mean() const;
@@ -296,6 +295,8 @@ public:
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
   RandomVariable* random_variable_rep() const;
+  /// function to check modelRep (does this envelope contain a letter)
+  bool is_null() const;
 
 protected:
 
@@ -382,6 +383,10 @@ inline short RandomVariable::type() const
 
 inline RandomVariable* RandomVariable::random_variable_rep() const
 { return ranVarRep; }
+
+
+inline bool RandomVariable::is_null() const
+{ return (ranVarRep) ? false : true; }
 
 } // namespace Pecos
 

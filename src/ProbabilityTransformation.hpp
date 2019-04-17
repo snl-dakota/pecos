@@ -10,6 +10,7 @@
 #define PROBABILITY_TRANSFORMATION_HPP
 
 #include "pecos_data_types.hpp"
+#include "MultivariateDistribution.hpp"
 
 namespace Pecos {
 

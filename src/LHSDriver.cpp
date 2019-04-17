@@ -197,6 +197,50 @@ void LHSDriver::abort_if_no_lhs()
 }
 
 
+void LHSDriver::
+lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
+		  const RealArray& dist_params)
+{
+  String dist_string;                 f77name32(dist_name,   dist_string);
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int num_params = dist_params.size(), err_code = 0, ptval_flag = 0, // inputs
+      dist_num, pv_num; // outputs (not used)
+  Real ptval = 0.;
+
+  LHS_DIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
+	       const_cast<Real*>(&dist_params[0]), num_params, err_code,
+	       dist_num, pv_num);
+  check_error(err_code, "lhs_dist()", var_string.data());
+}
+
+
+void LHSDriver::
+lhs_udist_register(const char* var_name, const char* dist_name, size_t rv,
+		   const RealArray& x_val, const RealArray& y_val)
+{
+  String dist_string;                 f77name32(dist_name,   dist_string);
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int num_params = std::min(x_val.size(), y_val.size()), err_code = 0,
+    ptval_flag = 0, dist_num, pv_num;
+  Real ptval = 0.;
+
+  LHS_UDIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
+		num_params, const_cast<Real*>(&x_val[0]),
+		const_cast<Real*>(&y_val[0]), err_code, dist_num, pv_num);
+  check_error(err_code, "lhs_udist()", var_string.data());
+}
+
+
+void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
+{
+  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
+  int err_code = 0, pv_num;
+
+  LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
+  check_error(err_code, "lhs_const()", var_string.data());
+}
+
+
 /** While it would be desirable in some cases to carve this function
     into smaller parts and allow multiple invocations of LHS_RUN
     following a single initialization of types and arrays, the LHS
@@ -893,7 +937,8 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
   // proceed with generating a unique set of discrete samples.
   if (finite_combinations && max_unique < num_samples) {
 
-    // *** TO DO: better to just set max_iter at ~5 to allow improvement?
+    // *** TO DO:  set max_iter at ~5 to allow some improvement?
+    // *** BETTER: allow iteration to continue iff new > old && new < target
 
     PCout << "LHS backfill was requested, but the discrete variables provided "
 	  << "do not have enough unique values (" << max_unique
@@ -935,14 +980,14 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
       generate_samples(random_vars, corr, num_samples, new_samples,
 		       sample_ranks, active_vars, active_corr);
 
-      // Sort the Real-valued samples and replace until
-      // num unique >= num requested.  Don't mess with discrete subset.
-      // Preserve original ordering? Yes --> don't truncate an ordered set
-      // since this could bias coverage (omitting tail of ordered set).
+      // Sort real-valued samples and replace until # unique >= # requested.
+      // > For now, don't try to replace only the discrete subset.
+      // > Preserve original sample ordering --> don't truncate an ordered set
+      //   (omitting tail of ordered set could bias coverage).
       for (i=0; i<num_samples; ++i) {
-	copy_data(new_samples[i], num_rv, new_samp_i);// std::vector for sorting
-	if (unique_samples.insert(new_samp_i).second) {
-	  copy_data(new_samples[i], num_rv, samples[unique_cntr++]);
+	copy_data(new_samples[i], num_rv, new_samp_i);  // vector for sorting
+	if (unique_samples.insert(new_samp_i).second) { // true if inserted
+	  copy_data(new_samples[i], num_rv, samples[unique_cntr++]); // append
 	  if (unique_cntr >= num_samples)
 	    { complete = true; break; }
 	}
@@ -1001,50 +1046,6 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
       */
     }
   }
-}
-
-
-void LHSDriver::
-lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
-		  const RealArray& dist_params)
-{
-  String dist_string;                 f77name32(dist_name,   dist_string);
-  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
-  int num_params = dist_params.size(), err_code = 0, ptval_flag = 0, // inputs
-      dist_num, pv_num; // outputs (not used)
-  Real ptval = 0.;
-
-  LHS_DIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
-	       const_cast<Real*>(&dist_params[0]), num_params, err_code,
-	       dist_num, pv_num);
-  check_error(err_code, "lhs_dist()", var_string.data());
-}
-
-
-void LHSDriver::
-lhs_udist_register(const char* var_name, const char* dist_name, size_t rv,
-		   const RealArray& x_val, const RealArray& y_val)
-{
-  String dist_string;                 f77name32(dist_name,   dist_string);
-  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
-  int num_params = std::min(x_val.size(), y_val.size()), err_code = 0,
-    ptval_flag = 0, dist_num, pv_num;
-  Real ptval = 0.;
-
-  LHS_UDIST2_FC(var_string.data(), ptval_flag, ptval, dist_string.data(),
-		num_params, const_cast<Real*>(&x_val[0]),
-		const_cast<Real*>(&y_val[0]), err_code, dist_num, pv_num);
-  check_error(err_code, "lhs_udist()", var_string.data());
-}
-
-
-void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
-{
-  String& var_string = lhsNames[rv];  f77name16(var_name, rv, var_string);
-  int err_code = 0, pv_num;
-
-  LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
-  check_error(err_code, "lhs_const()", var_string.data());
 }
 
 } // namespace Pecos

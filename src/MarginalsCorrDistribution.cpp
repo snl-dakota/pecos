@@ -43,6 +43,8 @@ initialize_correlations(const RealSymMatrix& corr)
 }
 
 
+/* Reshaping the correlation matrix should no longer be required
+   (replaced with active_corr BitArray)
 void MarginalsCorrDistribution::
 expand_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 			  size_t num_trail_v)
@@ -107,7 +109,6 @@ contract_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 }
 
 
-/*
 void MarginalsCorrDistribution::
 initialize_random_variable_parameters(const RealVector& cd_l_bnds,
 				      const RealVector& cd_u_bnds,
