@@ -240,6 +240,9 @@ public:
   //virtual void push_parameter(short dist_param,
   //                            const RealRealPairRealMap& val);
 
+  template <typename T>
+  T parameter(short dist_param) const;
+
   /// return the distribution mean
   virtual Real mean() const;
   /// return the distribution mode
@@ -342,6 +345,15 @@ private:
   /// number of objects sharing ranVarRep
   int referenceCount;
 };
+
+
+template <typename T>
+T RandomVariable::parameter(short dist_param) const
+{
+  T val;
+  pull_parameter(dist_param, val);
+  return val;
+}
 
 
 template <typename Engine> 

@@ -84,13 +84,18 @@ public:
 
   /// return randomVars
   const std::vector<RandomVariable>& random_variables() const;
+  /// return randomVars[i]
+  const RandomVariable& random_variable(size_t i) const;
 
   /// return ranVarTypes
   const ShortArray& types() const;
   /// set ranVarTypes
   void types(const ShortArray& rv_types);
+  /// return ranVarTypes[i]
+  short type(size_t i);
   /// set ranVarTypes[i]
   void type(short rv_type, size_t i);
+
   /// verify that randomVarsX[i].type() equals rv_type
   void check_type(size_t i, short rv_type) const;
 
@@ -178,6 +183,11 @@ inline MarginalsCorrDistribution::~MarginalsCorrDistribution()
 inline const std::vector<RandomVariable>& MarginalsCorrDistribution::
 random_variables() const
 { return randomVars; }
+
+
+inline const RandomVariable& MarginalsCorrDistribution::
+random_variable(size_t i) const
+{ return randomVars[i]; }
 
 
 inline const ShortArray& MarginalsCorrDistribution::types() const

@@ -158,6 +158,17 @@ private:
   /// Hessian of x(z) mapping obtained from differentiation of jacobian_dX_dZ()
   void hessian_d2X_dZ2(const RealVector& x_vars,
 		       RealSymMatrixArray& hessian_xz);
+
+  //
+  //- Heading: Data
+  //
+
+  /// Cholesky factor of the modified correlation matrix; computed in
+  /// transform_correlations().
+  /** Note that this is not a component of a MarginalsCorrDistribution
+      (not directly defined from original correlation matrix), but is
+      rather a product of the Nataf transformation. */
+  RealMatrix corrCholeskyFactorZ;
 };
 
 

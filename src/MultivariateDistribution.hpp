@@ -13,6 +13,8 @@
 
 namespace Pecos {
 
+class RandomVariable;
+
 
 /// Base class for all multivariate distributions
 
@@ -39,6 +41,17 @@ public:
   //
   //- Heading: Virtual functions
   //
+
+  /// return randomVars (marginals, when present)
+  virtual const std::vector<RandomVariable>& random_variables() const;
+  /// return randomVars[i] (marginal, when present)
+  virtual const RandomVariable& random_variable(size_t i) const;
+  /// return ranVarTypes (marginals, when present)
+  virtual const ShortArray& types() const;
+  /// return ranVarTypes[i] (marginal, when present)
+  virtual short type(size_t i) const;
+  /// return corrMatrix
+  virtual const RealSymMatrix& correlation_matrix() const;
 
   /// return the multivariate PDF value for the random variables
   virtual Real pdf(const RealVector& pt) const;
