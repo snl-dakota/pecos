@@ -57,15 +57,16 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
-  TEST_EQUALITY( poly_basis.alpha_polynomial(), -1.0 );
-  TEST_EQUALITY( poly_basis.beta_polynomial(), -1.0 );
+  Real ap;  poly_basis.pull_parameter(BI_P_PER_TRIAL, ap);
+  int  bp;  poly_basis.pull_parameter(BI_TRIALS,      bp);
+  TEST_EQUALITY( ap, -1.0 ); TEST_EQUALITY( bp, -1 );
 
   const Real p = 0.1;
-  const Real N = 15.0;
+  const int  N = 15;
   const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
 
-  poly_basis.alpha_stat(p);
-  poly_basis.beta_stat(N);
+  poly_basis.push_parameter(BI_P_PER_TRIAL, p);
+  poly_basis.push_parameter(BI_TRIALS,      N);
 
   // Test orthogonality of first 10 polynomials - covers hardcoded 1st and 2nd orders and recursion-based orders
   for( short i=0; i<11; ++i ) {
@@ -122,16 +123,17 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
-  TEST_EQUALITY( poly_basis.alpha_polynomial(), -1.0 );
-  TEST_EQUALITY( poly_basis.beta_polynomial(), -1.0 );
+  Real ap;  poly_basis.pull_parameter(NBI_P_PER_TRIAL, ap);
+  int  bp;  poly_basis.pull_parameter(NBI_TRIALS,      bp);
+  TEST_EQUALITY( ap, -1.0 );  TEST_EQUALITY( bp,  1 );
 
   const Real c    = 0.1;
-  const Real beta = 1.5;
+  const int  beta = 1;//const Real beta = 1.5; // *** MSE: Real was valid for old Meixner poly but not for NBI or GE distributions
   const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
   const unsigned NUM_TERMS_TO_SUM = 40; // the number of terms needed for the orthogonality sum to converge
 
-  poly_basis.alpha_stat(c);
-  poly_basis.beta_stat(beta);
+  poly_basis.push_parameter(NBI_P_PER_TRIAL, c);
+  poly_basis.push_parameter(NBI_TRIALS,      beta);
 
   // Test orthogonality of first 10 polynomials - covers hardcoded 1st and 2nd orders and recursion-based orders
   for( short i=0; i<7; ++i ) {
