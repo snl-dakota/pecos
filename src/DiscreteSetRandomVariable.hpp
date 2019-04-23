@@ -234,7 +234,7 @@ moments_from_params(const std::map<T, Real>& vals_probs,
 
 
 template <>
-Real DiscreteSetRandomVariable<String>::mode() const
+inline Real DiscreteSetRandomVariable<String>::mode() const
 {
   Real mode, mode_prob;
   SRMCIter cit = valueProbPairs.begin();
@@ -247,7 +247,7 @@ Real DiscreteSetRandomVariable<String>::mode() const
 
 
 template <>
-RealRealPair DiscreteSetRandomVariable<String>::bounds() const
+inline RealRealPair DiscreteSetRandomVariable<String>::bounds() const
 {
   RealRealPair bnds;
   bnds.first  = 0.;                                 // index lower bound
@@ -257,7 +257,7 @@ RealRealPair DiscreteSetRandomVariable<String>::bounds() const
 
 
 template <>
-void DiscreteSetRandomVariable<String>::
+inline void DiscreteSetRandomVariable<String>::
 moments_from_params(const StringRealMap& s_prs, Real& mean, Real& std_dev)
 {
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.

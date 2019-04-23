@@ -35,21 +35,20 @@ public:
   /// destructor
   ~CharlierOrthogPolynomial();
 
+protected:
+
   //
   //- Heading: Virtual function redefinitions
   //
-
-protected:
 
   Real type1_value( Real x, unsigned short order );
   Real type1_gradient( Real x, unsigned short order );
   Real type1_hessian( Real x, unsigned short order );
   Real norm_squared( unsigned short order );
 
-  /// set betaPoly
   void parameter(short dist_param, Real param);
-  /// get betaPoly
   Real parameter(short dist_param);
+  bool parameterized() const;
 
 private: 
   
@@ -57,12 +56,12 @@ private:
   /// variable X with mean lambda occurring k times in a fixed interval.
 
   /// expected value of the random variable X
-  Real lambdaParam;
+  Real lambdaStat;
 };
 
 
 inline CharlierOrthogPolynomial::CharlierOrthogPolynomial():
-  lambdaParam(-1.) // dummy value prior to update
+  lambdaStat(-1.) // dummy value prior to update
 { }
 
 
@@ -73,7 +72,7 @@ inline CharlierOrthogPolynomial::~CharlierOrthogPolynomial()
 inline Real CharlierOrthogPolynomial::parameter(short dist_param)
 {
   switch (dist_param) {
-  case P_LAMBDA: return lambdaParam; break;
+  case P_LAMBDA: return lambdaStat; break;
   default:
     PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
 	  << "Polynomial::parameter()." << std::endl;
@@ -97,14 +96,17 @@ inline void CharlierOrthogPolynomial::parameter(short dist_param, Real param)
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    lambdaParam = param;
+    lambdaStat = param;
   }
-  else {
+  else if (real_compare(lambdaStat, param))
     parametricUpdate = false;
-    if (!real_compare(lambdaParam, param))
-      { lambdaParam = param; parametricUpdate = true; reset_gauss(); }
-  }
+  else
+    { lambdaStat = param; parametricUpdate = true; reset_gauss(); }
 }
+
+
+inline bool CharlierOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
 

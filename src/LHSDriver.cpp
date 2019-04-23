@@ -241,6 +241,116 @@ void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
 }
 
 
+void LHSDriver::
+intervals_to_udist_params(const RealRealPairRealMap& ci_bpa,
+			  RealArray& x_val, RealArray& y_val)
+{
+  // x_sort_unique is a set with ALL of the interval bounds for this variable
+  // in increasing order and unique.  For example, if there are 2 intervals
+  // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
+  // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
+  // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
+  RRPRMCIter cit;  RealSet x_sort_unique;
+  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    x_sort_unique.insert(bounds.first);
+    x_sort_unique.insert(bounds.second);
+  }
+  // convert sorted RealSet to x_val
+  size_t j, num_params = x_sort_unique.size();
+  x_val.resize(num_params);  y_val.resize(num_params);
+  RSIter it = x_sort_unique.begin();
+  for (j=0; j<num_params; ++j, ++it)
+    x_val[j] = *it;
+
+  // Calculate the probability densities, and account for the cases where
+  // there are intervals that are overlapping.  This section of code goes
+  // through the original intervals and see where they fall relative to the
+  // new, sorted intervals for the density calculation.
+  RealVector prob_dens(num_params); // initialize to 0.
+  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    Real l_bnd = bounds.first, u_bnd = bounds.second;
+    Real ci_density = cit->second / (u_bnd - l_bnd);
+    int cum_int_index = 0;
+    while (l_bnd > x_val[cum_int_index])
+      ++cum_int_index;
+    ++cum_int_index;
+    while (cum_int_index < num_params && x_val[cum_int_index] <= u_bnd)
+      { prob_dens[cum_int_index] += ci_density; ++cum_int_index; }
+  }
+
+  // put the densities in a cumulative format necessary for LHS histograms.
+  // Note that x_val and y_val are defined as Real* for input to f77.
+  y_val[0] = 0.;
+  for (j=1; j<num_params; ++j)
+    y_val[j] = (prob_dens[j] > 0.0) ?
+      y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]) :
+      y_val[j-1] + 0.0001; // handle case where there is a gap
+  // normalize if necessary
+  if (y_val[num_params-1] != 1.) {
+    Real y_total = y_val[num_params-1];
+    for (j=1; j<num_params; ++j)
+      y_val[j] /= y_total;
+  }
+#ifdef DEBUG
+  for (j=0; j<num_params; ++j)
+    PCout << "ciuv: x_val[" << j << "] is " << x_val[j]
+	  << " y_val[" << j << "] is " << y_val[j] << '\n';
+#endif // DEBUG
+}
+
+
+void LHSDriver::
+intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
+			  RealArray& x_val, RealArray& y_val)
+{
+  // x_sort_unique contains ALL of the unique integer values for this
+  // x_sort_unique contains ALL of the unique integer values for this
+  // discrete interval variable in increasing order.  For example, if
+  // there are 3 intervals for a variable and the bounds are (1,4),
+  // (3,6), and (9,10), x_sorted will be (1,2,3,4,5,6,9,10).
+  IIPRMCIter cit; IntSet x_sort_unique;
+  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    int val, u_bnd = bounds.second;
+    for (val=bounds.first; val<=u_bnd; ++val)
+      x_sort_unique.insert(val);
+  }
+  // copy sorted IntSet to x_val
+  size_t j, num_params = x_sort_unique.size();
+  x_val.resize(num_params);  y_val.resize(num_params);
+  ISIter it = x_sort_unique.begin();
+  for (j=0; j<num_params; ++j, ++it)
+    x_val[j] = *it;
+
+  // Calculate probability densities and account for overlapping intervals.
+  // Loop over the original intervals and see where they fall relative to
+  // the new, sorted intervals for the density calculation.
+  for (j=0; j<num_params; ++j) y_val[j] = 0.;
+  int l_bnd, u_bnd; size_t index;
+  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
+    const RealRealPair& bounds = cit->first;
+    int val, l_bnd = bounds.first, u_bnd = bounds.second;
+    Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
+    it = x_sort_unique.find(l_bnd);
+    if (it == x_sort_unique.end()) {
+      PCerr << "Error: lower bound not found in sorted set within LHSDriver "
+	    << "mapping of discrete interval uncertain variable."<< std::endl;
+      abort_handler(-1);
+    }
+    index = std::distance(x_sort_unique.begin(), it);
+    for (val=l_bnd; val<=u_bnd; ++val, ++index)
+      y_val[index] += di_density;
+  }
+#ifdef DEBUG
+  for (j=0; j<num_params; ++j)
+    PCout << "diuv: x_val[" << j << "] is " << x_val[j]
+	  << " y_val[" << j << "] is " << y_val[j] << '\n';
+#endif // DEBUG
+}
+
+
 /** While it would be desirable in some cases to carve this function
     into smaller parts and allow multiple invocations of LHS_RUN
     following a single initialization of types and arrays, the LHS
@@ -706,7 +816,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     // > pass in bit array for active RV's to sample + another for active corr's
     // > Default empty arrays --> all RVs active; corr matrix applies to all RVs
     size_t j, cntr_i, cntr_j;
-    for (i=1, cntr_i=1; i<num_rv; ++i) {
+    for (i=0, cntr_i=0; i<num_rv; ++i) {
       if (!subset_corr || active_corr[i]) {
 	for (j=0, cntr_j=0; j<i; ++j) {
 	  if (!subset_corr || active_corr[j]) {

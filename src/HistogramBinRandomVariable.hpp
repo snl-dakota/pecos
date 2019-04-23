@@ -80,7 +80,7 @@ public:
   static Real cdf(Real x, const RealRealMap& bin_prs);
   static Real inverse_cdf(Real cdf, const RealRealMap& bin_prs);
 
-  //static Real pdf(Real x, const RealVector& bin_prs);
+  static Real pdf(Real x, const RealVector& bin_prs);
   //static Real cdf(Real x, const RealVector& bin_prs);
   //static Real inverse_cdf(Real cdf, const RealVector& bin_prs);
 
@@ -361,7 +361,6 @@ inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)
 { binPairs = bin_prs; }
 
 
-/*
 inline Real HistogramBinRandomVariable::pdf(Real x, const RealVector& bin_prs)
 {
   // Need this case to be fast for usage in NumericGenOrthogPolynomial...
@@ -385,6 +384,7 @@ inline Real HistogramBinRandomVariable::pdf(Real x, const RealVector& bin_prs)
 }
 
 
+/*
 inline Real HistogramBinRandomVariable::cdf(Real x, const RealVector& bin_prs)
 {
   // Cleaner, but induces unnecessary copy overhead:

@@ -30,21 +30,52 @@ void MarginalsCorrDistribution::initialize_types(const ShortArray& rv_types)
 
 
 void MarginalsCorrDistribution::
-initialize_correlations(const RealSymMatrix& corr)
+initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
 {
   corrMatrix = corr;
+  activeCorr = active_corr; // active RV subset for correlation matrix
 
-  size_t i, j, num_rv = corr.numRows();
+  size_t num_corr = corr.numRows(), num_rv = randomVars.size();
+  bool no_mask = activeCorr.empty();
+  if (no_mask) {
+    if (num_corr && num_corr != num_rv) {
+      PCerr << "Error: correlation matrix size (" << num_corr
+	    << ") inconsistent with number of random variables (" << num_rv
+	    << ")." << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else {
+    if (num_corr != activeCorr.count()) {
+      PCerr << "Error: correlation matrix size (" << num_corr
+	    << ") inconsistent with active correlation subset ("
+	    << activeCorr.count() << ")." << std::endl;
+      abort_handler(-1);
+    }
+  }
+
   correlationFlag = false;
-  for (i=1; i<num_rv; i++)
-    for (j=0; j<i; j++)
-      if (std::abs(corr(i,j)) > SMALL_NUMBER)
-	{ correlationFlag = true; break; }
+  if (num_corr == 0) return;
+
+  size_t i, j, cntr_i, cntr_j;
+  for (i=0, cntr_i=0; i<num_rv; ++i) {
+    if (no_mask || activeCorr[i]) {
+      for (j=0, cntr_j=0; j<i; ++j) {
+	if (no_mask || activeCorr[j]) {
+	  if (std::abs(corr(cntr_i, cntr_j)) > SMALL_NUMBER)
+	    correlationFlag = true;
+	  ++cntr_j;
+	}
+      }
+      ++cntr_i;
+    }
+    if (correlationFlag) break;
+  }
 }
 
 
 /* Reshaping the correlation matrix should no longer be required
-   (replaced with active_corr BitArray)
+   (subsets now supported with activeCorr BitArray)
 void MarginalsCorrDistribution::
 expand_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 			  size_t num_trail_v)

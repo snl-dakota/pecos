@@ -59,15 +59,9 @@ protected:
   //
   Real type1_value(Real x, unsigned short order);
 
-  /// set distribution parameter value
-  void parameter(short dist_param, int param);
-  /// get distribution parameter value
-  int parameter(short dist_param);
-
-  // set distribution parameter value
-  //void parameter(short dist_param, Real param);
-  // get distribution parameter value
-  //Real parameter(short dist_param);
+  void pull_parameter(short dist_param, int& param) const;
+  void push_parameter(short dist_param, int  param);
+  bool parameterized() const;
 
 private:
 
@@ -79,7 +73,7 @@ private:
   int totalPop;
   /// number in selected population
   int selectPop;
-  /// number failed in population
+  /// number drawn from population
   int numDrawn;
 };
 
@@ -93,22 +87,22 @@ inline HahnOrthogPolynomial::~HahnOrthogPolynomial()
 { }
 
 
-inline int HahnOrthogPolynomial::parameter(short dist_param)
+inline void HahnOrthogPolynomial::
+pull_parameter(short dist_param, int& param) const
 {
   switch (dist_param) {
-  case HGE_TOT_POP: return totalPop;  break;
-  case HGE_SEL_POP: return selectPop; break;
-  case HGE_DRAWN:   return numDrawn;  break;
+  case HGE_TOT_POP: param = totalPop;  break;
+  case HGE_SEL_POP: param = selectPop; break;
+  case HGE_DRAWN:   param = numDrawn;  break;
   default:
     PCerr << "Error: unsupported distribution parameter in HahnOrthogPolynomial"
 	  << "::parameter()." << std::endl;
     abort_handler(-1);
-    return 0.;
   }
 }
 
 
-inline void HahnOrthogPolynomial::parameter(short dist_param, int param)
+inline void HahnOrthogPolynomial::push_parameter(short dist_param, int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -141,56 +135,9 @@ inline void HahnOrthogPolynomial::parameter(short dist_param, int param)
   }
 }
 
-/*
-inline Real HahnOrthogPolynomial::parameter(short dist_param)
-{
-  switch (dist_param) {
-  case HGE_TOT_POP: return (Real)totalPop;  break;
-  case HGE_SEL_POP: return (Real)selectPop; break;
-  case HGE_DRAWN:   return (Real)numDrawn;  break;
-  default:
-    PCerr << "Error: unsupported distribution parameter in HahnOrthogPolynomial"
-	  << "::parameter()." << std::endl;
-    abort_handler(-1);
-    return 0.;
-  }
-}
 
-
-inline void HahnOrthogPolynomial::parameter(short dist_param, Real param)
-{
-  // *_stat() routines are called for each approximation build from
-  // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  // Logic for first pass included for completeness, but should not be needed.
-  int i_param = (int)param;
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
-    switch (dist_param) {
-    case HGE_TOT_POP:  totalPop = i_param; break;
-    case HGE_SEL_POP: selectPop = i_param; break;
-    case HGE_DRAWN:    numDrawn = i_param; break;
-    }
-  }
-  else {
-    parametricUpdate = false;
-    switch (dist_param) {
-    case HGE_TOT_POP:
-      if (totalPop != i_param)
-	{ totalPop = i_param;  parametricUpdate = true; reset_gauss(); }
-      break;
-    case HGE_SEL_POP:
-      if (selectPop != i_param)
-	{ selectPop = i_param; parametricUpdate = true; reset_gauss(); }
-      break;
-    case HGE_DRAWN:
-      if (numDrawn != i_param)
-	{ numDrawn = i_param;  parametricUpdate = true; reset_gauss(); }
-      break;
-    }
-  }
-}
-*/
+inline bool HahnOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
 

@@ -157,19 +157,20 @@ public:
   /// (calculate and) return wtFactor
   virtual Real weight_factor();
 
-  /// return {Jacobi,GenLaguerre}OrthogPolynomial::alphaPoly
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual Real alpha_polynomial() const;
-  /// return JacobiOrthogPolynomial::betaPoly
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual Real beta_polynomial() const;
-  /// set JacobiOrthogPolynomial::betaPoly or
-  /// GenLaguerreOrthogPolynomial::alphaPoly from statistical defn of alpha
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void alpha_stat(Real alpha);
-  /// set JacobiOrthogPolynomial::alphaPoly from statistical defn of beta
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void beta_stat(Real beta);
+  /// get real parameter value for a parameterized orthogonal polynomial, using
+  /// either statistical or polynomial conventions (based on dist_param value)
+  virtual void pull_parameter(short dist_param, Real& param) const;
+  /// get int parameter value for a parameterized orthogonal polynomial, using
+  /// either statistical or polynomial conventions (based on dist_param value)
+  virtual void pull_parameter(short dist_param, int& param) const;
+  /// set real parameter value for a parameterized orthogonal polynomial, using
+  /// either statistical or polynomial conventions (based on dist_param value)
+  virtual void push_parameter(short dist_param, Real param);
+  /// set int parameter value for a parameterized orthogonal polynomial, using
+  /// either statistical or polynomial conventions (based on dist_param value)
+  virtual void push_parameter(short dist_param, int param);
+  /// return whether a derived BasisPolynomial type supports parameterization
+  virtual bool parameterized() const;
 
   /// set OrthogonalPolynomial::collocRule
   virtual void collocation_rule(short rule);
@@ -185,9 +186,6 @@ public:
   /// get InterpolationPolynomial::interpPts
   /** This is defined only for interpolation polynomials. */
   virtual const RealArray& interpolation_points() const;
-
-  /// return whether a derived BasisPolynomial type supports parameterization
-  virtual bool parameterized() const;
 
   /// return a characteristic length scale for the probability distribution
   /// associated with an orthogonal polynomial basis

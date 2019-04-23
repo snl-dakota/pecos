@@ -162,6 +162,18 @@ MultivariateDistribution::~MultivariateDistribution()
 }
 
 
+const RandomVariable& MultivariateDistribution::random_variable(size_t i) const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: random_variable(size_t) not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->random_variable(i);
+}
+
+
 const std::vector<RandomVariable>& MultivariateDistribution::
 random_variables() const
 {
@@ -175,15 +187,16 @@ random_variables() const
 }
 
 
-const RandomVariable& MultivariateDistribution::random_variable(size_t i) const
+std::vector<RandomVariable>& MultivariateDistribution::
+random_variables()
 {
   if (!mvDistRep) { // forward to letter
-    PCerr << "Error: random_variable(size_t) not supported for this "
-	  << "multivariate distribution type." << std::endl;
+    PCerr << "Error: random_variables() not supported for this multivariate "
+	  << "distribution type." << std::endl;
     abort_handler(-1);
   }
 
-  return mvDistRep->random_variable(i);
+  return mvDistRep->random_variables();
 }
 
 
@@ -220,6 +233,18 @@ const RealSymMatrix& MultivariateDistribution::correlation_matrix() const
   }
 
   return mvDistRep->correlation_matrix();
+}
+
+
+const BitArray& MultivariateDistribution::active_correlations() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: active_correlations() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->active_correlations();
 }
 
 

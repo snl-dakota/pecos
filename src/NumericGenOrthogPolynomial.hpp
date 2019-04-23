@@ -81,7 +81,7 @@ public:
 
   /// set distribution type and parameters for a HISTOGRAM_PT_INT distribution
   void histogram_pt_distribution(const IntRealMap& bin_pairs);
-  /// set distribution type and parameters for a HISTOGRAM_PT_STRING distribution
+  /// set distribution type & parameters for a HISTOGRAM_PT_STRING distribution
   void histogram_pt_distribution(const StringRealMap& bin_pairs);
   /// set distribution type and parameters for a HISTOGRAM_PT_REAL distribution
   void histogram_pt_distribution(const RealRealMap& bin_pairs);

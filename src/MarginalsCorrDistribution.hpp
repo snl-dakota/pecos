@@ -39,7 +39,8 @@ public:
   /// set ranVarTypes and initialize randomVars
   void initialize_types(const ShortArray& rv_types);
   /// initializes corrMatrix and correlationFlag
-  void initialize_correlations(const RealSymMatrix& corr);
+  void initialize_correlations(const RealSymMatrix& corr,
+			       const BitArray& active_corr = BitArray());
 
   /// update a scalar distribution parameter within randomVars[v]
   template <typename ValueType>
@@ -82,10 +83,12 @@ public:
 				  size_t num_trail_v);
   */
 
-  /// return randomVars
-  const std::vector<RandomVariable>& random_variables() const;
   /// return randomVars[i]
   const RandomVariable& random_variable(size_t i) const;
+  /// return randomVars
+  const std::vector<RandomVariable>& random_variables() const;
+  /// return randomVars
+  std::vector<RandomVariable>& random_variables();
 
   /// return ranVarTypes
   const ShortArray& types() const;
@@ -103,6 +106,8 @@ public:
   const RealSymMatrix& correlation_matrix() const;
   // return corrCholeskyFactor
   //const RealMatrix& correlation_factor() const;
+  /// return activeCorr
+  const BitArray& active_correlations() const;
 
   /// assemble means and standard deviations from RandomVariable::moments()
   RealRealPairArray moments() const;
@@ -161,6 +166,9 @@ protected:
   // cholesky factor of a modified correlation matrix (#corrMatrixX
   // is modified in transform_correlations() for use in z-space)
   //RealMatrix corrCholeskyFactor;
+  /// subset of randomVars to which the corrMatrix refers
+  /// (if empty, no subset is applied)
+  BitArray activeCorr;
 
 private:
 
@@ -180,14 +188,19 @@ inline MarginalsCorrDistribution::~MarginalsCorrDistribution()
 { }
 
 
+inline const RandomVariable& MarginalsCorrDistribution::
+random_variable(size_t i) const
+{ return randomVars[i]; }
+
+
 inline const std::vector<RandomVariable>& MarginalsCorrDistribution::
 random_variables() const
 { return randomVars; }
 
 
-inline const RandomVariable& MarginalsCorrDistribution::
-random_variable(size_t i) const
-{ return randomVars[i]; }
+inline std::vector<RandomVariable>& MarginalsCorrDistribution::
+random_variables()
+{ return randomVars; }
 
 
 inline const ShortArray& MarginalsCorrDistribution::types() const
@@ -450,6 +463,10 @@ correlation_matrix() const
 
 //inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
 //{ return corrCholeskyFactor; }
+
+
+inline const BitArray& MarginalsCorrDistribution::active_correlations() const
+{ return activeCorr; }
 
 
 template <typename Engine> 

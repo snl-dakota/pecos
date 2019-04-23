@@ -664,9 +664,9 @@ void SharedOrthogPolyApproxData::gradient_check()
     laguerre_poly(LAGUERRE_ORTHOG), jacobi_poly(JACOBI_ORTHOG),
     gen_laguerre_poly(GEN_LAGUERRE_ORTHOG), chebyshev_poly(CHEBYSHEV_ORTHOG);
   // alpha/beta selections mirror dakota_uq_rosenbrock_pce.in
-  jacobi_poly.alpha_stat(1.5);
-  jacobi_poly.beta_stat(2.);
-  gen_laguerre_poly.alpha_stat(2.5);
+  jacobi_poly.push_parameter(BE_ALPHA, 1.5);
+  jacobi_poly.push_parameter(BE_BETA, 2.);
+  gen_laguerre_poly.push_parameter(GA_ALPHA, 2.5);
 
   Real x = 0.5; // valid for all support ranges: [-1,1], [0,Inf], [-Inf, Inf]
   PCout << "-------------------------------------------------\n";

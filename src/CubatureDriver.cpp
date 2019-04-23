@@ -219,8 +219,8 @@ int CubatureDriver::grid_size()
       break;
     case GAUSS_JACOBI: {
       BasisPolynomial& poly0 = polynomialBasis[0];
-      const Real& alpha_poly = poly0.alpha_polynomial();
-      const Real& beta_poly  = poly0.beta_polynomial();
+      Real alpha_poly; poly0.pull_parameter(JACOBI_ALPHA, alpha_poly);
+      Real  beta_poly; poly0.pull_parameter(JACOBI_BETA,   beta_poly);
       switch (integrandOrder) {
       case 1: numPts = webbur::cn_jac_01_1_size(numVars, alpha_poly, beta_poly);
 	break;
@@ -231,7 +231,8 @@ int CubatureDriver::grid_size()
       break;
     }
     case GEN_GAUSS_LAGUERRE: {
-      const Real& alpha_poly = polynomialBasis[0].alpha_polynomial();
+      Real alpha_poly;
+      polynomialBasis[0].pull_parameter(GENLAG_ALPHA, alpha_poly);
       switch (integrandOrder) {
       case 1: numPts = webbur::epn_glg_01_1_size(numVars,   alpha_poly); break;
       case 2: numPts = webbur::epn_glg_02_xiu_size(numVars, alpha_poly); break;
@@ -320,8 +321,8 @@ void CubatureDriver::compute_grid()
     default: err_flag = true;                                  break;
     } break;
   case GAUSS_JACOBI: {
-    const Real& alpha_poly = poly0.alpha_polynomial();
-    const Real& beta_poly  = poly0.beta_polynomial();
+    Real alpha_poly; poly0.pull_parameter(JACOBI_ALPHA, alpha_poly);
+    Real  beta_poly; poly0.pull_parameter(JACOBI_BETA,   beta_poly);
     switch (integrandOrder) {
     case 1:
       webbur::cn_jac_01_1(numVars,   alpha_poly, beta_poly, numPts, pts, wts);
@@ -334,7 +335,7 @@ void CubatureDriver::compute_grid()
     wt_scaling = true;        break;
   }
   case GEN_GAUSS_LAGUERRE: {
-    const Real& alpha_poly = poly0.alpha_polynomial();
+    Real alpha_poly; poly0.pull_parameter(GENLAG_ALPHA, alpha_poly);
     switch (integrandOrder) {
     case 1: webbur::epn_glg_01_1(numVars,   alpha_poly, numPts, pts, wts);
       break;

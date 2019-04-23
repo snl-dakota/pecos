@@ -56,12 +56,14 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
+
   Real type1_value(Real x, unsigned short order);
 
-  /// set distribution parameter value
-  void parameter(short dist_param, Real param);
-  /// get distribution parameter value
-  Real parameter(short dist_param);
+  void pull_parameter(short dist_param, Real& param) const;
+  void pull_parameter(short dist_param, int&  param) const;
+  void push_parameter(short dist_param, Real  param);
+  void push_parameter(short dist_param, int   param);
+  bool parameterized() const;
 
 private:
 
@@ -87,21 +89,34 @@ inline KrawtchoukOrthogPolynomial::~KrawtchoukOrthogPolynomial()
 { }
 
 
-inline Real KrawtchoukOrthogPolynomial::parameter(short dist_param)
+inline void KrawtchoukOrthogPolynomial::
+pull_parameter(short dist_param, Real& param) const
 {
   switch (dist_param) {
-  case BI_P_PER_TRIAL: return probPerTrial;    break;
-  case BI_TRIALS:      return (Real)numTrials; break;
+  case BI_P_PER_TRIAL: param = probPerTrial;    break;
   default:
     PCerr << "Error: unsupported distribution parameter in KrawtchoukOrthog"
-	  << "Polynomial::parameter()." << std::endl;
+	  << "Polynomial::pull_parameter(Real)." << std::endl;
     abort_handler(-1);
-    return 0.;
   }
 }
 
 
-inline void KrawtchoukOrthogPolynomial::parameter(short dist_param, Real param)
+inline void KrawtchoukOrthogPolynomial::
+pull_parameter(short dist_param, int& param) const
+{
+  switch (dist_param) {
+  case BI_TRIALS: param = numTrials; break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in KrawtchoukOrthog"
+	  << "Polynomial::pull_parameter(int)." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void KrawtchoukOrthogPolynomial::
+push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -111,7 +126,6 @@ inline void KrawtchoukOrthogPolynomial::parameter(short dist_param, Real param)
     parametricUpdate = true; // prevent false if default value assigned
     switch (dist_param) {
     case BI_P_PER_TRIAL: probPerTrial = param;   break;
-    case BI_TRIALS:      numTrials = (int)param; break;
     }
   }
   else {
@@ -121,15 +135,37 @@ inline void KrawtchoukOrthogPolynomial::parameter(short dist_param, Real param)
       if (!real_compare(probPerTrial, param))
 	{ probPerTrial = param; parametricUpdate = true; reset_gauss(); }
       break;
-    case BI_TRIALS: {
-      int i_param = (int)param;
-      if (numTrials != i_param)
-	{ numTrials = i_param; parametricUpdate = true; reset_gauss(); }
-      break;
-    }
     }
   }
 }
+
+
+inline void KrawtchoukOrthogPolynomial::
+push_parameter(short dist_param, int param)
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+    switch (dist_param) {
+    case BI_TRIALS: numTrials = param; break;
+    }
+  }
+  else {
+    switch (dist_param) {
+    case BI_TRIALS:
+      if (numTrials == param) parametricUpdate = false;
+      else { numTrials = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
+  }
+}
+
+
+inline bool KrawtchoukOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
 

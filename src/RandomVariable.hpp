@@ -206,10 +206,10 @@ public:
   //virtual void pull_parameter(short dist_param, StringSet& val) const;
   // return the value of the named distribution parameter
   //virtual void pull_parameter(short dist_param, RealSet& val) const;
-  // return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param, IntRealMap& val) const;
-  // return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param, StringRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, IntRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, StringRealMap& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, RealRealMap& val) const;
   // return the value of the named distribution parameter

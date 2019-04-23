@@ -419,6 +419,30 @@ void RandomVariable::pull_parameter(short dist_param, int& val) const
 }
 
 
+void RandomVariable::pull_parameter(short dist_param, IntRealMap& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(IntRealMap) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::pull_parameter(short dist_param, StringRealMap& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(StringRealMap) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void RandomVariable::pull_parameter(short dist_param, RealRealMap& val) const
 {
   if (ranVarRep)

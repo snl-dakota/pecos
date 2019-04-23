@@ -17,7 +17,6 @@
 
 #include "SharedBasisApproxData.hpp"
 #include "SparseGridDriver.hpp"
-#include <deque>
 
 namespace Pecos {
 
@@ -230,6 +229,9 @@ BasisConfigOptions(const BasisConfigOptions& bc_options):
 
 inline BasisConfigOptions::~BasisConfigOptions()
 { }
+
+
+class MultivariateDistribution; // fwd declaration
 
 
 /// Derived approximation class for global basis polynomials.

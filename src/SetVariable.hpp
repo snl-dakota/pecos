@@ -245,7 +245,7 @@ Real SetVariable<String>::mode() const
 
 
 template <>
-RealRealPair SetVariable<String>::bounds() const
+inline RealRealPair SetVariable<String>::bounds() const
 {
   size_t last_index = setValues.size() - 1;
   return RealRealPair(0., (Real)last_index);

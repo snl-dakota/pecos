@@ -923,7 +923,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // Rectangular Jacobian = Gradient^T = num_X by num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t i, j, num_var_map_1c = acv_map1_indices.size();
+  size_t num_var_map_1c = acv_map1_indices.size();
   int num_v = x_vars.length();
   if (jacobian_xs.numRows() != num_v || jacobian_xs.numCols() != num_var_map_1c)
     jacobian_xs.shape(num_v, num_var_map_1c);
@@ -931,30 +931,21 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   RealVector z_vars;
   trans_X_to_Z(x_vars, z_vars);
 
-  // compute counts for looping over continuous aleatory uncertain vars
-  const std::vector<RandomVariable>& x_rv = xDist.random_variables();
-  const ShortArray& x_types = xDist.types();
-  const ShortArray& u_types = uDist.types();
-  size_t num_cdv = 0, num_cdv_cauv = num_v; short x_type, u_type;
-  for (i=0; i<num_v; ++i) {
-    x_type = x_types[i];
-    if      (x_type == CONTINUOUS_DESIGN) ++num_cdv;
-    else if (x_type == CONTINUOUS_INTERVAL_UNCERTAIN ||
-	     x_type == CONTINUOUS_STATE)
-      --num_cdv_cauv;
-  }
-
   // For distributions without simple closed-form CDFs (beta, gamma), dx/ds is
   // computed numerically for nonlinear mappings.  If uncorrelated, then this
   // is only needed if the beta/gamma distribution parameters are design vars.
   // If correlated, then the beta/gamma distribution params do not have to be
   // design vars (dx/ds for beta/gamma x will include a dz/ds contribution).
-  bool need_xs = false, non_std_beta_gamma_map = false,
-       x_corr  = xDist.correlation();
+  const ShortArray&    x_types       = xDist.types();
+  const ShortArray&    u_types       = uDist.types();
   const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
+  const BitArray&      x_active_corr = xDist.active_correlations();
+  short x_type, u_type;  size_t i, j, cntr_i, cntr_j;
+  bool need_xs = false, non_std_beta_gamma_map = false,
+       x_corr  = xDist.correlation(), no_mask = x_active_corr.empty();
   // non_std_beta_gamma_map detects unsupported X->U cases for dx_ds and
   // dz_ds_factor; this is augmented below with unsupported dist param targets.
-  for (i=num_cdv; i<num_cdv_cauv; ++i) {
+  for (i=0, cntr_i=0; i<num_v; ++i) {
     x_type = x_types[i]; u_type = u_types[i];
     if ( ( x_type == BETA  && u_type != STD_BETA  ) ||
 	 ( x_type == GAMMA && u_type != STD_GAMMA ) ) {
@@ -965,10 +956,14 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
       // {Beta,Gamma}RandomVariable::dz_ds_factor(), requiring numerical dx/ds
       if (x_corr)
 	// since we don't check all rows, check *all* columns despite symmetry
-	for (j=num_cdv; j<num_cdv_cauv; ++j)
-	  if (i != j && std::abs(x_corr_matrix(i, j)) > SMALL_NUMBER)
-	    { need_xs = true; break; }
+	for (j=0, cntr_j=0; j<num_v; ++j)
+	  if (no_mask || x_active_corr[j]) {
+	    if (i != j && std::abs(x_corr_matrix(cntr_i,cntr_j)) > SMALL_NUMBER)
+	      { need_xs = true; break; }
+	    ++cntr_j;
+	  }
     }
+    if (no_mask || x_active_corr[i]) ++cntr_i;
   }
   // If numerical dx/ds not already reqd due to correlation-based contributions
   // from dz/ds, detect cases where dx_ds is not supported for particular s.
@@ -1003,6 +998,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
       }
 
   Real x, z; bool numerical_xs;
+  const std::vector<RandomVariable>& x_rv = xDist.random_variables();
   for (i=0; i<num_var_map_1c; ++i) { // loop over S
     size_t cv_index = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
@@ -1037,6 +1033,130 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
       }
     }
   }
+}
+
+
+/** This procedure computes numerical derivatives of x and/or z with respect to
+    distribution parameters s, and is used by jacobian_dX_dS() to provide data
+    that is not available analytically.  Numerical dz/ds involves dL/ds
+    (z(s) = L(s) u and dz/ds = dL/ds u) and is needed to evaluate dx/ds
+    semi-analytically for correlated variables.  Numerical dx/ds is needed for
+    distributions lacking simple closed-form CDF expressions (beta and gamma
+    distributions). */
+void NatafTransformation::
+numerical_design_jacobian(const RealVector& x_vars,
+			  bool xs, RealMatrix& num_jacobian_xs,
+			  bool zs, RealMatrix& num_jacobian_zs,
+			  SizetMultiArrayConstView cv_ids,
+			  SizetMultiArrayConstView acv_ids,
+			  const SizetArray& acv_map1_indices,
+			  const ShortArray& acv_map2_targets)
+{
+  // For correlated vars, correlation matrix C = C(s) due to Nataf modifications
+  //   z(s) = L(s) u  ->  dz/ds = dL/ds u  ->  need dL/ds
+  //   C(s) = L(s) L(s)^T
+  //   dC/ds (which could be derived analytically) = L dL/ds^T + dL/ds L^T
+  // This takes the form dC/ds = A + A^T where A = L dL/ds^T
+  // Unfortunately, solution of this equation for general A (which could
+  // provide dL/ds) given symmetric dC/ds is not possible since it is nonunique.
+  // Since we will not be differentiating the Cholesky solver, we will use
+  // semi-analytic design sensitivities with numerical dL/ds.  Note that
+  // numerical dz/ds is simpler and would likely be just as effective, but in
+  // general, semi-analytic sensitivities should minimize the numerical portion.
+
+  // Rectangular Jacobians = Gradient^T = num_Z x num_S where num_S is the total
+  // number of active continuous vars flowed down from a higher iteration level.
+  // The number of distribution parameter insertions is <= num_S.
+  size_t i, j, k, num_var_map_1c = acv_map1_indices.size();
+  int x_len = x_vars.length();
+  if (xs && (num_jacobian_xs.numRows() != x_len ||
+	     num_jacobian_xs.numCols() != num_var_map_1c) )
+    num_jacobian_xs.shape(x_len, num_var_map_1c);
+  if (zs && (num_jacobian_zs.numRows() != x_len ||
+	     num_jacobian_zs.numCols() != num_var_map_1c) )
+    num_jacobian_zs.shape(x_len, num_var_map_1c);
+
+  RealMatrix L_s_plus_h, dL_dsi;
+  RealVector dz_dsi;
+  //RealVector z_vars_s_plus_h, z_vars_s_minus_h;
+  RealVector x_vars_s_plus_h, x_vars_s_minus_h;
+  if (zs) {
+    L_s_plus_h.shape(x_len, x_len);
+    dL_dsi.shape(x_len, x_len);
+    dz_dsi.size(x_len);
+  }
+
+  RealVector u_vars;
+  trans_X_to_U(x_vars, u_vars);
+
+  std::vector<RandomVariable>& x_rv = xDist.random_variables();
+  Real fd_grad_ss = 1.e-4;
+  RealMatrix chol_z0(corrCholeskyFactorZ);
+  for (i=0; i<num_var_map_1c; i++) {
+
+    size_t cv_index        = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
+    short  acv_map2_target = acv_map2_targets[i];
+    if (cv_index != _NPOS && acv_map2_target != NO_TARGET) {
+
+      Real s0; x_rv[cv_index].pull_parameter(acv_map2_target, s0);
+
+      // Compute the offset for the ith gradient variable.
+      // Enforce a minimum delta of fdgss*.01
+      Real h_mag = fd_grad_ss * std::max(std::fabs(s0), .01);
+      Real h = (s0 < 0.0) ? -h_mag : h_mag; // h has same sign as s0
+
+      // -----------------------------------
+      // Evaluate (L/z_vars/x_vars)_s_plus_h
+      // -----------------------------------
+      Real s1 = s0 + h;
+      // update randomVars & corrCholeskyFactorZ:
+      x_rv[cv_index].push_parameter(acv_map2_target, s1);
+      transform_correlations();
+      if (zs) {
+	L_s_plus_h = corrCholeskyFactorZ;        // L
+	//trans_U_to_Z(u_vars, z_vars_s_plus_h); // z
+      }
+      if (xs)
+	trans_U_to_X(u_vars, x_vars_s_plus_h);   // x
+
+      // ------------------------------------
+      // Evaluate (L/z_vars/x_vars)_s_minus_h
+      // ------------------------------------
+      s1 = s0 - h;
+      // update randomVars & corrCholeskyFactorZ:
+      x_rv[cv_index].push_parameter(acv_map2_target, s1);
+      transform_correlations();
+      //if (zs) {
+        // utilize corrCholeskyFactorZ below      // L
+        //trans_U_to_Z(u_vars, z_vars_s_minus_h); // z
+      //}
+      if (xs)
+	trans_U_to_X(u_vars, x_vars_s_minus_h);   // x
+
+      // -------------------------------
+      // Compute the central differences
+      // -------------------------------
+      if (zs) {
+	for (j=0; j<x_len; j++)                            // dL/ds
+	  for (k=0; k<=j; k++)
+	    dL_dsi(j, k) = (L_s_plus_h(j, k) - corrCholeskyFactorZ(j, k))/2./h;
+	dz_dsi.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1., dL_dsi,
+			u_vars, 0.); // dz/ds
+	for (j=0; j<x_len; j++)
+	  num_jacobian_zs(j, i) = dz_dsi(j);
+	//for (j=0; j<x_len; j++)                          // dz/ds (alt)
+	//  num_jacobian_zs(j, i)=(z_vars_s_plus_h(j)-z_vars_s_minus_h(j))/2./h;
+      }
+      if (xs)
+	for (j=0; j<x_len; j++)                            // dx/ds
+	  num_jacobian_xs(j,i) = (x_vars_s_plus_h(j)-x_vars_s_minus_h(j))/2./h;
+
+      // reset s0 (corrCholeskyFactorZ reset can be deferred):
+      x_rv[cv_index].push_parameter(acv_map2_target, s0);
+    }
+  }
+  // reset corrCholeskyFactorZ:
+  corrCholeskyFactorZ = chol_z0;
 }
 
 

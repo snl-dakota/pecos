@@ -42,14 +42,18 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// return randomVars (marginals, when present)
-  virtual const std::vector<RandomVariable>& random_variables() const;
   /// return randomVars[i] (marginal, when present)
   virtual const RandomVariable& random_variable(size_t i) const;
+  /// return randomVars (marginals, when present)
+  virtual const std::vector<RandomVariable>& random_variables() const;
+  /// return randomVars (marginals, when present)
+  virtual std::vector<RandomVariable>& random_variables();
+
   /// return ranVarTypes (marginals, when present)
   virtual const ShortArray& types() const;
   /// return ranVarTypes[i] (marginal, when present)
   virtual short type(size_t i) const;
+
   /// return corrMatrix
   virtual const RealSymMatrix& correlation_matrix() const;
 
@@ -67,6 +71,8 @@ public:
 
   /// return correlationFlag
   bool correlation() const;
+  /// return active subset of variables to which correlation matrix applies
+  const BitArray& active_correlations() const;
 
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
