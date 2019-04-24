@@ -73,21 +73,29 @@ get_distribution(short mv_dist_type)
 	<< std::endl;
 #endif
 
+  MultivariateDistribution* mvd_rep;
   switch (mv_dist_type) {
   case MARGINALS_CORRELATIONS:
-    return new MarginalsCorrDistribution();      break;
+    mvd_rep = new MarginalsCorrDistribution();      break;
   case MULTIVARIATE_NORMAL:
-    return new MultivariateNormalDistribution(); break;
+    mvd_rep = new MultivariateNormalDistribution(); break;
   //case JOINT_KDE:
-  //  return new JointKDEDistribution();         break;
+  //  mvd_rep = new JointKDEDistribution();         break;
   //case GAUSSIAN_COPULA:
-  //  return new CopulaDistribution<Gaussian>(); break; // if templated...
+  //  mvd_rep = new CopulaDistribution<Gaussian>(); break; // if templated...
   //etc.
   default:
     PCerr << "Error: MultivariateDistribution type " << mv_dist_type
 	  << " not available." << std::endl;
-    return NULL;
+    mvd_rep = NULL;
   }
+
+  // some derived classes (especially template classes) cover multiple
+  // ranVarTypes, so override ctor assignments for those cases:
+  if (mvd_rep)
+    mvd_rep->mvDistType = mv_dist_type;
+
+  return mvd_rep;
 }
 
 

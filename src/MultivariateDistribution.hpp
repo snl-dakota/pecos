@@ -80,6 +80,9 @@ public:
   /// function to check modelRep (does this envelope contain a letter)
   bool is_null() const;
 
+  /// return mvDistType
+  short type() const;
+
 protected:
 
   //
@@ -94,6 +97,9 @@ protected:
   //
   //- Heading: Data members
   //
+
+  /// derived type of MultivariateDistribution
+  short mvDistType;
 
   /// flag for indicating if correlation exists among the random variables
   bool correlationFlag;
@@ -117,6 +123,10 @@ private:
   /// number of objects sharing mvDistRep
   int referenceCount;
 };
+
+
+inline short MultivariateDistribution::type() const
+{ return mvDistType; }
 
 
 inline bool MultivariateDistribution::correlation() const

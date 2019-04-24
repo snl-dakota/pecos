@@ -46,6 +46,7 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  /*
   Real mean() const;
   //Real median() const;
   Real mode() const;
@@ -53,9 +54,9 @@ public:
   Real variance() const;
   
   RealRealPair moments() const;
-  RealRealPair bounds() const;
-
   Real coefficient_of_variation() const;
+  */
+  RealRealPair bounds() const;
 
   void pull_parameter(short dist_param, std::set<T>& vals) const;
   void push_parameter(short dist_param, const std::set<T>& vals);
