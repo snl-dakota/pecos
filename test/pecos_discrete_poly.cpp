@@ -159,7 +159,7 @@ namespace {
   //------------------------------------
   // Compute known exact orthogonality value
   //------------------------------------
-  Real hahn_exact_orthog(Real a, Real b, short N, short order)
+  Real hahn_exact_orthog(int a, int b, short N, short order)
   {
     Real value =   std::pow(-1,order)*BasisPolynomial::pochhammer((order+a+b+1.0),(N+1))*BasisPolynomial::pochhammer((b+1.0),order)
                   *BasisPolynomial::factorial(order)/((2.0*order+a+b+1.0)*BasisPolynomial::pochhammer((a+1.0),order)
@@ -171,7 +171,7 @@ namespace {
   //------------------------------------
   // Compute numerical inner product
   //------------------------------------
-  Real hahn_inner_prod(short N, Real a, Real b, short order1, short order2, BasisPolynomial * poly)
+  Real hahn_inner_prod(short N, int a, int b, short order1, short order2, BasisPolynomial * poly)
   {
     Real sum = 0.0;
     for( short i=0; i<N+1; ++i ) {
@@ -196,25 +196,27 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
-  TEST_EQUALITY( poly_basis.alpha_polynomial(), -1.0 );
-  TEST_EQUALITY( poly_basis.beta_polynomial(), -1.0 );
-  TEST_EQUALITY( ptr->gamma_polynomial(), -1.0 );
+  int ap;  poly_basis.pull_parameter(HGE_TOT_POP, ap);
+  int bp;  poly_basis.pull_parameter(HGE_SEL_POP, bp);
+  int gp;  poly_basis.pull_parameter(HGE_DRAWN  , gp);
+  TEST_EQUALITY( ap, -1 );
+  TEST_EQUALITY( bp, -1 );
+  TEST_EQUALITY( gp, -1 );
 
-  const Real alpha = 4.0;
-  const Real beta  = 6.0;
-  const short N    = 10;
-  const Real  rN   = 10.0;
-  const Real TEST_TOL = 5.e-8; // a relative tolerance based on the exact answers
+  const int totalPop   = 4;
+  const int selectPop  = 6;
+  const int N          = 10;
+  const Real TEST_TOL  = 5.e-8; // a relative tolerance based on the exact answers
 
-  poly_basis.alpha_stat(alpha);
-  poly_basis.beta_stat(beta);
-  ptr->gamma_stat(rN);
+  poly_basis.push_parameter(HGE_TOT_POP, totalPop);
+  poly_basis.push_parameter(HGE_SEL_POP, selectPop);
+  poly_basis.push_parameter(HGE_DRAWN  , N);
 
   // Test orthogonality of first 10 polynomials - covers hardcoded 1st and 2nd orders and recursion-based orders
   for( short i=0; i<11; ++i ) {
-    Real exact_orth_val = hahn_exact_orthog(alpha, beta, N, i);
+    Real exact_orth_val = hahn_exact_orthog(totalPop, selectPop, N, i);
     for( short j=0; j<11; ++j ) {
-      Real numerical_orth_val = hahn_inner_prod(N, alpha, beta, i, j, ptr);
+      Real numerical_orth_val = hahn_inner_prod(N, totalPop, selectPop, i, j, ptr);
       if( i == j ) {
         TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
