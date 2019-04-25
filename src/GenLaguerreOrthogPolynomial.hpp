@@ -109,7 +109,7 @@ pull_parameter(short dist_param, Real& param) const
 {
   // return BE_ALPHA,BETA (unconverted)
   switch (dist_param) {
-  case   GA_ALPHA: param = alphaPoly + 1.; break; // alpha poly to alpha stat
+  case     GA_ALPHA: param = alphaPoly + 1.; break; // alpha poly to alpha stat
   case GENLAG_ALPHA: param = alphaPoly;      break;
   default:
     PCerr << "Error: unsupported distribution parameter in GenLaguerreOrthog"
@@ -129,7 +129,7 @@ push_parameter(short dist_param, Real param)
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
     switch (dist_param) {
-    case   GA_ALPHA: alphaPoly = param - 1.; break; // alpha stat to alpha poly
+    case     GA_ALPHA: alphaPoly = param - 1.; break;// alpha stat to alpha poly
     case GENLAG_ALPHA: alphaPoly = param;      break;
     }
   }

@@ -7,7 +7,8 @@
     _______________________________________________________________________ */
 
 //- Class:	 SetVariable
-//- Description: A random variable described by discrete values + probabilities
+//- Description: A random variable described by discrete values without
+//-              associated probabilities
 //- Owner:       Mike Eldred
 //- Revised by:  
 //- Version:
@@ -22,9 +23,10 @@ namespace Pecos {
 
 /// Derived random variable class for discrete set random variables.
 
-/** Manages value-probability pairings for types int, string, and real.
-    String values are managed by index rather than value, requiring
-    template specializations. */
+/** Manages a set of discrete values without associated probability pairings
+    (refer to DiscreteSetRandomVariable for pairings) for types int, string,
+    and real.  String values are managed by index rather than value,
+    requiring template specializations. */
 
 template <typename T>
 class SetVariable: public RandomVariable
