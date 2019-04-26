@@ -43,9 +43,9 @@ int main(int argc, char* argv[])
   // Compute and output samples
   int num_samples = 100;
   Pecos::RealMatrix samples_array;
-  lhs_driver.generate_samples(dp, num_samples, samples_array);
-  std::cout << "Samples:\n"; // << samples_array << '\n';
-  Pecos::write_data(std::cout, samples_array, false, true, true);
+  //lhs_driver.generate_samples(dp, num_samples, samples_array);
+  //std::cout << "Samples:\n"; // << samples_array << '\n';
+  //Pecos::write_data(std::cout, samples_array, false, true, true);
 
   return 0;
 }
