@@ -16,9 +16,11 @@ static const char rcsId[]="@(#) $Id: MarginalsCorrDistribution.cpp 4768 2007-12-
 
 namespace Pecos {
 
-void MarginalsCorrDistribution::initialize_types(const ShortArray& rv_types)
+void MarginalsCorrDistribution::
+initialize_types(const ShortArray& rv_types, const BitArray& active_vars)
 {
   ranVarTypes = rv_types;
+  activeVars  = active_vars;
 
   // construction of x-space random variables occurs once (updates to
   // distribution parameters can occur repeatedly)

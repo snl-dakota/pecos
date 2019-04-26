@@ -37,7 +37,8 @@ public:
   //
 
   /// set ranVarTypes and initialize randomVars
-  void initialize_types(const ShortArray& rv_types);
+  void initialize_types(const ShortArray& rv_types,
+			const BitArray& active_vars = BitArray());
   /// initializes corrMatrix and correlationFlag
   void initialize_correlations(const RealSymMatrix& corr,
 			       const BitArray& active_corr = BitArray());
@@ -160,14 +161,14 @@ protected:
   /// vector of random variables encapsulating distribution parameters and
   /// statistical functions (pdf, cdf, etc.)
   std::vector<RandomVariable> randomVars;
+  /// subset of randomVars that are currently active (if empty, then
+  /// no subset: all variables are active)
+  BitArray activeVars;
 
   /// matrix of random variable correlation coefficients
   RealSymMatrix corrMatrix;
-  // cholesky factor of a modified correlation matrix (#corrMatrixX
-  // is modified in transform_correlations() for use in z-space)
-  //RealMatrix corrCholeskyFactor;
-  /// subset of randomVars to which the corrMatrix refers
-  /// (if empty, no subset is applied)
+  /// subset of randomVars to which the corrMatrix refers (if empty,
+  /// then no subset: correlations are provided for all variables)
   BitArray activeCorr;
 
 private:
