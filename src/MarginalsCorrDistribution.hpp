@@ -67,10 +67,24 @@ public:
   void push_parameters(short rv_type, short dist_param,
 		       const std::vector<ValueType>& values);
 
-  /// return a scalar distribution parameter from randomVars[v
+  /// update val from a scalar distribution parameter from randomVars[v]
+  template <typename ValueType>
+  void pull_parameter(size_t v, short dist_param, ValueType& val);
+  /// define array of values using the identified distribution parameter
+  /// across the specified range of random variables
+  template <typename ValueType>
+  void pull_parameters(size_t start_v, size_t num_v, short dist_param,
+		       std::vector<ValueType>& values);
+  /// define array of values using the identified distribution parameter
+  /// across the specified range of random variables
+  template <typename ValueType>
+  void pull_parameters(short rv_type, short dist_param,
+		       std::vector<ValueType>& values);
+
+  /// return a scalar distribution parameter from randomVars[v]
   template <typename ValueType>
   ValueType pull_parameter(size_t v, short dist_param);
-  /// return values for one distribution parameter across the set
+  /// return array of values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename ValueType>
   std::vector<ValueType> pull_parameters(short rv_type, short dist_param);
@@ -241,7 +255,7 @@ push_parameters(size_t start_v, size_t num_v, short dist_param,
   // TO DO: would like to retire this version if Dakota migrates from Teuchos
   //        to std::vector for dist params
 
-  size_t i, v, num_updates = std::min(values.length(), num_v);
+  size_t i, v, num_updates = std::min((size_t)values.length(), num_v);
   for (i=0, v=start_v; i<num_updates; ++i, ++v)
     randomVars[v].push_parameter(dist_param, values[i]);
 }
@@ -291,6 +305,41 @@ push_parameters(short rv_type, short dist_param,
 
 
 template <typename ValueType>
+void MarginalsCorrDistribution::
+pull_parameter(size_t v, short dist_param, ValueType& val)
+{ randomVars[v].pull_parameter(dist_param, val); }
+
+
+template <typename ValueType>
+void MarginalsCorrDistribution::
+pull_parameters(size_t start_v, size_t num_v, short dist_param,
+		std::vector<ValueType>& values)
+{
+  // set one distribution parameter type for a range of random variables
+
+  size_t i, v;
+  values.resize(num_v);
+  for (i=0, v=start_v; i<num_v; ++i, ++v)
+    randomVars[v].pull_parameter(dist_param, values[i]);
+}
+
+
+template <typename ValueType>
+void MarginalsCorrDistribution::
+pull_parameters(short rv_type, short dist_param, std::vector<ValueType>& values)
+{
+  // rv_type eliminates need to check for dist_param support
+
+  values.resize(std::count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
+
+  size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
+  for (rv=0; rv<num_rv; ++rv)
+    if (ranVarTypes[rv] == rv_type)
+      randomVars[rv].pull_parameter(dist_param, values[cntr++]);
+}
+
+
+template <typename ValueType>
 ValueType MarginalsCorrDistribution::pull_parameter(size_t v, short dist_param)
 {
   ValueType val;
@@ -303,16 +352,8 @@ template <typename ValueType>
 std::vector<ValueType> MarginalsCorrDistribution::
 pull_parameters(short rv_type, short dist_param)
 {
-  // rv_type eliminates need to check for dist_param support
-
   std::vector<ValueType> vals;
-  vals.resize(count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
-
-  size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
-  for (rv=0; rv<num_rv; ++rv)
-    if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].pull_parameter(dist_param, vals[cntr++]);
-
+  pull_parameters(rv_type, dist_param, vals);
   return vals;
 }
 

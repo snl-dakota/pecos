@@ -199,13 +199,12 @@ public:
   virtual void pull_parameter(short dist_param, Real& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, int&  val) const;
-  // Can't override with a template instantiation -> client access via ranVarRep
   /// return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param, IntSet& val) const;
-  // return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param, StringSet& val) const;
-  // return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param, RealSet& val) const;
+  virtual void pull_parameter(short dist_param, IntSet& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, StringSet& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, RealSet& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, IntRealMap& val) const;
   /// return the value of the named distribution parameter
@@ -221,24 +220,22 @@ public:
   virtual void push_parameter(short dist_param, Real val);
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, int  val);
-  // Can't override with a template instantiation -> client access via ranVarRep
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const IntSet& val) ;
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const StringSet& val);
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const RealSet& val);
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const IntRealMap& val);
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const StringRealMap& val);
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const RealRealMap& val);
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param, const IntIntPairRealMap& val);
-  // return the value of the named distribution parameter
-  //virtual void push_parameter(short dist_param,
-  //                            const RealRealPairRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const IntSet& val) ;
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const StringSet& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const RealSet& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const IntRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const StringRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const RealRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const IntIntPairRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const RealRealPairRealMap& val);
 
   template <typename T>
   T parameter(short dist_param) const;

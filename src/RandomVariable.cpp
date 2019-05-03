@@ -419,6 +419,42 @@ void RandomVariable::pull_parameter(short dist_param, int& val) const
 }
 
 
+void RandomVariable::pull_parameter(short dist_param, IntSet& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(IntSet) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::pull_parameter(short dist_param, StringSet& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(StringSet) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::pull_parameter(short dist_param, RealSet& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(RealSet) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void RandomVariable::pull_parameter(short dist_param, IntRealMap& val) const
 {
   if (ranVarRep)
@@ -474,6 +510,104 @@ void RandomVariable::push_parameter(short dist_param, int val)
   else {
     PCerr << "Error: push_parameter(int) not supported for this random "
 	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, const IntSet& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(IntSet) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, const StringSet& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(StringSet) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, const RealSet& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(RealSet) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, const IntRealMap& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(IntRealMap) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, const StringRealMap& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(StringRealMap) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, const RealRealMap& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(RealRealMap) not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::
+push_parameter(short dist_param, const IntIntPairRealMap& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(IntIntPairRealMap) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::
+push_parameter(short dist_param, const RealRealPairRealMap& val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(RealRealPairRealMap) not supported for "
+	  << "this random variable type." << std::endl;
     abort_handler(-1);
   }
 }
