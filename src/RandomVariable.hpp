@@ -237,9 +237,6 @@ public:
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, const RealRealPairRealMap& val);
 
-  template <typename T>
-  T parameter(short dist_param) const;
-
   /// return the distribution mean
   virtual Real mean() const;
   /// return the distribution mode
@@ -279,6 +276,10 @@ public:
   //
   //- Heading: Member functions
   //
+
+  /// Invoke virtual pull_parameter(short, T) and return result
+  template <typename T>
+  T pull_parameter(short dist_param) const;
 
   /// Draw a sample from the distribution using inverse_cdf on uniform[0,1]
   template <typename Engine>
@@ -345,7 +346,7 @@ private:
 
 
 template <typename T>
-T RandomVariable::parameter(short dist_param) const
+T RandomVariable::pull_parameter(short dist_param) const
 {
   T val;
   pull_parameter(dist_param, val);
