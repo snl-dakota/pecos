@@ -50,20 +50,29 @@ set(ExportTarget ${CMAKE_PROJECT_NAME}-targets CACHE STRING
 
 # --- External TPLs ---
 
-# first check for a system blas and lapack
+# TODO: Update to use CMake BLAS/LAPACK probes and properly use their output
 if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
-  if(NOT DEFINED BLAS_LIBS)
-    find_library(BLAS_LIBS blas)
-  endif()
-  if(NOT DEFINED LAPACK_LIBS)
-    find_library(LAPACK_LIBS lapack)
-  endif()
-  if(NOT BLAS_LIBS OR NOT LAPACK_LIBS)
-    # if not a system blas and lapack, then look for a cmake built LAPACK
-    # with find_package
+  # Historically on MSVC, tried to use CMake config file approach first.  
+  # Could probably just use the Unix logic below instead...
+  if(MSVC)
     find_package(LAPACK REQUIRED NO_MODULE)
     set(BLAS_LIBS blas)
     set(LAPACK_LIBS lapack)
+  else()
+    # first check for a system blas and lapack
+    if(NOT DEFINED BLAS_LIBS)
+      find_library(BLAS_LIBS blas)
+    endif()
+    if(NOT DEFINED LAPACK_LIBS)
+      find_library(LAPACK_LIBS lapack)
+    endif()
+    if(NOT BLAS_LIBS OR NOT LAPACK_LIBS)
+      # if not a system blas and lapack, then look for a cmake built LAPACK
+      # with find_package
+      find_package(LAPACK REQUIRED NO_MODULE)
+      set(BLAS_LIBS blas)
+      set(LAPACK_LIBS lapack)
+    endif()
   endif()
 endif()
 
@@ -79,8 +88,13 @@ endif(Boost_DIR)
 
 if (NOT BUILD_IN_TRILINOS)
 
-  # First probe for system-installed Trilinos, respecting Trilinos_DIR if set
-  find_package(Trilinos QUIET)
+  # Workaround to skip finding system Trilinos until this probe is
+  # simplified and follows find_package semantics. Double negative to
+  # preserve historical behavior without overcomplicating things.
+  if(NOT DAKOTA_NO_FIND_TRILINOS)
+    # First probe for system-installed Trilinos, respecting Trilinos_DIR if set
+    find_package(Trilinos QUIET)
+  endif()
 
   if(Trilinos_FOUND)
     if(Trilinos_DIR)
@@ -125,9 +139,9 @@ if (NOT BUILD_IN_TRILINOS)
       set(Trilinos_GENERATE_REPO_VERSION_FILE OFF CACHE BOOL
         "Pecos disabling generation of TrilinosRepoVersion.txt")
 
-      # TODO: Propagate to top-level Dakota configure
-      set(Teuchos_ENABLE_COMPLEX TRUE CACHE BOOL
-	"Pecos requires some complex blas wrappers")
+      # BMA: Since Pecos surrogates not using complex yet, disabled this
+      ##set(Trilinos_ENABLE_COMPLEX_DOUBLE TRUE CACHE BOOL
+      ##  "Pecos requires some complex blas wrappers")
 
       add_subdirectory(packages/trilinos)
 

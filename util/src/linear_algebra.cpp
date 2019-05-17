@@ -58,34 +58,37 @@ template<> void GEMV<int,double>(
 	     vector.values(), &inc, &beta, result.values(), &inc );
 }
 
-template<> void GEMV<int,std::complex<double> >(
-      Teuchos::ETransp trans, bool conjugate_trans, std::complex<double> alpha,
-      const Teuchos::SerialDenseMatrix<int,std::complex<double> >&matrix,
-      const Teuchos::SerialDenseVector<int,std::complex<double> >&vector,
-      std::complex<double> beta,
-      Teuchos::SerialDenseVector<int,std::complex<double> > &result){
-
-  int result_len = matrix.numRows();
-  if ((trans==Teuchos::TRANS) || (trans==Teuchos::CONJ_TRANS))
-    result_len = matrix.numCols();
-  
-  if (result.length() != result_len){
-    if (beta!=0.)
-      throw(std::runtime_error("result inconsistent with matrix but beta!=0"));
-    result.sizeUninitialized(result_len);
-  }
-
-  if ((trans==Teuchos::TRANS) && conjugate_trans)
-    trans = Teuchos::CONJ_TRANS;
-  
-  int inc=1;
-  char T=Teuchos::ETranspChar[trans];
-  int M=matrix.numRows(), N=matrix.numCols(), stride=matrix.stride();
-  ZGEMV_F77( &T, &M, &N, &alpha, 
-	     matrix.values(), &stride, 
-	     vector.values(), &inc, &beta, result.values(), &inc );
-}
-
+// BMA: Disabled the complex variant since no current use cases
+// When reactivated will need to edit Dakota and Pecos CMakeLists.txt
+//#ifdef HAVE_COMPLEX_BLAS
+//template<> void GEMV<int,std::complex<double> >(
+//      Teuchos::ETransp trans, bool conjugate_trans, std::complex<double> alpha,
+//      const Teuchos::SerialDenseMatrix<int,std::complex<double> >&matrix,
+//      const Teuchos::SerialDenseVector<int,std::complex<double> >&vector,
+//      std::complex<double> beta,
+//      Teuchos::SerialDenseVector<int,std::complex<double> > &result){
+//
+//  int result_len = matrix.numRows();
+//  if ((trans==Teuchos::TRANS) || (trans==Teuchos::CONJ_TRANS))
+//    result_len = matrix.numCols();
+//  
+//  if (result.length() != result_len){
+//    if (beta!=0.)
+//      throw(std::runtime_error("result inconsistent with matrix but beta!=0"));
+//    result.sizeUninitialized(result_len);
+//  }
+//
+//  if ((trans==Teuchos::TRANS) && conjugate_trans)
+//    trans = Teuchos::CONJ_TRANS;
+//  
+//  int inc=1;
+//  char T=Teuchos::ETranspChar[trans];
+//  int M=matrix.numRows(), N=matrix.numCols(), stride=matrix.stride();
+//  ZGEMV_F77( &T, &M, &N, &alpha, 
+//	     matrix.values(), &stride, 
+//	     vector.values(), &inc, &beta, result.values(), &inc );
+//}
+//#endif
 
 int cholesky( const RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo, 
               bool for_lapack )
