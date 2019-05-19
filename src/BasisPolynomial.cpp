@@ -499,12 +499,13 @@ void BasisPolynomial::pull_parameter(short dist_param, Real& param) const
 }
 
 
-void BasisPolynomial::pull_parameter(short dist_param, int& param) const
+void BasisPolynomial::
+pull_parameter(short dist_param, unsigned int& param) const
 {
   if (polyRep)
     polyRep->pull_parameter(dist_param, param);
   else {
-    PCerr << "Error: pull_parameter(Real) not available for this basis "
+    PCerr << "Error: pull_parameter(unsigned int) not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
@@ -523,12 +524,12 @@ void BasisPolynomial::push_parameter(short dist_param, Real param)
 }
 
 
-void BasisPolynomial::push_parameter(short dist_param, int param)
+void BasisPolynomial::push_parameter(short dist_param, unsigned int param)
 {
   if (polyRep)
     polyRep->push_parameter(dist_param, param);
   else {
-    PCerr << "Error: push_parameter(int) not available for this basis "
+    PCerr << "Error: push_parameter(unsigned int) not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }

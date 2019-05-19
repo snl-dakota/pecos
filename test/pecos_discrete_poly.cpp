@@ -58,11 +58,11 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
 
   // Test deafult settings and accessors
   Real ap;  poly_basis.pull_parameter(BI_P_PER_TRIAL, ap);
-  int  bp;  poly_basis.pull_parameter(BI_TRIALS,      bp);
-  TEST_EQUALITY( ap, -1.0 ); TEST_EQUALITY( bp, -1 );
+  unsigned int  bp;  poly_basis.pull_parameter(BI_TRIALS,      bp);
+  TEST_EQUALITY( ap, 0.0 ); TEST_EQUALITY( bp, 0 );
 
   const Real p = 0.1;
-  const int  N = 15;
+  const unsigned int N = 15;
   const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
 
   poly_basis.push_parameter(BI_P_PER_TRIAL, p);
@@ -124,11 +124,11 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
 
   // Test deafult settings and accessors
   Real ap;  poly_basis.pull_parameter(NBI_P_PER_TRIAL, ap);
-  int  bp;  poly_basis.pull_parameter(NBI_TRIALS,      bp);
-  TEST_EQUALITY( ap, -1.0 );  TEST_EQUALITY( bp,  1 );
+  unsigned int bp;  poly_basis.pull_parameter(NBI_TRIALS,      bp);
+  TEST_EQUALITY( ap, 0.0 );  TEST_EQUALITY( bp,  1 );
 
-  const Real c    = 0.1;
-  const int  beta = 1;//const Real beta = 1.5; // *** MSE: Real was valid for old Meixner poly but not for NBI or GE distributions
+  const Real c = 0.1;
+  const unsigned int beta = 1;//const Real beta = 1.5; // *** MSE: Real was valid for old Meixner poly but not for NBI or GE distributions
   const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
   const unsigned NUM_TERMS_TO_SUM = 40; // the number of terms needed for the orthogonality sum to converge
 
@@ -159,7 +159,7 @@ namespace {
   //------------------------------------
   // Compute known exact orthogonality value
   //------------------------------------
-  Real hahn_exact_orthog(int a, int b, short N, short order)
+  Real hahn_exact_orthog(unsigned int a, unsigned int b, unsigned int N, short order)
   {
     Real value =   std::pow(-1,order)*BasisPolynomial::pochhammer((order+a+b+1.0),(N+1))*BasisPolynomial::pochhammer((b+1.0),order)
                   *BasisPolynomial::factorial(order)/((2.0*order+a+b+1.0)*BasisPolynomial::pochhammer((a+1.0),order)
@@ -171,7 +171,7 @@ namespace {
   //------------------------------------
   // Compute numerical inner product
   //------------------------------------
-  Real hahn_inner_prod(short N, int a, int b, short order1, short order2, BasisPolynomial * poly)
+  Real hahn_inner_prod(unsigned int N, unsigned int a, unsigned int b, short order1, short order2, BasisPolynomial * poly)
   {
     Real sum = 0.0;
     for( short i=0; i<N+1; ++i ) {
@@ -196,21 +196,21 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
-  int ap;  poly_basis.pull_parameter(HGE_TOT_POP, ap);
-  int bp;  poly_basis.pull_parameter(HGE_SEL_POP, bp);
-  int gp;  poly_basis.pull_parameter(HGE_DRAWN  , gp);
-  TEST_EQUALITY( ap, -1 );
-  TEST_EQUALITY( bp, -1 );
-  TEST_EQUALITY( gp, -1 );
+  unsigned int ap;  poly_basis.pull_parameter(HGE_TOT_POP, ap);
+  unsigned int bp;  poly_basis.pull_parameter(HGE_SEL_POP, bp);
+  unsigned int gp;  poly_basis.pull_parameter(HGE_DRAWN  , gp);
+  TEST_EQUALITY( ap, 0 );
+  TEST_EQUALITY( bp, 0 );
+  TEST_EQUALITY( gp, 0 );
 
-  const int totalPop   = 4;
-  const int selectPop  = 6;
-  const int N          = 10;
+  const unsigned int totalPop   = 4;
+  const unsigned int selectPop  = 6;
+  const unsigned int N          = 10;
   const Real TEST_TOL  = 5.e-8; // a relative tolerance based on the exact answers
 
   poly_basis.push_parameter(HGE_TOT_POP, totalPop);
   poly_basis.push_parameter(HGE_SEL_POP, selectPop);
-  poly_basis.push_parameter(HGE_DRAWN  , N);
+  poly_basis.push_parameter(HGE_DRAWN,   N);
 
   // Test orthogonality of first 10 polynomials - covers hardcoded 1st and 2nd orders and recursion-based orders
   for( short i=0; i<11; ++i ) {

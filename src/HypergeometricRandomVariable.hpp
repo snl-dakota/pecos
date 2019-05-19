@@ -52,8 +52,10 @@ public:
 
   Real pdf(Real x) const;
 
-  void pull_parameter(short dist_param, int& val) const;
-  void push_parameter(short dist_param, int  val);
+  void pull_parameter(short dist_param, unsigned int& val) const;
+  void push_parameter(short dist_param, unsigned int  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -148,7 +150,7 @@ inline Real HypergeometricRandomVariable::pdf(Real x) const
 
 
 inline void HypergeometricRandomVariable::
-pull_parameter(short dist_param, int& val) const
+pull_parameter(short dist_param, unsigned int& val) const
 {
   switch (dist_param) {
   case HGE_TOT_POP: val = numTotalPop;  break;
@@ -156,7 +158,7 @@ pull_parameter(short dist_param, int& val) const
   case HGE_DRAWN:   val = numDrawn;     break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in HypergeometricRandomVariable::pull_parameter(int)."
+	  << " in HypergeometricRandomVariable::pull_parameter(unsigned int)."
 	  << std::endl;
     abort_handler(-1); break;
   }
@@ -164,7 +166,7 @@ pull_parameter(short dist_param, int& val) const
 
 
 inline void HypergeometricRandomVariable::
-push_parameter(short dist_param, int val)
+push_parameter(short dist_param, unsigned int val)
 {
   switch (dist_param) {
   case HGE_TOT_POP: numTotalPop  = val; break;
@@ -172,11 +174,20 @@ push_parameter(short dist_param, int val)
   case HGE_DRAWN:   numDrawn     = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in HypergeometricRandomVariable::push_parameter(int)."
+	  << " in HypergeometricRandomVariable::push_parameter(unsigned int)."
 	  << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new hypergeomDist instance
+}
+
+
+inline void HypergeometricRandomVariable::
+copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(HGE_TOT_POP, numTotalPop);
+  rv.pull_parameter(HGE_SEL_POP, numSelectPop);
+  rv.pull_parameter(HGE_DRAWN,   numDrawn);
 }
 
 

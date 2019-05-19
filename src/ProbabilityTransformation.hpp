@@ -157,8 +157,12 @@ public:
 
   /// return xDist
   const MultivariateDistribution& x_distribution() const;
+  /// set xDist
+  void x_distribution(const MultivariateDistribution& dist);
   /// return uDist
   const MultivariateDistribution& u_distribution() const;
+  /// set uDist
+  void u_distribution(const MultivariateDistribution& dist);
 
   /*
   // REPLACE THESE CALLS WITH, FOR EXAMPLE, x_distibution().initialize_*()
@@ -330,9 +334,19 @@ x_distribution() const
 { return xDist; }
 
 
+inline void ProbabilityTransformation::
+x_distribution(const MultivariateDistribution& dist)
+{ xDist = dist; }
+
+
 inline const MultivariateDistribution& ProbabilityTransformation::
 u_distribution() const
 { return uDist; }
+
+
+inline void ProbabilityTransformation::
+u_distribution(const MultivariateDistribution& dist)
+{ uDist = dist; }
 
 
 inline bool ProbabilityTransformation::is_null() const

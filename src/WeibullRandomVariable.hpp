@@ -57,6 +57,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -216,6 +218,13 @@ inline void WeibullRandomVariable::push_parameter(short dist_param, Real val)
     abort_handler(-1); break;
   }
   update_boost(); // create a new weibullDist instance
+}
+
+
+inline void WeibullRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(W_ALPHA, alphaStat);
+  rv.pull_parameter(W_BETA,  betaStat);
 }
 
 

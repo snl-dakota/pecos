@@ -71,6 +71,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -292,6 +294,14 @@ inline void InvGammaRandomVariable::push_parameter(short dist_param, Real val)
     abort_handler(-1); break;
   }
   update_boost(); // create a new invGammaDist instance
+}
+
+
+inline void InvGammaRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(IGA_ALPHA, alphaShape);
+  //ExponentialRandomVariable::copy_parameters(rv); // different enum used
+  rv.pull_parameter(IGA_BETA,  betaScale);
 }
 
 

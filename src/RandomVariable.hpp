@@ -198,7 +198,9 @@ public:
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, Real& val) const;
   /// return the value of the named distribution parameter
-  virtual void pull_parameter(short dist_param, int&  val) const;
+  virtual void pull_parameter(short dist_param, int& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, unsigned int& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, IntSet& val) const;
   /// return the value of the named distribution parameter
@@ -211,15 +213,17 @@ public:
   virtual void pull_parameter(short dist_param, StringRealMap& val) const;
   /// return the value of the named distribution parameter
   virtual void pull_parameter(short dist_param, RealRealMap& val) const;
-  // return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param, IntIntPairRealMap& val) const;
-  // return the value of the named distribution parameter
-  //virtual void pull_parameter(short dist_param,RealRealPairRealMap& val)const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, IntIntPairRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, RealRealPairRealMap& val) const;
 
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, Real val);
   /// update the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, int  val);
+  virtual void push_parameter(short dist_param, int val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, unsigned int val);
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, const IntSet& val) ;
   /// update the value of the named distribution parameter
@@ -236,6 +240,9 @@ public:
   virtual void push_parameter(short dist_param, const IntIntPairRealMap& val);
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, const RealRealPairRealMap& val);
+
+  /// copy the distribution parameter values from rv into *this
+  virtual void copy_parameters(const RandomVariable& rv);
 
   /// return the distribution mean
   virtual Real mean() const;

@@ -157,18 +157,14 @@ public:
   /// (calculate and) return wtFactor
   virtual Real weight_factor();
 
-  /// get real parameter value for a parameterized orthogonal polynomial, using
-  /// either statistical or polynomial conventions (based on dist_param value)
+  /// get real parameter value for a parameterized orthogonal polynomial
   virtual void pull_parameter(short dist_param, Real& param) const;
-  /// get int parameter value for a parameterized orthogonal polynomial, using
-  /// either statistical or polynomial conventions (based on dist_param value)
-  virtual void pull_parameter(short dist_param, int& param) const;
-  /// set real parameter value for a parameterized orthogonal polynomial, using
-  /// either statistical or polynomial conventions (based on dist_param value)
+  /// get unsigned int parameter value for a parameterized orthogonal polynomial
+  virtual void pull_parameter(short dist_param, unsigned int& param) const;
+  /// set real parameter value for a parameterized orthogonal polynomial
   virtual void push_parameter(short dist_param, Real param);
-  /// set int parameter value for a parameterized orthogonal polynomial, using
-  /// either statistical or polynomial conventions (based on dist_param value)
-  virtual void push_parameter(short dist_param, int param);
+  /// set unsigned int parameter value for a parameterized orthogonal polynomial
+  virtual void push_parameter(short dist_param, unsigned int param);
   /// return whether a derived BasisPolynomial type supports parameterization
   virtual bool parameterized() const;
 

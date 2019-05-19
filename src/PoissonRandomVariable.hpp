@@ -53,6 +53,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -155,6 +157,10 @@ inline void PoissonRandomVariable::push_parameter(short dist_param, Real val)
   }
   update_boost(); // create a new poissonDist instance
 }
+
+
+inline void PoissonRandomVariable::copy_parameters(const RandomVariable& rv)
+{ rv.pull_parameter(P_LAMBDA, poissonLambda); }
 
 
 inline Real PoissonRandomVariable::mean() const

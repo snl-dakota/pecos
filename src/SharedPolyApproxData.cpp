@@ -236,13 +236,13 @@ update_basis_distribution_parameters(const ShortArray& u_types,
       poly_basis[i].push_parameter(BI_P_PER_TRIAL,
 	mvd_rep->pull_parameter<Real>(i, BI_P_PER_TRIAL));
       poly_basis[i].push_parameter(BI_TRIALS,
-	mvd_rep->pull_parameter<int>(i, BI_TRIALS));
+	mvd_rep->pull_parameter<unsigned int>(i, BI_TRIALS));
       break;
     case NEGATIVE_BINOMIAL:
       poly_basis[i].push_parameter(NBI_P_PER_TRIAL,
 	mvd_rep->pull_parameter<Real>(i, NBI_P_PER_TRIAL));
       poly_basis[i].push_parameter(NBI_TRIALS,
-	mvd_rep->pull_parameter<int>(i, NBI_TRIALS));
+	mvd_rep->pull_parameter<unsigned int>(i, NBI_TRIALS));
       break;
     case GEOMETRIC:
       poly_basis[i].push_parameter(GE_P_PER_TRIAL,
@@ -253,11 +253,11 @@ update_basis_distribution_parameters(const ShortArray& u_types,
       break;
     case HYPERGEOMETRIC:
       poly_basis[i].push_parameter(HGE_TOT_POP,
-	mvd_rep->pull_parameter<int>(i, HGE_TOT_POP));
+	mvd_rep->pull_parameter<unsigned int>(i, HGE_TOT_POP));
       poly_basis[i].push_parameter(HGE_SEL_POP,
-	mvd_rep->pull_parameter<int>(i, HGE_SEL_POP));
+	mvd_rep->pull_parameter<unsigned int>(i, HGE_SEL_POP));
       poly_basis[i].push_parameter(HGE_DRAWN,
-	mvd_rep->pull_parameter<int>(i, HGE_DRAWN));
+	mvd_rep->pull_parameter<unsigned int>(i, HGE_DRAWN));
       break;
     case HISTOGRAM_PT_INT:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->

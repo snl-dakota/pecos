@@ -71,6 +71,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -123,13 +125,13 @@ protected:
 
 inline GammaRandomVariable::GammaRandomVariable():
   ExponentialRandomVariable(), alphaShape(1.), gammaDist(NULL)
-{ ranVarType = GAMMA; }
+{ ranVarType = STD_GAMMA; }
 
 
 inline GammaRandomVariable::GammaRandomVariable(Real alpha, Real beta):
   ExponentialRandomVariable(beta), alphaShape(alpha),
   gammaDist(new gamma_dist(alphaShape, betaScale))
-{ ranVarType = GAMMA; }
+{ ranVarType = STD_GAMMA; }
 
 
 inline GammaRandomVariable::~GammaRandomVariable()
@@ -302,6 +304,14 @@ inline void GammaRandomVariable::push_parameter(short dist_param, Real val)
 }
 
 
+inline void GammaRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(GA_ALPHA, alphaShape);
+  //ExponentialRandomVariable::copy_parameters(rv); // different enum used
+  rv.pull_parameter(GA_BETA,  betaScale);
+}
+
+
 inline Real GammaRandomVariable::mean() const
 { return bmth::mean(*gammaDist); }
 
@@ -336,7 +346,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
       + (-0.007 + 0.131*COV - 0.132*corr)*COV; break;
 
   // Der Kiureghian & Liu: Table 6
-  case GAMMA: // Max Error 4.0%
+  case GAMMA: case STD_GAMMA: // Max Error 4.0%
     COV_rv = rv.coefficient_of_variation();
     return 1.002 + 0.022*corr - 0.012*(COV + COV_rv) + 0.001*corr*corr
       + 0.125*(COV*COV + COV_rv*COV_rv) - 0.077*corr*(COV + COV_rv)
@@ -354,6 +364,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 
   // warping factors are defined once for lower triangle based on uv order
   case NORMAL: case LOGNORMAL: case UNIFORM: case EXPONENTIAL:
+  case STD_NORMAL: case STD_UNIFORM: case STD_EXPONENTIAL:
     return rv.correlation_warping_factor(*this, corr); break;
 
   default: // Unsupported warping (should be prevented upsteam)

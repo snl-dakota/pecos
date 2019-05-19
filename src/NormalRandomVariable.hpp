@@ -65,6 +65,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -133,12 +135,12 @@ protected:
 
 inline NormalRandomVariable::NormalRandomVariable():
   RandomVariable(BaseConstructor()), gaussMean(0), gaussStdDev(1.)
-{ ranVarType = NORMAL; }
+{ ranVarType = STD_NORMAL; }
 
 
 inline NormalRandomVariable::NormalRandomVariable(Real mean, Real stdev):
   RandomVariable(BaseConstructor()), gaussMean(mean), gaussStdDev(stdev)
-{ ranVarType = NORMAL; }
+{ ranVarType = STD_NORMAL; }
 
 
 inline NormalRandomVariable::~NormalRandomVariable()
@@ -269,12 +271,16 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   Real COV;
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
-  case NORMAL:      return 1.; break; // No warping
+  case NORMAL:      case STD_NORMAL:
+    return 1.;  break; // No warping
 
   // Der Kiureghian & Liu: Table 2 (constants)
-  case UNIFORM:     return 1.023326707946488488; break; // Max Error 0.0%
-  case EXPONENTIAL: return 1.107; break;                // Max Error 0.0%
-  case GUMBEL:      return 1.031; break;                // Max Error 0.0%
+  case UNIFORM:     case STD_UNIFORM:
+    return 1.023326707946488488; break; // Max Error 0.0%
+  case EXPONENTIAL: case STD_EXPONENTIAL:
+    return 1.107; break;                // Max Error 0.0%
+  case GUMBEL:
+    return 1.031; break;                // Max Error 0.0%
 
   // Der Kiureghian & Liu: Table 3 (quadratic approximations in COV)
   case LOGNORMAL:
@@ -335,6 +341,13 @@ inline void NormalRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in NormalRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+inline void NormalRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(N_MEAN,    gaussMean);
+  rv.pull_parameter(N_STD_DEV, gaussStdDev);
 }
 
 

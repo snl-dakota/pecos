@@ -59,8 +59,8 @@ protected:
   //
   Real type1_value(Real x, unsigned short order);
 
-  void pull_parameter(short dist_param, int& param) const;
-  void push_parameter(short dist_param, int  param);
+  void pull_parameter(short dist_param, unsigned int& param) const;
+  void push_parameter(short dist_param, unsigned int  param);
   bool parameterized() const;
 
 private:
@@ -70,16 +70,16 @@ private:
   //
 
   /// number in total population
-  int totalPop;
+  unsigned int totalPop;
   /// number in selected population
-  int selectPop;
+  unsigned int selectPop;
   /// number drawn from population
-  int numDrawn;
+  unsigned int numDrawn;
 };
 
 
 inline HahnOrthogPolynomial::HahnOrthogPolynomial() :
-  totalPop(-1), selectPop(-1), numDrawn(-1) // dummy values prior to update
+  totalPop(0), selectPop(0), numDrawn(0) // dummy values prior to update
 { }
 
 
@@ -88,7 +88,7 @@ inline HahnOrthogPolynomial::~HahnOrthogPolynomial()
 
 
 inline void HahnOrthogPolynomial::
-pull_parameter(short dist_param, int& param) const
+pull_parameter(short dist_param, unsigned int& param) const
 {
   switch (dist_param) {
   case HGE_TOT_POP: param = totalPop;  break;
@@ -102,7 +102,8 @@ pull_parameter(short dist_param, int& param) const
 }
 
 
-inline void HahnOrthogPolynomial::push_parameter(short dist_param, int param)
+inline void HahnOrthogPolynomial::
+push_parameter(short dist_param, unsigned int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().

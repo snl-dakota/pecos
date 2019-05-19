@@ -61,6 +61,8 @@ public:
   void push_parameter(short dist_param,
 		      const std::map<std::pair<T, T>, Real>& bpa);
 
+  void copy_parameters(const RandomVariable& rv);
+
   //
   //- Heading: Member functions
   //
@@ -145,6 +147,23 @@ push_parameter(short dist_param, const std::map<std::pair<T, T>, Real>& bpa)
     abort_handler(-1); break;
   }
 }
+
+
+template <typename T>
+void IntervalRandomVariable<T>::copy_parameters(const RandomVariable& rv)
+{
+  switch (rv.type()) {
+  case CONTINUOUS_INTERVAL_UNCERTAIN:
+    rv.pull_parameter(CIU_BPA, intervalBPA); break;
+  case DISCRETE_INTERVAL_UNCERTAIN:
+    rv.pull_parameter(DIU_BPA, intervalBPA); break;
+  default:
+    PCerr << "Error: update failure for RandomVariable type " << rv.type()
+	  << " in IntervalRandomVariable::copy_parameters(T)." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
 
 /*
 template <typename T>

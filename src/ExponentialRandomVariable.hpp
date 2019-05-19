@@ -71,6 +71,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -128,12 +130,12 @@ protected:
 
 inline ExponentialRandomVariable::ExponentialRandomVariable():
   RandomVariable(BaseConstructor()), betaScale(1.)
-{ ranVarType = EXPONENTIAL; }
+{ ranVarType = STD_EXPONENTIAL; }
 
 
 inline ExponentialRandomVariable::ExponentialRandomVariable(Real beta):
   RandomVariable(BaseConstructor()), betaScale(beta)
-{ ranVarType = EXPONENTIAL; }
+{ ranVarType = STD_EXPONENTIAL; }
 
 
 inline ExponentialRandomVariable::~ExponentialRandomVariable()
@@ -250,6 +252,10 @@ push_parameter(short dist_param, Real val)
 }
 
 
+inline void ExponentialRandomVariable::copy_parameters(const RandomVariable& rv)
+{ rv.pull_parameter(E_BETA, betaScale); }
+
+
 inline Real ExponentialRandomVariable::mean() const
 { return betaScale; }
 
@@ -287,13 +293,13 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
   // Der Kiureghian & Liu: Table 4 (quadratic approximations in corr)
-  case EXPONENTIAL:
+  case EXPONENTIAL: case STD_EXPONENTIAL:
     return 1.229 + (-0.367 + 0.153*corr)*corr;      break; // Max Error 1.5%
   case GUMBEL:
     return 1.142 + (-0.154*corr + 0.031*corr)*corr; break; // Max Error 0.2%
 
   // Der Kiureghian & Liu: Table 5 (quadratic approximations in corr,COV)
-  case GAMMA:
+  case GAMMA: case STD_GAMMA:
     COV = rv.coefficient_of_variation();
     return 1.104 + (0.003 + 0.014*corr)*corr
       + (-0.008 + 0.173*COV - 0.296*corr)*COV; break; // Max Error 0.9%
@@ -307,7 +313,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
       + (-0.271 + 0.459*COV - 0.467*corr)*COV; break; // Max Error 0.4%
 
   // warping factors are defined once for lower triangle based on uv order
-  case NORMAL: case LOGNORMAL: case UNIFORM:
+  case NORMAL: case LOGNORMAL: case UNIFORM: case STD_NORMAL: case STD_UNIFORM:
     return rv.correlation_warping_factor(*this, corr); break;
 
   default: // Unsupported warping (should be prevented upsteam)

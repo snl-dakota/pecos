@@ -58,6 +58,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -272,6 +274,15 @@ push_parameter(short dist_param, Real val)
 	  << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void BoundedNormalRandomVariable::
+copy_parameters(const RandomVariable& rv)
+{
+  NormalRandomVariable::copy_parameters(rv); // same enums used
+  rv.pull_parameter(N_LWR_BND, lowerBnd);
+  rv.pull_parameter(N_UPR_BND, upperBnd);
 }
 
   

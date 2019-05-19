@@ -52,8 +52,10 @@ public:
 
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
-  void pull_parameter(short dist_param, int&  val) const;
-  void push_parameter(short dist_param, int   val);
+  void pull_parameter(short dist_param, unsigned int& val) const;
+  void push_parameter(short dist_param, unsigned int  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -166,28 +168,38 @@ inline void BinomialRandomVariable::push_parameter(short dist_param, Real val)
 
 
 inline void BinomialRandomVariable::
-pull_parameter(short dist_param, int& val) const
+pull_parameter(short dist_param, unsigned int& val) const
 {
   switch (dist_param) {
   case BI_TRIALS:  val = numTrials;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BinomialRandomVariable::pull_parameter(int)." << std::endl;
+	  << " in BinomialRandomVariable::pull_parameter(unsigned int)."
+	  << std::endl;
     abort_handler(-1); break;
   }
 }
 
 
-inline void BinomialRandomVariable::push_parameter(short dist_param, int val)
+inline void BinomialRandomVariable::
+push_parameter(short dist_param, unsigned int val)
 {
   switch (dist_param) {
   case BI_TRIALS:  numTrials = val;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BinomialRandomVariable::push_parameter(int)." << std::endl;
+	  << " in BinomialRandomVariable::push_parameter(unsigned int)."
+	  << std::endl;
     abort_handler(-1); break;
   }
   update_boost(); // create a new binomialDist instance
+}
+
+
+inline void BinomialRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(BI_P_PER_TRIAL, probPerTrial);
+  rv.pull_parameter(BI_TRIALS,      numTrials);
 }
 
 

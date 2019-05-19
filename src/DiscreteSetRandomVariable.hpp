@@ -60,6 +60,8 @@ public:
   void pull_parameter(short dist_param, std::map<T, Real>& val) const;
   void push_parameter(short dist_param, const std::map<T, Real>& val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   //
   //- Heading: Member functions
   //
@@ -144,6 +146,30 @@ push_parameter(short dist_param, const std::map<T, Real>& val)
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in DiscreteSetRandomVariable::push_parameter(T)." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+template <typename T>
+void DiscreteSetRandomVariable<T>::copy_parameters(const RandomVariable& rv)
+{
+  switch (rv.type()) {
+  case HISTOGRAM_PT_INT:
+    rv.pull_parameter(H_PT_INT_PAIRS,    valueProbPairs); break;
+  case DISCRETE_UNCERTAIN_SET_INT:
+    rv.pull_parameter(DUSI_VALUES_PROBS, valueProbPairs); break;
+  case HISTOGRAM_PT_STRING:
+    rv.pull_parameter(H_PT_STR_PAIRS,    valueProbPairs); break;
+  case DISCRETE_UNCERTAIN_SET_STRING:
+    rv.pull_parameter(DUSS_VALUES_PROBS, valueProbPairs); break;
+  case HISTOGRAM_PT_REAL:
+    rv.pull_parameter(H_PT_REAL_PAIRS,   valueProbPairs); break;
+  case DISCRETE_UNCERTAIN_SET_REAL:
+    rv.pull_parameter(DUSR_VALUES_PROBS, valueProbPairs); break;
+  default:
+    PCerr << "Error: update failure for RandomVariable type " << rv.type()
+	  << " in DiscreteSetRandomVariable::copy_parameters(T)." << std::endl;
     abort_handler(-1); break;
   }
 }

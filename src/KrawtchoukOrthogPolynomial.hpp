@@ -60,9 +60,9 @@ protected:
   Real type1_value(Real x, unsigned short order);
 
   void pull_parameter(short dist_param, Real& param) const;
-  void pull_parameter(short dist_param, int&  param) const;
+  void pull_parameter(short dist_param, unsigned int& param) const;
   void push_parameter(short dist_param, Real  param);
-  void push_parameter(short dist_param, int   param);
+  void push_parameter(short dist_param, unsigned int  param);
   bool parameterized() const;
 
 private:
@@ -76,12 +76,12 @@ private:
   /// the probability of a "success" for each experiment
   Real probPerTrial;
   /// the number of discrete points on which to base the polynomial 
-  int numTrials;
+  unsigned int numTrials;
 };
 
 
 inline KrawtchoukOrthogPolynomial::KrawtchoukOrthogPolynomial() :
-  probPerTrial(-1.), numTrials(-1) // dummy values prior to update
+  probPerTrial(0.), numTrials(0) // dummy values prior to update
 { }
 
 
@@ -103,13 +103,13 @@ pull_parameter(short dist_param, Real& param) const
 
 
 inline void KrawtchoukOrthogPolynomial::
-pull_parameter(short dist_param, int& param) const
+pull_parameter(short dist_param, unsigned int& param) const
 {
   switch (dist_param) {
   case BI_TRIALS: param = numTrials; break;
   default:
     PCerr << "Error: unsupported distribution parameter in KrawtchoukOrthog"
-	  << "Polynomial::pull_parameter(int)." << std::endl;
+	  << "Polynomial::pull_parameter(unsigned int)." << std::endl;
     abort_handler(-1);
   }
 }
@@ -141,7 +141,7 @@ push_parameter(short dist_param, Real param)
 
 
 inline void KrawtchoukOrthogPolynomial::
-push_parameter(short dist_param, int param)
+push_parameter(short dist_param, unsigned int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -156,7 +156,7 @@ push_parameter(short dist_param, int param)
   else {
     switch (dist_param) {
     case BI_TRIALS:
-      if (numTrials == param) parametricUpdate = false;
+      if (numTrials   == param) parametricUpdate = false;
       else { numTrials = param; parametricUpdate = true; reset_gauss(); }
       break;
     }

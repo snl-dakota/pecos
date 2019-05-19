@@ -57,6 +57,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -259,6 +261,13 @@ inline void LognormalRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in LognormalRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+inline void LognormalRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(LN_LAMBDA, lnLambda);
+  rv.pull_parameter(LN_ZETA,   lnZeta);
 }
 
 

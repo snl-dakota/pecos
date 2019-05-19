@@ -55,9 +55,9 @@ protected:
   Real type1_value(Real x, unsigned short order);
 
   void pull_parameter(short dist_param, Real& param) const;
-  void pull_parameter(short dist_param, int&  param) const;
+  void pull_parameter(short dist_param, unsigned int& param) const;
   void push_parameter(short dist_param, Real  param);
-  void push_parameter(short dist_param, int   param);
+  void push_parameter(short dist_param, unsigned int  param);
   bool parameterized() const;
 
 private:
@@ -69,12 +69,12 @@ private:
   /// the probability of a "success" for each experiment
   Real probPerTrial;
   /// the number of discrete points on which to base the polynomial 
-  int numTrials;
+  unsigned int numTrials;
 };
 
 
 inline MeixnerOrthogPolynomial::MeixnerOrthogPolynomial() :
-  probPerTrial(-1.), // dummy value prior to update
+  probPerTrial(0.), // dummy value prior to update
   numTrials(1) // default for Geometric dist (overridden for Negative Binomial)
 { }
 
@@ -97,13 +97,13 @@ pull_parameter(short dist_param, Real& param) const
 
 
 inline void MeixnerOrthogPolynomial::
-pull_parameter(short dist_param, int& param) const
+pull_parameter(short dist_param, unsigned int& param) const
 {
   switch (dist_param) {
   case NBI_TRIALS: param = numTrials; break;
   default:
     PCerr << "Error: unsupported distribution parameter in MeixnerOrthog"
-	  << "Polynomial::pull_parameter(int)." << std::endl;
+	  << "Polynomial::pull_parameter(unsigned int)." << std::endl;
     abort_handler(-1);
   }
 }
@@ -132,7 +132,8 @@ push_parameter(short dist_param, Real param)
 }
 
 
-inline void MeixnerOrthogPolynomial::push_parameter(short dist_param, int param)
+inline void MeixnerOrthogPolynomial::
+push_parameter(short dist_param, unsigned int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().

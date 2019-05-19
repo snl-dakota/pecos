@@ -55,6 +55,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -219,6 +221,15 @@ inline void TriangularRandomVariable::push_parameter(short dist_param, Real val)
     abort_handler(-1); break;
   }
   update_boost(); // create a new triangDist instance
+}
+
+
+inline void TriangularRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(T_MODE,    triangularMode);
+  //UniformRandomVariable::copy_parameters(rv); // different enums used
+  rv.pull_parameter(T_LWR_BND, lowerBnd);
+  rv.pull_parameter(T_UPR_BND, upperBnd);
 }
 
 

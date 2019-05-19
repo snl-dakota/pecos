@@ -70,6 +70,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -126,14 +128,14 @@ protected:
 
 inline BetaRandomVariable::BetaRandomVariable():
   UniformRandomVariable(), alphaStat(1.), betaStat(1.), betaDist(NULL)
-{ ranVarType = BETA; }
+{ ranVarType = STD_BETA; }
 
 
 inline BetaRandomVariable::
 BetaRandomVariable(Real alpha, Real beta, Real lwr, Real upr):
   UniformRandomVariable(lwr, upr), alphaStat(alpha), betaStat(beta),
   betaDist(new beta_dist(alphaStat, betaStat))
-{ ranVarType = BETA; }
+{ ranVarType = STD_BETA; }
 
 
 inline BetaRandomVariable::~BetaRandomVariable()
@@ -423,6 +425,16 @@ inline void BetaRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in BetaRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void BetaRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(BE_ALPHA,   alphaStat);
+  rv.pull_parameter(BE_BETA,    betaStat);
+  //UniformRandomVariable::copy_parameters(rv); // different enums used
+  rv.pull_parameter(BE_LWR_BND, lowerBnd);
+  rv.pull_parameter(BE_UPR_BND, upperBnd);
 }
 
 

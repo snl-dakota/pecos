@@ -113,9 +113,11 @@ public:
   short type(size_t i);
   /// set ranVarTypes[i]
   void type(short rv_type, size_t i);
-
   /// verify that randomVarsX[i].type() equals rv_type
   void check_type(size_t i, short rv_type) const;
+
+  /// return activeVars
+  const BitArray& active_variables() const;
 
   /// return corrMatrix
   const RealSymMatrix& correlation_matrix() const;
@@ -238,6 +240,23 @@ inline void MarginalsCorrDistribution::check_type(size_t i, short rv_type) const
     abort_handler(-1);
   }
 }
+
+
+inline const BitArray& MarginalsCorrDistribution::active_variables() const
+{ return activeVars; }
+
+
+inline const BitArray& MarginalsCorrDistribution::active_correlations() const
+{ return activeCorr; }
+
+
+inline const RealSymMatrix& MarginalsCorrDistribution::
+correlation_matrix() const
+{ return corrMatrix; }
+
+
+//inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
+//{ return corrCholeskyFactor; }
 
 
 template <typename ValueType>
@@ -496,19 +515,6 @@ inline Real MarginalsCorrDistribution::log_pdf(const RealVector& pt) const
     log_density += log_pdf(pt[i], i);
   return log_density;
 }
-
-
-inline const RealSymMatrix& MarginalsCorrDistribution::
-correlation_matrix() const
-{ return corrMatrix; }
-
-
-//inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
-//{ return corrCholeskyFactor; }
-
-
-inline const BitArray& MarginalsCorrDistribution::active_correlations() const
-{ return activeCorr; }
 
 
 template <typename Engine> 

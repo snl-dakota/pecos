@@ -64,6 +64,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -122,12 +124,12 @@ protected:
 
 inline UniformRandomVariable::UniformRandomVariable():
   RandomVariable(BaseConstructor()), lowerBnd(-1.), upperBnd(1.)
-{ ranVarType = UNIFORM; }
+{ ranVarType = STD_UNIFORM; }
 
 
 inline UniformRandomVariable::UniformRandomVariable(Real lwr, Real upr):
   RandomVariable(BaseConstructor()), lowerBnd(lwr), upperBnd(upr)
-{ ranVarType = UNIFORM; }
+{ ranVarType = STD_UNIFORM; }
 
 
 inline UniformRandomVariable::~UniformRandomVariable()
@@ -311,6 +313,13 @@ inline void UniformRandomVariable::push_parameter(short dist_param, Real val)
 }
 
 
+inline void UniformRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(U_LWR_BND, lowerBnd);
+  rv.pull_parameter(U_UPR_BND, upperBnd);
+}
+
+
 inline Real UniformRandomVariable::mean() const
 { return (lowerBnd + upperBnd)/2.; }
 
@@ -347,23 +356,26 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
   // Der Kiureghian & Liu: Table 4
-  case UNIFORM:     return 1.047 - 0.047*corr*corr; break; // Max Error 0.0%
-  case EXPONENTIAL: return 1.133 + 0.029*corr*corr; break; // Max Error 0.0%
-  case GUMBEL:      return 1.055 + 0.015*corr*corr; break; // Max Error 0.0%
+  case UNIFORM:     case STD_UNIFORM:
+    return 1.047 - 0.047*corr*corr; break; // Max Error 0.0%
+  case EXPONENTIAL: case STD_EXPONENTIAL:
+    return 1.133 + 0.029*corr*corr; break; // Max Error 0.0%
+  case GUMBEL:
+    return 1.055 + 0.015*corr*corr; break; // Max Error 0.0%
 
   // Der Kiureghian & Liu: Table 5 (quadratic approximations in COV,corr)
-  case GAMMA:     // Max Error 0.1%
+  case GAMMA:       case STD_GAMMA:        // Max Error 0.1%
     COV = rv.coefficient_of_variation();
     return 1.023 + (-0.007 + 0.127*COV)*COV + 0.002*corr*corr; break;
-  case FRECHET:   // Max Error 2.1%
+  case FRECHET:                            // Max Error 2.1%
     COV = rv.coefficient_of_variation();
     return 1.033 + ( 0.305 + 0.405*COV)*COV + 0.074*corr*corr; break;
-  case WEIBULL:   // Max Error 0.5%
+  case WEIBULL:                            // Max Error 0.5%
     COV = rv.coefficient_of_variation();
     return 1.061 + (-0.237 + 0.379*COV)*COV - 0.005*corr*corr; break;
 
   // warping factors are defined once for lower triangle based on uv order
-  case NORMAL: case LOGNORMAL:
+  case NORMAL: case STD_NORMAL: case LOGNORMAL:
     return rv.correlation_warping_factor(*this, corr); break;
 
   default: // Unsupported warping (should be prevented upsteam)

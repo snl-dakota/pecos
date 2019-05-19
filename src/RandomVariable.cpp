@@ -412,8 +412,20 @@ void RandomVariable::pull_parameter(short dist_param, int& val) const
   if (ranVarRep)
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
-    PCerr << "Error: pull_parameter(int) not supported for this random "
-	  << "variable type." << std::endl;
+    PCerr << "Error: pull_parameter(int) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::pull_parameter(short dist_param, unsigned int& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(unsigned int) not supported for this "
+	  << "random variable type." << std::endl;
     abort_handler(-1);
   }
 }
@@ -491,6 +503,32 @@ void RandomVariable::pull_parameter(short dist_param, RealRealMap& val) const
 }
 
 
+void RandomVariable::
+pull_parameter(short dist_param, IntIntPairRealMap& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(IntIntPairRealMap) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::
+pull_parameter(short dist_param, RealRealPairRealMap& val) const
+{
+  if (ranVarRep)
+    ranVarRep->pull_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: pull_parameter(RealRealPairRealMap) not supported for "
+	  << "this random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void RandomVariable::push_parameter(short dist_param, Real val)
 {
   if (ranVarRep)
@@ -508,8 +546,20 @@ void RandomVariable::push_parameter(short dist_param, int val)
   if (ranVarRep)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
-    PCerr << "Error: push_parameter(int) not supported for this random "
-	  << "variable type." << std::endl;
+    PCerr << "Error: push_parameter(int) not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::push_parameter(short dist_param, unsigned int val)
+{
+  if (ranVarRep)
+    ranVarRep->push_parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: push_parameter(unsigned int) not supported for this "
+	  << "random variable type." << std::endl;
     abort_handler(-1);
   }
 }
@@ -608,6 +658,18 @@ push_parameter(short dist_param, const RealRealPairRealMap& val)
   else {
     PCerr << "Error: push_parameter(RealRealPairRealMap) not supported for "
 	  << "this random variable type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  if (ranVarRep)
+    ranVarRep->copy_parameters(rv); // forward to letter
+  else {
+    PCerr << "Error: copy_parameters(RandomVariable) not supported for this "
+	  << "random variable type." << std::endl;
     abort_handler(-1);
   }
 }

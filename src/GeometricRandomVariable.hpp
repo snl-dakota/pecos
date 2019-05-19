@@ -54,6 +54,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -158,6 +160,10 @@ inline void GeometricRandomVariable::push_parameter(short dist_param, Real val)
   }
   update_boost(); // create a new geometricDist instance
 }
+
+
+inline void GeometricRandomVariable::copy_parameters(const RandomVariable& rv)
+{ rv.pull_parameter(GE_P_PER_TRIAL, probPerTrial); }
 
 
 inline Real GeometricRandomVariable::mean() const

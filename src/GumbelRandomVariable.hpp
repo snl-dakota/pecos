@@ -59,6 +59,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   //Real median() const;
   Real mode() const;
@@ -227,6 +229,13 @@ inline void GumbelRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in GumbelRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void GumbelRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(GU_ALPHA, alphaStat);
+  rv.pull_parameter(GU_BETA,  betaStat);
 }
 
 

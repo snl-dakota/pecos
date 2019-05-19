@@ -66,6 +66,8 @@ public:
   void pull_parameter(short dist_param, RealRealMap& val) const;
   void push_parameter(short dist_param, const RealRealMap& val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   //
   //- Heading: Member functions
   //
@@ -137,6 +139,11 @@ push_parameter(short dist_param, const RealRealMap& val)
     abort_handler(-1); break;
   }
 }
+
+
+inline void HistogramBinRandomVariable::
+copy_parameters(const RandomVariable& rv)
+{ rv.pull_parameter(H_BIN_PAIRS, binPairs); }
 
 
 inline Real HistogramBinRandomVariable::cdf(Real x, const RealRealMap& bin_prs)

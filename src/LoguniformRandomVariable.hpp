@@ -52,6 +52,8 @@ public:
   void pull_parameter(short dist_param, Real& val) const;
   void push_parameter(short dist_param, Real  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   Real mean() const;
   Real median() const;
   Real mode() const;
@@ -168,6 +170,14 @@ inline void LoguniformRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in LoguniformRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void LoguniformRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  //UniformRandomVariable::copy_parameters(rv); // different enums used
+  rv.pull_parameter(LU_LWR_BND, lowerBnd);
+  rv.pull_parameter(LU_UPR_BND, upperBnd);
 }
 
 

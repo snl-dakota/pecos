@@ -61,7 +61,7 @@ private:
 
 
 inline CharlierOrthogPolynomial::CharlierOrthogPolynomial():
-  lambdaStat(-1.) // dummy value prior to update
+  lambdaStat(0.) // dummy value prior to update
 { }
 
 
