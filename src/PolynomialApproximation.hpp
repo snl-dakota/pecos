@@ -278,8 +278,8 @@ public:
   void moment(Real mom, size_t i);
 
   /// standardize central moments 2-n and eliminate excess kurtosis
-  void standardize_moments(const RealVector& central_moments,
-			   RealVector& std_moments);
+  static void standardize_moments(const RealVector& central_moments,
+				  RealVector& std_moments);
 
   /// return the variance of the expansion, treating all variables as random
   Real variance();
