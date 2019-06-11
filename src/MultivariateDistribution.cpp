@@ -232,6 +232,18 @@ short MultivariateDistribution::type(size_t i) const
 }
 
 
+const BitArray& MultivariateDistribution::active_variables() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: active_variables() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->active_variables();
+}
+
+
 const RealSymMatrix& MultivariateDistribution::correlation_matrix() const
 {
   if (!mvDistRep) { // forward to letter

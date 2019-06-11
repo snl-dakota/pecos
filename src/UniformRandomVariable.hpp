@@ -129,7 +129,7 @@ inline UniformRandomVariable::UniformRandomVariable():
 
 inline UniformRandomVariable::UniformRandomVariable(Real lwr, Real upr):
   RandomVariable(BaseConstructor()), lowerBnd(lwr), upperBnd(upr)
-{ ranVarType = STD_UNIFORM; }
+{ ranVarType = (lwr == -1. && upr == 1.) ? STD_UNIFORM : UNIFORM; }
 
 
 inline UniformRandomVariable::~UniformRandomVariable()

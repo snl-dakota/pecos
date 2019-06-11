@@ -135,7 +135,8 @@ inline BetaRandomVariable::
 BetaRandomVariable(Real alpha, Real beta, Real lwr, Real upr):
   UniformRandomVariable(lwr, upr), alphaStat(alpha), betaStat(beta),
   betaDist(new beta_dist(alphaStat, betaStat))
-{ ranVarType = STD_BETA; }
+{ ranVarType = (lwr == -1. && upr == 1.) ? STD_BETA : BETA; }
+// std distribution defined by scale params, while shape params may vary
 
 
 inline BetaRandomVariable::~BetaRandomVariable()

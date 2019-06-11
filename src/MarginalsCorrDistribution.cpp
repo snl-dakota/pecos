@@ -292,7 +292,7 @@ initialize_random_variable_parameters(const RealVector& cd_l_bnds,
 	  update(adp.histogram_point_real_pairs(hpr_cntr));
 	++hpr_cntr; break;
 
-      case CONTINUOUS_INTERVAL: {
+      case CONTINUOUS_INTERVAL_UNCERTAIN: {
 	const RealRealPairRealMap& ci_bp
 	  = edp.continuous_interval_basic_probabilities(ci_cntr);
 	// process interval sets for overall bounds; since intervals are sorted,

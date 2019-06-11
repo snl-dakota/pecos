@@ -69,9 +69,12 @@ public:
   // perform a deep copy of incoming mv_dist
   //void copy(const MultivariateDistribution& mv_dist);
 
+  /// return active subset of variables
+  const BitArray& active_variables() const;
+
   /// return correlationFlag
   bool correlation() const;
-  /// return active subset of variables to which correlation matrix applies
+  /// return subset of variables to which correlation matrix applies
   const BitArray& active_correlations() const;
 
   /// returns ranVarRep for access to derived class member functions

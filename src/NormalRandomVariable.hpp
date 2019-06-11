@@ -140,7 +140,7 @@ inline NormalRandomVariable::NormalRandomVariable():
 
 inline NormalRandomVariable::NormalRandomVariable(Real mean, Real stdev):
   RandomVariable(BaseConstructor()), gaussMean(mean), gaussStdDev(stdev)
-{ ranVarType = STD_NORMAL; }
+{ ranVarType = (mean == 0. && stdev == 1.) ? STD_NORMAL : NORMAL; }
 
 
 inline NormalRandomVariable::~NormalRandomVariable()

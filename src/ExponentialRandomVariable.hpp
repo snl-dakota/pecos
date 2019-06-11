@@ -135,7 +135,7 @@ inline ExponentialRandomVariable::ExponentialRandomVariable():
 
 inline ExponentialRandomVariable::ExponentialRandomVariable(Real beta):
   RandomVariable(BaseConstructor()), betaScale(beta)
-{ ranVarType = STD_EXPONENTIAL; }
+{ ranVarType = (beta == 1.) ? STD_EXPONENTIAL : EXPONENTIAL; }
 
 
 inline ExponentialRandomVariable::~ExponentialRandomVariable()
