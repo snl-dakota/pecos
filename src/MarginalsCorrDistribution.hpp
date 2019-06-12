@@ -106,15 +106,15 @@ public:
   std::vector<RandomVariable>& random_variables();
 
   /// return ranVarTypes
-  const ShortArray& types() const;
+  const ShortArray& random_variable_types() const;
   /// set ranVarTypes
-  void types(const ShortArray& rv_types);
+  void random_variable_types(const ShortArray& rv_types);
   /// return ranVarTypes[i]
-  short type(size_t i);
+  short random_variable_type(size_t i) const;
   /// set ranVarTypes[i]
-  void type(short rv_type, size_t i);
+  void random_variable_type(short rv_type, size_t i);
   /// verify that randomVarsX[i].type() equals rv_type
-  void check_type(size_t i, short rv_type) const;
+  void check_random_variable_type(size_t i, short rv_type) const;
 
   /// return activeVars
   const BitArray& active_variables() const;
@@ -220,23 +220,31 @@ random_variables()
 { return randomVars; }
 
 
-inline const ShortArray& MarginalsCorrDistribution::types() const
+inline const ShortArray& MarginalsCorrDistribution::
+random_variable_types() const
 { return ranVarTypes; }
 
 
-inline void MarginalsCorrDistribution::types(const ShortArray& rv_types)
+inline void MarginalsCorrDistribution::
+random_variable_types(const ShortArray& rv_types)
 { ranVarTypes = rv_types; }
 
 
-inline void MarginalsCorrDistribution::type(short rv_type, size_t i)
+inline short MarginalsCorrDistribution::random_variable_type(size_t i) const
+{ return ranVarTypes[i]; }
+
+
+inline void MarginalsCorrDistribution::
+random_variable_type(short rv_type, size_t i)
 { ranVarTypes[i] = rv_type; }
 
 
-inline void MarginalsCorrDistribution::check_type(size_t i, short rv_type) const
+inline void MarginalsCorrDistribution::
+check_random_variable_type(size_t i, short rv_type) const
 {
   if (randomVars[i].type() != rv_type) {
-    PCerr << "Error: failure in random variable type check in "
-	  << "MarginalsCorrDistribution." << std::endl;
+    PCerr << "Error: inconsistent random variable type in MarginalsCorr"
+	  << "Distribution::check_random_variable_type()." << std::endl;
     abort_handler(-1);
   }
 }

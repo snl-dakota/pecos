@@ -208,27 +208,51 @@ random_variables()
 }
 
 
-const ShortArray& MultivariateDistribution::types() const
+const ShortArray& MultivariateDistribution::random_variable_types() const
 {
   if (!mvDistRep) { // forward to letter
-    PCerr << "Error: types() not supported for this multivariate distribution "
-	  << "type." << std::endl;
+    PCerr << "Error: random_variable_types() not supported for this "
+	  << "multivariate distribution type." << std::endl;
     abort_handler(-1);
   }
 
-  return mvDistRep->types();
+  return mvDistRep->random_variable_types();
 }
 
 
-short MultivariateDistribution::type(size_t i) const
+void MultivariateDistribution::random_variable_types(const ShortArray& rv_types)
+{
+  if (mvDistRep)
+    mvDistRep->random_variable_types(rv_types);
+  else { // forward to letter
+    PCerr << "Error: random_variable_types(ShortArray) not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+short MultivariateDistribution::random_variable_type(size_t i) const
 {
   if (!mvDistRep) { // forward to letter
-    PCerr << "Error: type(size_t) not supported for this multivariate "
-	  << "distribution type." << std::endl;
+    PCerr << "Error: random_variable_type(size_t) not supported for this "
+	  << "multivariate distribution type." << std::endl;
     abort_handler(-1);
   }
 
-  return mvDistRep->type(i);
+  return mvDistRep->random_variable_type(i);
+}
+
+
+void MultivariateDistribution::random_variable_type(short rv_type, size_t i)
+{
+  if (mvDistRep)
+    mvDistRep->random_variable_type(rv_type, i);
+  else { // forward to letter
+    PCerr << "Error: random_variable_type(short, size_t) not supported for "
+	  << "this multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
 }
 
 

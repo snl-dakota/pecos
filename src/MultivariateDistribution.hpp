@@ -50,9 +50,13 @@ public:
   virtual std::vector<RandomVariable>& random_variables();
 
   /// return ranVarTypes (marginals, when present)
-  virtual const ShortArray& types() const;
+  virtual const ShortArray& random_variable_types() const;
+  /// set ranVarTypes (marginals, when present)
+  virtual void random_variable_types(const ShortArray& rv_types);
   /// return ranVarTypes[i] (marginal, when present)
-  virtual short type(size_t i) const;
+  virtual short random_variable_type(size_t i) const;
+  /// set ranVarTypes[i] (marginal, when present)
+  virtual void random_variable_type(short rv_type, size_t i);
 
   /// return corrMatrix
   virtual const RealSymMatrix& correlation_matrix() const;
