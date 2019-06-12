@@ -281,8 +281,8 @@ inline void GammaRandomVariable::
 pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case GA_ALPHA: val = alphaShape; break;
-  case GA_BETA:  val = betaScale;  break;
+  case GA_ALPHA: case GA_SHAPE: val = alphaShape; break;
+  case GA_BETA:  case GA_SCALE: val = betaScale;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in GammaRandomVariable::pull_parameter(Real)." << std::endl;
@@ -294,8 +294,8 @@ pull_parameter(short dist_param, Real& val) const
 inline void GammaRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case GA_ALPHA: alphaShape = val; break;
-  case GA_BETA:  betaScale  = val; break;
+  case GA_ALPHA: case GA_SHAPE: alphaShape = val; break;
+  case GA_BETA:  case GA_SCALE: betaScale  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in GammaRandomVariable::push_parameter(Real)." << std::endl;
@@ -387,10 +387,9 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
     switch (dist_param) { // x = z*beta
     // For distributions without simple closed-form CDFs (beta, gamma), dx/ds
     // is computed numerically in NatafTransformation::jacobian_dX_dS():
-    //case GA_ALPHA:
-    case GA_BETA: return z;   break;
+    //case GA_ALPHA: case GA_SHAPE:
+    case GA_BETA: case GA_SCALE: return z; break;
     //case GA_LOCATION: - TO DO
-    //case GA_SCALE:    - TO DO
     default: dist_err = true; break;
     }
     break;

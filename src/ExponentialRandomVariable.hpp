@@ -230,7 +230,7 @@ inline void ExponentialRandomVariable::
 pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case E_BETA: val = betaScale; break;
+  case E_BETA: case E_SCALE: val = betaScale; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in ExponentialRandomVariable::pull_parameter(Real)."<< std::endl;
@@ -243,7 +243,7 @@ inline void ExponentialRandomVariable::
 push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case E_BETA: betaScale = val; break;
+  case E_BETA: case E_SCALE: betaScale = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in ExponentialRandomVariable::push_parameter(Real)."<< std::endl;
@@ -335,7 +335,7 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   //                     x = -beta ln(1. - Phi(z))
   bool u_type_err = false, dist_err = false;
   switch (dist_param) {
-  case E_BETA: // Deriv of exponential w.r.t. beta
+  case E_BETA: case E_SCALE: // Deriv of exponential w.r.t. beta
     switch (u_type) {
     case STD_NORMAL:      return x / betaScale; break;
     //case STD_UNIFORM:   TO DO;                break;
