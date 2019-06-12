@@ -88,7 +88,7 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
   const RandomVariable& rv_i = xDist.random_variable(i);
-  short x_type = rv_i.type(), u_type = uDist.type(i);
+  short x_type = rv_i.type(), u_type = uDist.random_variable_type(i);
   if (u_type == x_type)
     x = z;
   else if (u_type == STD_NORMAL) {
@@ -179,7 +179,7 @@ void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
   const RandomVariable& rv_i = xDist.random_variable(i);
-  short x_type = rv_i.type(), u_type = uDist.type(i);
+  short x_type = rv_i.type(), u_type = uDist.random_variable_type(i);
   if (u_type == x_type)
     z = x;
   else if (u_type == STD_NORMAL) {
@@ -280,7 +280,7 @@ void NatafTransformation::transform_correlations()
   RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
 
   const std::vector<RandomVariable>& x_rv = xDist.random_variables();
-  const ShortArray&               u_types = uDist.types();
+  const ShortArray&               u_types = uDist.random_variable_types();
   size_t i, j, num_rv = x_rv.size();
   for (i=0; i<num_rv; ++i)
     if (u_types[i] == STD_NORMAL)
@@ -592,7 +592,8 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   bool nonlinear_vars_map = false;
   size_t i, num_v = x_vars.length(); short x_type, u_type;
   for (i=0; i<num_v; ++i) {
-    x_type = xDist.type(i); u_type = uDist.type(i);
+    x_type = xDist.random_variable_type(i);
+    u_type = uDist.random_variable_type(i);
     if ( ( ( x_type == CONTINUOUS_RANGE || x_type == UNIFORM ||
 	     x_type == CONTINUOUS_INTERVAL_UNCERTAIN ) &&
 	   u_type   != STD_UNIFORM ) ||
@@ -775,7 +776,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
   const std::vector<RandomVariable>& x_rv = xDist.random_variables();
   for (int i=0; i<num_v; ++i) {
     const RandomVariable& x_rv_i = x_rv[i];
-    x_type = x_rv_i.type(); u_type = uDist.type(i);
+    x_type = x_rv_i.type(); u_type = uDist.random_variable_type(i);
     if (u_type == x_type)
       jacobian_xz(i, i) = 1.;
     else if (u_type == STD_NORMAL)
@@ -867,7 +868,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
   // dZ/dX is diagonal as defined by differentiation of trans_X_to_Z()
 
   const std::vector<RandomVariable>& x_rv = xDist.random_variables();
-  const ShortArray&               u_types = uDist.types();
+  const ShortArray&               u_types = uDist.random_variable_types();
   Real z_var; short x_type, u_type;
   for (int i=0; i<num_v; ++i) {
     const RandomVariable& x_rv_i = x_rv[i];
@@ -938,8 +939,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // is only needed if the beta/gamma distribution parameters are design vars.
   // If correlated, then the beta/gamma distribution params do not have to be
   // design vars (dx/ds for beta/gamma x will include a dz/ds contribution).
-  const ShortArray&    x_types       = xDist.types();
-  const ShortArray&    u_types       = uDist.types();
+  const ShortArray&    x_types       = xDist.random_variable_types();
+  const ShortArray&    u_types       = uDist.random_variable_types();
   const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
   const BitArray&      x_active_corr = xDist.active_correlations();
   short x_type, u_type;  size_t i, j, cntr_i, cntr_j;
@@ -1223,7 +1224,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
   Real x, z, dx_dz, pdf; short x_type, u_type;
   for (int i=0; i<num_v; ++i) {
     const RandomVariable& x_rv_i = xDist.random_variable(i);
-    x_type = x_rv_i.type(); u_type = uDist.type(i);
+    x_type = x_rv_i.type(); u_type = uDist.random_variable_type(i);
     if (hessian_xz[i].numRows() != num_v)
       hessian_xz[i].shape(num_v);
     // each d^2X_i/dZ^2 has a single entry on the diagonal as defined by
