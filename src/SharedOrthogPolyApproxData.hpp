@@ -20,6 +20,8 @@
 
 namespace Pecos {
 
+class MultivariateDistribution;
+
 
 /// Derived approximation class for orthogonal polynomials (global
 /// approximation).
@@ -95,22 +97,19 @@ public:
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using class member data
-  void construct_basis(const ShortArray& u_types,
-		       const MultivariateDistribution& mv_dist);
+  void construct_basis(const MultivariateDistribution& u_dist);
   
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using passed data
-  static void construct_basis(const ShortArray& u_types,
-			      const MultivariateDistribution& mv_dist,
+  static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis);
 
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using passed data
-  static void construct_basis(const ShortArray& u_types,
-			      const MultivariateDistribution& mv_dist,
+  static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis,
 			      ShortArray &basis_types,ShortArray &colloc_rules);
@@ -505,12 +504,10 @@ inline void SharedOrthogPolyApproxData::decrement_order()
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types,
-		const MultivariateDistribution& mv_dist)
+construct_basis(const MultivariateDistribution& u_dist)
 {
   ShortArray colloc_rules;
-  BasisConfigOptions bc_options;
-  construct_basis(u_types, mv_dist, basisConfigOptions, polynomialBasis,
+  construct_basis(u_dist, basisConfigOptions, polynomialBasis,
 		  orthogPolyTypes, colloc_rules);		  
 }
 
@@ -519,32 +516,12 @@ construct_basis(const ShortArray& u_types,
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types,
-		const MultivariateDistribution& mv_dist,
+construct_basis(const MultivariateDistribution& u_dist,
 		const BasisConfigOptions& bc_options,
 		std::vector<BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
-  construct_basis(u_types, mv_dist, bc_options, poly_basis,
-		  basis_types, colloc_rules);
-}
-
-/** This function is invoked to create orthogPolyTypes and polynomialBasis
-    for cases where they have not already been created by an
-    IntegrationDriver (i.e., expansion_samples or regression). */
-inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types,
-		const MultivariateDistribution& mv_dist,
-		const BasisConfigOptions& bc_options,
-		std::vector<BasisPolynomial>& poly_basis,
-		ShortArray &basis_types, ShortArray &colloc_rules)
-{
-  bool dist_params
-    = initialize_orthogonal_basis_types_rules(u_types, bc_options,
-					      basis_types, colloc_rules);
-  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
-  if (dist_params)
-    update_basis_distribution_parameters(u_types, mv_dist, poly_basis);
+  construct_basis(u_dist, bc_options, poly_basis, basis_types, colloc_rules);
 }
 
 

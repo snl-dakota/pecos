@@ -76,14 +76,14 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 
 
 void CubatureDriver::
-initialize_grid_parameters(const ShortArray& u_types,
-			   const MultivariateDistribution& mv_dist)
+initialize_grid_parameters(const MultivariateDistribution& u_dist)
 {
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
+  short u_type0 = u_dist.random_variable_type(0);
   MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
+    = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag =
@@ -95,7 +95,7 @@ initialize_grid_parameters(const ShortArray& u_types,
       verify_homogeneity(mvd_rep->pull_parameters<Real>(GAMMA, GA_ALPHA));
     break;
   case GOLUB_WELSCH: // numerically generated: check all params
-    switch (u_types[0]) { // u_types verified in initialize_grid() above
+    switch (u_type0) { // u_types verified in initialize_grid() above
     case BOUNDED_NORMAL:
       err_flag =
 	(verify_homogeneity(
@@ -177,7 +177,7 @@ initialize_grid_parameters(const ShortArray& u_types,
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
   SharedPolyApproxData::
-    update_basis_distribution_parameters(u_types, mv_dist, polynomialBasis);
+    update_basis_distribution_parameters(u_dist, polynomialBasis);
 }
 
 

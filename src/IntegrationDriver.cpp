@@ -247,14 +247,13 @@ assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr)
 
 
 void IntegrationDriver::
-initialize_grid_parameters(const ShortArray& u_types, 
-			   const MultivariateDistribution& mv_dist)
+initialize_grid_parameters(const MultivariateDistribution& u_dist)
 {
   if (driverRep)
-    driverRep->initialize_grid_parameters(u_types, mv_dist); // fwd to letter
+    driverRep->initialize_grid_parameters(u_dist); // fwd to letter
   else // default implementation
     SharedPolyApproxData::
-      update_basis_distribution_parameters(u_types, mv_dist, polynomialBasis);
+      update_basis_distribution_parameters(u_dist, polynomialBasis);
 }
 
 

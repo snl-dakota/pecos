@@ -12,6 +12,7 @@
 //- Owner:        Mike Eldred
 
 #include "SharedOrthogPolyApproxData.hpp"
+#include "MultivariateDistribution.hpp"
 #include "pecos_global_defs.hpp"
 #include "pecos_math_util.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
@@ -62,6 +63,23 @@ void SharedOrthogPolyApproxData::allocate_data()
     PCout << "} using tensor-product expansion of ";      break;
   }
   PCout << multi_index.size() << " terms\n";
+}
+
+
+/** This function is invoked to create orthogPolyTypes and polynomialBasis
+    for cases where they have not already been created by an
+    IntegrationDriver (i.e., expansion_samples or regression). */
+void SharedOrthogPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist,
+		const BasisConfigOptions& bc_options,
+		std::vector<BasisPolynomial>& poly_basis,
+		ShortArray &basis_types, ShortArray &colloc_rules)
+{
+  bool dist_params = initialize_orthogonal_basis_types_rules(
+    u_dist.random_variable_types(), bc_options, basis_types, colloc_rules);
+  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
+  if (dist_params)
+    update_basis_distribution_parameters(u_dist, poly_basis);
 }
 
 

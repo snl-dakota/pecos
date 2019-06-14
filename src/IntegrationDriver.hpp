@@ -63,8 +63,8 @@ public:
 			       const ExpansionConfigOptions& ec_options,
 			       const BasisConfigOptions& bc_options);
   /// update polynomialBasis with data from MultivariateDistribution
-  virtual void initialize_grid_parameters(const ShortArray& u_types,
-			    const MultivariateDistribution& mv_dist);
+  virtual void initialize_grid_parameters(
+			       const MultivariateDistribution& u_dist);
 
   /// compute variable and weight sets for the grid
   virtual void compute_grid();

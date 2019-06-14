@@ -155,14 +155,14 @@ initialize_polynomial_basis(const ShortArray& basis_types,
 
 
 void SharedPolyApproxData::
-update_basis_distribution_parameters(const ShortArray& u_types,
-				     const MultivariateDistribution& mv_dist,
+update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 				     std::vector<BasisPolynomial>& poly_basis)
 {
-  // update poly_basis using distribution data from mv_dist
+  // update poly_basis using distribution data from u_dist
+  const ShortArray& u_types = u_dist.random_variable_types();
   size_t i, num_vars = u_types.size();
   MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
+    = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
   for (i=0; i<num_vars; ++i)
     switch (u_types[i]) {
     case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:

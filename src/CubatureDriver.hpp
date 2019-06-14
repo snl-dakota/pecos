@@ -48,8 +48,7 @@ public:
   void initialize_grid(const ShortArray& u_types, unsigned short order,
 		       unsigned short rule);
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
-  void initialize_grid_parameters(const ShortArray& u_types,
-				  const MultivariateDistribution& mv_dist);
+  void initialize_grid_parameters(const MultivariateDistribution& u_dist);
 
   const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;

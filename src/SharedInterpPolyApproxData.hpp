@@ -19,6 +19,8 @@
 
 namespace Pecos {
 
+class MultivariateDistribution;
+
 
 /// Derived approximation class for interpolation polynomials (global
 /// approximation).
@@ -66,8 +68,7 @@ public:
   /// initialize basis types and collocation rules, construct a vector of basis
   /// polynomials for driver usage (not the vector<vector<BasisPolynomial> >
   /// used herein), and initialize distribution parameters within this basis
-  static void construct_basis(const ShortArray& u_types,
-			      const MultivariateDistribution& mv_dist,
+  static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis);
 
@@ -408,21 +409,6 @@ inline void SharedInterpPolyApproxData::update_active_iterators()
 {
   if (pushAvail.find(activeKey) == pushAvail.end())
     pushAvail[activeKey] = false; // initialize
-}
-
-
-inline void SharedInterpPolyApproxData::
-construct_basis(const ShortArray& u_types,
-		const MultivariateDistribution& mv_dist,
-		const BasisConfigOptions& bc_options,
-		std::vector<BasisPolynomial>& poly_basis)
-{
-  ShortArray basis_types, colloc_rules;
-  bool dist_params = initialize_driver_types_rules(u_types, bc_options,
-						   basis_types, colloc_rules);
-  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
-  if (dist_params)
-    update_basis_distribution_parameters(u_types, mv_dist, poly_basis);
 }
 
 

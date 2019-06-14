@@ -12,12 +12,28 @@
 //- Owner:        Mike Eldred
 
 #include "SharedInterpPolyApproxData.hpp"
+#include "MultivariateDistribution.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "TensorProductDriver.hpp"
 #include "IncrementalSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
 
 namespace Pecos {
+
+
+void SharedInterpPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist,
+		const BasisConfigOptions& bc_options,
+		std::vector<BasisPolynomial>& poly_basis)
+{
+  ShortArray basis_types, colloc_rules;
+  bool dist_params
+    = initialize_driver_types_rules(u_dist.random_variable_types(), bc_options,
+				    basis_types, colloc_rules);
+  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
+  if (dist_params)
+    update_basis_distribution_parameters(u_dist, poly_basis);
+}
 
 
 /** This version provides the polynomial types needed to retrieve

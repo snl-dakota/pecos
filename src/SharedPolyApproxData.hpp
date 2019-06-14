@@ -335,8 +335,8 @@ public:
   static void initialize_polynomial_basis(const ShortArray& basis_types,
     const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);
   /// pass distribution parameters from dp to poly_basis
-  static void update_basis_distribution_parameters(const ShortArray& u_types,
-    const MultivariateDistribution& mv_dist,
+  static void update_basis_distribution_parameters(
+    const MultivariateDistribution& u_dist,
     std::vector<BasisPolynomial>& poly_basis);
 
   // returns index of the data set to be restored from within popped
