@@ -256,6 +256,20 @@ void MultivariateDistribution::random_variable_type(short rv_type, size_t i)
 }
 
 
+void MultivariateDistribution::
+pull_distribution_parameters(const MultivariateDistribution& mv_dist)
+{
+  if (mvDistRep)
+    mvDistRep->pull_distribution_parameters(mv_dist);
+  else { // forward to letter
+    PCerr << "Error: pull_distribution_parameters(MultivariateDistribution) "
+	  << "not supported for this multivariate distribution type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 const BitArray& MultivariateDistribution::active_variables() const
 {
   if (!mvDistRep) { // forward to letter
@@ -277,6 +291,18 @@ const RealSymMatrix& MultivariateDistribution::correlation_matrix() const
   }
 
   return mvDistRep->correlation_matrix();
+}
+
+
+void MultivariateDistribution::correlation_matrix(const RealSymMatrix& corr)
+{
+  if (mvDistRep)
+    mvDistRep->correlation_matrix(corr);
+  else { // forward to letter
+    PCerr << "Error: correlation_matrix(RealSymMatrix) not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
 }
 
 

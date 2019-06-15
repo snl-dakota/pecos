@@ -76,6 +76,55 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
 }
 
 
+void MarginalsCorrDistribution::
+pull_distribution_parameters(const MultivariateDistribution& mv_dist)
+{
+  const std::vector<RandomVariable>& rv_in = mv_dist.random_variables();
+  const ShortArray& rv_types_in = mv_dist.random_variable_types();
+  size_t i, num_rv = ranVarTypes.size();
+
+  for (i=0; i<num_rv; ++i) {
+    RandomVariable&       push_rv = randomVars[i];
+    const RandomVariable& pull_rv = rv_in[i];
+    switch (ranVarTypes[i]) {
+
+    // push RV are fully standard: no updates to perform
+    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:           break;
+
+    // push RV have standardized scale params; copy shape params
+    case STD_BETA:
+      push_rv.push_parameter(BE_ALPHA, pull_rv.pull_parameter<Real>(BE_ALPHA));
+      push_rv.push_parameter(BE_BETA,  pull_rv.pull_parameter<Real>(BE_BETA));
+      break;
+    case STD_GAMMA:
+      push_rv.push_parameter(GA_ALPHA, pull_rv.pull_parameter<Real>(GA_ALPHA));
+      break;
+
+    // push RV are non-standard, pull all non-standard data from rv_in
+    default:
+      switch (rv_types_in[i]) {
+      // pull RV are fully standard: no data to pull
+      case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:         break;
+
+      // pull RV have standardized scale params; pull shape params
+      case STD_BETA:
+	push_rv.push_parameter(BE_ALPHA,pull_rv.pull_parameter<Real>(BE_ALPHA));
+	push_rv.push_parameter(BE_BETA, pull_rv.pull_parameter<Real>(BE_BETA));
+	break;
+      case STD_GAMMA:
+	push_rv.push_parameter(GA_ALPHA,pull_rv.pull_parameter<Real>(GA_ALPHA));
+	break;
+
+      // pull and push RV are non-standard; copy all params
+      default:
+	push_rv.copy_parameters(rv_in[i]);                         break;
+      }
+      break;
+    }
+  }
+}
+
+
 /* Reshaping the correlation matrix should no longer be required
    (subsets now supported with activeCorr BitArray)
 void MarginalsCorrDistribution::

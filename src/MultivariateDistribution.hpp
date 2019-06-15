@@ -60,6 +60,12 @@ public:
 
   /// return corrMatrix
   virtual const RealSymMatrix& correlation_matrix() const;
+  /// set corrMatrix
+  virtual void correlation_matrix(const RealSymMatrix& corr);
+
+  /// pull non-standardized distribution parameters from mv_dist to this
+  virtual void
+    pull_distribution_parameters(const MultivariateDistribution& mv_dist);
 
   /// return the multivariate PDF value for the random variables
   virtual Real pdf(const RealVector& pt) const;

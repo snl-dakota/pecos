@@ -80,6 +80,11 @@ public:
   template <typename ValueType>
   void pull_parameters(short rv_type, short dist_param,
 		       std::vector<ValueType>& values);
+  /// update values for one distribution parameter across the set
+  /// of random variables with matching RV type
+  template <typename OrdinalType, typename ScalarType>
+  void pull_parameters(short rv_type, short dist_param,
+    Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values);
 
   /// return a scalar distribution parameter from randomVars[v]
   template <typename ValueType>
@@ -97,6 +102,9 @@ public:
   void contract_correlation_matrix(size_t num_lead_v, size_t num_prob_v,
 				  size_t num_trail_v);
   */
+
+  /// pull non-standardized distribution parameters from mv_dist
+  void pull_distribution_parameters(const MultivariateDistribution& mv_dist);
 
   /// return randomVars[i]
   const RandomVariable& random_variable(size_t i) const;
@@ -121,6 +129,8 @@ public:
 
   /// return corrMatrix
   const RealSymMatrix& correlation_matrix() const;
+  /// set corrMatrix
+  void correlation_matrix(const RealSymMatrix& corr);
   // return corrCholeskyFactor
   //const RealMatrix& correlation_factor() const;
   /// return activeCorr
@@ -263,6 +273,11 @@ correlation_matrix() const
 { return corrMatrix; }
 
 
+inline void MarginalsCorrDistribution::
+correlation_matrix(const RealSymMatrix& corr)
+{ initialize_correlations(corr); } // Note: default active_corr = BitArray()
+
+
 //inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
 //{ return corrCholeskyFactor; }
 
@@ -360,6 +375,23 @@ pull_parameters(short rv_type, short dist_param, std::vector<ValueType>& values)
   values.resize(std::count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
 
   size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
+  for (rv=0; rv<num_rv; ++rv)
+    if (ranVarTypes[rv] == rv_type)
+      randomVars[rv].pull_parameter(dist_param, values[cntr++]);
+}
+
+
+template <typename OrdinalType, typename ScalarType>
+void MarginalsCorrDistribution::
+pull_parameters(short rv_type, short dist_param,
+		Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+{
+  // rv_type eliminates need to check for dist_param support
+
+  size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
+  values.sizeUninitialized(
+    std::count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
+
   for (rv=0; rv<num_rv; ++rv)
     if (ranVarTypes[rv] == rv_type)
       randomVars[rv].pull_parameter(dist_param, values[cntr++]);
