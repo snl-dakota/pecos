@@ -33,6 +33,53 @@ public:
   ~MarginalsCorrDistribution(); ///< destructor
 
   //
+  //- Heading: Virtual function redefinitions
+  //
+
+  /// return randomVars[i]
+  const RandomVariable& random_variable(size_t i) const;
+  /// return randomVars
+  const std::vector<RandomVariable>& random_variables() const;
+  /// return randomVars
+  std::vector<RandomVariable>& random_variables();
+
+  /// return ranVarTypes
+  const ShortArray& random_variable_types() const;
+  /// set ranVarTypes
+  void random_variable_types(const ShortArray& rv_types);
+  /// return ranVarTypes[i]
+  short random_variable_type(size_t i) const;
+  /// set ranVarTypes[i]
+  void random_variable_type(short rv_type, size_t i);
+
+  /// pull non-standardized distribution parameters from mv_dist
+  void pull_distribution_parameters(const MultivariateDistribution& mv_dist);
+
+  /// return activeVars
+  const BitArray& active_variables() const;
+  /// return activeCorr
+  const BitArray& active_correlations() const;
+
+  /// return corrMatrix
+  const RealSymMatrix& correlation_matrix() const;
+  /// set corrMatrix
+  void correlation_matrix(const RealSymMatrix& corr);
+
+  /// assemble means and standard deviations from RandomVariable::moments()
+  RealRealPairArray moments() const;
+  /// assemble means from RandomVariable::mean()
+  RealVector means() const;
+  /// assemble standard deviations from RandomVariable::standard_deviation()
+  RealVector std_deviations() const;
+
+  /// assemble lower and upper bounds from RandomVariable::bounds()
+  RealRealPairArray bounds() const;
+  /// assemble lower bounds from RandomVariable::bounds()
+  RealVector lower_bounds() const;
+  /// assemble upper bounds from RandomVariable::bounds()
+  RealVector upper_bounds() const;
+
+  //
   //- Heading: Member function definitions
   //
 
@@ -103,52 +150,8 @@ public:
 				  size_t num_trail_v);
   */
 
-  /// pull non-standardized distribution parameters from mv_dist
-  void pull_distribution_parameters(const MultivariateDistribution& mv_dist);
-
-  /// return randomVars[i]
-  const RandomVariable& random_variable(size_t i) const;
-  /// return randomVars
-  const std::vector<RandomVariable>& random_variables() const;
-  /// return randomVars
-  std::vector<RandomVariable>& random_variables();
-
-  /// return ranVarTypes
-  const ShortArray& random_variable_types() const;
-  /// set ranVarTypes
-  void random_variable_types(const ShortArray& rv_types);
-  /// return ranVarTypes[i]
-  short random_variable_type(size_t i) const;
-  /// set ranVarTypes[i]
-  void random_variable_type(short rv_type, size_t i);
   /// verify that randomVarsX[i].type() equals rv_type
   void check_random_variable_type(size_t i, short rv_type) const;
-
-  /// return activeVars
-  const BitArray& active_variables() const;
-
-  /// return corrMatrix
-  const RealSymMatrix& correlation_matrix() const;
-  /// set corrMatrix
-  void correlation_matrix(const RealSymMatrix& corr);
-  // return corrCholeskyFactor
-  //const RealMatrix& correlation_factor() const;
-  /// return activeCorr
-  const BitArray& active_correlations() const;
-
-  /// assemble means and standard deviations from RandomVariable::moments()
-  RealRealPairArray moments() const;
-  /// assemble means from RandomVariable::mean()
-  RealVector means() const;
-  /// assemble standard deviations from RandomVariable::standard_deviation()
-  RealVector std_deviations() const;
-
-  /// assemble lower and upper bounds from RandomVariable::bounds()
-  RealRealPairArray bounds() const;
-  /// assemble lower bounds from RandomVariable::bounds()
-  RealVector lower_bounds() const;
-  /// assemble upper bounds from RandomVariable::bounds()
-  RealVector upper_bounds() const;
 
   /// return the univariate PDF value for a random variable
   Real pdf(Real val, size_t i) const;

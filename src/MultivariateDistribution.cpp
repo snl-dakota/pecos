@@ -256,20 +256,6 @@ void MultivariateDistribution::random_variable_type(short rv_type, size_t i)
 }
 
 
-void MultivariateDistribution::
-pull_distribution_parameters(const MultivariateDistribution& mv_dist)
-{
-  if (mvDistRep)
-    mvDistRep->pull_distribution_parameters(mv_dist);
-  else { // forward to letter
-    PCerr << "Error: pull_distribution_parameters(MultivariateDistribution) "
-	  << "not supported for this multivariate distribution type."
-	  << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
 const BitArray& MultivariateDistribution::active_variables() const
 {
   if (!mvDistRep) { // forward to letter
@@ -279,6 +265,18 @@ const BitArray& MultivariateDistribution::active_variables() const
   }
 
   return mvDistRep->active_variables();
+}
+
+
+const BitArray& MultivariateDistribution::active_correlations() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: active_correlations() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->active_correlations();
 }
 
 
@@ -306,15 +304,89 @@ void MultivariateDistribution::correlation_matrix(const RealSymMatrix& corr)
 }
 
 
-const BitArray& MultivariateDistribution::active_correlations() const
+void MultivariateDistribution::
+pull_distribution_parameters(const MultivariateDistribution& mv_dist)
+{
+  if (mvDistRep)
+    mvDistRep->pull_distribution_parameters(mv_dist);
+  else { // forward to letter
+    PCerr << "Error: pull_distribution_parameters(MultivariateDistribution) "
+	  << "not supported for this multivariate distribution type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+RealRealPairArray MultivariateDistribution::moments() const
 {
   if (!mvDistRep) { // forward to letter
-    PCerr << "Error: active_correlations() not supported for this multivariate "
+    PCerr << "Error: moments() not supported for this multivariate "
 	  << "distribution type." << std::endl;
     abort_handler(-1);
   }
 
-  return mvDistRep->active_correlations();
+  return mvDistRep->moments();
+}
+
+
+RealVector MultivariateDistribution::means() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: means() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->means();
+}
+
+
+RealVector MultivariateDistribution::std_deviations() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: std_deviations() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->std_deviations();
+}
+
+
+RealRealPairArray MultivariateDistribution::bounds() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: bounds() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->bounds();
+}
+
+
+RealVector MultivariateDistribution::lower_bounds() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: lower_bounds() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->lower_bounds();
+}
+
+
+RealVector MultivariateDistribution::upper_bounds() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: upper_bounds() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->upper_bounds();
 }
 
 

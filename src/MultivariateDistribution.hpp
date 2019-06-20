@@ -58,6 +58,11 @@ public:
   /// set ranVarTypes[i] (marginal, when present)
   virtual void random_variable_type(short rv_type, size_t i);
 
+  /// return active subset of variables
+  virtual const BitArray& active_variables() const;
+  /// return subset of variables to which correlation matrix applies
+  virtual const BitArray& active_correlations() const;
+
   /// return corrMatrix
   virtual const RealSymMatrix& correlation_matrix() const;
   /// set corrMatrix
@@ -66,6 +71,20 @@ public:
   /// pull non-standardized distribution parameters from mv_dist to this
   virtual void
     pull_distribution_parameters(const MultivariateDistribution& mv_dist);
+
+  /// return marginal means,standard deviations for multivariate distribution
+  virtual RealRealPairArray moments() const;
+  /// return marginal means from multivariate distribution
+  virtual RealVector means() const;
+  /// return marginal standard deviations for multivariate distribution
+  virtual RealVector std_deviations() const;
+
+  /// return lower and upper bounds for multivariate distribution
+  virtual RealRealPairArray bounds() const;
+  /// return lower bounds for multivariate distribution
+  virtual RealVector lower_bounds() const;
+  /// return upper bounds for multivariate distribution
+  virtual RealVector upper_bounds() const;
 
   /// return the multivariate PDF value for the random variables
   virtual Real pdf(const RealVector& pt) const;
@@ -76,16 +95,11 @@ public:
   //- Heading: Member functions
   //
 
-  // perform a deep copy of incoming mv_dist
-  //void copy(const MultivariateDistribution& mv_dist);
-
-  /// return active subset of variables
-  const BitArray& active_variables() const;
-
   /// return correlationFlag
   bool correlation() const;
-  /// return subset of variables to which correlation matrix applies
-  const BitArray& active_correlations() const;
+
+  // perform a deep copy of incoming mv_dist
+  //void copy(const MultivariateDistribution& mv_dist);
 
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
