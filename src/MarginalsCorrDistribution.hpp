@@ -290,7 +290,7 @@ correlation_matrix(const RealSymMatrix& corr)
 //{ return corrCholeskyFactor; }
 
 
-void MarginalsCorrDistribution::
+inline void MarginalsCorrDistribution::
 pull_distribution_parameters(const MultivariateDistribution& mv_dist)
 { pull_distribution_parameters(mv_dist.multivar_dist_rep()); }
 
