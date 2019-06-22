@@ -66,7 +66,7 @@ MultivariateDistribution(short mv_dist_type): referenceCount(1)
 /** Used only by the envelope constructor to initialize mvDistRep to the 
     appropriate derived type. */
 MultivariateDistribution* MultivariateDistribution::
-get_distribution(short mv_dist_type)
+get_distribution(short mv_dist_type) const
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_distribution(string&)."
@@ -412,29 +412,26 @@ Real MultivariateDistribution::log_pdf(const RealVector& pt) const
 }
 
 
-
-/** This function provides a deep copy (the copy constructor supports
-    shallow copies with shared reps) and is commonly used to publish
-    tranformation data when the Model variables are in a transformed
-    space (e.g., u-space) and x-space data may not be generated
-    directly.  This allows for the use of inverse transformations to
-    return the transformed space variables to their original states.
-void MultivariateDistribution::
-copy(const MultivariateDistribution& mv_dist)
+/** This function provides a deep copy, creating a envelope and copying
+    data from the current letter (if defined) into the new envelope. */
+MultivariateDistribution MultivariateDistribution::copy() const
 {
-  if (mvDistRep) // target is envelope
-    mvDistRep->copy(mv_dist);
-  else { // target is letter
-    if (mv_dist.mvDistRep) { // source is envelope
-      correlationFlag = mv_dist.mvDistRep->correlationFlagX;
-      //...
-    }
-    else { // source is letter
-      correlationFlag = mv_dist.correlationFlagX;
-      //...
-    }
+  MultivariateDistribution mvd; // target
+
+  if (mvDistRep) { // source has letter
+    // allocate a responseRep letter, copy data attributes, share the srd
+    mvd.mvDistRep = get_distribution(mvDistRep->mvDistType);
+    // allow derived classes to specialize copy_rep if they augment
+    // the base class data
+    mvd.mvDistRep->copy_rep(mvDistRep);
   }
+
+  return mvd;
 }
-*/
+
+
+/** Default overridden by derived classes */
+void MultivariateDistribution::copy_rep(MultivariateDistribution* source_rep)
+{ correlationFlag = source_rep->correlationFlag; }
 
 } // namespace Pecos

@@ -98,8 +98,8 @@ public:
   /// return correlationFlag
   bool correlation() const;
 
-  // perform a deep copy of incoming mv_dist
-  //void copy(const MultivariateDistribution& mv_dist);
+  /// perform a deep copy of this object and return by value
+  MultivariateDistribution copy() const;
 
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
@@ -122,6 +122,13 @@ protected:
   MultivariateDistribution(BaseConstructor);
   
   //
+  //- Heading: Virtual functions
+  //
+
+  /// copy the data from mvd_rep to the current representation
+  virtual void copy_rep(MultivariateDistribution* mvd_rep);
+
+  //
   //- Heading: Data members
   //
 
@@ -139,7 +146,7 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// mvDistRep to the appropriate derived type.
-  MultivariateDistribution* get_distribution(short mv_dist_type);
+  MultivariateDistribution* get_distribution(short mv_dist_type) const;
 
   //
   //- Heading: Data members

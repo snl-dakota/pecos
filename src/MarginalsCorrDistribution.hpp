@@ -54,6 +54,8 @@ public:
 
   /// pull non-standardized distribution parameters from mv_dist
   void pull_distribution_parameters(const MultivariateDistribution& mv_dist);
+  /// pull non-standardized distribution parameters from mv_dist
+  void pull_distribution_parameters(MultivariateDistribution* mv_dist_rep);
 
   /// return activeVars
   const BitArray& active_variables() const;
@@ -180,6 +182,9 @@ protected:
   /// return the multivariate log PDF value for full set of random variables
   Real log_pdf(const RealVector& pt) const;
 
+  /// copy marginals + correlation data between representations
+  void copy_rep(MultivariateDistribution* mvd_rep);
+
   //
   //- Heading: Data
   //
@@ -283,6 +288,11 @@ correlation_matrix(const RealSymMatrix& corr)
 
 //inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
 //{ return corrCholeskyFactor; }
+
+
+void MarginalsCorrDistribution::
+pull_distribution_parameters(const MultivariateDistribution& mv_dist)
+{ pull_distribution_parameters(mv_dist.multivar_dist_rep()); }
 
 
 template <typename ValueType>

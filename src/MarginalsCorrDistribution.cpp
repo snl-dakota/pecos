@@ -77,16 +77,17 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
 
 
 void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution& mv_dist)
+pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
 {
-  const std::vector<RandomVariable>& rv_in = mv_dist.random_variables();
-  const ShortArray& rv_types_in = mv_dist.random_variable_types();
+  const std::vector<RandomVariable>& rv_in = mv_dist_rep->random_variables();
+  const ShortArray& rv_types_in = mv_dist_rep->random_variable_types();
   size_t i, num_rv = ranVarTypes.size();
 
   for (i=0; i<num_rv; ++i) {
     RandomVariable&       push_rv = randomVars[i];
     const RandomVariable& pull_rv = rv_in[i];
-    switch (ranVarTypes[i]) {
+    short push_type = ranVarTypes[i], pull_type = rv_types_in[i];
+    switch (push_type) {
 
     // push RV are fully standard: no updates to perform
     case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:           break;
@@ -102,7 +103,7 @@ pull_distribution_parameters(const MultivariateDistribution& mv_dist)
 
     // push RV are non-standard, pull all non-standard data from rv_in
     default:
-      switch (rv_types_in[i]) {
+      switch (pull_type) {
       // pull RV are fully standard: no data to pull
       case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:         break;
 
@@ -122,6 +123,18 @@ pull_distribution_parameters(const MultivariateDistribution& mv_dist)
       break;
     }
   }
+}
+
+
+void MarginalsCorrDistribution::copy_rep(MultivariateDistribution* source_rep)
+{
+  // copy base class data
+  MultivariateDistribution::copy_rep(source_rep);
+  // specialization for marginals + corr
+  MarginalsCorrDistribution* mcd_rep = (MarginalsCorrDistribution*)source_rep;
+  initialize_types(mcd_rep->ranVarTypes, mcd_rep->activeVars);
+  initialize_correlations(mcd_rep->corrMatrix, mcd_rep->activeCorr);
+  pull_distribution_parameters(source_rep);
 }
 
 
