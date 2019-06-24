@@ -155,15 +155,6 @@ public:
   /// verify that randomVarsX[i].type() equals rv_type
   void check_random_variable_type(size_t i, short rv_type) const;
 
-  /// return the univariate PDF value for a random variable
-  Real pdf(Real val, size_t i) const;
-  /// return the univariate log PDF value for a random variable
-  Real log_pdf(Real val, size_t i) const;
-  /// return the gradient of the univariate log PDF for a random variable
-  Real log_pdf_gradient(Real val, size_t i) const;
-  /// return the Hessian of the univariate log PDF for a random variable
-  Real log_pdf_hessian(Real val, size_t i) const;
-
   /// draw a sample from the i-th RandomVariable
   template <typename Engine> 
   Real draw_sample(size_t i, Engine& rng) const;
@@ -177,10 +168,15 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// return the multivariate PDF value for full set of random variables
   Real pdf(const RealVector& pt) const;
-  /// return the multivariate log PDF value for full set of random variables
   Real log_pdf(const RealVector& pt) const;
+
+  Real pdf(Real val, size_t i) const;
+  Real pdf_gradient(Real val, size_t i) const;
+  Real pdf_hessian(Real val, size_t i) const;
+  Real log_pdf(Real val, size_t i) const;
+  Real log_pdf_gradient(Real val, size_t i) const;
+  Real log_pdf_hessian(Real val, size_t i) const;
 
   /// copy marginals + correlation data between representations
   void copy_rep(MultivariateDistribution* mvd_rep);
@@ -522,6 +518,14 @@ inline Real MarginalsCorrDistribution::pdf(Real val, size_t i) const
 { return randomVars[i].pdf(val); }
 
 
+inline Real MarginalsCorrDistribution::pdf_gradient(Real val, size_t i) const
+{ return randomVars[i].pdf_gradient(val); }
+
+
+inline Real MarginalsCorrDistribution::pdf_hessian(Real val, size_t i) const
+{ return randomVars[i].pdf_hessian(val); }
+
+
 inline Real MarginalsCorrDistribution::log_pdf(Real val, size_t i) const
 { return randomVars[i].log_pdf(val); }
 
@@ -531,8 +535,7 @@ log_pdf_gradient(Real val, size_t i) const
 { return randomVars[i].log_pdf_gradient(val); }
 
 
-inline Real MarginalsCorrDistribution::
-log_pdf_hessian(Real val, size_t i) const
+inline Real MarginalsCorrDistribution::log_pdf_hessian(Real val, size_t i) const
 { return randomVars[i].log_pdf_hessian(val); }
 
 

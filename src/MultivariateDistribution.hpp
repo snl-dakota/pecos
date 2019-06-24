@@ -91,6 +91,19 @@ public:
   /// return the multivariate log PDF value for the random variables
   virtual Real log_pdf(const RealVector& pt) const;
 
+  /// return the univariate PDF value for a random variable
+  virtual Real pdf(Real val, size_t i) const;
+  /// return the gradient of the univariate PDF value for a random variable
+  virtual Real pdf_gradient(Real val, size_t i) const;
+  /// return the the Hessian of the univariate PDF value for a random variable
+  virtual Real pdf_hessian(Real val, size_t i) const;
+  /// return the univariate log PDF value for a random variable
+  virtual Real log_pdf(Real val, size_t i) const;
+  /// return the gradient of the univariate log PDF for a random variable
+  virtual Real log_pdf_gradient(Real val, size_t i) const;
+  /// return the Hessian of the univariate log PDF for a random variable
+  virtual Real log_pdf_hessian(Real val, size_t i) const;
+
   //
   //- Heading: Member functions
   //

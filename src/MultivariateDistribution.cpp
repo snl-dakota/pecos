@@ -389,6 +389,7 @@ RealVector MultivariateDistribution::upper_bounds() const
   return mvDistRep->upper_bounds();
 }
 
+// Vector input / Joint:
 
 Real MultivariateDistribution::pdf(const RealVector& pt) const
 {
@@ -411,6 +412,73 @@ Real MultivariateDistribution::log_pdf(const RealVector& pt) const
     return std::log(pdf(pt));
 }
 
+// Scalar input / Marginals:
+
+Real MultivariateDistribution::pdf(Real val, size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->pdf(val, i);
+  else { // default implementation (exponential-based distribs will override)
+    PCerr << "Error: pdf(Real, size_t) not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+Real MultivariateDistribution::pdf_gradient(Real val, size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->pdf_gradient(val, i);
+  else { // default implementation (exponential-based distribs will override)
+    PCerr << "Error: pdf_gradient(Real, size_t) not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+Real MultivariateDistribution::pdf_hessian(Real val, size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->pdf_hessian(val, i);
+  else { // default implementation (exponential-based distribs will override)
+    PCerr << "Error: pdf_hessian(Real, size_t) not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+    return 0.;
+  }
+}
+
+
+Real MultivariateDistribution::log_pdf(Real val, size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->log_pdf(val, i);
+  else // default implementation (exponential-based distribs will override)
+    return std::log(pdf(val, i));
+}
+
+
+Real MultivariateDistribution::log_pdf_gradient(Real val, size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->log_pdf_gradient(val, i);
+  else // default implementation (exponential-based distribs will override)
+    return std::log(pdf_gradient(val, i));
+}
+
+
+Real MultivariateDistribution::log_pdf_hessian(Real val, size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->log_pdf_hessian(val, i);
+  else // default implementation (exponential-based distribs will override)
+    return std::log(pdf_hessian(val, i));
+}
+   
 
 /** This function provides a deep copy, creating a envelope and copying
     data from the current letter (if defined) into the new envelope. */
