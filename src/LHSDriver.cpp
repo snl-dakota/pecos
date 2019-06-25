@@ -1061,7 +1061,7 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
     if (samples.numRows() != num_rv || samples.numCols() != num_samples)
       samples.shapeUninitialized(num_rv, num_samples);
     // Currently sample_ranks will always be returned empty. It should only be
-    // filled when NonDSampling.sampleRanksMode>0. But I cannot see anywhere
+    // filled when NonDSampling::sampleRanksMode > 0. But I cannot see anywhere
     // in the code where this is true.
     //sample_ranks.shapeUninitialized( num_vars, num_samples );
 

@@ -111,6 +111,21 @@ public:
     const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples,
     bool backfill_flag = false);
 
+  /// define the subset of design or state variables from RV type within
+  /// the range [start_set,start_set+num_set)
+  void design_state_subset(const std::vector<RandomVariable>& random_vars,
+			   BitArray& subset, size_t start_set,
+			   size_t num_set) const;
+  /// define the subset of uncertain variables from RV type
+  void uncertain_subset(const std::vector<RandomVariable>& random_vars,
+			BitArray& subset) const;
+  /// define the subset of aleatory uncertain variables from RV type
+  void aleatory_uncertain_subset(
+    const std::vector<RandomVariable>& random_vars, BitArray& subset) const;
+  /// define the subset of epistemic uncertain variables from RV type
+  void epistemic_uncertain_subset(
+    const std::vector<RandomVariable>& random_vars, BitArray& subset) const;
+
 private:
 
   //
@@ -130,16 +145,6 @@ private:
   /// error message if an error was returned
   void check_error(int err_code, const char* err_source = NULL,
 		   const char* err_case = NULL) const;
-
-  /// define the subset of uncertain variables from RV type
-  void uncertain_subset(const std::vector<RandomVariable>& random_vars,
-			BitArray& subset);
-  /// define the subset of aleatory uncertain variables from RV type
-  void aleatory_uncertain_subset(
-    const std::vector<RandomVariable>& random_vars, BitArray& subset);
-  /// define the subset of epistemic uncertain variables from RV type
-  void epistemic_uncertain_subset(
-    const std::vector<RandomVariable>& random_vars, BitArray& subset);
 
   /// convert histogram bin pairs to LHS udist x,y inputs
   void bins_to_udist_params(const RealRealMap& h_bin_prs,
@@ -255,8 +260,24 @@ inline void LHSDriver::advance_seed_sequence()
 
 
 inline void LHSDriver::
+design_state_subset(const std::vector<RandomVariable>& random_vars,
+		    BitArray& subset, size_t start_set, size_t num_set) const
+{
+  size_t i, num_rv = random_vars.size(), end_set = start_set + num_set;
+  subset.resize(num_rv, false); // init bits to false
+  for (i=start_set; i<end_set; ++i)
+    // activate design + state vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
+    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+      subset.set(i); break;
+    }
+}
+
+
+inline void LHSDriver::
 uncertain_subset(const std::vector<RandomVariable>& random_vars,
-		 BitArray& subset)
+		 BitArray& subset) const
 {
   size_t i, num_rv = random_vars.size();
   subset.resize(num_rv, true); // init bits to true
@@ -272,7 +293,7 @@ uncertain_subset(const std::vector<RandomVariable>& random_vars,
 
 inline void LHSDriver::
 aleatory_uncertain_subset(const std::vector<RandomVariable>& random_vars,
-			  BitArray& subset)
+			  BitArray& subset) const
 {
   size_t i, num_rv = random_vars.size();
   subset.resize(num_rv, true); // init bits to true
@@ -291,7 +312,7 @@ aleatory_uncertain_subset(const std::vector<RandomVariable>& random_vars,
 
 inline void LHSDriver::
 epistemic_uncertain_subset(const std::vector<RandomVariable>& random_vars,
-			   BitArray& subset)
+			   BitArray& subset) const
 {
   size_t i, num_rv = random_vars.size();
   subset.resize(num_rv, false); // init bits to false
@@ -375,7 +396,7 @@ inline void LHSDriver::
 generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
 			RealSymMatrix& corr, int num_samples,
-			RealMatrix& samples_array)
+			RealMatrix& samples_array)//, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_normal_samples() does not support sample rank "
@@ -394,6 +415,10 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
     if (u_bnd) rv_i.push_parameter(N_UPR_BND, n_u_bnds[i]);
   }
   RealMatrix ranks;
+  // All variables are continuous normal --> no need for backfill
+  //if (backfill_flag)
+  //  generate_unique_samples(random_vars,corr,num_samples,samples_array,ranks);
+  //else
   generate_samples(random_vars, corr, num_samples, samples_array, ranks);
 }
 
@@ -401,7 +426,7 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 inline void LHSDriver::
 generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 			 RealSymMatrix& corr, int num_samples,
-			 RealMatrix& samples_array)
+			 RealMatrix& samples_array)//, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_samples() does not support sample rank "
@@ -417,6 +442,10 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
     rv_i.push_parameter(U_UPR_BND, u_u_bnds[i]);
   }
   RealMatrix ranks;
+  // All variables are continuous uniform --> no need for backfill
+  //if (backfill_flag)
+  //  generate_unique_samples(random_vars,corr,num_samples,samples_array,ranks);
+  //else
   generate_samples(random_vars, corr, num_samples, samples_array, ranks);
 }
 
