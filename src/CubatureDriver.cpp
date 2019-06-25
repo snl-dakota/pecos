@@ -27,27 +27,25 @@ namespace Pecos {
 
 
 void CubatureDriver::
-initialize_grid(const ShortArray& u_types, unsigned short order,
+initialize_grid(const ShortArray& rv_types, unsigned short order,
 		unsigned short rule)
 {
-  numVars = u_types.size();
+  numVars = rv_types.size();
   integrand_order(order);
   collocation_rule(rule); // size collocRules and define first entry
 
-  // check for isotropic u_types
-  short type0 = u_types[0];
-  for (size_t i=1; i<numVars; ++i)
-    if (u_types[i] != type0) {
-      PCerr << "Error: u_types must be isotropic in CubatureDriver::"
-	    << "initialize_grid(u_types)." << std::endl;
-      abort_handler(-1);
-    }
+  // check for isotropic rv_types
+  if (verify_homogeneity(rv_types)) {
+    PCerr << "Error: rv_types must be isotropic in CubatureDriver::"
+	  << "initialize_grid(rv_types)." << std::endl;
+    abort_handler(-1);
+  }
 
   ShortArray basis_types;
   // Cubature used for numerical integration of PCE
   // TO DO: require OPA/IPA switch? (see IntegrationDriver::initialize_grid())
   //BasisConfigOptions bc_options(false, false, false, false);
-  //SharedPolyApproxData::initialize_basis_types(u_types, bc_options,
+  //SharedPolyApproxData::initialize_basis_types(rv_types, bc_options,
   //                                             basis_types);
   // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
   // have to be expanded into array for PolynomialApproximation within NonDPCE).
@@ -62,7 +60,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
   numVars         = poly_basis.size();
   polynomialBasis = poly_basis; // shallow copy
 
-  // check for isotropic u_types
+  // check for isotropic integration rules
   unsigned short rule0 = poly_basis[0].collocation_rule();
   for (size_t i=1; i<numVars; ++i)
     if (poly_basis[i].collocation_rule() != rule0) {
@@ -70,20 +68,19 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 	    << "initialize_grid(poly_basis)." << std::endl;
       abort_handler(-1);
     }
-
   collocation_rule(rule0);
 }
 
 
 void CubatureDriver::
-initialize_grid_parameters(const MultivariateDistribution& u_dist)
+initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
-  short u_type0 = u_dist.random_variable_type(0);
+  short rv_type0 = mv_dist.random_variable_type(0);
   MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
+    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag =
@@ -95,7 +92,7 @@ initialize_grid_parameters(const MultivariateDistribution& u_dist)
       verify_homogeneity(mvd_rep->pull_parameters<Real>(GAMMA, GA_ALPHA));
     break;
   case GOLUB_WELSCH: // numerically generated: check all params
-    switch (u_type0) { // u_types verified in initialize_grid() above
+    switch (rv_type0) { // rv_types verified in initialize_grid() above
     case BOUNDED_NORMAL:
       err_flag =
 	(verify_homogeneity(
@@ -177,7 +174,7 @@ initialize_grid_parameters(const MultivariateDistribution& u_dist)
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
   SharedPolyApproxData::
-    update_basis_distribution_parameters(u_dist, polynomialBasis);
+    update_basis_distribution_parameters(mv_dist, polynomialBasis);
 }
 
 
