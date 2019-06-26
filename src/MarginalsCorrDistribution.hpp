@@ -118,30 +118,30 @@ public:
 
   /// update val from a scalar distribution parameter from randomVars[v]
   template <typename ValueType>
-  void pull_parameter(size_t v, short dist_param, ValueType& val);
+  void pull_parameter(size_t v, short dist_param, ValueType& val) const;
   /// define array of values using the identified distribution parameter
   /// across the specified range of random variables
   template <typename ValueType>
   void pull_parameters(size_t start_v, size_t num_v, short dist_param,
-		       std::vector<ValueType>& values);
+		       std::vector<ValueType>& values) const;
   /// define array of values using the identified distribution parameter
   /// across the specified range of random variables
   template <typename ValueType>
   void pull_parameters(short rv_type, short dist_param,
-		       std::vector<ValueType>& values);
+		       std::vector<ValueType>& values) const;
   /// update values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename OrdinalType, typename ScalarType>
   void pull_parameters(short rv_type, short dist_param,
-    Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values);
+    Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values) const;
 
   /// return a scalar distribution parameter from randomVars[v]
   template <typename ValueType>
-  ValueType pull_parameter(size_t v, short dist_param);
+  ValueType pull_parameter(size_t v, short dist_param) const;
   /// return array of values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename ValueType>
-  std::vector<ValueType> pull_parameters(short rv_type, short dist_param);
+  std::vector<ValueType> pull_parameters(short rv_type, short dist_param) const;
 
   /*
   /// expand corrMatrix from probabilistic variables to combined variables
@@ -357,14 +357,14 @@ push_parameters(short rv_type, short dist_param,
 
 template <typename ValueType>
 void MarginalsCorrDistribution::
-pull_parameter(size_t v, short dist_param, ValueType& val)
+pull_parameter(size_t v, short dist_param, ValueType& val) const
 { randomVars[v].pull_parameter(dist_param, val); }
 
 
 template <typename ValueType>
 void MarginalsCorrDistribution::
 pull_parameters(size_t start_v, size_t num_v, short dist_param,
-		std::vector<ValueType>& values)
+		std::vector<ValueType>& values) const
 {
   // set one distribution parameter type for a range of random variables
 
@@ -377,7 +377,8 @@ pull_parameters(size_t start_v, size_t num_v, short dist_param,
 
 template <typename ValueType>
 void MarginalsCorrDistribution::
-pull_parameters(short rv_type, short dist_param, std::vector<ValueType>& values)
+pull_parameters(short rv_type, short dist_param,
+		std::vector<ValueType>& values) const
 {
   // rv_type eliminates need to check for dist_param support
 
@@ -393,7 +394,7 @@ pull_parameters(short rv_type, short dist_param, std::vector<ValueType>& values)
 template <typename OrdinalType, typename ScalarType>
 void MarginalsCorrDistribution::
 pull_parameters(short rv_type, short dist_param,
-		Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values)
+  Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values) const
 {
   // rv_type eliminates need to check for dist_param support
 
@@ -408,7 +409,8 @@ pull_parameters(short rv_type, short dist_param,
 
 
 template <typename ValueType>
-ValueType MarginalsCorrDistribution::pull_parameter(size_t v, short dist_param)
+ValueType MarginalsCorrDistribution::
+pull_parameter(size_t v, short dist_param) const
 {
   ValueType val;
   randomVars[v].pull_parameter(dist_param, val);
@@ -418,7 +420,7 @@ ValueType MarginalsCorrDistribution::pull_parameter(size_t v, short dist_param)
 
 template <typename ValueType>
 std::vector<ValueType> MarginalsCorrDistribution::
-pull_parameters(short rv_type, short dist_param)
+pull_parameters(short rv_type, short dist_param) const
 {
   std::vector<ValueType> vals;
   pull_parameters(rv_type, dist_param, vals);
