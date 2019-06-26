@@ -46,8 +46,8 @@ protected:
   Real type1_hessian( Real x, unsigned short order );
   Real norm_squared( unsigned short order );
 
-  void parameter(short dist_param, Real param);
-  Real parameter(short dist_param);
+  void pull_parameter(short dist_param, Real& param);
+  void push_parameter(short dist_param, Real  param);
   bool parameterized() const;
 
 private: 
@@ -69,24 +69,25 @@ inline CharlierOrthogPolynomial::~CharlierOrthogPolynomial()
 { }
 
 
-inline Real CharlierOrthogPolynomial::parameter(short dist_param)
+inline void CharlierOrthogPolynomial::
+pull_parameter(short dist_param, Real& param)
 {
   switch (dist_param) {
-  case P_LAMBDA: return lambdaStat; break;
+  case P_LAMBDA: param = lambdaStat; break;
   default:
     PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
-	  << "Polynomial::parameter()." << std::endl;
+	  << "Polynomial::pull_parameter()." << std::endl;
     abort_handler(-1);
-    return 0.;
   }
 }
 
 
-inline void CharlierOrthogPolynomial::parameter(short dist_param, Real param)
+inline void CharlierOrthogPolynomial::
+push_parameter(short dist_param, Real param)
 {
   if (dist_param != P_LAMBDA) {
     PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
-	  << "Polynomial::parameter()." << std::endl;
+	  << "Polynomial::push_parameter()." << std::endl;
     abort_handler(-1);
   }
 
