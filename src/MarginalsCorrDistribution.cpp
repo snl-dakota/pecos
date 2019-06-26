@@ -37,10 +37,14 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
   corrMatrix = corr;
   activeCorr = active_corr; // active RV subset for correlation matrix
 
-  size_t num_corr = corr.numRows(), num_rv = randomVars.size();
+  correlationFlag = false;
+  size_t num_corr = corr.numRows();
+  if (num_corr == 0) return;
+
+  size_t num_rv = randomVars.size();
   bool no_mask = activeCorr.empty();
   if (no_mask) {
-    if (num_corr && num_corr != num_rv) {
+    if (num_corr != num_rv) {
       PCerr << "Error: correlation matrix size (" << num_corr
 	    << ") inconsistent with number of random variables (" << num_rv
 	    << ")." << std::endl;
@@ -55,9 +59,6 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
       abort_handler(-1);
     }
   }
-
-  correlationFlag = false;
-  if (num_corr == 0) return;
 
   size_t i, j, cntr_i, cntr_j;
   for (i=0, cntr_i=0; i<num_rv; ++i) {
