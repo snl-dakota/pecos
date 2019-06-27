@@ -160,126 +160,129 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 {
   // update poly_basis using distribution data from u_dist
   const ShortArray& u_types = u_dist.random_variable_types();
+  const BitArray& active_rv = u_dist.active_variables();
   size_t i, num_vars = u_types.size();
   MarginalsCorrDistribution* mvd_rep
     = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
   for (i=0; i<num_vars; ++i)
-    switch (u_types[i]) {
-    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:
-      break;
-    case STD_BETA:
-      poly_basis[i].push_parameter(BE_ALPHA,
-	mvd_rep->pull_parameter<Real>(i, BE_ALPHA));
-      poly_basis[i].push_parameter(BE_BETA,
-	mvd_rep->pull_parameter<Real>(i, BE_BETA));
-      break;
-    case STD_GAMMA:
-      poly_basis[i].push_parameter(GA_ALPHA,
-        mvd_rep->pull_parameter<Real>(i, GA_ALPHA));
-      break;
-    case BOUNDED_NORMAL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_normal_distribution(mvd_rep->pull_parameter<Real>(i, N_MEAN),
-	  mvd_rep->pull_parameter<Real>(i, N_STD_DEV),
-	  mvd_rep->pull_parameter<Real>(i, N_LWR_BND),
-	  mvd_rep->pull_parameter<Real>(i, N_UPR_BND));
-      break;
-    case LOGNORMAL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	lognormal_distribution(mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
-	  mvd_rep->pull_parameter<Real>(i, LN_ZETA));
-      break;
-    case BOUNDED_LOGNORMAL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_lognormal_distribution(
-	  mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
-	  mvd_rep->pull_parameter<Real>(i, LN_ZETA),
-	  mvd_rep->pull_parameter<Real>(i, LN_LWR_BND),
-	  mvd_rep->pull_parameter<Real>(i, LN_UPR_BND));
-      break;
-    case LOGUNIFORM:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	loguniform_distribution(mvd_rep->pull_parameter<Real>(i, LU_LWR_BND),
-				mvd_rep->pull_parameter<Real>(i, LU_UPR_BND));
-      break;
-    case TRIANGULAR:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	triangular_distribution(mvd_rep->pull_parameter<Real>(i, T_LWR_BND),
-				mvd_rep->pull_parameter<Real>(i, T_MODE),
-				mvd_rep->pull_parameter<Real>(i, T_UPR_BND));
-      break;
-    case GUMBEL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	gumbel_distribution(mvd_rep->pull_parameter<Real>(i, GU_ALPHA),
-			    mvd_rep->pull_parameter<Real>(i, GU_BETA));
-      break;
-    case FRECHET:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	frechet_distribution(mvd_rep->pull_parameter<Real>(i, F_ALPHA),
-			     mvd_rep->pull_parameter<Real>(i, F_BETA));
-      break;
-    case WEIBULL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	weibull_distribution(mvd_rep->pull_parameter<Real>(i, W_ALPHA),
-			     mvd_rep->pull_parameter<Real>(i, W_BETA));
-      break;
-    case HISTOGRAM_BIN:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	histogram_bin_distribution(
-	  mvd_rep->pull_parameter<RealRealMap>(i, H_BIN_PAIRS));
-      break;
-    case POISSON:
-      poly_basis[i].push_parameter(P_LAMBDA,
-	mvd_rep->pull_parameter<Real>(i, P_LAMBDA));
-      break;
-    case BINOMIAL:
-      poly_basis[i].push_parameter(BI_P_PER_TRIAL,
-	mvd_rep->pull_parameter<Real>(i, BI_P_PER_TRIAL));
-      poly_basis[i].push_parameter(BI_TRIALS,
-	mvd_rep->pull_parameter<unsigned int>(i, BI_TRIALS));
-      break;
-    case NEGATIVE_BINOMIAL:
-      poly_basis[i].push_parameter(NBI_P_PER_TRIAL,
-	mvd_rep->pull_parameter<Real>(i, NBI_P_PER_TRIAL));
-      poly_basis[i].push_parameter(NBI_TRIALS,
-	mvd_rep->pull_parameter<unsigned int>(i, NBI_TRIALS));
-      break;
-    case GEOMETRIC:
-      poly_basis[i].push_parameter(GE_P_PER_TRIAL,
-	mvd_rep->pull_parameter<Real>(i, GE_P_PER_TRIAL));
-      // There is no numTrials for Geometric variables -> simplest to have
-      // Meixner numTrials default to 1., rather than setting NBI_TRIALS
-      //poly_basis[i].parameter(NBI_TRIALS, 1.);
-      break;
-    case HYPERGEOMETRIC:
-      poly_basis[i].push_parameter(HGE_TOT_POP,
-	mvd_rep->pull_parameter<unsigned int>(i, HGE_TOT_POP));
-      poly_basis[i].push_parameter(HGE_SEL_POP,
-	mvd_rep->pull_parameter<unsigned int>(i, HGE_SEL_POP));
-      poly_basis[i].push_parameter(HGE_DRAWN,
-	mvd_rep->pull_parameter<unsigned int>(i, HGE_DRAWN));
-      break;
-    case HISTOGRAM_PT_INT:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	histogram_pt_distribution(
-	  mvd_rep->pull_parameter<IntRealMap>(i, H_PT_INT_PAIRS));
-      break;
-    case HISTOGRAM_PT_STRING:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	histogram_pt_distribution(
-	  mvd_rep->pull_parameter<StringRealMap>(i,H_PT_STR_PAIRS));
-      break;
-    case HISTOGRAM_PT_REAL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(
-	  mvd_rep->pull_parameter<RealRealMap>(i, H_PT_REAL_PAIRS));
-      break;
-    default:
-      PCerr << "Error: unsupported u-space type in SharedPolyApproxData::"
-	    << "distribution_parameters()" << std::endl;
-      abort_handler(-1);
-      break;
-    }
+    if (active_rv[i])
+      switch (u_types[i]) {
+      case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:
+	break;
+      case STD_BETA:
+	poly_basis[i].push_parameter(BE_ALPHA,
+	  mvd_rep->pull_parameter<Real>(i, BE_ALPHA));
+	poly_basis[i].push_parameter(BE_BETA,
+	  mvd_rep->pull_parameter<Real>(i, BE_BETA));
+	break;
+      case STD_GAMMA:
+	poly_basis[i].push_parameter(GA_ALPHA,
+          mvd_rep->pull_parameter<Real>(i, GA_ALPHA));
+	break;
+      case BOUNDED_NORMAL:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  bounded_normal_distribution(mvd_rep->pull_parameter<Real>(i, N_MEAN),
+	    mvd_rep->pull_parameter<Real>(i, N_STD_DEV),
+	    mvd_rep->pull_parameter<Real>(i, N_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, N_UPR_BND));
+	break;
+      case LOGNORMAL:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  lognormal_distribution(mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
+	    mvd_rep->pull_parameter<Real>(i, LN_ZETA));
+	break;
+      case BOUNDED_LOGNORMAL:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  bounded_lognormal_distribution(
+	    mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
+	    mvd_rep->pull_parameter<Real>(i, LN_ZETA),
+	    mvd_rep->pull_parameter<Real>(i, LN_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, LN_UPR_BND));
+	break;
+      case LOGUNIFORM:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  loguniform_distribution(mvd_rep->pull_parameter<Real>(i, LU_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, LU_UPR_BND));
+	break;
+      case TRIANGULAR:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  triangular_distribution(mvd_rep->pull_parameter<Real>(i, T_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, T_MODE),
+	    mvd_rep->pull_parameter<Real>(i, T_UPR_BND));
+	break;
+      case GUMBEL:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  gumbel_distribution(mvd_rep->pull_parameter<Real>(i, GU_ALPHA),
+	    mvd_rep->pull_parameter<Real>(i, GU_BETA));
+	break;
+      case FRECHET:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  frechet_distribution(mvd_rep->pull_parameter<Real>(i, F_ALPHA),
+	    mvd_rep->pull_parameter<Real>(i, F_BETA));
+	break;
+      case WEIBULL:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  weibull_distribution(mvd_rep->pull_parameter<Real>(i, W_ALPHA),
+	    mvd_rep->pull_parameter<Real>(i, W_BETA));
+	break;
+      case HISTOGRAM_BIN:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  histogram_bin_distribution(
+	    mvd_rep->pull_parameter<RealRealMap>(i, H_BIN_PAIRS));
+	break;
+      case POISSON:
+	poly_basis[i].push_parameter(P_LAMBDA,
+	  mvd_rep->pull_parameter<Real>(i, P_LAMBDA));
+	break;
+      case BINOMIAL:
+	poly_basis[i].push_parameter(BI_P_PER_TRIAL,
+	  mvd_rep->pull_parameter<Real>(i, BI_P_PER_TRIAL));
+	poly_basis[i].push_parameter(BI_TRIALS,
+	  mvd_rep->pull_parameter<unsigned int>(i, BI_TRIALS));
+	break;
+      case NEGATIVE_BINOMIAL:
+	poly_basis[i].push_parameter(NBI_P_PER_TRIAL,
+	  mvd_rep->pull_parameter<Real>(i, NBI_P_PER_TRIAL));
+	poly_basis[i].push_parameter(NBI_TRIALS,
+	  mvd_rep->pull_parameter<unsigned int>(i, NBI_TRIALS));
+	break;
+      case GEOMETRIC:
+	poly_basis[i].push_parameter(GE_P_PER_TRIAL,
+	  mvd_rep->pull_parameter<Real>(i, GE_P_PER_TRIAL));
+	// There is no numTrials for Geometric variables -> simplest to have
+	// Meixner numTrials default to 1., rather than setting NBI_TRIALS
+	//poly_basis[i].parameter(NBI_TRIALS, 1.);
+	break;
+      case HYPERGEOMETRIC:
+	poly_basis[i].push_parameter(HGE_TOT_POP,
+	  mvd_rep->pull_parameter<unsigned int>(i, HGE_TOT_POP));
+	poly_basis[i].push_parameter(HGE_SEL_POP,
+	  mvd_rep->pull_parameter<unsigned int>(i, HGE_SEL_POP));
+	poly_basis[i].push_parameter(HGE_DRAWN,
+	  mvd_rep->pull_parameter<unsigned int>(i, HGE_DRAWN));
+	break;
+      case HISTOGRAM_PT_INT:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  histogram_pt_distribution(
+	    mvd_rep->pull_parameter<IntRealMap>(i, H_PT_INT_PAIRS));
+	break;
+      case HISTOGRAM_PT_STRING:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  histogram_pt_distribution(
+	    mvd_rep->pull_parameter<StringRealMap>(i,H_PT_STR_PAIRS));
+	break;
+      case HISTOGRAM_PT_REAL:
+	((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	  histogram_pt_distribution(
+	    mvd_rep->pull_parameter<RealRealMap>(i, H_PT_REAL_PAIRS));
+	break;
+      default:
+	PCerr << "Error: unsupported u-space random variable type ("
+	      << u_types[i] << ") in SharedPolyApproxData::update_basis_"
+	      << "distribution_parameters()" << std::endl;
+	abort_handler(-1);
+	break;
+      }
 }
 
 
