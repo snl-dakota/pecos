@@ -331,22 +331,28 @@ private:
 
 inline const MultivariateDistribution& ProbabilityTransformation::
 x_distribution() const
-{ return xDist; }
+{ return (probTransRep) ? probTransRep->xDist : xDist; }
 
 
 inline void ProbabilityTransformation::
 x_distribution(const MultivariateDistribution& dist)
-{ xDist = dist; }
+{
+  if (probTransRep) probTransRep->xDist = dist;
+  else                            xDist = dist;
+}
 
 
 inline const MultivariateDistribution& ProbabilityTransformation::
 u_distribution() const
-{ return uDist; }
+{ return (probTransRep) ? probTransRep->uDist : uDist; }
 
 
 inline void ProbabilityTransformation::
 u_distribution(const MultivariateDistribution& dist)
-{ uDist = dist; }
+{
+  if (probTransRep) probTransRep->uDist = dist;
+  else                            uDist = dist;
+}
 
 
 inline bool ProbabilityTransformation::is_null() const
