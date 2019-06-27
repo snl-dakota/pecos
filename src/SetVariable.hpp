@@ -63,6 +63,8 @@ public:
   void pull_parameter(short dist_param, std::set<T>& vals) const;
   void push_parameter(short dist_param, const std::set<T>& vals);
 
+  void copy_parameters(const RandomVariable& rv);
+
   //
   //- Heading: Member functions
   //
@@ -144,6 +146,17 @@ void SetVariable<T>::push_parameter(short dist_param, const std::set<T>& vals)
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in SetVariable::push_parameter(T)." << std::endl;
     abort_handler(-1); break;
+  }
+}
+
+
+template <typename T>
+inline void SetVariable<T>::copy_parameters(const RandomVariable& rv)
+{
+  switch (ranVarType) {
+  case DISCRETE_SET_INT:     rv.pull_parameter(DSI_VALUES, setValues);  break;
+  case DISCRETE_SET_STRING:  rv.pull_parameter(DSS_VALUES, setValues);  break;
+  case DISCRETE_SET_REAL:    rv.pull_parameter(DSR_VALUES, setValues);  break;
   }
 }
 

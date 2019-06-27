@@ -152,7 +152,7 @@ push_parameter(short dist_param, const std::map<std::pair<T, T>, Real>& bpa)
 template <typename T>
 void IntervalRandomVariable<T>::copy_parameters(const RandomVariable& rv)
 {
-  switch (rv.type()) {
+  switch (ranVarType) {
   case CONTINUOUS_INTERVAL_UNCERTAIN:
     rv.pull_parameter(CIU_BPA, intervalBPA); break;
   case DISCRETE_INTERVAL_UNCERTAIN:

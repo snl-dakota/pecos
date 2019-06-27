@@ -60,6 +60,8 @@ public:
   void pull_parameter(short dist_param, T& val) const;
   void push_parameter(short dist_param, T  val);
 
+  void copy_parameters(const RandomVariable& rv);
+
   //
   //- Heading: Member functions
   //
@@ -140,6 +142,20 @@ void RangeVariable<T>::push_parameter(short dist_param, T val)
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in RangeVariable::push_parameter(T)." << std::endl;
     abort_handler(-1); break;
+  }
+}
+
+
+template <typename T>
+inline void RangeVariable<T>::copy_parameters(const RandomVariable& rv)
+{
+  switch (ranVarType) {
+  case CONTINUOUS_RANGE:
+    rv.pull_parameter(CR_LWR_BND, lowerBnd);
+    rv.pull_parameter(CR_UPR_BND, upperBnd); break;
+  case DISCRETE_RANGE:
+    rv.pull_parameter(DR_LWR_BND, lowerBnd);
+    rv.pull_parameter(DR_UPR_BND, upperBnd); break;
   }
 }
 

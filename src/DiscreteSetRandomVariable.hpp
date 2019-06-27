@@ -154,7 +154,7 @@ push_parameter(short dist_param, const std::map<T, Real>& val)
 template <typename T>
 void DiscreteSetRandomVariable<T>::copy_parameters(const RandomVariable& rv)
 {
-  switch (rv.type()) {
+  switch (ranVarType) {
   case HISTOGRAM_PT_INT:
     rv.pull_parameter(H_PT_INT_PAIRS,    valueProbPairs); break;
   case DISCRETE_UNCERTAIN_SET_INT:

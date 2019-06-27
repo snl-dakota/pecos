@@ -666,10 +666,10 @@ push_parameter(short dist_param, const RealRealPairRealMap& val)
 void RandomVariable::copy_parameters(const RandomVariable& rv)
 {
   if (ranVarRep)
-    ranVarRep->copy_parameters(rv); // forward to letter
+    ranVarRep->copy_parameters(rv);
   else {
     PCerr << "Error: copy_parameters(RandomVariable) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
