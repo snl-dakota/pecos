@@ -152,7 +152,7 @@ public:
 				  size_t num_trail_v);
   */
 
-  /// verify that randomVarsX[i].type() equals rv_type
+  /// verify that randomVars[i].type() equals rv_type
   void check_random_variable_type(size_t i, short rv_type) const;
 
   /// draw a sample from the i-th RandomVariable
@@ -583,33 +583,7 @@ Real MarginalsCorrDistribution::draw_sample(size_t i, Engine& rng) const
 template <typename Engine> 
 Real MarginalsCorrDistribution::
 draw_standard_sample(size_t i, Engine& rng) const
-{
-  /*
-  // can only use randomVarsX[i].standard_pdf() for cases where u_type is a
-  // standardized form of the x_type.  For STD_NORMAL and STD_UNIFORM, many
-  // x_types can be mapped to these u_types, so use global utility fns
-  // whenever there are no auxilliary parameters to manage.
-  switch (ranVarTypesU[i]) {
-  // these cases require static fns since U type may not correspond to X type
-  case STD_NORMAL:  return  NormalRandomVariable::draw_std_sample(rng); break;
-  case STD_UNIFORM: return UniformRandomVariable::draw_std_sample(rng); break;
-  case STD_EXPONENTIAL:
-    return ExponentialRandomVariable::draw_std_sample(rng);             break;
-  // these cases can rely on correspondence between X and U types
-  case STD_BETA:
-    check_x_type(i, BETA);
-    return randomVarsX[i].draw_standard_sample(rng); break;
-  case STD_GAMMA:
-    check_x_type(i, GAMMA);
-    return randomVarsX[i].draw_standard_sample(rng); break;
-  default: // no transformation (e.g., PCE with numerically-generated bases)
-    check_x_type(i, ranVarTypesU[i]);
-    return randomVarsX[i].draw_sample(rng);          break;
-  }
-  */
-
-  return randomVars[i].draw_standard_sample(rng);
-}
+{ return randomVars[i].draw_standard_sample(rng); }
 
 } // namespace Pecos
 

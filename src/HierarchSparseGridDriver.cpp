@@ -15,7 +15,6 @@
 #include "HierarchSparseGridDriver.hpp"
 #include "SharedPolyApproxData.hpp"
 #include "sandia_sgmga.hpp"
-#include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
 #include "pecos_math_util.hpp"
 

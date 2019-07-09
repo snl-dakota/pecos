@@ -14,7 +14,6 @@
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
 #include "SparseGridDriver.hpp"
-#include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "DiscrepancyCalculator.hpp"
 

@@ -15,7 +15,6 @@
 #include "IncrementalSparseGridDriver.hpp"
 #include "SharedPolyApproxData.hpp"
 #include "sandia_sgmgg.hpp"
-#include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
 
 static const char rcsId[]="@(#) $Id: IncrementalSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";

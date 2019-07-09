@@ -17,7 +17,6 @@
 #include "sandia_sgmg.hpp"
 #include "sandia_sgmga.hpp"
 #include "sandia_sgmgg.hpp"
-#include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
 #include "pecos_math_util.hpp"
 
