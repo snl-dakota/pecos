@@ -112,7 +112,7 @@ public:
   static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis,
-			      ShortArray &basis_types,ShortArray &colloc_rules);
+			      ShortArray& basis_types,ShortArray& colloc_rules);
 
   /// set orthogPolyTypes
   void orthogonal_basis_types(const ShortArray& opb_types);
@@ -129,9 +129,8 @@ public:
   void coefficients_norms_flag(bool flag);
 
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
-  static void coefficients_norms_flag(bool flag,
-				      ShortArray &poly_types,
-				      std::vector<BasisPolynomial> &poly_basis);
+  static void coefficients_norms_flag(bool flag, ShortArray& poly_types,
+				      std::vector<BasisPolynomial>& poly_basis);
 
 protected:
 
@@ -560,9 +559,9 @@ inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
 { coefficients_norms_flag(flag,orthogPolyTypes,polynomialBasis); }
 
 
-inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag,
-		  ShortArray &poly_types,
-		  std::vector<BasisPolynomial> &poly_basis)
+inline void SharedOrthogPolyApproxData::
+coefficients_norms_flag(bool flag, ShortArray& poly_types,
+			std::vector<BasisPolynomial>& poly_basis)
 {
   //size_t i, num_basis = orthogPolyTypes.size();
   size_t i, num_basis = poly_basis.size();

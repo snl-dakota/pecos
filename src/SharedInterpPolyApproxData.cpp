@@ -27,9 +27,8 @@ construct_basis(const MultivariateDistribution& u_dist,
 		std::vector<BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
-  bool dist_params
-    = initialize_driver_types_rules(u_dist.random_variable_types(), bc_options,
-				    basis_types, colloc_rules);
+  bool dist_params = initialize_driver_types_rules(u_dist, bc_options,
+						   basis_types, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
   if (dist_params)
     update_basis_distribution_parameters(u_dist, poly_basis);
@@ -41,50 +40,56 @@ construct_basis(const MultivariateDistribution& u_dist,
     may involve orthogonal polynomials which will differ from the
     interpolation polynomial types used in the basis. */
 bool SharedInterpPolyApproxData::
-initialize_driver_types_rules(const ShortArray& u_types,
+initialize_driver_types_rules(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      ShortArray& basis_types, ShortArray& colloc_rules)
 {
-  bool extra_dist_params = false;
-  size_t i, num_vars = u_types.size();
-  basis_types.resize(num_vars); colloc_rules.resize(num_vars);
+  const ShortArray&   u_types = u_dist.random_variable_types();
+  const BitArray& active_vars = u_dist.active_variables();
+  bool extra_dist_params = false, no_mask = active_vars.empty();
+  size_t i, av_cntr, num_v = u_types.size(),
+    num_av = (no_mask) ? num_v : active_vars.count();
+  basis_types.resize(num_av); colloc_rules.resize(num_av);
 
   // Initialize basis_types, colloc_rules, and extra_dist_params from u_types.
   // interpolation has different requirements from integration/projection; i.e,
   // a good choice for interpolation nodes minimize the Lebesgue constant.  This
   // goal is reflected in the STD_UNIFORM case below.
-  for (i=0; i<num_vars; ++i)
-    switch (u_types[i]) {
-    case STD_UNIFORM: // specialized for interpolation (min Lebesgue constant)
-      if (bc_options.piecewiseBasis) {
-	basis_types[i] = (bc_options.useDerivs) ?
-	  PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
-	if (bc_options.openRuleOverride) // closed nested rules required
-	  PCerr << "Warning: open rules not currently supported for piecewise "
-		<< "polynomial interpolants.  Ignoring override." << std::endl;
-	colloc_rules[i] = (bc_options.equidistantRules) ?
-	  NEWTON_COTES : CLENSHAW_CURTIS;
+  for (i=0, av_cntr=0; i<num_v; ++i)
+    if (no_mask || active_vars[i]) {
+      switch (u_types[i]) {
+      case STD_UNIFORM: // specialized for interpolation (min Lebesgue constant)
+	if (bc_options.piecewiseBasis) {
+	  basis_types[av_cntr] = (bc_options.useDerivs) ?
+	    PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
+	  if (bc_options.openRuleOverride) // closed nested rules required
+	    PCerr << "Warning: open rules not currently supported for piecewise"
+		  << " polynomial interpolants. Ignoring override."<< std::endl;
+	  colloc_rules[av_cntr] = (bc_options.equidistantRules) ?
+	    NEWTON_COTES : CLENSHAW_CURTIS;
+	}
+	else if (bc_options.gaussRuleOverride) {
+	  basis_types[av_cntr]  = (bc_options.useDerivs) ?
+	    HERMITE_INTERP : LEGENDRE_ORTHOG;
+	  colloc_rules[av_cntr] = (bc_options.nestedRules) ?
+	    GAUSS_PATTERSON : GAUSS_LEGENDRE;
+	}
+	else {
+	  // LEGENDRE_ORTHOG provides more rule options than CHEBYSHEV_ORTHOG
+	  // if driver mode is changed (removing need to update basis_types)
+	  basis_types[av_cntr]  = (bc_options.useDerivs) ?
+	    HERMITE_INTERP : LEGENDRE_ORTHOG;//CHEBYSHEV_ORTHOG;
+	  colloc_rules[av_cntr] = (bc_options.openRuleOverride) ?
+	    FEJER2 : CLENSHAW_CURTIS;
+	}
+	break;
+      default: // all other cases currently rely on Gaussian quadrature rules
+	if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+	      basis_types[av_cntr], colloc_rules[av_cntr]))
+	  extra_dist_params = true;
+	break;
       }
-      else if (bc_options.gaussRuleOverride) {
-        basis_types[i]  = (bc_options.useDerivs) ?
-          HERMITE_INTERP : LEGENDRE_ORTHOG;
-        colloc_rules[i] = (bc_options.nestedRules) ?
-          GAUSS_PATTERSON : GAUSS_LEGENDRE;
-      }
-      else {
-	// LEGENDRE_ORTHOG provides more rule options than CHEBYSHEV_ORTHOG
-	// if driver mode is changed (removing need to update basis_types)
-	basis_types[i]  = (bc_options.useDerivs) ?
-	  HERMITE_INTERP : LEGENDRE_ORTHOG;//CHEBYSHEV_ORTHOG;
-	colloc_rules[i] = (bc_options.openRuleOverride) ?
-	  FEJER2 : CLENSHAW_CURTIS;
-      }
-      break;
-    default: // all other cases currently rely on Gaussian quadrature rules
-      if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
-						basis_types[i],colloc_rules[i]))
-	extra_dist_params = true;
-      break;
+      ++av_cntr;
     }
 
   return extra_dist_params;

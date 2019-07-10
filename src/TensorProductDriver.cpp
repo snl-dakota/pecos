@@ -24,11 +24,11 @@ namespace Pecos {
 
 
 void TensorProductDriver::
-initialize_grid(const ShortArray& u_types,
+initialize_grid(const MultivariateDistribution& u_dist,
 		const ExpansionConfigOptions& ec_options,
 		const BasisConfigOptions& bc_options)
 {
-  IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
+  IntegrationDriver::initialize_grid(u_dist, ec_options, bc_options);
   quadOrder.resize(numVars); levelIndIter->second.resize(numVars);
 }
 

@@ -32,12 +32,12 @@ CombinedSparseGridDriver* CombinedSparseGridDriver::sgdInstance(NULL);
 
 void CombinedSparseGridDriver::
 initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
-		const ShortArray& u_types,
+		const MultivariateDistribution& u_dist,
 		const ExpansionConfigOptions& ec_options,
 		BasisConfigOptions& bc_options, short growth_rate,
 		bool track_colloc, bool track_uniq_prod_wts)
 {
-  SparseGridDriver::initialize_grid(ssg_level, dim_pref, u_types, ec_options,
+  SparseGridDriver::initialize_grid(ssg_level, dim_pref, u_dist, ec_options,
 				    bc_options, growth_rate);
   trackCollocDetails     = track_colloc;
   trackUniqueProdWeights = track_uniq_prod_wts;

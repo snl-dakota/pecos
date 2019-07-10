@@ -27,26 +27,26 @@ namespace Pecos {
 
 
 void CubatureDriver::
-initialize_grid(const ShortArray& rv_types, unsigned short order,
+initialize_grid(const MultivariateDistribution& mv_dist, unsigned short order,
 		unsigned short rule)
 {
-  numVars = rv_types.size();
+  const ShortArray&  rv_types = mv_dist.random_variable_types();
+  const BitArray& active_vars = mv_dist.active_variables();
+  numVars = (active_vars.empty()) ? rv_types.size() : active_vars.count();
+
   integrand_order(order);
   collocation_rule(rule); // size collocRules and define first entry
 
   // check for isotropic rv_types
   if (verify_homogeneity(rv_types)) {
     PCerr << "Error: rv_types must be isotropic in CubatureDriver::"
-	  << "initialize_grid(rv_types)." << std::endl;
+	  << "initialize_grid(mv_dist)." << std::endl;
     abort_handler(-1);
   }
 
   ShortArray basis_types;
   // Cubature used for numerical integration of PCE
   // TO DO: require OPA/IPA switch? (see IntegrationDriver::initialize_grid())
-  //BasisConfigOptions bc_options(false, false, false, false);
-  //SharedPolyApproxData::initialize_basis_types(rv_types, bc_options,
-  //                                             basis_types);
   // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
   // have to be expanded into array for PolynomialApproximation within NonDPCE).
   SharedPolyApproxData::initialize_polynomial_basis(basis_types, collocRules,

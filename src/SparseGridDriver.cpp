@@ -17,6 +17,7 @@
 #include "sandia_sgmga.hpp"
 #include "sandia_sgmgg.hpp"
 #include "pecos_stat_util.hpp"
+#include "MultivariateDistribution.hpp"
 
 static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -172,7 +173,7 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 void SparseGridDriver::
 initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
-		const ShortArray& u_types,
+		const MultivariateDistribution& u_dist,
 		const ExpansionConfigOptions& ec_options,
 		BasisConfigOptions& bc_options, short growth_rate)
 {
@@ -183,16 +184,20 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:
   if (bc_options.nestedRules && growthRate == UNRESTRICTED_GROWTH) {
+    const ShortArray&   u_types = u_dist.random_variable_types();
+    const BitArray& active_vars = u_dist.active_variables();
     size_t i, num_u_types = u_types.size(); // numVars not yet defined
+    bool no_mask = active_vars.empty();
     for (i=0; i<num_u_types; ++i)
-      if (u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL)
+      if ( ( no_mask || active_vars[i] ) &&
+	   u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL )
 	{ bc_options.nestedRules = false; break; }
   }
   // For MODERATE and SLOW restricted exponential growth, nested rules
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
-  IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
+  IntegrationDriver::initialize_grid(u_dist, ec_options, bc_options);
 
   level(ssg_level);
   dimension_preference(dim_pref);

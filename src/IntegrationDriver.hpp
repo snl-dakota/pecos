@@ -59,7 +59,7 @@ public:
   /// set within poly_basis)
   virtual void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
   /// set int_rules and growth_rules from u_types and mode booleans
-  virtual void initialize_grid(const ShortArray& u_types,
+  virtual void initialize_grid(const MultivariateDistribution& u_dist,
 			       const ExpansionConfigOptions& ec_options,
 			       const BasisConfigOptions& bc_options);
   /// update polynomialBasis with data from MultivariateDistribution

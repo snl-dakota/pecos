@@ -45,8 +45,8 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  void initialize_grid(const ShortArray& rv_types, unsigned short order,
-		       unsigned short rule);
+  void initialize_grid(const MultivariateDistribution& mv_dist,
+		       unsigned short order, unsigned short rule);
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
   void initialize_grid_parameters(const MultivariateDistribution& mv_dist);
 
@@ -75,7 +75,8 @@ private:
 
   /// verify that all values within params are identical
   template <typename T>
-  bool verify_homogeneity(const std::vector<T>& params) const;
+  bool verify_homogeneity(const std::vector<T>& params,
+			  const BitArray& active_subset = BitArray()) const;
 
   /// size collocRules and set first entry
   void collocation_rule(unsigned short rule);
@@ -152,15 +153,31 @@ inline void CubatureDriver::collocation_rule(unsigned short rule)
 
 
 template <typename T>
-bool CubatureDriver::verify_homogeneity(const std::vector<T>& params) const
+bool CubatureDriver::
+verify_homogeneity(const std::vector<T>& params,
+		   const BitArray& active_subset) const
 {
   bool err_flag = false;
   size_t len = params.size();
-  if (len > 1) {
+  if (len <= 1) return false;
+
+  if (active_subset.empty()) { // no subset
     const T& param0 = params[0];
     for (size_t i=1; i<len; ++i)
       if (params[i] != param0)
 	{ err_flag = true; break; }
+  }
+  else {
+    size_t i, first_i = len;
+    for (i=0; i<len; ++i)
+      if (active_subset[i])
+	{ first_i = i; break; }
+    if (first_i < len) {
+      const T& param = params[first_i];
+      for (i=first_i+1; i<len; ++i)
+	if (active_subset[i] && params[i] != param)
+	  { err_flag = true; break; }
+    }
   }
   return err_flag;
 }

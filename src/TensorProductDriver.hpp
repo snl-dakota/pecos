@@ -113,7 +113,7 @@ public:
 
   /// stand-alone initializer of tensor grid settings (except for
   /// distribution params)
-  void initialize_grid(const ShortArray& u_types,
+  void initialize_grid(const MultivariateDistribution& u_dist,
 		       const ExpansionConfigOptions& ec_options,
 		       const BasisConfigOptions& bc_options);
   /// helper initializer of tensor grid settings (except distribution params)

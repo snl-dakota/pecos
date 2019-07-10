@@ -323,7 +323,8 @@ public:
 
   /// allocate orthogonal polynomial basis types and integration rules
   /// based on u_types and rule options
-  static bool initialize_orthogonal_basis_types_rules(const ShortArray& u_types,
+  static bool initialize_orthogonal_basis_types_rules(
+    const MultivariateDistribution& u_dist,
     const BasisConfigOptions& bc_options, ShortArray& basis_types,
     ShortArray& colloc_rules);
   /// assign orthogonal polynomial basis type and integration rule based
