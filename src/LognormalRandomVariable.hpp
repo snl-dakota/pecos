@@ -23,8 +23,8 @@ namespace Pecos {
 
 /// Derived random variable class for lognormal random variables.
 
-/** Manages lambda and zeta (mean and std deviation of underlying
-    normal distribution). */
+/** Standardizes on lambda and zeta parameters: mean and std deviation of
+    corresponding Normal distribution with ln(RV) ~ N(lambda, zeta^2). */
 
 class LognormalRandomVariable: public RandomVariable
 {
@@ -34,9 +34,9 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  LognormalRandomVariable();                      ///< constructor
+  LognormalRandomVariable();                       ///< constructor
   LognormalRandomVariable(Real lambda, Real zeta); ///< alternate constructor
-  ~LognormalRandomVariable();                     ///< destructor
+  ~LognormalRandomVariable();                      ///< destructor
 
   //
   //- Heading: Virtual function redefinitions
@@ -105,16 +105,16 @@ protected:
   //- Heading: Data
   //
 
-  /// lambda parameter for lognormal random variable
+  /// lambda parameter for lognormal random variable (mean of log(RV))
   Real lnLambda;
-  /// zeta parameter for lognormal random variable
+  /// zeta parameter for lognormal random variable (std deviation of log(RV))
   Real lnZeta;
 };
 
 
 inline LognormalRandomVariable::LognormalRandomVariable():
-  RandomVariable(BaseConstructor())
-{ ranVarType = LOGNORMAL; params_from_moments(0., 1., lnLambda, lnZeta); }
+  RandomVariable(BaseConstructor()), lnLambda(0.), lnZeta(1.)
+{ ranVarType = LOGNORMAL; }
 
 
 inline LognormalRandomVariable::LognormalRandomVariable(Real lambda, Real zeta):
@@ -233,20 +233,28 @@ inline void LognormalRandomVariable::push_parameter(short dist_param, Real val)
 {
   bool err_flag = false;
   switch (dist_param) {
-  case LN_MEAN: {    // assume stdev is invariant from previous params
+  case LN_MEAN: {    // preserve stdev in assumed {mean,stdev} pairing
     Real zeta_sq = lnZeta*lnZeta,
       stdev = std::exp(lnLambda + zeta_sq/2.) * std::sqrt(bmth::expm1(zeta_sq));
-    params_from_moments(val, stdev, lnLambda, lnZeta);    // new params
+    // new lambda,zeta from preserved stdev and new mean:
+    params_from_moments(val, stdev, lnLambda, lnZeta);
     break;
   }
-  case LN_STD_DEV: { // assume mean is invariant from previous params
-    Real mean = std::exp(lnLambda + lnZeta * lnZeta/2.); // previous params
-    params_from_moments(mean, val, lnLambda, lnZeta);    // new params
+  case LN_STD_DEV: { // preserve mean in assumed {mean,stdev} pairing
+    Real mean = std::exp(lnLambda + lnZeta * lnZeta/2.); // preserve prev mean
+    // new lambda,zeta from preserved mean and new stdev:
+    params_from_moments(mean, val, lnLambda, lnZeta);
     break;
   }
-  case LN_ERR_FACT: zeta_from_error_factor(val, lnZeta); break;
-  case LN_LAMBDA:   lnLambda = val;                      break;
-  case LN_ZETA:     lnZeta   = val;                      break;
+  case LN_ERR_FACT: { // preserve mean in assumed {mean,errfact} pairing
+    Real mean = std::exp(lnLambda + lnZeta * lnZeta/2.); // preserve prev mean
+    zeta_from_error_factor(val, lnZeta);                 // update zeta only
+    // new lambda from preserved mean and updated zeta
+    lnLambda = std::log(mean) - lnZeta * lnZeta/2.;
+    break;
+  }
+  case LN_LAMBDA:   lnLambda = val;  break;
+  case LN_ZETA:     lnZeta   = val;  break;
   case LN_LWR_BND:
     if (val != 0.) err_flag = true;
     break;
