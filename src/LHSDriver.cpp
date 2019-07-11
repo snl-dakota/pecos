@@ -380,7 +380,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 
   // active_vars identifies the active subset of random_vars for which we will
   // generate samples; it will vary based on sampling context.
-  size_t i, num_rv = random_vars.size(), num_active_rv;
+  size_t i, num_rv = random_vars.size(), num_active_rv, av_cntr;
   bool subset_rv = false;
   if (active_vars.empty())
     num_active_rv = num_rv;
@@ -485,7 +485,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
   // Register RandomVariables with lhs_{dist,udist,const} //
   //////////////////////////////////////////////////////////
   RealArray dist_params;
-  for (i=0; i<num_rv; ++i) {
+  for (i=0, av_cntr=0; i<num_rv; ++i) {
     if (subset_rv && !active_vars[i]) continue; // skip this RV if not active
 
     const RandomVariable& rv_i = random_vars[i];
@@ -499,11 +499,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (u_bnd > l_bnd) {
 	dist_params.resize(2);
 	dist_params[0] = l_bnd;  dist_params[1] = u_bnd;
-	lhs_dist_register("ContRange", "uniform", i, dist_params);
+	lhs_dist_register("ContRange", "uniform", av_cntr, dist_params);
       }
       else {
 	check_range(l_bnd, u_bnd, true); // allow equal
-	lhs_const_register("ContRange", i, (Real)l_bnd);
+	lhs_const_register("ContRange", av_cntr, (Real)l_bnd);
       }
       break;
     }
@@ -516,11 +516,12 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (u_bnd > l_bnd) {
 	RealArray x_val, y_val;
 	int_range_to_udist_params(l_bnd, u_bnd, x_val, y_val);
-	lhs_udist_register("DiscRange", "discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscRange", "discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else {
 	check_range(l_bnd, u_bnd, true); // allow equal
-	lhs_const_register("DiscRange", i, (Real)l_bnd);
+	lhs_const_register("DiscRange", av_cntr, (Real)l_bnd);
       }
       break;
     }
@@ -531,10 +532,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (set_size > 1) {
 	RealArray x_val, y_val;
 	set_to_udist_params(int_set, x_val, y_val); // set values
-	lhs_udist_register("DiscSetI", "discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscSetI", "discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (set_size)
-	lhs_const_register("DiscSetI", i, (Real)(*int_set.begin()));
+	lhs_const_register("DiscSetI", av_cntr, (Real)(*int_set.begin()));
       break;
     }
     case DISCRETE_SET_STRING: {
@@ -545,10 +547,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (set_size > 1) {
 	RealArray x_val, y_val;
 	int_range_to_udist_params(0, set_size - 1, x_val, y_val); // indices
-	lhs_udist_register("DiscSetS", "discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscSetS", "discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (set_size)
-	lhs_const_register("DiscSetS", i, 0.);
+	lhs_const_register("DiscSetS", av_cntr, 0.);
       break;
     }
     case DISCRETE_SET_REAL: {
@@ -559,17 +562,18 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (set_size > 1) {
 	RealArray x_val, y_val;
 	set_to_udist_params(real_set, x_val, y_val); // set values
-	lhs_udist_register("DiscSetR", "discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscSetR", "discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (set_size)
-	lhs_const_register("DiscSetR", i, *real_set.begin());
+	lhs_const_register("DiscSetR", av_cntr, *real_set.begin());
       break;
     }
     case NORMAL: case STD_NORMAL:
       dist_params.resize(2);
       rv_i.pull_parameter(N_MEAN,    dist_params[0]);
       rv_i.pull_parameter(N_STD_DEV, dist_params[1]);
-      lhs_dist_register("Normal", "normal", i, dist_params);
+      lhs_dist_register("Normal", "normal", av_cntr, dist_params);
       break;
     case BOUNDED_NORMAL:
       dist_params.resize(4);
@@ -578,13 +582,13 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       rv_i.pull_parameter(N_LWR_BND, dist_params[2]);
       rv_i.pull_parameter(N_UPR_BND, dist_params[3]);
       check_range(dist_params[2], dist_params[3], false);
-      lhs_dist_register("Normal", "bounded normal", i, dist_params);
+      lhs_dist_register("Normal", "bounded normal", av_cntr, dist_params);
       break;
     case LOGNORMAL:     // LognormalRandomVariable standardizes on Lambda/Zeta
       dist_params.resize(2);
       rv_i.pull_parameter(LN_LAMBDA,  dist_params[0]);
       rv_i.pull_parameter(LN_ZETA,    dist_params[1]);
-      lhs_dist_register("Lognormal", "lognormal-n", i, dist_params);
+      lhs_dist_register("Lognormal", "lognormal-n", av_cntr, dist_params);
       break;
     case BOUNDED_LOGNORMAL: // BoundedLognormalRandomVariable uses Lambda/Zeta
       dist_params.resize(4);
@@ -593,7 +597,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       rv_i.pull_parameter(LN_LWR_BND, dist_params[2]);
       rv_i.pull_parameter(LN_UPR_BND, dist_params[3]);
       check_range(dist_params[2], dist_params[3], false);
-      lhs_dist_register("Lognormal", "bounded lognormal-n", i, dist_params);
+      lhs_dist_register("Lognormal", "bounded lognormal-n",av_cntr,dist_params);
       break;
     case UNIFORM: case STD_UNIFORM:
       dist_params.resize(2);
@@ -601,7 +605,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       rv_i.pull_parameter(U_UPR_BND, dist_params[1]);
       check_range(dist_params[0],  dist_params[1], false);
       check_finite(dist_params[0], dist_params[1]);
-      lhs_dist_register("Uniform", "uniform", i, dist_params);
+      lhs_dist_register("Uniform", "uniform", av_cntr, dist_params);
       break;
     case LOGUNIFORM:
       dist_params.resize(2);
@@ -609,7 +613,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       rv_i.pull_parameter(LU_UPR_BND, dist_params[1]);
       check_range(dist_params[0],  dist_params[1], false);
       check_finite(dist_params[0], dist_params[1]);
-      lhs_dist_register("Loguniform", "loguniform", i, dist_params);
+      lhs_dist_register("Loguniform", "loguniform", av_cntr, dist_params);
       break;
     case TRIANGULAR:
       dist_params.resize(2);
@@ -618,13 +622,13 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       rv_i.pull_parameter(T_UPR_BND, dist_params[2]);
       check_range(dist_params[0],  dist_params[2], false);
       check_finite(dist_params[0], dist_params[2]);
-      lhs_dist_register("Triangular", "triangular", i, dist_params);
+      lhs_dist_register("Triangular", "triangular", av_cntr, dist_params);
       break;
     case EXPONENTIAL: case STD_EXPONENTIAL: {
       dist_params.resize(1);
       Real e_beta; rv_i.pull_parameter(E_BETA, e_beta);
       dist_params[0] = 1./e_beta; // convert to LHS convention
-      lhs_dist_register("Exponential", "exponential", i, dist_params);
+      lhs_dist_register("Exponential", "exponential", av_cntr, dist_params);
       break;
     }
     case BETA: case STD_BETA:
@@ -635,72 +639,72 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       rv_i.pull_parameter(BE_BETA,    dist_params[3]);
       check_range(dist_params[0],  dist_params[1], false);
       check_finite(dist_params[0], dist_params[1]);
-      lhs_dist_register("Beta", "beta", i, dist_params);
+      lhs_dist_register("Beta", "beta", av_cntr, dist_params);
       break;
     case GAMMA: case STD_GAMMA: {
       dist_params.resize(2);
       rv_i.pull_parameter(GA_ALPHA, dist_params[0]);
       Real ga_beta; rv_i.pull_parameter(GA_BETA, ga_beta);
       dist_params[1] = 1./ga_beta; // convert to LHS convention
-      lhs_dist_register("Gamma", "gamma", i, dist_params);
+      lhs_dist_register("Gamma", "gamma", av_cntr, dist_params);
       break;
     }
     case GUMBEL:
       dist_params.resize(2);
       rv_i.pull_parameter(GU_ALPHA, dist_params[0]);
       rv_i.pull_parameter(GU_BETA,  dist_params[1]);
-      lhs_dist_register("Gumbel", "gumbel", i, dist_params);
+      lhs_dist_register("Gumbel", "gumbel", av_cntr, dist_params);
       break;
     case FRECHET:
       dist_params.resize(2);
       rv_i.pull_parameter(F_ALPHA, dist_params[0]);
       rv_i.pull_parameter(F_BETA,  dist_params[1]);
-      lhs_dist_register("Frechet", "frechet", i, dist_params);
+      lhs_dist_register("Frechet", "frechet", av_cntr, dist_params);
       break;
     case WEIBULL:
       dist_params.resize(2);
       rv_i.pull_parameter(W_ALPHA, dist_params[0]);
       rv_i.pull_parameter(W_BETA,  dist_params[1]);
-      lhs_dist_register("Weibull", "weibull", i, dist_params);
+      lhs_dist_register("Weibull", "weibull", av_cntr, dist_params);
       break;
     case HISTOGRAM_BIN: {
       HistogramBinRandomVariable* rv_rep
 	= (HistogramBinRandomVariable*)rv_i.random_variable_rep();
       RealRealMap h_bin_pairs; rv_rep->pull_parameter(H_BIN_PAIRS, h_bin_pairs);
       RealArray x_val, y_val;  bins_to_udist_params(h_bin_pairs, x_val, y_val);
-      lhs_udist_register("HistBin", "continuous linear", i, x_val, y_val);
+      lhs_udist_register("HistBin", "continuous linear", av_cntr, x_val, y_val);
       break;
     }
     case POISSON:
       dist_params.resize(1);
       rv_i.pull_parameter(P_LAMBDA, dist_params[0]);
-      lhs_dist_register("Poisson", "poisson", i, dist_params);
+      lhs_dist_register("Poisson", "poisson", av_cntr, dist_params);
       break;
     case BINOMIAL: {
       dist_params.resize(2);  int num_tr;
       rv_i.pull_parameter(BI_P_PER_TRIAL, dist_params[0]);
       rv_i.pull_parameter(BI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
-      lhs_dist_register("Binomial", "binomial", i, dist_params);
+      lhs_dist_register("Binomial", "binomial", av_cntr, dist_params);
       break;
     }
     case NEGATIVE_BINOMIAL: {
       dist_params.resize(2);  int num_tr;
       rv_i.pull_parameter(NBI_P_PER_TRIAL, dist_params[0]);
       rv_i.pull_parameter(NBI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
-      lhs_dist_register("NegBinomial", "negative binomial", i, dist_params);
+      lhs_dist_register("NegBinomial", "negative binomial",av_cntr,dist_params);
       break;
     }
     case GEOMETRIC:
       dist_params.resize(1);
       rv_i.pull_parameter(GE_P_PER_TRIAL, dist_params[0]);
-      lhs_dist_register("Geometric", "geometric", i, dist_params);
+      lhs_dist_register("Geometric", "geometric", av_cntr, dist_params);
       break;
     case HYPERGEOMETRIC: {
       dist_params.resize(3);  int tot_pop, num_drw, sel_pop;
       rv_i.pull_parameter(HGE_TOT_POP, tot_pop); dist_params[0] = (Real)tot_pop;
       rv_i.pull_parameter(HGE_DRAWN,   num_drw); dist_params[1] = (Real)num_drw;
       rv_i.pull_parameter(HGE_SEL_POP, sel_pop); dist_params[2] = (Real)sel_pop;
-      lhs_dist_register("Hypergeom", "hypergeometric", i, dist_params);
+      lhs_dist_register("Hypergeom", "hypergeometric", av_cntr, dist_params);
       break;
     }
     case HISTOGRAM_PT_INT: {
@@ -711,10 +715,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (map_size > 1) {
 	RealArray x_val, y_val;
 	map_to_udist_params(ir_map, x_val, y_val);
-	lhs_udist_register("HistPtInt", "discrete histogram", i, x_val, y_val);
+	lhs_udist_register("HistPtInt", "discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("HistPtInt", i, (Real)ir_map.begin()->first);
+	lhs_const_register("HistPtInt", av_cntr, (Real)ir_map.begin()->first);
       break;
     }
     case HISTOGRAM_PT_STRING: {
@@ -725,10 +730,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (map_size > 1) {
 	RealArray x_val, y_val;
 	map_indices_to_udist_params(sr_map, x_val, y_val);
-	lhs_udist_register("HistPtString","discrete histogram",i, x_val, y_val);
+	lhs_udist_register("HistPtString","discrete histogram",av_cntr,
+			   x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("HistPtString", i, 0.);
+	lhs_const_register("HistPtString", av_cntr, 0.);
       break;
     }
     case HISTOGRAM_PT_REAL: {
@@ -739,10 +745,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (map_size > 1) {
 	RealArray x_val, y_val;
 	map_to_udist_params(rr_map, x_val, y_val);
-	lhs_udist_register("HistPtReal", "discrete histogram", i, x_val, y_val);
+	lhs_udist_register("HistPtReal", "discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("HistPtReal", i, rr_map.begin()->first);
+	lhs_const_register("HistPtReal", av_cntr, rr_map.begin()->first);
       break;
     }
     case CONTINUOUS_INTERVAL_UNCERTAIN: {
@@ -750,7 +757,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 	= (IntervalRandomVariable<Real>*)rv_i.random_variable_rep();
       RealRealPairRealMap ci_bpa;  rv_rep->pull_parameter(CIU_BPA, ci_bpa);
       RealArray x_val, y_val;  intervals_to_udist_params(ci_bpa, x_val, y_val);
-      lhs_udist_register("ContInterval", "continuous linear", i, x_val, y_val);
+      lhs_udist_register("ContInterval", "continuous linear", av_cntr,
+			 x_val, y_val);
       break;
     }
     case DISCRETE_INTERVAL_UNCERTAIN: {
@@ -758,7 +766,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 	= (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
       IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
       RealArray x_val, y_val;  intervals_to_udist_params(di_bpa, x_val, y_val);
-      lhs_udist_register("DiscInterval", "discrete histogram", i, x_val, y_val);
+      lhs_udist_register("DiscInterval", "discrete histogram", av_cntr,
+			 x_val, y_val);
       break;
     }
     case DISCRETE_UNCERTAIN_SET_INT: {
@@ -769,10 +778,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (map_size > 1) {
 	RealArray x_val, y_val;
 	map_to_udist_params(ir_map, x_val, y_val);
-	lhs_udist_register("DiscUncSetI","discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscUncSetI","discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("DiscUncSetI", i, (Real)ir_map.begin()->first);
+	lhs_const_register("DiscUncSetI", av_cntr, (Real)ir_map.begin()->first);
       break;
     }
     case DISCRETE_UNCERTAIN_SET_STRING: {
@@ -783,10 +793,11 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (map_size > 1) {
 	RealArray x_val, y_val;
 	map_indices_to_udist_params(sr_map, x_val, y_val);
-	lhs_udist_register("DiscUncSetS","discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscUncSetS","discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("DiscUncSetS", i, 0.);
+	lhs_const_register("DiscUncSetS", av_cntr, 0.);
       break;
     }
     case DISCRETE_UNCERTAIN_SET_REAL: {
@@ -797,13 +808,15 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       if (map_size > 1) {
 	RealArray x_val, y_val;
 	map_to_udist_params(rr_map, x_val, y_val);
-	lhs_udist_register("DiscUncSetR","discrete histogram", i, x_val, y_val);
+	lhs_udist_register("DiscUncSetR","discrete histogram", av_cntr,
+			   x_val, y_val);
       }
       else if (map_size)
-	lhs_const_register("DiscUncSetR", i, rr_map.begin()->first);
+	lhs_const_register("DiscUncSetR", av_cntr, rr_map.begin()->first);
       break;
     }
     }
+    ++av_cntr;
   }
 
   /////////////////////////////////////////
@@ -815,25 +828,30 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     // Spec order: {cdv, ddv}, {cauv, dauv, corr}, {ceuv, deuv}, {csv, dsv}
     // > pass in bit array for active RV's to sample + another for active corr's
     // > Default empty arrays --> all RVs active; corr matrix applies to all RVs
-    size_t j, cntr_i, cntr_j;
-    for (i=0, cntr_i=0; i<num_rv; ++i) {
-      if (!subset_corr || active_corr[i]) {
-	for (j=0, cntr_j=0; j<i; ++j) {
-	  if (!subset_corr || active_corr[j]) {
-	    if (!subset_rv || (active_vars[i] && active_vars[j])) {
-	      Real corr_val = corr(cntr_i,cntr_j);
-	      if (std::abs(corr_val) > SMALL_NUMBER) {
-		LHS_CORR2_FC(const_cast<char*>(lhsNames[i].data()),
-			     const_cast<char*>(lhsNames[j].data()),
-			     corr_val, err_code);
-		check_error(err_code, "lhs_corr");
-	      }
+    size_t j, ac_cntr_i, ac_cntr_j, av_cntr_i, av_cntr_j;
+    bool av_i, av_j, ac_i, ac_j;
+    for (i=0, ac_cntr_i=0, av_cntr_i=0; i<num_rv; ++i) {
+      av_i = (!subset_rv   || active_vars[i]);
+      ac_i = (!subset_corr || active_corr[i]);
+      if (av_i && ac_i) {
+	for (j=0, ac_cntr_j=0, av_cntr_j=0; j<i; ++j) {
+	  av_j = (!subset_rv   || active_vars[j]);
+	  ac_j = (!subset_corr || active_corr[j]);
+	  if (av_j && ac_j) {
+	    Real corr_val = corr(ac_cntr_i, ac_cntr_j);
+	    if (std::abs(corr_val) > SMALL_NUMBER) {
+	      LHS_CORR2_FC(const_cast<char*>(lhsNames[av_cntr_i].data()),
+			   const_cast<char*>(lhsNames[av_cntr_j].data()),
+			   corr_val, err_code);
+	      check_error(err_code, "lhs_corr");
 	    }
-	    ++cntr_j;
 	  }
+	  if (av_j) ++av_cntr_j;
+	  if (ac_j) ++ac_cntr_j;
 	}
-	++cntr_i;
       }
+      if (av_i) ++av_cntr_i;
+      if (ac_i) ++ac_cntr_i;
     }
   }
 
