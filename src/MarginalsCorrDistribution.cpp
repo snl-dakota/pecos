@@ -119,7 +119,7 @@ pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
 
       // pull and push RV are non-standard; copy all params
       default:
-	push_rv.copy_parameters(rv_in[i]);                         break;
+	push_rv.copy_parameters(rv_in[i]);                               break;
       }
       break;
     }
