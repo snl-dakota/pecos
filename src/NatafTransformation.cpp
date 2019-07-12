@@ -93,7 +93,7 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
     x = z;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    x = x_rv_i.from_standard(z); break;
+    case NORMAL:  x = x_rv_i.from_standard(z);  break;
     case LOGNORMAL:
       x = std::exp(x_rv_i.pull_parameter<Real>(LN_LAMBDA) +
 		   x_rv_i.pull_parameter<Real>(LN_ZETA) * z);

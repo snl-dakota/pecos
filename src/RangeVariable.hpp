@@ -16,6 +16,7 @@
 #define RANGE_VARIABLE_HPP
 
 #include "RandomVariable.hpp"
+#include "UniformRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -46,13 +47,24 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  //Real mean() const;
+  Real cdf(Real x) const;
+  Real ccdf(Real x) const;
+  Real inverse_cdf(Real p_cdf) const;
+  Real inverse_ccdf(Real p_ccdf) const;
+
+  Real pdf(Real x) const;
+  Real pdf_gradient(Real x) const;
+  Real pdf_hessian(Real x) const;
+  Real log_pdf_gradient(Real x) const;
+  Real log_pdf_hessian(Real x) const;
+
+  Real mean() const;
   //Real median() const;
-  //Real mode() const;
-  //Real standard_deviation() const;
-  //Real variance() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
   
-  //RealRealPair moments() const;
+  RealRealPair moments() const;
   RealRealPair bounds() const;
 
   //Real coefficient_of_variation() const;
@@ -75,6 +87,12 @@ public:
   //static void moments_from_params(T lwr, T upr, Real& mean, Real& std_dev);
 
 protected:
+
+  //
+  //- Heading: Member functions
+  //
+
+  void no_template_specialization(String fn) const;
 
   //
   //- Heading: Data
@@ -160,12 +178,96 @@ inline void RangeVariable<T>::copy_parameters(const RandomVariable& rv)
 }
 
 
-/*
+template <typename T>
+inline void RangeVariable<T>::no_template_specialization(String fn) const
+{
+  PCerr << "Error: no template specialization of " << fn << "() for this type."
+	<< std::endl;
+  abort_handler(-1);
+}
+
+
+template <typename T>
+Real RangeVariable<T>::pdf(Real x) const
+{ no_template_specialization("pdf"); return 0.; }
+
+
+template <>
+inline Real RangeVariable<Real>::pdf(Real x) const
+{ return UniformRandomVariable::pdf(lowerBnd, upperBnd); }
+
+
+template <typename T>
+Real RangeVariable<T>::pdf_gradient(Real x) const
+{ return 0.; }
+
+
+template <typename T>
+Real RangeVariable<T>::pdf_hessian(Real x) const
+{ return 0.; }
+
+
+template <typename T>
+Real RangeVariable<T>::log_pdf_gradient(Real x) const
+{ return 0.; }
+
+
+template <typename T>
+Real RangeVariable<T>::log_pdf_hessian(Real x) const
+{ return 0.; }
+
+
+template <typename T>
+Real RangeVariable<T>::cdf(Real x) const
+{ no_template_specialization("cdf"); return 0.; }
+
+
+template <>
+inline Real RangeVariable<Real>::cdf(Real x) const
+{ return UniformRandomVariable::cdf(x, lowerBnd, upperBnd); }
+
+
+template <typename T>
+Real RangeVariable<T>::ccdf(Real x) const
+{ no_template_specialization("ccdf"); return 0.; }
+
+
+template <>
+inline Real RangeVariable<Real>::ccdf(Real x) const
+{ return UniformRandomVariable::ccdf(x, lowerBnd, upperBnd); }
+
+
+template <typename T>
+inline Real RangeVariable<T>::inverse_cdf(Real p_cdf) const
+{ no_template_specialization("inverse_cdf"); return 0.; }
+
+
+template <>
+inline Real RangeVariable<Real>::inverse_cdf(Real p_cdf) const
+{ return UniformRandomVariable::inverse_cdf(p_cdf, lowerBnd, upperBnd); }
+
+
+template <typename T>
+Real RangeVariable<T>::inverse_ccdf(Real p_ccdf) const
+{ no_template_specialization("inverse_ccdf"); return 0.; }
+
+
+template <>
+inline Real RangeVariable<Real>::inverse_ccdf(Real p_ccdf) const
+{ return UniformRandomVariable::inverse_ccdf(p_ccdf, lowerBnd, upperBnd); }
+
+
 template <typename T>
 RealRealPair RangeVariable<T>::moments() const
+{ no_template_specialization("moments"); return RealRealPair(); }
+
+
+template <>
+inline RealRealPair RangeVariable<Real>::moments() const
 {
   RealRealPair moms;
-  moments_from_params(lowerBnd, upperBnd, moms.first, moms.second);
+  UniformRandomVariable::
+    moments_from_params(lowerBnd, upperBnd, moms.first, moms.second);
   return moms;
 }
 
@@ -177,7 +279,7 @@ Real RangeVariable<T>::mean() const
 
 //template <typename T>
 //Real RangeVariable<T>::median() const
-//{ return inverse_cdf(.5); } // default
+//{ return inverse_cdf(.5); }
 
 
 template <typename T>
@@ -190,24 +292,17 @@ Real RangeVariable<T>::variance() const
 { Real std_dev = moments().second; return std_dev * std_dev; }
 
 
-template <typename T>
-Real RangeVariable<T>::coefficient_of_variation() const
-{ RealRealPair mom = moments(); return mom.second / mom.first; }
+//template <typename T>
+//Real RangeVariable<T>::coefficient_of_variation() const
+//{ RealRealPair mom = moments(); return mom.second / mom.first; }
 
 
 template <typename T>
 Real RangeVariable<T>::mode() const
-{
-  Real mode, mode_cnt;
-  typename std::map<T, Real>::const_iterator cit = valueCountPairs.begin();
-  mode = (Real)cit->first;  mode_cnt = cit->second;  ++cit;
-  for (; cit != valueCountPairs.end(); ++cit)
-    if (cit->second > mode_cnt)
-      { mode = (Real)cit->first;  mode_cnt = cit->second; }
-  return mode;
-}
+{ return moments().first; } // not well-defined: any value in [L,U] is valid
 
 
+/*
 /// for T-valued histogram, return a real-valued mean and std dev
 template <typename T>
 void RangeVariable<T>::

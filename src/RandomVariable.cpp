@@ -750,8 +750,10 @@ Real RandomVariable::coefficient_of_variation() const
 {
   if (ranVarRep)
     return ranVarRep->coefficient_of_variation(); // forward to letter
-  else
-    return standard_deviation() / mean(); // default used by most
+  else {
+    RealRealPair moms = moments();
+    return moms.second / moms.first; // default used by most
+  }
 }
 
 

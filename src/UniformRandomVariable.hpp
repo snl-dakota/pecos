@@ -91,7 +91,9 @@ public:
 
   static Real pdf(Real lwr, Real upr);
   static Real cdf(Real x, Real lwr, Real upr);
+  static Real ccdf(Real x, Real lwr, Real upr);
   static Real inverse_cdf(Real p_cdf, Real lwr, Real upr);
+  static Real inverse_ccdf(Real p_ccdf, Real lwr, Real upr);
 
   static Real std_pdf();
   static Real log_std_pdf();
@@ -196,6 +198,14 @@ inline Real UniformRandomVariable::cdf(Real x, Real lwr, Real upr)
 }
 
 
+inline Real UniformRandomVariable::ccdf(Real x, Real lwr, Real upr)
+{
+  if      (x >= upr) return 0.;
+  else if (x <= lwr) return 1.;
+  else               return (upr - x)/(upr - lwr); // linear [l,u] -> [1,0]
+}
+
+
 inline Real UniformRandomVariable::inverse_cdf(Real p_cdf, Real lwr, Real upr)
 {
   if      (p_cdf >= 1.) return upr;
@@ -204,16 +214,20 @@ inline Real UniformRandomVariable::inverse_cdf(Real p_cdf, Real lwr, Real upr)
 }
 
 
+inline Real UniformRandomVariable::inverse_ccdf(Real p_ccdf, Real lwr, Real upr)
+{
+  if      (p_ccdf >= 1.) return lwr;
+  else if (p_ccdf <= 0.) return upr;
+  else                   return upr - (upr - lwr) * p_ccdf;
+}
+
+
 inline Real UniformRandomVariable::cdf(Real x) const
 { return cdf(x, lowerBnd, upperBnd); }
 
 
 inline Real UniformRandomVariable::ccdf(Real x) const
-{
-  if      (x >= upperBnd) return 0.;
-  else if (x <= lowerBnd) return 1.;
-  else                    return (upperBnd - x)/(upperBnd - lowerBnd);
-}
+{ return ccdf(x, lowerBnd, upperBnd); }
 
 
 inline Real UniformRandomVariable::inverse_cdf(Real p_cdf) const
@@ -221,11 +235,7 @@ inline Real UniformRandomVariable::inverse_cdf(Real p_cdf) const
 
 
 inline Real UniformRandomVariable::inverse_ccdf(Real p_ccdf) const
-{
-  if      (p_ccdf >= 1.) return lowerBnd;
-  else if (p_ccdf <= 0.) return upperBnd;
-  else                   return upperBnd - (upperBnd - lowerBnd) * p_ccdf;
-}
+{ return inverse_ccdf(p_ccdf, lowerBnd, upperBnd); }
 
 
 inline Real UniformRandomVariable::pdf(Real x) const
