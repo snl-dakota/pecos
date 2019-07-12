@@ -87,37 +87,37 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
   // This routine performs an inverse transformation based on CDF/CCDF
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
-  const RandomVariable& rv_i = xDist.random_variable(i);
-  short x_type = rv_i.type(), u_type = uDist.random_variable_type(i);
+  const RandomVariable& x_rv_i = xDist.random_variable(i);
+  short x_type = x_rv_i.type(), u_type = uDist.random_variable_type(i);
   if (u_type == x_type)
     x = z;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    x = rv_i.from_standard(z); break;
+    case NORMAL:    x = x_rv_i.from_standard(z); break;
     case LOGNORMAL:
-      x = std::exp(rv_i.pull_parameter<Real>(LN_LAMBDA) +
-		   rv_i.pull_parameter<Real>(LN_ZETA) * z);
+      x = std::exp(x_rv_i.pull_parameter<Real>(LN_LAMBDA) +
+		   x_rv_i.pull_parameter<Real>(LN_ZETA) * z);
       break;
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-      x = rv_i.inverse_log_ccdf(NormalRandomVariable::log_std_ccdf(z)); break;
+      x = x_rv_i.inverse_log_ccdf(NormalRandomVariable::log_std_ccdf(z)); break;
     case GUMBEL:  // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
     case FRECHET: // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-      x = rv_i.inverse_log_cdf(NormalRandomVariable::log_std_cdf(z));   break;
+      x = x_rv_i.inverse_log_cdf(NormalRandomVariable::log_std_cdf(z));   break;
     */
     default: // default mapping based on either CDF or CCDF equivalence
-      x = (z > 0.) ? rv_i.inverse_ccdf(NormalRandomVariable::std_ccdf(z)) :
-	rv_i.inverse_cdf(NormalRandomVariable::std_cdf(z));  break;
+      x = (z > 0.) ? x_rv_i.inverse_ccdf(NormalRandomVariable::std_ccdf(z)) :
+	x_rv_i.inverse_cdf(NormalRandomVariable::std_cdf(z));  break;
     }
   }
   else if (u_type == STD_UNIFORM)
-    x = (z > 0.) ? rv_i.inverse_ccdf(UniformRandomVariable::std_ccdf(z)) :
-      rv_i.inverse_cdf(UniformRandomVariable::std_cdf(z));
+    x = (z > 0.) ? x_rv_i.inverse_ccdf(UniformRandomVariable::std_ccdf(z)) :
+      x_rv_i.inverse_cdf(UniformRandomVariable::std_cdf(z));
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    x = rv_i.from_standard(z);
+    x = x_rv_i.from_standard(z);
   else {
     PCerr << "Error: unsupported variable mapping for variable " << i
 	  << " in NatafTransformation::trans_Z_to_X()" << std::endl;
@@ -178,42 +178,42 @@ void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
   // This routine performs an forward transformation based on CDF/CCDF
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
-  const RandomVariable& rv_i = xDist.random_variable(i);
-  short x_type = rv_i.type(), u_type = uDist.random_variable_type(i);
+  const RandomVariable& x_rv_i = xDist.random_variable(i);
+  short x_type = x_rv_i.type(), u_type = uDist.random_variable_type(i);
   if (u_type == x_type)
     z = x;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    z = rv_i.to_standard(x); break;
+    case NORMAL:    z = x_rv_i.to_standard(x); break;
     case LOGNORMAL:
-      z = (std::log(x) - rv_i.pull_parameter<Real>(LN_LAMBDA)) /
-	                 rv_i.pull_parameter<Real>(LN_ZETA);
+      z = (std::log(x) - x_rv_i.pull_parameter<Real>(LN_LAMBDA)) /
+	                 x_rv_i.pull_parameter<Real>(LN_ZETA);
       break;      
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-      z = NormalRandomVariable::inverse_log_std_ccdf(rv_i.log_ccdf(x)); break;
+      z = NormalRandomVariable::inverse_log_std_ccdf(x_rv_i.log_ccdf(x)); break;
     case GUMBEL:  // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
     case FRECHET: // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-      z = NormalRandomVariable::inverse_log_std_cdf(rv_i.log_cdf(x));   break;
+      z = NormalRandomVariable::inverse_log_std_cdf(x_rv_i.log_cdf(x));   break;
     */
     default: { // default mapping based on either CDF or CCDF equivalence
-      Real xcdf = rv_i.cdf(x);
-      z = (xcdf > .5) ? NormalRandomVariable::inverse_std_ccdf(rv_i.ccdf(x)) :
+      Real xcdf = x_rv_i.cdf(x);
+      z = (xcdf > .5) ? NormalRandomVariable::inverse_std_ccdf(x_rv_i.ccdf(x)) :
 	NormalRandomVariable::inverse_std_cdf(xcdf);
       break;
     }
     }
   }
   else if (u_type == STD_UNIFORM) {
-    Real xcdf = rv_i.cdf(x);
-    z = (xcdf > .5) ? UniformRandomVariable::inverse_std_ccdf(rv_i.ccdf(x)) :
+    Real xcdf = x_rv_i.cdf(x);
+    z = (xcdf > .5) ? UniformRandomVariable::inverse_std_ccdf(x_rv_i.ccdf(x)) :
       UniformRandomVariable::inverse_std_cdf(xcdf);
   }
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    z = rv_i.to_standard(x);
+    z = x_rv_i.to_standard(x);
   else {
     PCerr << "Error: unsupported variable mapping for variable " << i
 	  << " in NatafTransformation::trans_X_to_Z()" << std::endl;
