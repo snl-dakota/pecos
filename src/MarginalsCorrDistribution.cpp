@@ -90,7 +90,7 @@ pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
     short push_type = ranVarTypes[i], pull_type = rv_types_in[i];
     switch (push_type) {
 
-    // push RV are fully standard: no updates to perform
+    // push RV are fully standardized: no updates to perform
     case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:           break;
 
     // push RV have standardized scale params; copy shape params
@@ -105,7 +105,7 @@ pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
     // push RV are non-standard, pull all non-standard data from rv_in
     default:
       switch (pull_type) {
-      // pull RV are fully standard: no data to pull
+      // pull RV are fully standardized: no data to pull
       case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:         break;
 
       // pull RV have standardized scale params; pull shape params
@@ -117,9 +117,9 @@ pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
 	push_rv.push_parameter(GA_ALPHA,pull_rv.pull_parameter<Real>(GA_ALPHA));
 	break;
 
-      // pull and push RV are non-standard; copy all params
+      // pull and push RV are non-standardized; copy all params
       default:
-	push_rv.copy_parameters(rv_in[i]);                               break;
+	push_rv.copy_parameters(pull_rv);                                break;
       }
       break;
     }

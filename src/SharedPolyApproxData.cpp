@@ -175,6 +175,30 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
   for (i=0, av_cntr=0; i<num_v; ++i)
     if (no_mask || active_vars[i]) {
       switch (u_types[i]) {
+      // CONTINUOUS RANGE vars are always mapped to STD_UNIFORM
+      // DISCRETE RANGE, SET
+      case DISCRETE_RANGE:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_range_distribution(
+	    mvd_rep->pull_parameter<int>(i, DR_LWR_BND),
+	    mvd_rep->pull_parameter<int>(i, DR_UPR_BND));
+	break;
+      case DISCRETE_SET_INT:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_set_distribution(
+	    mvd_rep->pull_parameter<IntSet>(i, DSI_VALUES));
+	break;
+      case DISCRETE_SET_STRING:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_set_distribution(
+	    mvd_rep->pull_parameter<StringSet>(i, DSS_VALUES));
+	break;
+      case DISCRETE_SET_REAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_set_distribution(
+	    mvd_rep->pull_parameter<RealSet>(i, DSR_VALUES));
+	break;
+      // CONTINUOUS ALEATORY
       case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:
 	break;
       case STD_BETA:
@@ -238,6 +262,7 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	  histogram_bin_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, H_BIN_PAIRS));
 	break;
+      // DISCRETE ALEATORY
       case POISSON:
 	poly_basis[av_cntr].push_parameter(P_LAMBDA,
 	  mvd_rep->pull_parameter<Real>(i, P_LAMBDA));
@@ -283,6 +308,33 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, H_PT_REAL_PAIRS));
+	break;
+      // CONTINUOUS EPISTEMIC
+      case CONTINUOUS_INTERVAL_UNCERTAIN:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  continuous_interval_distribution(
+	    mvd_rep->pull_parameter<RealRealPairRealMap>(i, CIU_BPA));
+	break;
+      // DISCRETE EPISTEMIC
+      case DISCRETE_INTERVAL_UNCERTAIN:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_interval_distribution(
+	    mvd_rep->pull_parameter<IntIntPairRealMap>(i, DIU_BPA));
+	break;
+      case DISCRETE_UNCERTAIN_SET_INT:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_map_distribution(
+	    mvd_rep->pull_parameter<IntRealMap>(i, DUSI_VALUES_PROBS));
+	break;
+      case DISCRETE_UNCERTAIN_SET_STRING:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_map_distribution(
+	    mvd_rep->pull_parameter<StringRealMap>(i, DUSS_VALUES_PROBS));
+	break;
+      case DISCRETE_UNCERTAIN_SET_REAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_map_distribution(
+	    mvd_rep->pull_parameter<RealRealMap>(i, DUSR_VALUES_PROBS));
 	break;
       default:
 	PCerr << "Error: unsupported u-space random variable type ("

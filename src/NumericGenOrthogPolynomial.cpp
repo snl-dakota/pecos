@@ -384,7 +384,9 @@ inner_product(const RealVector& poly_coeffs1,
     //	HistogramBinRandomVariable::pdf,distParams[0],distParams[u_bnd_index]);
     break;
   }
-  case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL: {
+  case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
+  case DISCRETE_UNCERTAIN_SET_INT: case DISCRETE_UNCERTAIN_SET_STRING:
+  case DISCRETE_UNCERTAIN_SET_REAL: {
     // TOP: https://www.math.lsu.edu/~xlwan/papers/journal/megpc2.pdf
     // https://www.math.lsu.edu/~xlwan/papers/journal/beyondAskey.pdf
     // https://www.cs.purdue.edu/homes/wxg/Madrid.pdf
@@ -402,6 +404,20 @@ inner_product(const RealVector& poly_coeffs1,
     return sum;
     break;
   }
+  case DISCRETE_RANGE:
+    PCerr << "Error: TO DO!" << std::endl;
+    break;
+  case DISCRETE_SET_INT:  case DISCRETE_SET_STRING:  case DISCRETE_SET_REAL:
+    PCerr << "Error: TO DO!" << std::endl;
+    break;
+  case CONTINUOUS_INTERVAL_UNCERTAIN:
+    // *** Convert to/mirror hist bin, either here or upstream
+    // *** Probably better here so that equivalence() does not require map
+    PCerr << "Error: TO DO!" << std::endl;
+    break;
+  case DISCRETE_INTERVAL_UNCERTAIN:
+    PCerr << "Error: TO DO!" << std::endl;
+    break;
   // ******************************
   // * SEMI-BOUNDED DISTRIBUTIONS *
   // ******************************

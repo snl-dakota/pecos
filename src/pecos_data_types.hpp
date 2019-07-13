@@ -213,23 +213,105 @@ inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 }
 
 
-/// equality operator for SizetArray and SizetMultiArrayConstView
-template <typename OrdinalType, typename ScalarType>
-bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
-		const std::map<ScalarType, ScalarType>& m)
+/// equality operator for set compared to vector
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+		const std::set<ScalarType1>& s)
 {
   // Check for equality in array lengths
-  size_t i, m_len = m.size();
-  OrdinalType v_len = v.length();
-  if ( m_len * 2 != v_len )
+  if ( s.size() != v.length() )
     return false;
 
   // Check each key,value pair
-  typename std::map<ScalarType, ScalarType>::const_iterator cit;
+  typename std::set<ScalarType1>::const_iterator cit;  OrdinalType cntr;
+  for (cit=s.begin(), cntr=0; cit!=s.end(); ++cit, ++cntr)
+    if (v[cntr] != (ScalarType2)*cit)
+      return false;
+
+  return true;
+}
+
+
+/// specialization of equality operator for StringSet compared to vector
+template <typename OrdinalType, typename ScalarType2>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+		const std::set<String>& s)
+{
+  // Check for equality in array lengths
+  size_t s_len = s.size();
+  if ( s_len != v.length() )
+    return false;
+
+  // Check each key,value pair
+  for (OrdinalType cntr=0; cntr<s_len; ++cntr)
+    if (v[cntr] != (ScalarType2)cntr)
+      return false;
+
+  return true;
+}
+
+
+/// equality operator for unrolled map compared to vector
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+		const std::map<ScalarType1, ScalarType2>& m)
+{
+  // Check for equality in array lengths
+  if ( m.size() * 2 != v.length() )
+    return false;
+
+  // Check each key,value pair
+  typename std::map<ScalarType1, ScalarType2>::const_iterator cit;
+  OrdinalType cntr;
+  for (cit=m.begin(), cntr=0; cit!=m.end(); ++cit) {
+    if (v[cntr] != (ScalarType2)cit->first)  return false; ++cntr;
+    if (v[cntr] !=              cit->second) return false; ++cntr;
+  }
+
+  return true;
+}
+
+
+/// specialization of equality operator for StringRealMap compared to vector
+template <typename OrdinalType, typename ScalarType2>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+		const std::map<String, ScalarType2>& m)
+{
+  // Check for equality in array lengths
+  if ( m.size() * 2 != v.length() )
+    return false;
+
+  // Check each key,value pair
+  typename std::map<String, ScalarType2>::const_iterator cit;
+  OrdinalType cntr;
+  for (cit=m.begin(), cntr=0; cit!=m.end(); ++cit) {
+    if (v[cntr] != (ScalarType2)cntr)  return false;  ++cntr;
+    if (v[cntr] !=       cit->second)  return false;  ++cntr;
+  }
+
+  return true;
+}
+
+
+/// equality operator for unrolled map compared to vector
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+		const std::map<std::pair<ScalarType1, ScalarType1>,
+		               ScalarType2>& m)
+{
+  // Check for equality in array lengths
+  if ( m.size() * 3 != v.length() )
+    return false;
+
+  // Check each key,value pair
+  typename std::map<std::pair<ScalarType1, ScalarType1>, ScalarType2>::
+    const_iterator cit;
   OrdinalType cntr = 0;
   for (cit=m.begin(); cit!=m.end(); ++cit) {
-    if (v[cntr] != cit->first)  return false; ++cntr;
-    if (v[cntr] != cit->second) return false; ++cntr;
+    const std::pair<ScalarType1, ScalarType1>& pr = cit->first;
+    if (v[cntr] != (ScalarType2)pr.first)   return false;  ++cntr;
+    if (v[cntr] != (ScalarType2)pr.second)  return false;  ++cntr;
+    if (v[cntr] !=            cit->second)  return false;  ++cntr;
   }
 
   return true;
@@ -531,9 +613,34 @@ void copy_data(const BitArray& ba, bool* ptr, //ScalarType* ptr,
 }
 
 
-template <typename OrdinalType, typename ScalarType>
-void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
-	       std::map<ScalarType, ScalarType>& m)
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+void copy_data(const std::set<ScalarType1>& s,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v)
+{
+  // convert map[x] = y to vector of concatenated (x,y) pairs
+  v.sizeUninitialized(s.size());
+  typename std::set<ScalarType1>::const_iterator cit;  OrdinalType cntr;
+  for (cit=s.begin(), cntr=0; cit!=s.end(); ++cit, ++cntr)
+    v[cntr] = (ScalarType2)*cit;
+}
+
+
+// specialization for StringSet using set indices
+template <typename OrdinalType, typename ScalarType2>
+void copy_data(const std::set<String>& s,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v)
+{
+  // convert map[x] = y to vector of concatenated (x,y) pairs
+  OrdinalType cntr, s_len = s.size();
+  v.sizeUninitialized(s_len);
+  for (cntr=0; cntr<s_len; ++cntr)
+    v[cntr] = (ScalarType2)cntr;
+}
+
+
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+	       std::map<ScalarType1, ScalarType2>& m)
 {
   OrdinalType v_len = v.length();
   if (v_len % 2) {
@@ -544,57 +651,63 @@ void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
   // convert vector of concatenated (x,y) pairs to map[x] = y
   OrdinalType i, j, m_len = v_len / 2;
   m.clear();
-  for (i=0; i<m_len; ++i)
-    { j = 2*i; m[v[j]] = v[j+1]; }
-}
-
-
-template <typename OrdinalType, typename ScalarType>
-void copy_data(const std::map<ScalarType, ScalarType>& m,
-	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
-{
-  // convert map[x] = y to vector of concatenated (x,y) pairs
-  v.sizeUninitialized(m.size() * 2);
-  typename std::map<ScalarType, ScalarType>::const_iterator cit;
-  OrdinalType cntr = 0;
-  for (cit=m.begin(); cit!=m.end(); ++cit) {
-    v[cntr] = cit->first;  ++cntr;
-    v[cntr] = cit->second; ++cntr;
+  for (i=0; i<m_len; ++i) {
+    j = 2*i;
+    ScalarType1 vj = (ScalarType1)v[j];
+    m[vj] = v[j+1];
   }
 }
 
-/// specialization for IntScalarTypeMap 
-template <typename OrdinalType, typename ScalarType>
-void copy_data(const std::map<int, ScalarType>& m,
-	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
+
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+void copy_data(const std::map<ScalarType1, ScalarType2>& m,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v)
 {
   // convert map[x] = y to vector of concatenated (x,y) pairs
   v.sizeUninitialized(m.size() * 2);
-  typename std::map<int, ScalarType>::const_iterator cit;
+  typename std::map<ScalarType1, ScalarType2>::const_iterator cit;
   OrdinalType cntr = 0;
   for (cit=m.begin(); cit!=m.end(); ++cit) {
-    // possibly promote int to double
-    v[cntr] = cit->first;  ++cntr;
-    v[cntr] = cit->second; ++cntr;
+    v[cntr] = (ScalarType2)cit->first;  ++cntr;
+    v[cntr] =              cit->second; ++cntr;
   }
 }
+
 
 /// specialization for StringScalarTypeMap: store index of string value 
-template <typename OrdinalType, typename ScalarType>
-void copy_data(const std::map<String, ScalarType>& m,
-	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
+template <typename OrdinalType, typename ScalarType2>
+void copy_data(const std::map<String, ScalarType2>& m,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v)
 {
   // convert map[x] = y to vector of concatenated (x,y) pairs
   v.sizeUninitialized(m.size() * 2);
-  typename std::map<String, ScalarType>::const_iterator cit;
-  size_t str_index = 0;
-  OrdinalType cntr = 0;
+  typename std::map<String, ScalarType2>::const_iterator cit;
+  size_t str_index = 0;  OrdinalType cntr = 0;
   for (cit=m.begin(); cit!=m.end(); ++cit) {
-    // possibly promote string index to double for dist params
-    v[cntr] = str_index;   ++cntr; ++str_index;
-    v[cntr] = cit->second; ++cntr;
+    v[cntr] = (ScalarType2)str_index;  ++cntr;  ++str_index;
+    v[cntr] =            cit->second;  ++cntr;
   }
 }
+
+
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+void copy_data(const std::map<std::pair<ScalarType1, ScalarType1>,
+	                      ScalarType2>& m,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v)
+{
+  // convert map[x] = y to vector of concatenated (x,y) pairs
+  v.sizeUninitialized(m.size() * 3);
+  typename std::map<std::pair<ScalarType1, ScalarType1>, ScalarType2>::
+    const_iterator cit;
+  OrdinalType cntr = 0;
+  for (cit=m.begin(); cit!=m.end(); ++cit) {
+    const std::pair<ScalarType1, ScalarType1>& pr = cit->first;
+    v[cntr] = (ScalarType2)pr.first;   ++cntr;
+    v[cntr] = (ScalarType2)pr.second;  ++cntr;
+    v[cntr] =            cit->second;  ++cntr;
+  }
+}
+
 
 /// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to
 /// ith row of Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>
