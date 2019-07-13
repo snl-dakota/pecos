@@ -645,7 +645,8 @@ void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
   OrdinalType v_len = v.length();
   if (v_len % 2) {
     PCerr << "Error: vector length (" << v_len << ") must be multiple of 2 in "
-	  << "Pecos::copy_data(std::vector, std::map)." << std::endl;
+	  << "Pecos::copy_data(Teuchos::SerialDenseVector, std::map)."
+	  << std::endl;
     abort_handler(-1);
   }
   // convert vector of concatenated (x,y) pairs to map[x] = y
@@ -705,6 +706,30 @@ void copy_data(const std::map<std::pair<ScalarType1, ScalarType1>,
     v[cntr] = (ScalarType2)pr.first;   ++cntr;
     v[cntr] = (ScalarType2)pr.second;  ++cntr;
     v[cntr] =            cit->second;  ++cntr;
+  }
+}
+
+
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2>
+void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
+	       std::map<std::pair<ScalarType1, ScalarType1>, ScalarType2>& m)
+{
+  OrdinalType v_len = v.length();
+  if (v_len % 3) {
+    PCerr << "Error: vector length (" << v_len << ") must be multiple of 3 in "
+	  << "Pecos::copy_data(Teuchos::SerialDenseVector, std::map<std::pair, "
+	  << "T>)." << std::endl;
+    abort_handler(-1);
+  }
+  // convert vector of concatenated (xl,xu,y) triplets to map[xl,xu] = y
+  OrdinalType i, j, m_len = v_len / 3;
+  m.clear();
+  std::pair<ScalarType1, ScalarType1> pr;
+  for (i=0; i<m_len; ++i) {
+    j = 3*i;
+    pr.first  = (ScalarType1)v[j];
+    pr.second = (ScalarType1)v[j+1];
+    m[pr]     = v[j+2];
   }
 }
 

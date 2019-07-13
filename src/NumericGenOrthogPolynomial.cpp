@@ -410,14 +410,38 @@ inner_product(const RealVector& poly_coeffs1,
   case DISCRETE_SET_INT:  case DISCRETE_SET_STRING:  case DISCRETE_SET_REAL:
     PCerr << "Error: TO DO!" << std::endl;
     break;
-  case CONTINUOUS_INTERVAL_UNCERTAIN:
-    // *** Convert to/mirror hist bin, either here or upstream
-    // *** Probably better here so that equivalence() does not require map
+  case CONTINUOUS_INTERVAL_UNCERTAIN: {
+    // Convert (overlapping,disjoint) intervals to hist bin format. Done here
+    // (rather than upstream) so that equivalence() does not require mapping.
+    RealRealPairRealMap ciu_bpa;  RealArray x_vals, y_vals, xy_vals;
+    copy_data(distParams, ciu_bpa);
+    intervals_to_xy_pairs(ciu_bpa, x_vals, y_vals);
+    //flatten(x_vals, y_vals, xy_vals);
+
     PCerr << "Error: TO DO!" << std::endl;
+
+    /*
+    size_t dp_len = distParams.length(),
+      u_bnd_index = (dp_len>=2) ? dp_len-2 : 0;
+    // Alternate integrations:
+    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //  HistogramBinRandomVariable::pdf,distParams[0],distParams[u_bnd_index]);
+    return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
+      HistogramBinRandomVariable::pdf, distParams[0], distParams[u_bnd_index],
+      50*dp_len); // 100 per bin
+    */
     break;
-  case DISCRETE_INTERVAL_UNCERTAIN:
+  }
+  case DISCRETE_INTERVAL_UNCERTAIN: {
+    IntIntPairRealMap diu_bpa;  RealArray x_vals, y_vals, xy_vals;
+    copy_data(distParams, diu_bpa);
+    intervals_to_xy_pairs(diu_bpa, x_vals, y_vals);
+    //flatten(x_vals, y_vals, xy_vals);
+
     PCerr << "Error: TO DO!" << std::endl;
+
     break;
+  }
   // ******************************
   // * SEMI-BOUNDED DISTRIBUTIONS *
   // ******************************
