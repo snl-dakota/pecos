@@ -9,7 +9,7 @@
 #ifndef LHS_DRIVER_H
 #define LHS_DRIVER_H
 
-#include "pecos_data_types.hpp"
+#include "pecos_stat_util.hpp"
 #include "RandomVariable.hpp"
 
 
@@ -111,21 +111,6 @@ public:
     const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples,
     bool backfill_flag = false);
 
-  /// define the subset of design or state variables from RV type within
-  /// the range [start_set,start_set+num_set)
-  void design_state_subset(const std::vector<RandomVariable>& random_vars,
-			   BitArray& subset, size_t start_set,
-			   size_t num_set) const;
-  /// define the subset of uncertain variables from RV type
-  void uncertain_subset(const std::vector<RandomVariable>& random_vars,
-			BitArray& subset) const;
-  /// define the subset of aleatory uncertain variables from RV type
-  void aleatory_uncertain_subset(
-    const std::vector<RandomVariable>& random_vars, BitArray& subset) const;
-  /// define the subset of epistemic uncertain variables from RV type
-  void epistemic_uncertain_subset(
-    const std::vector<RandomVariable>& random_vars, BitArray& subset) const;
-
 private:
 
   //
@@ -145,31 +130,6 @@ private:
   /// error message if an error was returned
   void check_error(int err_code, const char* err_source = NULL,
 		   const char* err_case = NULL) const;
-
-  /// convert histogram bin pairs to LHS udist x,y inputs
-  void bins_to_udist_params(const RealRealMap& h_bin_prs,
-			    RealArray& x_val, RealArray& y_val);
-  /// convert int range to LHS udist x,y inputs
-  void int_range_to_udist_params(int l_bnd,        int u_bnd,
-				 RealArray& x_val, RealArray& y_val);
-  /// convert set values to LHS udist x,y inputs
-  template <typename T>
-  void set_to_udist_params(const std::set<T>& values,
-			   RealArray& x_val, RealArray& y_val);
-  /// convert map pairs (value T to Real prob) to LHS udist x,y inputs
-  template <typename T>
-  void map_to_udist_params(const std::map<T, Real>& vals_probs,
-			   RealArray& x_val, RealArray& y_val);
-  /// convert map pairs (string index to Real prob) to LHS udist x,y inputs
-  template <typename T>
-  void map_indices_to_udist_params(const std::map<T, Real>& vals_probs,
-				   RealArray& x_val, RealArray& y_val);
-  /// convert epistemic BPAs to LHS udist x,y inputs
-  void intervals_to_udist_params(const RealRealPairRealMap& ci_bpa,
-				 RealArray& x_val, RealArray& y_val);
-  /// convert epistemic BPAs to LHS udist x,y inputs
-  void intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
-				 RealArray& x_val, RealArray& y_val);
 
   /// register a random variable with LHS using the DIST format
   void lhs_dist_register(const char* var_name, const char* dist_name,
@@ -211,14 +171,14 @@ private:
 };
 
 
-inline LHSDriver::LHSDriver():
-  sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true),
-  randomSeed(0), allowSeedAdvance(1)
-{ abort_if_no_lhs(); }
-
-
-inline LHSDriver::~LHSDriver()
-{ }
+inline void LHSDriver::abort_if_no_lhs()
+{
+#ifndef HAVE_LHS
+  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
+        << std::endl;
+  abort_handler(-1);
+#endif
+}
 
 
 inline void LHSDriver::
@@ -230,6 +190,12 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 }
 
 
+inline LHSDriver::LHSDriver():
+  sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true),
+  randomSeed(0), allowSeedAdvance(1)
+{ abort_if_no_lhs(); }
+
+
 inline LHSDriver::LHSDriver(const String& sample_type,
 			    short sample_ranks_mode, bool reports) :
   allowSeedAdvance(1)
@@ -237,6 +203,10 @@ inline LHSDriver::LHSDriver(const String& sample_type,
   abort_if_no_lhs();
   initialize(sample_type, sample_ranks_mode, reports);
 }
+
+
+inline LHSDriver::~LHSDriver()
+{ }
 
 
 inline int LHSDriver::seed() const
@@ -256,74 +226,6 @@ inline void LHSDriver::advance_seed_sequence()
     std::srand(randomSeed);
     seed(1 + std::rand()); // from 1 to RANDMAX+1
   }
-}
-
-
-inline void LHSDriver::
-design_state_subset(const std::vector<RandomVariable>& random_vars,
-		    BitArray& subset, size_t start_set, size_t num_set) const
-{
-  size_t i, num_rv = random_vars.size(), end_set = start_set + num_set;
-  subset.resize(num_rv, false); // init bits to false
-  for (i=start_set; i<end_set; ++i)
-    // activate design + state vars
-    switch (random_vars[i].type()) {
-    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
-    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
-      subset.set(i); break;
-    }
-}
-
-
-inline void LHSDriver::
-uncertain_subset(const std::vector<RandomVariable>& random_vars,
-		 BitArray& subset) const
-{
-  size_t i, num_rv = random_vars.size();
-  subset.resize(num_rv, true); // init bits to true
-  for (i=0; i<num_rv; ++i)
-    // deactivate complement of uncertain vars
-    switch (random_vars[i].type()) {
-    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
-    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
-      subset.reset(i); break;
-    }
-}
-
-
-inline void LHSDriver::
-aleatory_uncertain_subset(const std::vector<RandomVariable>& random_vars,
-			  BitArray& subset) const
-{
-  size_t i, num_rv = random_vars.size();
-  subset.resize(num_rv, true); // init bits to true
-  for (i=0; i<num_rv; ++i)
-    // deactivate complement of aleatory uncertain vars
-    switch (random_vars[i].type()) {
-    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
-    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
-    case CONTINUOUS_INTERVAL_UNCERTAIN: case DISCRETE_INTERVAL_UNCERTAIN:
-    case DISCRETE_UNCERTAIN_SET_INT:    case DISCRETE_UNCERTAIN_SET_STRING:
-    case DISCRETE_UNCERTAIN_SET_REAL:
-      subset.reset(i); break;
-    }
-}
-
-
-inline void LHSDriver::
-epistemic_uncertain_subset(const std::vector<RandomVariable>& random_vars,
-			   BitArray& subset) const
-{
-  size_t i, num_rv = random_vars.size();
-  subset.resize(num_rv, false); // init bits to false
-  for (i=0; i<num_rv; ++i)
-    // activate epistemic uncertain vars
-    switch (random_vars[i].type()) {
-    case CONTINUOUS_INTERVAL_UNCERTAIN: case DISCRETE_INTERVAL_UNCERTAIN:
-    case DISCRETE_UNCERTAIN_SET_INT:    case DISCRETE_UNCERTAIN_SET_STRING:
-    case DISCRETE_UNCERTAIN_SET_REAL:
-      subset.set(i); break;
-    }
 }
 
 
@@ -542,90 +444,6 @@ check_error(int err_code, const char* err_source, const char* err_case) const
     if (err_case   != NULL) PCerr << " for case "      << err_case;
     PCerr << "." << std::endl;
     abort_handler(-1);
-  }
-}
-
-
-inline void LHSDriver::
-bins_to_udist_params(const RealRealMap& h_bin_prs,
-		     RealArray& x_val, RealArray& y_val)
-{
-  // histogram bins: pairs are defined from an abscissa in the first field
-  // and a count (not a density) in the second field.  This distinction is
-  // important for unequal bin widths.
-
-  size_t i, num_params = h_bin_prs.size(), end = num_params - 1;
-  RRMCIter cit = h_bin_prs.begin();
-
-  // Assume already normalized with sum = 1
-  //Real sum = 0.;
-  //RRMCIter end = --h_bin_prs.end(); // last y from DAKOTA must be zero
-  //for (; cit!=end; ++cit)
-  //  sum += cit->second;
-
-  // LHS requires accumulation of CDF with first y at 0 and last y at 1
-  x_val.resize(num_params);  y_val.resize(num_params);
-  y_val[0] = 0.;
-  for (i=0; i<end; ++i, ++cit) {
-    x_val[i]   = cit->first;
-    y_val[i+1] = y_val[i] + cit->second/* /sum */;
-  }
-  x_val[end] = cit->first; // last prob value (cit->second) must be zero
-}
-
-
-inline void LHSDriver::
-int_range_to_udist_params(int l_bnd,        int u_bnd,
-			  RealArray& x_val, RealArray& y_val)
-{
-  // supports either discrete integer range or range of set indices
-
-  int i, num_params = u_bnd - l_bnd + 1;
-  x_val.resize(num_params);  y_val.assign(num_params, 1.);
-  for (i=0; i<num_params; ++i)
-    x_val[i] = (Real)(l_bnd + i);
-}
-
-
-template <typename T>
-void LHSDriver::
-set_to_udist_params(const std::set<T>& values,
-		    RealArray& x_val, RealArray& y_val)
-{
-  int i, num_params = values.size();
-  x_val.resize(num_params);  y_val.assign(num_params, 1.);
-  typename std::set<T>::const_iterator cit;
-  for (cit=values.begin(), i=0; cit!=values.end(); ++cit, ++i)
-    x_val[i] = (Real)(*cit); // value
-}
-
-
-template <typename T>
-void LHSDriver::
-map_to_udist_params(const std::map<T, Real>& vals_probs,
-		    RealArray& x_val, RealArray& y_val)
-{
-  int i, num_params = vals_probs.size();
-  x_val.resize(num_params);  y_val.resize(num_params);
-  typename std::map<T, Real>::const_iterator cit;
-  for (cit=vals_probs.begin(), i=0; cit!=vals_probs.end(); ++cit, ++i) {
-    x_val[i] = (Real)cit->first;  // value
-    y_val[i] =       cit->second; // probability
-  }
-}
-
-
-template <typename T>
-void LHSDriver::
-map_indices_to_udist_params(const std::map<T, Real>& vals_probs,
-			    RealArray& x_val, RealArray& y_val)
-{
-  int i, num_params = vals_probs.size();
-  x_val.resize(num_params);  y_val.resize(num_params);
-  typename std::map<T, Real>::const_iterator cit;
-  for (cit=vals_probs.begin(), i=0; cit!=vals_probs.end(); ++cit, ++i) {
-    x_val[i] = (Real)i;     // index rather than value
-    y_val[i] = cit->second; // probability
   }
 }
 

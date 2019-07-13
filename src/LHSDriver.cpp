@@ -187,16 +187,6 @@ void LHSDriver::rng(String unif_gen)
 //}
 
 
-void LHSDriver::abort_if_no_lhs()
-{
-#ifndef HAVE_LHS
-  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
-        << std::endl;
-  abort_handler(-1);
-#endif
-}
-
-
 void LHSDriver::
 lhs_dist_register(const char* var_name, const char* dist_name, size_t rv,
 		  const RealArray& dist_params)
@@ -238,116 +228,6 @@ void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
 
   LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
   check_error(err_code, "lhs_const()", var_string.data());
-}
-
-
-void LHSDriver::
-intervals_to_udist_params(const RealRealPairRealMap& ci_bpa,
-			  RealArray& x_val, RealArray& y_val)
-{
-  // x_sort_unique is a set with ALL of the interval bounds for this variable
-  // in increasing order and unique.  For example, if there are 2 intervals
-  // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
-  // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
-  // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-  RRPRMCIter cit;  RealSet x_sort_unique;
-  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    x_sort_unique.insert(bounds.first);
-    x_sort_unique.insert(bounds.second);
-  }
-  // convert sorted RealSet to x_val
-  size_t j, num_params = x_sort_unique.size();
-  x_val.resize(num_params);  y_val.resize(num_params);
-  RSIter it = x_sort_unique.begin();
-  for (j=0; j<num_params; ++j, ++it)
-    x_val[j] = *it;
-
-  // Calculate the probability densities, and account for the cases where
-  // there are intervals that are overlapping.  This section of code goes
-  // through the original intervals and see where they fall relative to the
-  // new, sorted intervals for the density calculation.
-  RealVector prob_dens(num_params); // initialize to 0.
-  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    Real l_bnd = bounds.first, u_bnd = bounds.second;
-    Real ci_density = cit->second / (u_bnd - l_bnd);
-    int cum_int_index = 0;
-    while (l_bnd > x_val[cum_int_index])
-      ++cum_int_index;
-    ++cum_int_index;
-    while (cum_int_index < num_params && x_val[cum_int_index] <= u_bnd)
-      { prob_dens[cum_int_index] += ci_density; ++cum_int_index; }
-  }
-
-  // put the densities in a cumulative format necessary for LHS histograms.
-  // Note that x_val and y_val are defined as Real* for input to f77.
-  y_val[0] = 0.;
-  for (j=1; j<num_params; ++j)
-    y_val[j] = (prob_dens[j] > 0.0) ?
-      y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]) :
-      y_val[j-1] + 0.0001; // handle case where there is a gap
-  // normalize if necessary
-  if (y_val[num_params-1] != 1.) {
-    Real y_total = y_val[num_params-1];
-    for (j=1; j<num_params; ++j)
-      y_val[j] /= y_total;
-  }
-#ifdef DEBUG
-  for (j=0; j<num_params; ++j)
-    PCout << "ciuv: x_val[" << j << "] is " << x_val[j]
-	  << " y_val[" << j << "] is " << y_val[j] << '\n';
-#endif // DEBUG
-}
-
-
-void LHSDriver::
-intervals_to_udist_params(const IntIntPairRealMap& di_bpa,
-			  RealArray& x_val, RealArray& y_val)
-{
-  // x_sort_unique contains ALL of the unique integer values for this
-  // x_sort_unique contains ALL of the unique integer values for this
-  // discrete interval variable in increasing order.  For example, if
-  // there are 3 intervals for a variable and the bounds are (1,4),
-  // (3,6), and (9,10), x_sorted will be (1,2,3,4,5,6,9,10).
-  IIPRMCIter cit; IntSet x_sort_unique;
-  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    int val, u_bnd = bounds.second;
-    for (val=bounds.first; val<=u_bnd; ++val)
-      x_sort_unique.insert(val);
-  }
-  // copy sorted IntSet to x_val
-  size_t j, num_params = x_sort_unique.size();
-  x_val.resize(num_params);  y_val.resize(num_params);
-  ISIter it = x_sort_unique.begin();
-  for (j=0; j<num_params; ++j, ++it)
-    x_val[j] = *it;
-
-  // Calculate probability densities and account for overlapping intervals.
-  // Loop over the original intervals and see where they fall relative to
-  // the new, sorted intervals for the density calculation.
-  for (j=0; j<num_params; ++j) y_val[j] = 0.;
-  int l_bnd, u_bnd; size_t index;
-  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    int val, l_bnd = bounds.first, u_bnd = bounds.second;
-    Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
-    it = x_sort_unique.find(l_bnd);
-    if (it == x_sort_unique.end()) {
-      PCerr << "Error: lower bound not found in sorted set within LHSDriver "
-	    << "mapping of discrete interval uncertain variable."<< std::endl;
-      abort_handler(-1);
-    }
-    index = std::distance(x_sort_unique.begin(), it);
-    for (val=l_bnd; val<=u_bnd; ++val, ++index)
-      y_val[index] += di_density;
-  }
-#ifdef DEBUG
-  for (j=0; j<num_params; ++j)
-    PCout << "diuv: x_val[" << j << "] is " << x_val[j]
-	  << " y_val[" << j << "] is " << y_val[j] << '\n';
-#endif // DEBUG
 }
 
 
@@ -515,7 +395,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       check_finite(l_bnd, u_bnd);
       if (u_bnd > l_bnd) {
 	RealArray x_val, y_val;
-	int_range_to_udist_params(l_bnd, u_bnd, x_val, y_val);
+	int_range_to_xy_pairs(l_bnd, u_bnd, x_val, y_val);
 	lhs_udist_register("DiscRange", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -531,7 +411,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       size_t set_size = int_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
-	set_to_udist_params(int_set, x_val, y_val); // set values
+	set_to_xy_pairs(int_set, x_val, y_val); // set values
 	lhs_udist_register("DiscSetI", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -546,7 +426,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       int set_size = str_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
-	int_range_to_udist_params(0, set_size - 1, x_val, y_val); // indices
+	int_range_to_xy_pairs(0, set_size - 1, x_val, y_val); // indices
 	lhs_udist_register("DiscSetS", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -561,7 +441,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       size_t set_size = real_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
-	set_to_udist_params(real_set, x_val, y_val); // set values
+	set_to_xy_pairs(real_set, x_val, y_val); // set values
 	lhs_udist_register("DiscSetR", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -671,7 +551,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       HistogramBinRandomVariable* rv_rep
 	= (HistogramBinRandomVariable*)rv_i.random_variable_rep();
       RealRealMap h_bin_pairs; rv_rep->pull_parameter(H_BIN_PAIRS, h_bin_pairs);
-      RealArray x_val, y_val;  bins_to_udist_params(h_bin_pairs, x_val, y_val);
+      RealArray x_val, y_val;  bins_to_xy_pairs(h_bin_pairs, x_val, y_val);
       lhs_udist_register("HistBin", "continuous linear", av_cntr, x_val, y_val);
       break;
     }
@@ -713,8 +593,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntRealMap ir_map;  rv_rep->pull_parameter(H_PT_INT_PAIRS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;
-	map_to_udist_params(ir_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pairs(ir_map, x_val, y_val);
 	lhs_udist_register("HistPtInt", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -728,8 +607,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       StringRealMap sr_map;  rv_rep->pull_parameter(H_PT_STR_PAIRS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;
-	map_indices_to_udist_params(sr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_indices_to_xy_pairs(sr_map, x_val, y_val);
 	lhs_udist_register("HistPtString","discrete histogram",av_cntr,
 			   x_val, y_val);
       }
@@ -743,8 +621,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       RealRealMap rr_map;  rv_rep->pull_parameter(H_PT_REAL_PAIRS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;
-	map_to_udist_params(rr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pairs(rr_map, x_val, y_val);
 	lhs_udist_register("HistPtReal", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -756,7 +633,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntervalRandomVariable<Real>* rv_rep
 	= (IntervalRandomVariable<Real>*)rv_i.random_variable_rep();
       RealRealPairRealMap ci_bpa;  rv_rep->pull_parameter(CIU_BPA, ci_bpa);
-      RealArray x_val, y_val;  intervals_to_udist_params(ci_bpa, x_val, y_val);
+      RealArray x_val, y_val;  intervals_to_xy_pairs(ci_bpa, x_val, y_val);
       lhs_udist_register("ContInterval", "continuous linear", av_cntr,
 			 x_val, y_val);
       break;
@@ -765,7 +642,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntervalRandomVariable<int>* rv_rep
 	= (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
       IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
-      RealArray x_val, y_val;  intervals_to_udist_params(di_bpa, x_val, y_val);
+      RealArray x_val, y_val;  intervals_to_xy_pairs(di_bpa, x_val, y_val);
       lhs_udist_register("DiscInterval", "discrete histogram", av_cntr,
 			 x_val, y_val);
       break;
@@ -776,8 +653,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntRealMap ir_map;  rv_rep->pull_parameter(DUSI_VALUES_PROBS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;
-	map_to_udist_params(ir_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pairs(ir_map, x_val, y_val);
 	lhs_udist_register("DiscUncSetI","discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -791,8 +667,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       StringRealMap sr_map;  rv_rep->pull_parameter(DUSS_VALUES_PROBS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;
-	map_indices_to_udist_params(sr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_indices_to_xy_pairs(sr_map, x_val, y_val);
 	lhs_udist_register("DiscUncSetS","discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -806,8 +681,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       RealRealMap rr_map;  rv_rep->pull_parameter(DUSR_VALUES_PROBS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;
-	map_to_udist_params(rr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pairs(rr_map, x_val, y_val);
 	lhs_udist_register("DiscUncSetR","discrete histogram", av_cntr,
 			   x_val, y_val);
       }

@@ -225,7 +225,7 @@ bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
   // Check each key,value pair
   typename std::set<ScalarType1>::const_iterator cit;  OrdinalType cntr;
   for (cit=s.begin(), cntr=0; cit!=s.end(); ++cit, ++cntr)
-    if (v[cntr] != (ScalarType2)*cit)
+    if (v[cntr] != (ScalarType2)(*cit))
       return false;
 
   return true;
@@ -621,7 +621,7 @@ void copy_data(const std::set<ScalarType1>& s,
   v.sizeUninitialized(s.size());
   typename std::set<ScalarType1>::const_iterator cit;  OrdinalType cntr;
   for (cit=s.begin(), cntr=0; cit!=s.end(); ++cit, ++cntr)
-    v[cntr] = (ScalarType2)*cit;
+    v[cntr] = (ScalarType2)(*cit);
 }
 
 
