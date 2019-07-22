@@ -10,6 +10,7 @@
 #define MULTIVARIATE_NORMAL_DISTRIBUTION_HPP
 
 #include "MultivariateDistribution.hpp"
+#include "NormalRandomVariable.hpp"
 
 namespace Pecos {
 

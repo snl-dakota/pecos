@@ -80,11 +80,15 @@ public:
 
   static Real pdf(Real x, const RealRealMap& bin_prs);
   static Real cdf(Real x, const RealRealMap& bin_prs);
-  static Real inverse_cdf(Real cdf, const RealRealMap& bin_prs);
+  static Real ccdf(Real x, const RealRealMap& bin_prs);
+  static Real inverse_cdf(Real p_cdf, const RealRealMap& bin_prs);
+  static Real inverse_ccdf(Real p_ccdf, const RealRealMap& bin_prs);
 
   static Real pdf(Real x, const RealVector& bin_prs);
   //static Real cdf(Real x, const RealVector& bin_prs);
   //static Real inverse_cdf(Real cdf, const RealVector& bin_prs);
+
+  static Real mode(const RealRealMap& bin_prs);
 
   static void moments_from_params(const RealRealMap& bin_prs,
 				  Real& mean, Real& std_dev);
@@ -159,7 +163,7 @@ inline Real HistogramBinRandomVariable::cdf(Real x, const RealRealMap& bin_prs)
     for (i=0; i<num_bins; ++i) {
       lwr = cit->first; count = cit->second; ++cit;
       upr = cit->first;
-      if (x < upr) {
+      if (x <= upr) {
 	p_cdf += count * (x - lwr) / (upr - lwr);
 	break;
       }
@@ -175,13 +179,13 @@ inline Real HistogramBinRandomVariable::cdf(Real x) const
 { return cdf(x, binPairs); }
 
 
-inline Real HistogramBinRandomVariable::ccdf(Real x) const
+inline Real HistogramBinRandomVariable::ccdf(Real x, const RealRealMap& bin_prs)
 {
-  size_t i, num_bins = binPairs.size() - 1;
-  RRMCIter cit = binPairs.begin();
+  size_t i, num_bins = bin_prs.size() - 1;
+  RRMCIter cit = bin_prs.begin();
   if (x <= cit->first)
     return 1.;
-  else if (x >= (--binPairs.end())->first)
+  else if (x >= (--bin_prs.end())->first)
     return 0.;
   else {
     Real p_ccdf = 1., count, upr, lwr;
@@ -200,6 +204,10 @@ inline Real HistogramBinRandomVariable::ccdf(Real x) const
 }
 
 
+inline Real HistogramBinRandomVariable::ccdf(Real x) const
+{ return ccdf(x, binPairs); }
+
+
 inline Real HistogramBinRandomVariable::
 inverse_cdf(Real p_cdf, const RealRealMap& bin_prs)
 {
@@ -215,7 +223,7 @@ inverse_cdf(Real p_cdf, const RealRealMap& bin_prs)
       lwr = cit->first; count = cit->second; ++cit;
       upr = cit->first;
       upr_cdf += count;
-      if (p_cdf < upr_cdf)
+      if (p_cdf <= upr_cdf)
 	return upr - (upr_cdf - p_cdf) / count * (upr - lwr);
     }
     // If still no return due to numerical roundoff, return upper bound
@@ -228,14 +236,15 @@ inline Real HistogramBinRandomVariable::inverse_cdf(Real p_cdf) const
 { return inverse_cdf(p_cdf, binPairs); }
 
 
-inline Real HistogramBinRandomVariable::inverse_ccdf(Real p_ccdf) const
+inline Real HistogramBinRandomVariable::
+inverse_ccdf(Real p_ccdf, const RealRealMap& bin_prs)
 {
-  size_t i, num_bins = binPairs.size() - 1;
-  RRMCIter cit = binPairs.begin();
+  size_t i, num_bins = bin_prs.size() - 1;
+  RRMCIter cit = bin_prs.begin();
   if (p_ccdf >= 1.)
     return cit->first;                // lower bound abscissa
   else if (p_ccdf <= 0.)
-    return (--binPairs.end())->first; // upper bound abscissa
+    return (--bin_prs.end())->first; // upper bound abscissa
   else {
     Real upr_ccdf = 1., count, upr, lwr;
     for (i=0; i<num_bins; ++i) {
@@ -246,9 +255,13 @@ inline Real HistogramBinRandomVariable::inverse_ccdf(Real p_ccdf) const
 	return upr - (p_ccdf - upr_ccdf) / count * (upr - lwr);
     }
     // If still no return due to numerical roundoff, return upper bound
-    return (--binPairs.end())->first; // upper bound abscissa
+    return (--bin_prs.end())->first; // upper bound abscissa
   }
 }
+
+
+inline Real HistogramBinRandomVariable::inverse_ccdf(Real p_ccdf) const
+{ return inverse_ccdf(p_ccdf, binPairs); }
 
 
 inline Real HistogramBinRandomVariable::pdf(Real x, const RealRealMap& bin_prs)
@@ -303,10 +316,10 @@ inline Real HistogramBinRandomVariable::mean() const
 //{ return inverse_cdf(.5); } // default
 
 
-inline Real HistogramBinRandomVariable::mode() const
+inline Real HistogramBinRandomVariable::mode(const RealRealMap& bin_prs)
 {
-  size_t i, num_bins = binPairs.size() - 1;
-  RRMCIter cit = binPairs.begin();
+  size_t i, num_bins = bin_prs.size() - 1;
+  RRMCIter cit = bin_prs.begin();
   Real mode = cit->first, mode_p = 0., density, lwr, count, upr;
   for (i=0; i<num_bins; ++i) {
     lwr  = cit->first; count   = cit->second; ++cit;
@@ -316,6 +329,10 @@ inline Real HistogramBinRandomVariable::mode() const
   }
   return mode;
 }
+
+
+inline Real HistogramBinRandomVariable::mode() const
+{ return mode(binPairs); }
 
 
 //inline Real HistogramBinRandomVariable::standard_deviation() const

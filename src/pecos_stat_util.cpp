@@ -7,145 +7,76 @@
     _______________________________________________________________________ */
 
 #include "pecos_stat_util.hpp"
+#include "RandomVariable.hpp"
 
 static const char rcsId[]="@(#) $Id: pecos_stat_util.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
 namespace Pecos {
 
 
-void bins_to_xy_pairs(const RealRealMap& h_bin_prs,
-		      RealArray& x_val, RealArray& y_val)
+void design_state_subset(const std::vector<RandomVariable>& random_vars,
+			 BitArray& subset, size_t start_set, size_t num_set)
 {
-  // histogram bins: pairs are defined from an abscissa in the first field
-  // and a count (not a density) in the second field.  This distinction is
-  // important for unequal bin widths.
-
-  size_t i, num_params = h_bin_prs.size(), end = num_params - 1;
-  RRMCIter cit = h_bin_prs.begin();
-
-  // Assume already normalized with sum = 1
-  //Real sum = 0.;
-  //RRMCIter end = --h_bin_prs.end(); // last y from DAKOTA must be zero
-  //for (; cit!=end; ++cit)
-  //  sum += cit->second;
-
-  // LHS requires accumulation of CDF with first y at 0 and last y at 1
-  x_val.resize(num_params);  y_val.resize(num_params);
-  y_val[0] = 0.;
-  for (i=0; i<end; ++i, ++cit) {
-    x_val[i]   = cit->first;
-    y_val[i+1] = y_val[i] + cit->second/* /sum */;
-  }
-  x_val[end] = cit->first; // last prob value (cit->second) must be zero
-}
-
-
-void intervals_to_xy_pairs(const RealRealPairRealMap& ci_bpa,
-			   RealArray& x_val, RealArray& y_val)
-{
-  // x_sort_unique is a set with ALL of the interval bounds for this variable
-  // in increasing order and unique.  For example, if there are 2 intervals
-  // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
-  // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
-  // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-  RRPRMCIter cit;  RealSet x_sort_unique;
-  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    x_sort_unique.insert(bounds.first);
-    x_sort_unique.insert(bounds.second);
-  }
-  // convert sorted RealSet to x_val
-  size_t j, num_params = x_sort_unique.size();
-  x_val.resize(num_params);  y_val.resize(num_params);
-  RSIter it = x_sort_unique.begin();
-  for (j=0; j<num_params; ++j, ++it)
-    x_val[j] = *it;
-
-  // Calculate the probability densities, and account for the cases where
-  // there are intervals that are overlapping.  This section of code goes
-  // through the original intervals and see where they fall relative to the
-  // new, sorted intervals for the density calculation.
-  RealVector prob_dens(num_params); // initialize to 0.
-  for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    Real l_bnd = bounds.first, u_bnd = bounds.second;
-    Real ci_density = cit->second / (u_bnd - l_bnd);
-    int cum_int_index = 0;
-    while (l_bnd > x_val[cum_int_index])
-      ++cum_int_index;
-    ++cum_int_index;
-    while (cum_int_index < num_params && x_val[cum_int_index] <= u_bnd)
-      { prob_dens[cum_int_index] += ci_density; ++cum_int_index; }
-  }
-
-  // put the densities in a cumulative format necessary for LHS histograms.
-  // Note that x_val and y_val are defined as Real* for input to f77.
-  y_val[0] = 0.;
-  for (j=1; j<num_params; ++j)
-    y_val[j] = (prob_dens[j] > 0.0) ?
-      y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]) :
-      y_val[j-1] + 0.0001; // handle case where there is a gap
-  // normalize if necessary
-  if (y_val[num_params-1] != 1.) {
-    Real y_total = y_val[num_params-1];
-    for (j=1; j<num_params; ++j)
-      y_val[j] /= y_total;
-  }
-#ifdef DEBUG
-  for (j=0; j<num_params; ++j)
-    PCout << "ciuv: x_val[" << j << "] is " << x_val[j]
-	  << " y_val[" << j << "] is " << y_val[j] << '\n';
-#endif // DEBUG
-}
-
-
-void intervals_to_xy_pairs(const IntIntPairRealMap& di_bpa,
-			   RealArray& x_val, RealArray& y_val)
-{
-  // x_sort_unique contains ALL of the unique integer values for this
-  // x_sort_unique contains ALL of the unique integer values for this
-  // discrete interval variable in increasing order.  For example, if
-  // there are 3 intervals for a variable and the bounds are (1,4),
-  // (3,6), and (9,10), x_sorted will be (1,2,3,4,5,6,9,10).
-  IIPRMCIter cit; IntSet x_sort_unique;
-  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    int val, u_bnd = bounds.second;
-    for (val=bounds.first; val<=u_bnd; ++val)
-      x_sort_unique.insert(val);
-  }
-  // copy sorted IntSet to x_val
-  size_t j, num_params = x_sort_unique.size();
-  x_val.resize(num_params);  y_val.resize(num_params);
-  ISIter it = x_sort_unique.begin();
-  for (j=0; j<num_params; ++j, ++it)
-    x_val[j] = *it;
-
-  // Calculate probability densities and account for overlapping intervals.
-  // Loop over the original intervals and see where they fall relative to
-  // the new, sorted intervals for the density calculation.
-  for (j=0; j<num_params; ++j) y_val[j] = 0.;
-  int l_bnd, u_bnd; size_t index;
-  for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
-    const RealRealPair& bounds = cit->first;
-    int val, l_bnd = bounds.first, u_bnd = bounds.second;
-    Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
-    it = x_sort_unique.find(l_bnd);
-    if (it == x_sort_unique.end()) {
-      PCerr << "Error: lower bound not found in sorted set within LHSDriver "
-	    << "mapping of discrete interval uncertain variable."<< std::endl;
-      abort_handler(-1);
+  size_t i, num_rv = random_vars.size(), end_set = start_set + num_set;
+  subset.resize(num_rv, false); // init bits to false
+  for (i=start_set; i<end_set; ++i)
+    // activate design + state vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
+    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+      subset.set(i); break;
     }
-    index = std::distance(x_sort_unique.begin(), it);
-    for (val=l_bnd; val<=u_bnd; ++val, ++index)
-      y_val[index] += di_density;
-  }
-#ifdef DEBUG
-  for (j=0; j<num_params; ++j)
-    PCout << "diuv: x_val[" << j << "] is " << x_val[j]
-	  << " y_val[" << j << "] is " << y_val[j] << '\n';
-#endif // DEBUG
 }
+
+
+void uncertain_subset(const std::vector<RandomVariable>& random_vars,
+		      BitArray& subset)
+{
+  size_t i, num_rv = random_vars.size();
+  subset.resize(num_rv, true); // init bits to true
+  for (i=0; i<num_rv; ++i)
+    // deactivate complement of uncertain vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
+    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+      subset.reset(i); break;
+    }
+}
+
+
+void aleatory_uncertain_subset(const std::vector<RandomVariable>& random_vars,
+			       BitArray& subset)
+{
+  size_t i, num_rv = random_vars.size();
+  subset.resize(num_rv, true); // init bits to true
+  for (i=0; i<num_rv; ++i)
+    // deactivate complement of aleatory uncertain vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_RANGE:    case DISCRETE_RANGE: case DISCRETE_SET_INT:
+    case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+    case CONTINUOUS_INTERVAL_UNCERTAIN: case DISCRETE_INTERVAL_UNCERTAIN:
+    case DISCRETE_UNCERTAIN_SET_INT:    case DISCRETE_UNCERTAIN_SET_STRING:
+    case DISCRETE_UNCERTAIN_SET_REAL:
+      subset.reset(i); break;
+    }
+}
+
+
+void epistemic_uncertain_subset(const std::vector<RandomVariable>& random_vars,
+				BitArray& subset)
+{
+  size_t i, num_rv = random_vars.size();
+  subset.resize(num_rv, false); // init bits to false
+  for (i=0; i<num_rv; ++i)
+    // activate epistemic uncertain vars
+    switch (random_vars[i].type()) {
+    case CONTINUOUS_INTERVAL_UNCERTAIN: case DISCRETE_INTERVAL_UNCERTAIN:
+    case DISCRETE_UNCERTAIN_SET_INT:    case DISCRETE_UNCERTAIN_SET_STRING:
+    case DISCRETE_UNCERTAIN_SET_REAL:
+      subset.set(i); break;
+    }
+}
+
 
 /*
 #ifndef HAVE_BOOST

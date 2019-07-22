@@ -11,7 +11,6 @@
 
 #include "ProbabilityTransformation.hpp"
 
-
 namespace Pecos {
 
 

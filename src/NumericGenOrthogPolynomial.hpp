@@ -17,7 +17,19 @@
 #include "OrthogonalPolynomial.hpp"
 #include "pecos_global_defs.hpp"
 #include "pecos_stat_util.hpp"
-
+#include "BoundedNormalRandomVariable.hpp"
+#include "BoundedLognormalRandomVariable.hpp"
+#include "LoguniformRandomVariable.hpp"
+#include "TriangularRandomVariable.hpp"
+#include "GumbelRandomVariable.hpp"
+#include "FrechetRandomVariable.hpp"
+#include "WeibullRandomVariable.hpp"
+#include "HistogramBinRandomVariable.hpp"
+//#include "PoissonRandomVariable.hpp"
+//#include "BinomialRandomVariable.hpp"
+//#include "NegBinomialRandomVariable.hpp"
+//#include "GeometricRandomVariable.hpp"
+//#include "HypergeometricRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -594,34 +606,45 @@ histogram_pt_distribution(const RealRealMap& pt_pairs)
 
 
 inline void NumericGenOrthogPolynomial::
-continuous_interval_distribution(const RealRealPairRealMap& pt_pairs)
+continuous_interval_distribution(const RealRealPairRealMap& ciu_bpa)
 {
+  // combine intervals to create histogram bin representation (as vector)
+
   parametricUpdate = false;
   if (distributionType == CONTINUOUS_INTERVAL_UNCERTAIN) {
-    if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+    RealVector xy_vec;  intervals_to_xy_vector(ciu_bpa, xy_vec);
+    if (!equivalent(distParams, xy_vec))
+      { parametricUpdate = true; distParams = xy_vec; }
   }
   else {
     distributionType = CONTINUOUS_INTERVAL_UNCERTAIN;
     parametricUpdate = true;
+    intervals_to_xy_vector(ciu_bpa, distParams);
   }
   if (parametricUpdate)
-    { copy_data(pt_pairs, distParams); reset_gauss(); }
+    reset_gauss();
 }
 
 
 inline void NumericGenOrthogPolynomial::
-discrete_interval_distribution(const IntIntPairRealMap& pt_pairs)
+discrete_interval_distribution(const IntIntPairRealMap& diu_bpa)
 {
+  // combine intervals to create discrete uncertain set representation
+  // (as vector)
+
   parametricUpdate = false;
   if (distributionType == DISCRETE_INTERVAL_UNCERTAIN) {
-    if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+    RealVector xy_vec;  intervals_to_xy_vector(diu_bpa, xy_vec);
+    if (!equivalent(distParams, xy_vec))
+      { parametricUpdate = true; distParams = xy_vec; }
   }
-  else
-    { distributionType = DISCRETE_INTERVAL_UNCERTAIN; parametricUpdate = true; }
+  else {
+    distributionType = DISCRETE_INTERVAL_UNCERTAIN;
+    parametricUpdate = true;
+    intervals_to_xy_vector(diu_bpa, distParams);
+  }
   if (parametricUpdate)
-    { copy_data(pt_pairs, distParams); reset_gauss(); }
+    reset_gauss();
 }
 
 

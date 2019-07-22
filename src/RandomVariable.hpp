@@ -15,91 +15,9 @@
 #ifndef RANDOM_VARIABLE_HPP
 #define RANDOM_VARIABLE_HPP
 
-#include "pecos_data_types.hpp"
-#include <boost/math/distributions.hpp>
-#include <boost/math/special_functions/sqrt1pm1.hpp> // includes expm1,log1p
-#include <boost/random/uniform_real.hpp>
-
-namespace bmth = boost::math;
-namespace bmp  = bmth::policies;
+#include "pecos_stat_util.hpp"
 
 namespace Pecos {
-
-// -----------------------------------
-// Non-default boost math/policy types
-// -----------------------------------
-
-// continuous random variable types:
-typedef bmth::
-  normal_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  normal_dist;
-typedef bmth::
-  lognormal_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  lognormal_dist;
-typedef bmth::
-  triangular_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  triangular_dist;
-typedef bmth::
-  exponential_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  exponential_dist;
-typedef bmth::
-  beta_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  beta_dist;
-typedef bmth::
-  gamma_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  gamma_dist;
-typedef bmth::
-  inverse_gamma_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  inv_gamma_dist;
-typedef bmth::
-  extreme_value_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  extreme_value_dist;
-typedef bmth::
-  weibull_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  weibull_dist;
-// discrete random variable types:
-typedef bmth::
-  poisson_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  poisson_dist;
-typedef bmth::
-  binomial_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  binomial_dist;
-typedef bmth::
-  negative_binomial_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  negative_binomial_dist;
-typedef bmth::
-  geometric_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  geometric_dist;
-typedef bmth::
-  hypergeometric_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  hypergeometric_dist;
-// distributions used in statistical utilities (e.g., confidence intervals):
-typedef bmth::
-  chi_squared_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  chi_squared_dist;
-typedef bmth::
-  students_t_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  students_t_dist;
-typedef bmth::
-  fisher_f_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  fisher_f_dist;
 
 
 /// base class for random variable hierarchy

@@ -314,12 +314,16 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
 	  continuous_interval_distribution(
 	    mvd_rep->pull_parameter<RealRealPairRealMap>(i, CIU_BPA));
+	//((IntervalRandomVariable<Real>*)u_rv[i].random_variable_rep())->
+	//  activate_vpp();
 	break;
       // DISCRETE EPISTEMIC
       case DISCRETE_INTERVAL_UNCERTAIN:
 	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
 	  discrete_interval_distribution(
 	    mvd_rep->pull_parameter<IntIntPairRealMap>(i, DIU_BPA));
+	//((IntervalRandomVariable<int>*)u_rv[i].random_variable_rep())->
+	//  activate_vpp();
 	break;
       case DISCRETE_UNCERTAIN_SET_INT:
 	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->

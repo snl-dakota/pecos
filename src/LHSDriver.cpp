@@ -642,7 +642,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntervalRandomVariable<int>* rv_rep
 	= (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
       IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
-      RealArray x_val, y_val;  intervals_to_xy_pairs(di_bpa, x_val, y_val);
+      IntArray i_val;  RealArray x_val, y_val;
+      intervals_to_xy_pairs(di_bpa, i_val, y_val);  cast_data(i_val, x_val);
       lhs_udist_register("DiscInterval", "discrete histogram", av_cntr,
 			 x_val, y_val);
       break;

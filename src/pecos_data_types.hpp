@@ -196,6 +196,147 @@ typedef RealRealPairRealMap::iterator       RRPRMIter;
 typedef RealRealPairRealMap::const_iterator RRPRMCIter;
 
 
+template <typename PecosContainerType>
+inline size_t find_index(const PecosContainerType& c,
+			 const typename PecosContainerType::value_type& val)
+{
+  // For a default container, employ one traversal
+
+  typename PecosContainerType::const_iterator cit;
+  size_t cntr; // force size_t to ensure that _NPOS is valid
+  for (cit=c.begin(), cntr=0; cit!=c.end(); ++cit, ++cntr)
+    if (*cit == val)
+      return cntr;
+  return _NPOS;
+}
+
+
+template <typename ScalarType>
+inline ScalarType find_max(const std::vector<ScalarType>& vec)
+{
+  size_t i, len = vec.size();
+  ScalarType max = std::numeric_limits<ScalarType>::min();
+  for (i=0; i<len; ++i)
+    if (vec[i] > max)
+      max = vec[i];
+  return max;
+}
+
+
+template <typename ValueType>
+inline size_t set_value_to_index(const std::set<ValueType>& s,
+				 const ValueType& val)
+{
+  // For a sorted container, use fast lookup + distance()
+
+  typename std::set<ValueType>::const_iterator cit = s.find(val);
+  return (cit == s.end()) ? _NPOS : std::distance(s.begin(), cit);
+}
+
+
+template <typename KeyType, typename ValueType>
+inline size_t map_key_to_index(const std::map<KeyType, ValueType>& m,
+			       const KeyType& key)
+{
+  // For a sorted container, use fast lookup + distance()
+
+  typename std::map<KeyType, ValueType>::const_iterator cit = m.find(key);
+  return (cit == m.end()) ? _NPOS : std::distance(m.begin(), cit);
+}
+
+
+/// compare two Real values using DBL_EPSILON relative tolerance:
+/// return true if same, false if different
+inline bool real_compare(Real r1, Real r2)
+{
+  if (r1 == r2) // a higher bar than we want, but check before relative test
+    return true;
+  else if (r2 >= DBL_MAX || r2 <= -DBL_MAX) // +/-DBL_MAX or +/-dbl_inf
+    return (r1 == r2);                      // assume outside tol if not equal
+  else if  (std::abs(r2) <= DBL_MIN)        // +/-0 (see IEEE 754)
+    return (std::abs(r1) <= DBL_MIN);       // assume within tol if not equal
+  else
+    return (std::abs(1. - r1/r2) <= DBL_EPSILON); // relative
+}
+
+
+/// compute 1-norm |i| (sum of indices) for the given index_set
+template <typename OrdinalType> 
+inline size_t l1_norm(const std::vector<OrdinalType>& index_set)
+{
+  // hardwire to size_t instead of OrdinalType since could be a large sum
+  // of smaller types
+  size_t i, norm = 0, len = index_set.size();
+  // assume unsigned types since std::abs(index_set[i]) will not compile
+  // for unsigned types on some platforms
+  for (i=0; i<len; ++i)
+    norm += index_set[i];//std::abs(index_set[i]);
+  return norm;
+}
+
+
+/// inflate a scalar specification into a homogeneous vector
+template <typename OrdinalType, typename ScalarType> 
+void inflate_scalar(std::vector<ScalarType>& v, OrdinalType num_v)
+{
+  OrdinalType v_len = v.size();
+  if (v_len != num_v) {
+    if (v_len == 1) {
+      ScalarType v0 = v[0];
+      v.assign(num_v, v0);
+    }
+    else {
+      PCerr << "Error: specification length (" << v_len
+	    << ") does not match target length (" << num_v
+	    << ") in Pecos::inflate_scalar()." << std::endl;
+      abort_handler(-1);
+    }
+  }
+}
+
+
+/// For T=SerialDense{Vector,Matrix} and ContainerT=std::{vector,deque}<T>
+template <typename ContainerT1, typename ContainerT2>
+inline void push_back_to_back(ContainerT1& array1, ContainerT2& array2)
+{
+  typename ContainerT1::iterator p1_it = --array1.end();
+  // avoid deep copy of potentially large Real{Vector,Matrix}
+  // push_back empty instance and update in place
+  array2.push_back(typename ContainerT2::value_type()); // push empty
+  array2.back().swap(*p1_it); // shallow copy
+  array1.erase(p1_it);
+}
+
+
+/// For T=SerialDense{Vector,Matrix} and ContainerT=std::{vector,deque}<T>
+template <typename ContainerT1, typename OrdinalType, typename ContainerT2>
+inline void push_index_to_back(ContainerT1& array1, OrdinalType p1_index,
+			       ContainerT2& array2)
+{
+  typename ContainerT1::iterator p1_it = array1.begin() + p1_index;
+  // avoid deep copy of potentially large Real{Vector,Matrix}
+  // push_back empty instance and update in place
+  array2.push_back(typename ContainerT2::value_type());
+  array2.back().swap(*p1_it); // shallow copy
+  array1.erase(p1_it);
+}
+
+
+/// For T=SerialDense{Vector,Matrix} and ContainerT=std::{vector,deque}<T>
+template <typename ContainerT1, typename OrdinalType, typename ContainerT2>
+inline void push_range_to_back(ContainerT1& array1, OrdinalType p1_index,
+			       ContainerT2& array2)
+{
+  // avoid deep copies of potentially large Real{Vector,Matrix} instances
+  size_t i1, i2, len1 = array1.size(), len2 = array2.size(),
+    new_len2 = len2 + len1 - p1_index;
+  array2.resize(new_len2); // populates end with empty instances
+  for (i1=p1_index, i2=len2; i1<len1; ++i1, ++i2)
+    array2[i2].swap(array1[i1]);
+  array1.resize(p1_index);
+}
+
+
 /// equality operator for SizetArray and SizetMultiArrayConstView
 inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 {
@@ -207,6 +348,44 @@ inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
   // Check each size_t
   for (i=0; i<len; i++)
     if ( smav[i] != sa[i] )
+      return false;
+
+  return true;
+}
+
+
+/// equality operator for vector compared to vector (non-Real types)
+template <typename OrdinalType, typename ScalarType>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v1,
+		const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v2)
+{
+  // Check for equality in array lengths
+  OrdinalType i, len = v1.length();
+  if (v2.length() != len)
+    return false;
+
+  // Check each key,value pair
+  for (i=0; i<len; ++i)
+    if (v1[i] != v2[i])
+      return false;
+
+  return true;
+}
+
+
+/// specialization of equality operator for RealVector compared to RealVector
+template <typename OrdinalType>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, Real>& v1,
+		const Teuchos::SerialDenseVector<OrdinalType, Real>& v2)
+{
+  // Check for equality in array lengths
+  OrdinalType i, len = v1.length();
+  if (v2.length() != len)
+    return false;
+
+  // Check each key,value pair
+  for (i=0; i<len; ++i)
+    if (!real_compare(v1[i], v2[i]))
       return false;
 
   return true;
@@ -315,145 +494,6 @@ bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
   }
 
   return true;
-}
-
-
-template <typename PecosContainerType>
-inline size_t find_index(const PecosContainerType& c,
-			 const typename PecosContainerType::value_type& val)
-{
-  // For a default container, employ one traversal
-
-  typename PecosContainerType::const_iterator cit;
-  size_t cntr; // force size_t to ensure that _NPOS is valid
-  for (cit=c.begin(), cntr=0; cit!=c.end(); ++cit, ++cntr)
-    if (*cit == val)
-      return cntr;
-  return _NPOS;
-}
-
-
-template <typename ScalarType>
-inline ScalarType find_max(const std::vector<ScalarType>& vec)
-{
-  size_t i, len = vec.size();
-  ScalarType max = std::numeric_limits<ScalarType>::min();
-  for (i=0; i<len; ++i)
-    if (vec[i] > max)
-      max = vec[i];
-  return max;
-}
-
-
-template <typename ValueType>
-inline size_t set_value_to_index(const std::set<ValueType>& s,
-				 const ValueType& val)
-{
-  // For a sorted container, use fast lookup + distance()
-
-  typename std::set<ValueType>::const_iterator cit = s.find(val);
-  return (cit == s.end()) ? _NPOS : std::distance(s.begin(), cit);
-}
-
-
-template <typename KeyType, typename ValueType>
-inline size_t map_key_to_index(const std::map<KeyType, ValueType>& m,
-			       const KeyType& key)
-{
-  // For a sorted container, use fast lookup + distance()
-
-  typename std::map<KeyType, ValueType>::const_iterator cit = m.find(key);
-  return (cit == m.end()) ? _NPOS : std::distance(m.begin(), cit);
-}
-
-
-/// compare two Real values using DBL_EPSILON relative tolerance:
-/// return true if same, false if different
-inline bool real_compare(Real r1, Real r2)
-{
-  if (r2 >= DBL_MAX || r2 <= -DBL_MAX) // +/-DBL_MAX or +/-dbl_inf
-    return (r1 == r2);
-  else if  (std::abs(r2) < DBL_MIN)    // +/-0 (see IEEE 754)
-    return (std::abs(r1) < DBL_MIN);
-  else
-    return (std::abs(1. - r1/r2) <= DBL_EPSILON); // relative
-}
-
-
-/// compute 1-norm |i| (sum of indices) for the given index_set
-template <typename OrdinalType> 
-inline size_t l1_norm(const std::vector<OrdinalType>& index_set)
-{
-  // hardwire to size_t instead of OrdinalType since could be a large sum
-  // of smaller types
-  size_t i, norm = 0, len = index_set.size();
-  // assume unsigned types since std::abs(index_set[i]) will not compile
-  // for unsigned types on some platforms
-  for (i=0; i<len; ++i)
-    norm += index_set[i];//std::abs(index_set[i]);
-  return norm;
-}
-
-
-/// inflate a scalar specification into a homogeneous vector
-template <typename OrdinalType, typename ScalarType> 
-void inflate_scalar(std::vector<ScalarType>& v, OrdinalType num_v)
-{
-  OrdinalType v_len = v.size();
-  if (v_len != num_v) {
-    if (v_len == 1) {
-      ScalarType v0 = v[0];
-      v.assign(num_v, v0);
-    }
-    else {
-      PCerr << "Error: specification length (" << v_len
-	    << ") does not match target length (" << num_v
-	    << ") in Pecos::inflate_scalar()." << std::endl;
-      abort_handler(-1);
-    }
-  }
-}
-
-
-/// For T=SerialDense{Vector,Matrix} and ContainerT=std::{vector,deque}<T>
-template <typename ContainerT1, typename ContainerT2>
-inline void push_back_to_back(ContainerT1& array1, ContainerT2& array2)
-{
-  typename ContainerT1::iterator p1_it = --array1.end();
-  // avoid deep copy of potentially large Real{Vector,Matrix}
-  // push_back empty instance and update in place
-  array2.push_back(typename ContainerT2::value_type()); // push empty
-  array2.back().swap(*p1_it); // shallow copy
-  array1.erase(p1_it);
-}
-
-
-/// For T=SerialDense{Vector,Matrix} and ContainerT=std::{vector,deque}<T>
-template <typename ContainerT1, typename OrdinalType, typename ContainerT2>
-inline void push_index_to_back(ContainerT1& array1, OrdinalType p1_index,
-			       ContainerT2& array2)
-{
-  typename ContainerT1::iterator p1_it = array1.begin() + p1_index;
-  // avoid deep copy of potentially large Real{Vector,Matrix}
-  // push_back empty instance and update in place
-  array2.push_back(typename ContainerT2::value_type());
-  array2.back().swap(*p1_it); // shallow copy
-  array1.erase(p1_it);
-}
-
-
-/// For T=SerialDense{Vector,Matrix} and ContainerT=std::{vector,deque}<T>
-template <typename ContainerT1, typename OrdinalType, typename ContainerT2>
-inline void push_range_to_back(ContainerT1& array1, OrdinalType p1_index,
-			       ContainerT2& array2)
-{
-  // avoid deep copies of potentially large Real{Vector,Matrix} instances
-  size_t i1, i2, len1 = array1.size(), len2 = array2.size(),
-    new_len2 = len2 + len1 - p1_index;
-  array2.resize(new_len2); // populates end with empty instances
-  for (i1=p1_index, i2=len2; i1<len1; ++i1, ++i2)
-    array2[i2].swap(array1[i1]);
-  array1.resize(p1_index);
 }
 
 
@@ -731,6 +771,31 @@ void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& v,
     pr.second = (ScalarType1)v[j+1];
     m[pr]     = v[j+2];
   }
+}
+
+
+/// cast Teuchos::SerialDenseVector from one ScalarType to another
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2> 
+void cast_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType1>& sdv1,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType2>& sdv2)
+{
+  OrdinalType i, size_sdv1 = sdv1.length();
+  if (size_sdv1 != sdv2.length())
+    sdv2.sizeUninitialized(size_sdv1);
+  for (i=0; i<size_sdv1; ++i)
+    sdv2[i] = (ScalarType2)sdv1[i];
+}
+
+
+/// cast std::vector from one ScalarType to another
+template <typename ScalarType1, typename ScalarType2> 
+void cast_data(const std::vector<ScalarType1>& v1, std::vector<ScalarType2>& v2)
+{
+  size_t i, size_v1 = v1.size();
+  if (size_v1 != v2.size())
+    v2.resize(size_v1);
+  for (i=0; i<size_v1; ++i)
+    v2[i] = (ScalarType2)v1[i];
 }
 
 

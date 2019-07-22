@@ -181,8 +181,8 @@ inline void RangeVariable<T>::copy_parameters(const RandomVariable& rv)
 template <typename T>
 inline void RangeVariable<T>::no_template_specialization(String fn) const
 {
-  PCerr << "Error: no template specialization of " << fn << "() for this type."
-	<< std::endl;
+  PCerr << "Error: no template specialization of " << fn << "() for "
+	<< "RangeVariable<T>." << std::endl;
   abort_handler(-1);
 }
 
@@ -190,11 +190,6 @@ inline void RangeVariable<T>::no_template_specialization(String fn) const
 template <typename T>
 Real RangeVariable<T>::pdf(Real x) const
 { no_template_specialization("pdf"); return 0.; }
-
-
-template <>
-inline Real RangeVariable<Real>::pdf(Real x) const
-{ return UniformRandomVariable::pdf(lowerBnd, upperBnd); }
 
 
 template <typename T>
@@ -222,19 +217,9 @@ Real RangeVariable<T>::cdf(Real x) const
 { no_template_specialization("cdf"); return 0.; }
 
 
-template <>
-inline Real RangeVariable<Real>::cdf(Real x) const
-{ return UniformRandomVariable::cdf(x, lowerBnd, upperBnd); }
-
-
 template <typename T>
 Real RangeVariable<T>::ccdf(Real x) const
 { no_template_specialization("ccdf"); return 0.; }
-
-
-template <>
-inline Real RangeVariable<Real>::ccdf(Real x) const
-{ return UniformRandomVariable::ccdf(x, lowerBnd, upperBnd); }
 
 
 template <typename T>
@@ -242,34 +227,14 @@ inline Real RangeVariable<T>::inverse_cdf(Real p_cdf) const
 { no_template_specialization("inverse_cdf"); return 0.; }
 
 
-template <>
-inline Real RangeVariable<Real>::inverse_cdf(Real p_cdf) const
-{ return UniformRandomVariable::inverse_cdf(p_cdf, lowerBnd, upperBnd); }
-
-
 template <typename T>
 Real RangeVariable<T>::inverse_ccdf(Real p_ccdf) const
 { no_template_specialization("inverse_ccdf"); return 0.; }
 
 
-template <>
-inline Real RangeVariable<Real>::inverse_ccdf(Real p_ccdf) const
-{ return UniformRandomVariable::inverse_ccdf(p_ccdf, lowerBnd, upperBnd); }
-
-
 template <typename T>
 RealRealPair RangeVariable<T>::moments() const
 { no_template_specialization("moments"); return RealRealPair(); }
-
-
-template <>
-inline RealRealPair RangeVariable<Real>::moments() const
-{
-  RealRealPair moms;
-  UniformRandomVariable::
-    moments_from_params(lowerBnd, upperBnd, moms.first, moms.second);
-  return moms;
-}
 
 
 template <typename T>
@@ -306,20 +271,17 @@ Real RangeVariable<T>::mode() const
 /// for T-valued histogram, return a real-valued mean and std dev
 template <typename T>
 void RangeVariable<T>::
-moments_from_params(const std::map<T, Real>& vals_cnts,
-		    Real& mean, Real& std_dev)
+moments_from_params(const std::set<T>& vals, Real& mean, Real& std_dev)
 {
-  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
-  // assume normalization (counts sum to 1.).
   mean = 0.;
-  Real val, prod, raw2 = 0.;
-  typename std::map<T, Real>::const_iterator cit;
-  for (cit = vals_cnts.begin(); cit != vals_cnts.end(); ++cit) {
-    val   = (Real)cit->first;
-    prod  = cit->second * val; // normalized count * val
-    mean += prod;
-    raw2 += prod * val;        // normalized count * val^2
+  Real val, raw2 = 0.;  size_t num_vals = vals.size();
+  typename std::set<T>::const_iterator cit;
+  for (cit = vals.begin(); cit != vals.end(); ++cit) {
+    val   = (Real)(*cit);
+    mean += val;
+    raw2 += val * val;
   }
+  mean /= num_vals;  raw2 /= num_vals;
   std_dev = std::sqrt(raw2 - mean * mean);
 }
 */
@@ -328,6 +290,44 @@ moments_from_params(const std::map<T, Real>& vals_cnts,
 template <typename T>
 RealRealPair RangeVariable<T>::bounds() const
 { return RealRealPair((Real)lowerBnd, (Real)upperBnd); }
+
+
+//// SPECIALIZATIONS ////
+
+
+template <>
+inline Real RangeVariable<Real>::pdf(Real x) const
+{ return UniformRandomVariable::pdf(lowerBnd, upperBnd); }
+
+
+template <>
+inline Real RangeVariable<Real>::cdf(Real x) const
+{ return UniformRandomVariable::cdf(x, lowerBnd, upperBnd); }
+
+
+template <>
+inline Real RangeVariable<Real>::ccdf(Real x) const
+{ return UniformRandomVariable::ccdf(x, lowerBnd, upperBnd); }
+
+
+template <>
+inline Real RangeVariable<Real>::inverse_cdf(Real p_cdf) const
+{ return UniformRandomVariable::inverse_cdf(p_cdf, lowerBnd, upperBnd); }
+
+
+template <>
+inline Real RangeVariable<Real>::inverse_ccdf(Real p_ccdf) const
+{ return UniformRandomVariable::inverse_ccdf(p_ccdf, lowerBnd, upperBnd); }
+
+
+template <>
+inline RealRealPair RangeVariable<Real>::moments() const
+{
+  RealRealPair moms;
+  UniformRandomVariable::
+    moments_from_params(lowerBnd, upperBnd, moms.first, moms.second);
+  return moms;
+}
 
 } // namespace Pecos
 

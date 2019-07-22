@@ -46,6 +46,13 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  Real cdf(Real x) const;
+  Real ccdf(Real x) const;
+  Real inverse_cdf(Real p_cdf) const;
+  Real inverse_ccdf(Real p_ccdf) const;
+
+  Real pdf(Real x) const;
+
   Real mean() const;
   //Real median() const;
   Real mode() const;
@@ -71,6 +78,17 @@ public:
   //
   //- Heading: Static member functions (global utilities)
   //
+
+  static Real cdf(Real x, const std::map<T, Real>& vals_probs);
+  static Real ccdf(Real x, const std::map<T, Real>& vals_probs);
+  static Real inverse_cdf(Real p_cdf, const std::map<T, Real>& vals_probs);
+  static Real inverse_ccdf(Real p_ccdf, const std::map<T, Real>& vals_probs);
+
+  static Real pdf(Real x, const std::map<T, Real>& vals_probs);
+
+  static Real mode(const std::map<T, Real>& vals_probs);
+
+  static RealRealPair bounds(const std::map<T, Real>& vals_probs);
 
   static void moments_from_params(const std::map<T, Real>& vals_probs,
 				  Real& mean, Real& std_dev);
@@ -176,6 +194,146 @@ void DiscreteSetRandomVariable<T>::copy_parameters(const RandomVariable& rv)
 
 
 template <typename T>
+Real DiscreteSetRandomVariable<T>::
+cdf(Real x, const std::map<T, Real>& vals_probs)
+{
+  // increment CDF probability until x is surpassed
+  typename std::map<T, Real>::const_iterator cit;
+  Real p_cdf = 0.;
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit) {
+    if (x <= (Real)(cit->first)) // has not reached start of this CDF increment
+      return p_cdf;              // return previous value
+    else
+      p_cdf += cit->second;
+  }
+  return 1.;
+}
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::
+ccdf(Real x, const std::map<T, Real>& vals_probs)
+{
+  // decrement CCDF probability until x is surpassed
+  typename std::map<T, Real>::const_iterator cit;
+  Real p_ccdf = 1.;
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit) {
+    if (x < (Real)(cit->first))
+      return p_ccdf;
+    else
+      p_ccdf -= cit->second;
+  }
+  return 0.;
+}
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::
+inverse_cdf(Real p_cdf, const std::map<T, Real>& vals_probs)
+{
+  // increment CDF probability until x is surpassed
+  typename std::map<T, Real>::const_iterator cit;
+  Real accumulated_p = 0., x = 0.; // return of this x value should not happen
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit) {
+    if (p_cdf <= accumulated_p) // CDF prob = P(z <= z-bar)
+      return x;
+    else {
+      accumulated_p += cit->second;
+      x = (Real)(cit->first);
+    }
+  }
+  return (--vals_probs.end())->first;
+}
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::
+inverse_ccdf(Real p_ccdf, const std::map<T, Real>& vals_probs)
+{
+  // decrement CCDF probability until x is surpassed
+  typename std::map<T, Real>::const_iterator cit;
+  Real decremented_p = 1., x = 0.; // return of this x value should not happen
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit) {
+    if (p_ccdf > decremented_p) // CCDF prob = P(z > z-bar)
+      return x;
+    else {
+      decremented_p -= cit->second;
+      x = (Real)(cit->first);
+    }
+  }
+  return (--vals_probs.end())->first;
+}
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::
+pdf(Real x, const std::map<T, Real>& vals_probs)
+{
+  // check to see if x can be converted to type T without loss of Real data
+  T abscissa = (T)x; // cast Real to type T
+  if (!real_compare(x, (Real)abscissa)) return 0.; // did casting change value?
+
+  // x is a valid discrete value, now search for presence in vals_probs
+  typename std::map<T, Real>::const_iterator cit = vals_probs.find(abscissa);
+  return (cit == vals_probs.end()) ? 0. : cit->second;
+}
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::mode(const std::map<T, Real>& vals_probs)
+{
+  Real mode, mode_prob;
+  typename std::map<T, Real>::const_iterator cit = vals_probs.begin();
+  mode = (Real)cit->first;  mode_prob = cit->second;  ++cit;
+  for (; cit != vals_probs.end(); ++cit)
+    if (cit->second > mode_prob)
+      { mode = (Real)cit->first;  mode_prob = cit->second; }
+  return mode;
+}
+
+
+template <typename T>
+RealRealPair DiscreteSetRandomVariable<T>::
+bounds(const std::map<T, Real>& vals_probs)
+{
+  RealRealPair bnds;
+  bnds.first  = (Real)vals_probs.begin()->first;   // lower bound
+  bnds.second = (Real)(--vals_probs.end())->first; // upper bound
+  return bnds;
+}
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::cdf(Real x) const
+{ return cdf(x, valueProbPairs); }
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::ccdf(Real x) const
+{ return ccdf(x, valueProbPairs); }
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::inverse_cdf(Real p_cdf) const
+{ return inverse_cdf(p_cdf, valueProbPairs); }
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::inverse_ccdf(Real p_ccdf) const
+{ return inverse_ccdf(p_ccdf, valueProbPairs); }
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::pdf(Real x) const
+{ return pdf(x, valueProbPairs); }
+
+
+template <typename T>
+Real DiscreteSetRandomVariable<T>::mode() const
+{ return mode(valueProbPairs); }
+
+
+template <typename T>
 RealRealPair DiscreteSetRandomVariable<T>::moments() const
 {
   RealRealPair moms;
@@ -210,26 +368,8 @@ Real DiscreteSetRandomVariable<T>::coefficient_of_variation() const
 
 
 template <typename T>
-Real DiscreteSetRandomVariable<T>::mode() const
-{
-  Real mode, mode_prob;
-  typename std::map<T, Real>::const_iterator cit = valueProbPairs.begin();
-  mode = (Real)cit->first;  mode_prob = cit->second;  ++cit;
-  for (; cit != valueProbPairs.end(); ++cit)
-    if (cit->second > mode_prob)
-      { mode = (Real)cit->first;  mode_prob = cit->second; }
-  return mode;
-}
-
-
-template <typename T>
 RealRealPair DiscreteSetRandomVariable<T>::bounds() const
-{
-  RealRealPair bnds;
-  bnds.first  = (Real)valueProbPairs.begin()->first;   // lower bound
-  bnds.second = (Real)(--valueProbPairs.end())->first; // upper bound
-  return bnds;
-}
+{ return bounds(valueProbPairs); }
 
 
 /// for T-valued histogram, return a real-valued mean and std dev
@@ -260,12 +400,99 @@ moments_from_params(const std::map<T, Real>& vals_probs,
 
 
 template <>
-inline Real DiscreteSetRandomVariable<String>::mode() const
+inline Real DiscreteSetRandomVariable<String>::
+cdf(Real x, const StringRealMap& vals_probs)
+{
+  // increment CDF probability until x is surpassed
+  SRMCIter cit;  size_t index = 0;  Real p_cdf = 0.;
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit, ++index) {
+    if (x <= (Real)index) // has not reached start of this index increment
+      return p_cdf;       // return previous value
+    else
+      p_cdf += cit->second;
+  }
+  return 1.;
+}
+
+
+template <>
+inline Real DiscreteSetRandomVariable<String>::
+ccdf(Real x, const StringRealMap& vals_probs)
+{
+  // decrement CCDF probability until x is surpassed
+  SRMCIter cit;  size_t index = 0;  Real p_ccdf = 1.;
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit, ++index) {
+    if (x < (Real)index)
+      return p_ccdf;
+    else
+      p_ccdf -= cit->second;
+  }
+  return 0.;
+}
+
+
+template <>
+inline Real DiscreteSetRandomVariable<String>::
+inverse_cdf(Real p_cdf, const StringRealMap& vals_probs)
+{
+  // increment CDF probability until x is surpassed
+  SRMCIter cit;  size_t index = 0;
+  Real accumulated_p = 0., x = 0.; // return of this x value should not happen
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit, ++index) {
+    if (p_cdf <= accumulated_p) // CDF prob = P(z <= z-bar)
+      return x;
+    else {
+      accumulated_p += cit->second;
+      x = (Real)index;
+    }
+  }
+  return x;
+}
+
+
+template <>
+inline Real DiscreteSetRandomVariable<String>::
+inverse_ccdf(Real p_ccdf, const StringRealMap& vals_probs)
+{
+  // decrement CCDF probability until x is surpassed
+  SRMCIter cit;  size_t index = 0;
+  Real decremented_p = 1., x = 0.; // return of this x value should not happen
+  for (cit=vals_probs.begin(); cit!=vals_probs.end(); ++cit, ++index) {
+    if (p_ccdf > decremented_p) // CCDF prob = P(z > z-bar)
+      return x;
+    else {
+      decremented_p -= cit->second;
+      x = (Real)index;
+    }
+  }
+  return x;
+}
+
+
+template <>
+inline Real DiscreteSetRandomVariable<String>::
+pdf(Real x, const StringRealMap& vals_probs)
+{
+  // check to see if x can be converted to type T without loss of Real data
+  size_t index = (size_t)x; // cast Real to size_t
+  if ( !real_compare(x, (Real)index) || // did casting change value?
+       index >= vals_probs.size() )      // index out of range
+    return 0.;
+
+  // x is a valid discrete value, now return ith probability from vals_probs
+  SRMCIter cit = vals_probs.begin();  std::advance(cit, index);
+  return cit->second;
+}
+
+
+template <>
+inline Real DiscreteSetRandomVariable<String>::
+mode(const StringRealMap& vals_probs)
 {
   Real mode, mode_prob;
-  SRMCIter cit = valueProbPairs.begin();
+  SRMCIter cit = vals_probs.begin();
   mode = 0.;  mode_prob = cit->second;  ++cit;
-  for (size_t index=1; cit!=valueProbPairs.end(); ++cit, ++index)
+  for (size_t index=1; cit!=vals_probs.end(); ++cit, ++index)
     if (cit->second > mode_prob)
       { mode = (Real)index;  mode_prob = cit->second; }
   return mode;
@@ -273,24 +500,25 @@ inline Real DiscreteSetRandomVariable<String>::mode() const
 
 
 template <>
-inline RealRealPair DiscreteSetRandomVariable<String>::bounds() const
+inline RealRealPair DiscreteSetRandomVariable<String>::
+bounds(const StringRealMap& vals_probs)
 {
   RealRealPair bnds;
-  bnds.first  = 0.;                                 // index lower bound
-  bnds.second = (Real)(valueProbPairs.size() - 1); // index upper bound
+  bnds.first  = 0.;                            // index lower bound
+  bnds.second = (Real)(vals_probs.size() - 1); // index upper bound
   return bnds;
 }
 
 
 template <>
 inline void DiscreteSetRandomVariable<String>::
-moments_from_params(const StringRealMap& s_prs, Real& mean, Real& std_dev)
+moments_from_params(const StringRealMap& vals_probs, Real& mean, Real& std_dev)
 {
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
   // assume normalization (probs sum to 1.).
   mean = 0.;
   Real val, prod, raw2 = 0.;  size_t index = 0;  SRMCIter cit;
-  for (cit = s_prs.begin(); cit != s_prs.end(); ++cit, ++index) {
+  for (cit = vals_probs.begin(); cit != vals_probs.end(); ++cit, ++index) {
     val   = (Real)index;
     prod  = cit->second * val; // normalized prob * val
     mean += prod;
