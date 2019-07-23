@@ -114,8 +114,18 @@ Pecos::Real defaultrnum2( void );
 }
 #endif // HAVE_LHS
 
-
 namespace Pecos {
+
+
+void LHSDriver::abort_if_no_lhs()
+{
+#ifndef HAVE_LHS
+  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
+        << std::endl;
+  abort_handler(-1);
+#endif
+}
+
 
 void LHSDriver::seed(int seed)
 {
