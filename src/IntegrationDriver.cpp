@@ -423,27 +423,27 @@ initialize_grid(const MultivariateDistribution& u_dist,
     const ShortArray&   u_types = u_dist.random_variable_types();
     const BitArray& active_vars = u_dist.active_variables();
     numVars = (active_vars.empty()) ? u_types.size() : active_vars.count();
-    ShortArray basis_types; bool dist_params;
+    ShortArray basis_types;
     if (ec_options.expBasisType == NODAL_INTERPOLANT ||
 	ec_options.expBasisType == HIERARCHICAL_INTERPOLANT) {
       driverMode = INTERPOLATION_MODE;
-      dist_params = SharedInterpPolyApproxData::
+      SharedInterpPolyApproxData::
 	initialize_driver_types_rules(u_dist, bc_options,
 				      basis_types, collocRules);
     }
     else {
       driverMode = INTEGRATION_MODE;
-      dist_params = SharedPolyApproxData::
+      SharedPolyApproxData::
 	initialize_orthogonal_basis_types_rules(u_dist, bc_options,
 						basis_types, collocRules);
     }
 
     SharedPolyApproxData::
       initialize_polynomial_basis(basis_types, collocRules, polynomialBasis);
-    // TO DO: need MultivariateDistribution instance
-    //if (dist_params)
-    //  SharedPolyApproxData::
-    //    update_basis_distribution_parameters(u_types,mv_dist,polynomialBasis);
+
+    // Note: this update to polynomialBasis is managed at run time
+    //SharedPolyApproxData::
+    //  update_basis_distribution_parameters(mv_dist, polynomialBasis);
 
     for (size_t i=0; i<numVars; i++)
       if (basis_types[i] == HERMITE_INTERP ||

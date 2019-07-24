@@ -27,11 +27,11 @@ construct_basis(const MultivariateDistribution& u_dist,
 		std::vector<BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
-  bool dist_params = initialize_driver_types_rules(u_dist, bc_options,
-						   basis_types, colloc_rules);
+  initialize_driver_types_rules(u_dist, bc_options, basis_types, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
-  if (dist_params)
-    update_basis_distribution_parameters(u_dist, poly_basis);
+
+  // The following update now occurs at run time:
+  //update_basis_distribution_parameters(u_dist, poly_basis);
 }
 
 
@@ -39,22 +39,22 @@ construct_basis(const MultivariateDistribution& u_dist,
     collocation points and weights by an integration driver.  These
     may involve orthogonal polynomials which will differ from the
     interpolation polynomial types used in the basis. */
-bool SharedInterpPolyApproxData::
+void SharedInterpPolyApproxData::
 initialize_driver_types_rules(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      ShortArray& basis_types, ShortArray& colloc_rules)
 {
   const ShortArray&   u_types = u_dist.random_variable_types();
   const BitArray& active_vars = u_dist.active_variables();
-  bool extra_dist_params = false, no_mask = active_vars.empty();
+  bool no_mask = active_vars.empty();
   size_t i, av_cntr, num_v = u_types.size(),
     num_av = (no_mask) ? num_v : active_vars.count();
   basis_types.resize(num_av); colloc_rules.resize(num_av);
 
-  // Initialize basis_types, colloc_rules, and extra_dist_params from u_types.
-  // interpolation has different requirements from integration/projection; i.e,
-  // a good choice for interpolation nodes minimize the Lebesgue constant.  This
-  // goal is reflected in the STD_UNIFORM case below.
+  // Initialize basis_types and colloc_rules from u_types
+  // Note: interpolation has different requirements from integration/projection;
+  // i.e, a good choice for interpolation nodes minimize the Lebesgue constant.
+  // This goal is reflected in the STD_UNIFORM case below.
   for (i=0, av_cntr=0; i<num_v; ++i)
     if (no_mask || active_vars[i]) {
       switch (u_types[i]) {
@@ -84,15 +84,13 @@ initialize_driver_types_rules(const MultivariateDistribution& u_dist,
 	}
 	break;
       default: // all other cases currently rely on Gaussian quadrature rules
-	if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
-	      basis_types[av_cntr], colloc_rules[av_cntr]))
-	  extra_dist_params = true;
+	initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+					      basis_types[av_cntr],
+					      colloc_rules[av_cntr]);
 	break;
       }
       ++av_cntr;
     }
-
-  return extra_dist_params;
 }
 
 

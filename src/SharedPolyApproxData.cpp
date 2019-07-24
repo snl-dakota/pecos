@@ -25,7 +25,7 @@ namespace Pecos {
 /** This version supports only orthogonal polynomial types.  In this case,
     the polynomial types needed for an orthogonal basis and for computing
     collocation points and weights in an integration driver are the same. */
-bool SharedPolyApproxData::
+void SharedPolyApproxData::
 initialize_orthogonal_basis_types_rules(const MultivariateDistribution& u_dist,
 					const BasisConfigOptions& bc_options,
 					ShortArray& basis_types,
@@ -33,7 +33,7 @@ initialize_orthogonal_basis_types_rules(const MultivariateDistribution& u_dist,
 {
   const ShortArray&   u_types = u_dist.random_variable_types();
   const BitArray& active_vars = u_dist.active_variables();
-  bool extra_dist_params = false, no_mask = active_vars.empty();
+  bool no_mask = active_vars.empty();
   size_t i, av_cntr, num_v = u_types.size(),
     num_av = (no_mask) ? num_v : active_vars.count();
   basis_types.resize(num_av); colloc_rules.resize(num_av);
@@ -41,29 +41,26 @@ initialize_orthogonal_basis_types_rules(const MultivariateDistribution& u_dist,
   // Initialize basis_types, colloc_rules, and extra_dist_params from u_types:
   for (i=0, av_cntr=0; i<num_v; ++i)
     if (no_mask || active_vars[i]) {
-      if ( initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
-	     basis_types[av_cntr], colloc_rules[av_cntr]) )
-	extra_dist_params = true;
+      initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+					    basis_types[av_cntr],
+					    colloc_rules[av_cntr]);
       ++av_cntr;
     }
-
-  return extra_dist_params;
 }
 
 
-bool SharedPolyApproxData::
+void SharedPolyApproxData::
 initialize_orthogonal_basis_type_rule(short u_type,
 				      const BasisConfigOptions& bc_options,
 				      short& basis_type, short& colloc_rule)
 {
   // > open Gauss rules are used for all global cases
   // > nested closed rules are used for piecewise approximations
-  bool extra_dist_params;
   switch (u_type) {
   case STD_NORMAL:
     basis_type  = HERMITE_ORTHOG;
     colloc_rule = (bc_options.nestedRules) ? GENZ_KEISTER : GAUSS_HERMITE;
-    extra_dist_params = false; break;
+    break;
   case STD_UNIFORM:
     basis_type = LEGENDRE_ORTHOG;
     // no piecewise orthogonal polynomial bases at this time
@@ -72,13 +69,11 @@ initialize_orthogonal_basis_type_rule(short u_type,
     //    NEWTON_COTES : CLENSHAW_CURTIS;
     //else
     colloc_rule = (bc_options.nestedRules) ? GAUSS_PATTERSON : GAUSS_LEGENDRE;
-    extra_dist_params = false; break;
+    break;
   case STD_EXPONENTIAL:
-    basis_type = LAGUERRE_ORTHOG; colloc_rule = GAUSS_LAGUERRE;
-    extra_dist_params = false; break;
+    basis_type = LAGUERRE_ORTHOG; colloc_rule = GAUSS_LAGUERRE; break;
   case STD_BETA:
-    basis_type = JACOBI_ORTHOG;   colloc_rule = GAUSS_JACOBI;
-    extra_dist_params = true; break;
+    basis_type = JACOBI_ORTHOG;   colloc_rule = GAUSS_JACOBI;   break;
     // a special case of Jacobi is Chebyshev polynomials for alpha=beta=-1/2,
     // which are orthogonal to the weight fn 1/sqrt(1-x^2).
     //case BETA_CHEBY:
@@ -90,27 +85,19 @@ initialize_orthogonal_basis_type_rule(short u_type,
     // polynomials, as these points correspond to extrema rather than roots
     // (point sets from Fejer's first rule are roots, but are not nested).
   case STD_GAMMA:
-    basis_type = GEN_LAGUERRE_ORTHOG; colloc_rule = GEN_GAUSS_LAGUERRE;
-    extra_dist_params = true; break;
+    basis_type = GEN_LAGUERRE_ORTHOG; colloc_rule = GEN_GAUSS_LAGUERRE; break;
   case POISSON:
-    basis_type = CHARLIER_DISCRETE; colloc_rule = GAUSS_CHARLIER;
-    extra_dist_params = true; break;
+    basis_type = CHARLIER_DISCRETE;   colloc_rule = GAUSS_CHARLIER;     break;
   case BINOMIAL:
-    basis_type = KRAWTCHOUK_DISCRETE; colloc_rule = GAUSS_KRAWTCHOUK;
-    extra_dist_params = true; break;
+    basis_type = KRAWTCHOUK_DISCRETE; colloc_rule = GAUSS_KRAWTCHOUK;   break;
   case NEGATIVE_BINOMIAL:
   case GEOMETRIC: // special case of NEGATIVE_BINOMIAL
-    basis_type = MEIXNER_DISCRETE; colloc_rule = GAUSS_MEIXNER;
-    extra_dist_params = true; break;
+    basis_type = MEIXNER_DISCRETE;    colloc_rule = GAUSS_MEIXNER;      break;
   case HYPERGEOMETRIC:
-    basis_type = HAHN_DISCRETE; colloc_rule = GAUSS_HAHN;
-    extra_dist_params = true; break;
+    basis_type = HAHN_DISCRETE;       colloc_rule = GAUSS_HAHN;         break;
   default:
-    basis_type = NUM_GEN_ORTHOG; colloc_rule = GOLUB_WELSCH;
-    extra_dist_params = true; break;
+    basis_type = NUM_GEN_ORTHOG;      colloc_rule = GOLUB_WELSCH;       break;
   }
-
-  return extra_dist_params;
 }
 
 

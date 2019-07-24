@@ -62,7 +62,7 @@ public:
       computing their Gauss points and weights within integration drivers;
       thus they differ in general from the interpolation polynomial basis
       used for approximation. */
-  static bool initialize_driver_types_rules(
+  static void initialize_driver_types_rules(
     const MultivariateDistribution& u_dist,
     const BasisConfigOptions& bc_options, ShortArray& basis_types,
     ShortArray& colloc_rules);
