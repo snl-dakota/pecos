@@ -315,10 +315,11 @@ public:
   virtual void combined_to_active(bool clear_combined = true);
 
   /// construct polynomial basis, for approximation and/or Gauss points/weights
-  virtual void construct_basis(const Pecos::MultivariateDistribution& mv_dist);
+  virtual void
+    construct_basis(const Pecos::MultivariateDistribution& mv_dist) = 0;
   /// update distribution parameters for orthogonal polynomial basis
   virtual void update_basis_distribution_parameters(
-    const Pecos::MultivariateDistribution& mv_dist);
+    const Pecos::MultivariateDistribution& mv_dist) = 0;
 
   /// set derived polynomialBasis
   virtual void
