@@ -76,6 +76,8 @@ public:
 
   void pre_combine_data();
 
+  //void construct_basis(const MultivariateDistribution& u_dist);
+
 protected:
 
   //
@@ -150,6 +152,18 @@ SharedProjectOrthogPolyApproxData(short basis_type,
 
 inline SharedProjectOrthogPolyApproxData::~SharedProjectOrthogPolyApproxData()
 { }
+
+
+/*
+// Good for self-contained Pecos, but driverRep grid initialization is
+// currently integrated with Dakota::NonDIntegration initialization
+inline void SharedProjectOrthogPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist)
+{
+  SharedOrthogPolyApproxData::construct_basis(u_dist);
+  driverRep->initialize_grid(polynomialBasis);
+}
+*/
 
 
 inline IntegrationDriver* SharedProjectOrthogPolyApproxData::driver()

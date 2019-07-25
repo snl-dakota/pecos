@@ -314,6 +314,21 @@ public:
   /// promotes combined approximation data into active data
   virtual void combined_to_active(bool clear_combined = true);
 
+  /// construct polynomial basis, for approximation and/or Gauss points/weights
+  virtual void construct_basis(const Pecos::MultivariateDistribution& mv_dist);
+  /// update distribution parameters for orthogonal polynomial basis
+  virtual void update_basis_distribution_parameters(
+    const Pecos::MultivariateDistribution& mv_dist);
+
+  /// set derived polynomialBasis
+  virtual void
+    polynomial_basis(const std::vector<Pecos::BasisPolynomial>& poly_basis) = 0;
+  /// get derived polynomialBasis
+  virtual const std::vector<Pecos::BasisPolynomial>&
+    polynomial_basis() const = 0;
+  /// get derived polynomialBasis
+  virtual std::vector<Pecos::BasisPolynomial>& polynomial_basis() = 0;
+
   //
   //- Heading: Member functions
   //

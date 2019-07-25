@@ -142,6 +142,8 @@ public:
   const std::vector<BasisPolynomial>& polynomial_basis() const;
   /// return polynomialBasis
   std::vector<BasisPolynomial>& polynomial_basis();
+  /// set polynomialBasis
+  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
   /// set driverMode
   void mode(short driver_mode);
@@ -284,6 +286,14 @@ IntegrationDriver::polynomial_basis() const
 
 inline std::vector<BasisPolynomial>& IntegrationDriver::polynomial_basis()
 { return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
+
+
+inline void IntegrationDriver::
+polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
+{
+  if (driverRep) driverRep->polynomialBasis = poly_basis;
+  else           polynomialBasis = poly_basis;
+}
 
 
 inline void IntegrationDriver::mode(short driver_mode)

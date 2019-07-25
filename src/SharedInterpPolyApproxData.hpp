@@ -94,6 +94,17 @@ protected:
 
   void clear_inactive_data();
 
+  void construct_basis(const MultivariateDistribution& u_dist);
+  void update_basis_distribution_parameters(
+    const MultivariateDistribution& u_dist);
+
+  /// get polynomialBasis for grid points/weights from driverRep (const)
+  const std::vector<BasisPolynomial>& polynomial_basis() const;
+  /// get polynomialBasis for grid points/weights from driverRep
+  std::vector<BasisPolynomial>& polynomial_basis();
+  /// set polynomialBasis for grid points/weights using driverRep
+  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
+
   //
   //- Heading: New virtual functions
   //
@@ -414,6 +425,14 @@ inline void SharedInterpPolyApproxData::update_active_iterators()
 
 
 inline void SharedInterpPolyApproxData::
+update_basis_distribution_parameters(const MultivariateDistribution& u_dist)
+{
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(u_dist, driverRep->polynomial_basis());
+}
+
+
+inline void SharedInterpPolyApproxData::
 resize_polynomial_basis(unsigned short max_level)
 {
   size_t i, basis_size = polynomialBasis.size();
@@ -453,6 +472,21 @@ inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)
 
 inline void SharedInterpPolyApproxData::clear_inactive_data()
 { driverRep->clear_inactive(); }
+
+
+inline const std::vector<BasisPolynomial>& SharedInterpPolyApproxData::
+polynomial_basis() const
+{ return driverRep->polynomial_basis(); }
+
+
+inline std::vector<BasisPolynomial>& SharedInterpPolyApproxData::
+polynomial_basis()
+{ return driverRep->polynomial_basis(); }
+
+
+inline void SharedInterpPolyApproxData::
+polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
+{ driverRep->polynomial_basis(poly_basis); }
 
 
 inline Real SharedInterpPolyApproxData::

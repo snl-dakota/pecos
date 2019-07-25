@@ -61,6 +61,16 @@ public:
   //
 
   bool push_available();
+  void construct_basis(const MultivariateDistribution& u_dist);
+  void update_basis_distribution_parameters(
+    const MultivariateDistribution& u_dist);
+
+  /// get polynomialBasis (const)
+  const std::vector<BasisPolynomial>& polynomial_basis() const;
+  /// get polynomialBasis
+  std::vector<BasisPolynomial>& polynomial_basis();
+  /// set polynomialBasis
+  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
   //
   //- Heading: Member functions
@@ -94,21 +104,8 @@ public:
   /// uniformly decrement active approxOrder
   void decrement_order();
 
-  /// invoke initialize_orthogonal_basis_types_rules(),
-  /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters() using class member data
-  void construct_basis(const MultivariateDistribution& u_dist);
-  
-  /// invoke initialize_orthogonal_basis_types_rules(),
-  /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters() using passed data
-  static void construct_basis(const MultivariateDistribution& u_dist,
-			      const BasisConfigOptions& bc_options,
-			      std::vector<BasisPolynomial>& poly_basis);
-
-  /// invoke initialize_orthogonal_basis_types_rules(),
-  /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters() using passed data
+  /// invoke initialize_orthogonal_basis_types_rules() and
+  /// initialize_polynomial_basis()
   static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis,
@@ -118,12 +115,6 @@ public:
   void orthogonal_basis_types(const ShortArray& opb_types);
   /// get orthogPolyTypes
   const ShortArray& orthogonal_basis_types() const;
-
-  /// get polynomialBasis
-  const std::vector<BasisPolynomial>& polynomial_basis() const;
-  std::vector<BasisPolynomial>& polynomial_basis();
-  /// set polynomialBasis
-  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
@@ -503,24 +494,35 @@ inline void SharedOrthogPolyApproxData::decrement_order()
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist,
+		const BasisConfigOptions& bc_options,
+		std::vector<BasisPolynomial>& poly_basis,
+		ShortArray& basis_types, ShortArray& colloc_rules)
+{
+  // Construct time initializations
+  initialize_orthogonal_basis_types_rules(u_dist, bc_options,
+					  basis_types, colloc_rules);
+  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
+
+  // The following update now occurs at run time:
+  //update_basis_distribution_parameters(u_dist, poly_basis);
+}
+
+
+inline void SharedOrthogPolyApproxData::
 construct_basis(const MultivariateDistribution& u_dist)
 {
   ShortArray colloc_rules;
   construct_basis(u_dist, basisConfigOptions, polynomialBasis,
-		  orthogPolyTypes, colloc_rules);		  
+		  orthogPolyTypes, colloc_rules);
 }
 
 
-/** This function is invoked to create orthogPolyTypes and polynomialBasis
-    for cases where they have not already been created by an
-    IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const MultivariateDistribution& u_dist,
-		const BasisConfigOptions& bc_options,
-		std::vector<BasisPolynomial>& poly_basis)
+update_basis_distribution_parameters(const MultivariateDistribution& u_dist)
 {
-  ShortArray basis_types, colloc_rules;
-  construct_basis(u_dist, bc_options, poly_basis, basis_types, colloc_rules);
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(u_dist, polynomialBasis);
 }
 
 

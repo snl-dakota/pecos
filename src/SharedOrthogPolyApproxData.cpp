@@ -66,25 +66,6 @@ void SharedOrthogPolyApproxData::allocate_data()
 }
 
 
-/** This function is invoked to create orthogPolyTypes and polynomialBasis
-    for cases where they have not already been created by an
-    IntegrationDriver (i.e., expansion_samples or regression). */
-void SharedOrthogPolyApproxData::
-construct_basis(const MultivariateDistribution& u_dist,
-		const BasisConfigOptions& bc_options,
-		std::vector<BasisPolynomial>& poly_basis,
-		ShortArray& basis_types, ShortArray& colloc_rules)
-{
-  // Construct time initializations
-  initialize_orthogonal_basis_types_rules(u_dist, bc_options,
-					  basis_types, colloc_rules);
-  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
-
-  // The following update now occurs at run time:
-  //update_basis_distribution_parameters(u_dist, poly_basis);
-}
-
-
 void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
 {
   if (activeKey != key) {
