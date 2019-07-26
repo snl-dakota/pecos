@@ -425,6 +425,17 @@ inline void SharedInterpPolyApproxData::update_active_iterators()
 
 
 inline void SharedInterpPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist)
+{
+  // This basis is only used for point/weight generation;
+  // polynomialBasis provides the num_vars x num_levels interpolant basis
+  std::vector<Pecos::BasisPolynomial> driver_basis;
+  construct_basis(u_dist, basisConfigOptions, driver_basis);
+  driverRep->polynomial_basis(driver_basis); // set basis but defer grid init
+}
+
+
+inline void SharedInterpPolyApproxData::
 update_basis_distribution_parameters(const MultivariateDistribution& u_dist)
 {
   SharedPolyApproxData::

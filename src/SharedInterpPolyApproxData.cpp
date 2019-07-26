@@ -22,17 +22,6 @@ namespace Pecos {
 
 
 void SharedInterpPolyApproxData::
-construct_basis(const MultivariateDistribution& u_dist)
-{
-  // This basis is only used for point/weight generation;
-  // polynomialBasis provides the num_vars x num_levels interpolant basis
-  std::vector<Pecos::BasisPolynomial> driver_basis;
-  construct_basis(u_dist, basisConfigOptions, driver_basis);
-  driverRep->polynomial_basis(driver_basis); // set basis but defer grid init
-}
-
-
-void SharedInterpPolyApproxData::
 construct_basis(const MultivariateDistribution& u_dist,
 		const BasisConfigOptions& bc_options,
 		std::vector<BasisPolynomial>& poly_basis)
