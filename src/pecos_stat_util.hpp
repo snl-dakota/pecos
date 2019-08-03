@@ -287,6 +287,7 @@ void intervals_to_xy_vector(const std::map<std::pair<T,T>, Real>& bpa,
 
   // flatten arrays into a single vector
   size_t i, len = x_vals.size(), cntr = 0;
+  xy_vals.sizeUninitialized(2*len);
   for (i=0; i<len; ++i) {
     xy_vals[cntr] = (Real)x_vals[i];  ++cntr;
     xy_vals[cntr] =       y_vals[i];  ++cntr;
