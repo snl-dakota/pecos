@@ -162,7 +162,7 @@ template <typename T>
 void IntervalRandomVariable<T>::activate_vpp()
 {
   if (valueProbPairs.empty()) // activate once to avoid copying repeatedly
-    intervals_to_xy_map(intervalBPA, valueProbPairs);
+    intervals_to_xy_pdf(intervalBPA, valueProbPairs);
 }
 */
 
@@ -171,7 +171,7 @@ template <typename T>
 void IntervalRandomVariable<T>::update_vpp_if_active()
 {
   if (!valueProbPairs.empty()) // update valueProbPairs if already activated
-    intervals_to_xy_map(intervalBPA, valueProbPairs);
+    intervals_to_xy_pdf(intervalBPA, valueProbPairs);
 }
 
 
@@ -244,7 +244,7 @@ Real IntervalRandomVariable<T>::cdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return DiscreteSetRandomVariable<T>::cdf(x, xy_map);
   }
   else
@@ -258,7 +258,7 @@ Real IntervalRandomVariable<T>::ccdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return DiscreteSetRandomVariable<T>::ccdf(x, xy_map);
   }
   else
@@ -272,7 +272,7 @@ Real IntervalRandomVariable<T>::inverse_cdf(Real p_cdf) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return DiscreteSetRandomVariable<T>::inverse_cdf(p_cdf, xy_map);
   }
   else
@@ -286,7 +286,7 @@ Real IntervalRandomVariable<T>::inverse_ccdf(Real p_ccdf) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return DiscreteSetRandomVariable<T>::inverse_ccdf(p_ccdf, xy_map);
   }
   else
@@ -300,7 +300,7 @@ Real IntervalRandomVariable<T>::pdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return DiscreteSetRandomVariable<T>::pdf(x, xy_map);
   }
   else
@@ -325,7 +325,7 @@ RealRealPair IntervalRandomVariable<T>::moments() const
 
   RealRealPair moms;
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     DiscreteSetRandomVariable<T>::
       moments_from_params(xy_map, moms.first, moms.second);
   }
@@ -357,7 +357,7 @@ Real IntervalRandomVariable<T>::mode() const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    std::map<T, Real> xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    std::map<T, Real> xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return DiscreteSetRandomVariable<T>::mode(xy_map);
   }
   else
@@ -396,7 +396,7 @@ moments_from_params(const std::map<std::pair<T, T>, Real>& bpa,
 		    Real& mean, Real& std_dev)
 {
   typename std::map<T, Real> xy_map;
-  intervals_to_xy_map(bpa, xy_map);
+  intervals_to_xy_pdf(bpa, xy_map);
   DiscreteSetRandomVariable<T>::moments_from_params(xy_map, mean, std_dev);
 }
 
@@ -410,7 +410,7 @@ inline Real IntervalRandomVariable<Real>::cdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return HistogramBinRandomVariable::cdf(x, xy_map);
   }
   else
@@ -424,7 +424,7 @@ inline Real IntervalRandomVariable<Real>::ccdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return HistogramBinRandomVariable::ccdf(x, xy_map);
   }
   else
@@ -438,7 +438,7 @@ inline Real IntervalRandomVariable<Real>::inverse_cdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return HistogramBinRandomVariable::inverse_cdf(x, xy_map);
   }
   else
@@ -452,7 +452,7 @@ inline Real IntervalRandomVariable<Real>::inverse_ccdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return HistogramBinRandomVariable::inverse_ccdf(x, xy_map);
   }
   else
@@ -466,7 +466,7 @@ inline Real IntervalRandomVariable<Real>::pdf(Real x) const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return HistogramBinRandomVariable::pdf(x, xy_map);
   }
   else
@@ -481,7 +481,7 @@ inline RealRealPair IntervalRandomVariable<Real>::moments() const
 
   RealRealPair moms;
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     HistogramBinRandomVariable::
       moments_from_params(xy_map, moms.first, moms.second);
   }
@@ -498,7 +498,7 @@ inline Real IntervalRandomVariable<Real>::mode() const
   //activate_vpp(); // can't do this since non-const
 
   if (valueProbPairs.empty()) {
-    RealRealMap xy_map;  intervals_to_xy_map(intervalBPA, xy_map);
+    RealRealMap xy_map;  intervals_to_xy_pdf(intervalBPA, xy_map);
     return HistogramBinRandomVariable::mode(xy_map);
   }
   else
@@ -510,8 +510,7 @@ template <>
 inline void IntervalRandomVariable<Real>::
 moments_from_params(const RealRealPairRealMap& bpa, Real& mean, Real& std_dev)
 {
-  RealRealMap xy_map;
-  intervals_to_xy_map(bpa, xy_map);
+  RealRealMap xy_map;  intervals_to_xy_pdf(bpa, xy_map);
   HistogramBinRandomVariable::moments_from_params(xy_map, mean, std_dev);
 }
 

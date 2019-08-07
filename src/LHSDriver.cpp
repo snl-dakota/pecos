@@ -405,7 +405,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       check_finite(l_bnd, u_bnd);
       if (u_bnd > l_bnd) {
 	RealArray x_val, y_val;
-	int_range_to_xy_pairs(l_bnd, u_bnd, x_val, y_val);
+	int_range_to_xy_pdf(l_bnd, u_bnd, x_val, y_val);
 	lhs_udist_register("DiscRange", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -421,7 +421,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       size_t set_size = int_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
-	set_to_xy_pairs(int_set, x_val, y_val); // set values
+	set_to_xy_pdf(int_set, x_val, y_val); // set values
 	lhs_udist_register("DiscSetI", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -436,7 +436,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       int set_size = str_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
-	int_range_to_xy_pairs(0, set_size - 1, x_val, y_val); // indices
+	int_range_to_xy_pdf(0, set_size - 1, x_val, y_val); // indices
 	lhs_udist_register("DiscSetS", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -451,7 +451,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       size_t set_size = real_set.size();
       if (set_size > 1) {
 	RealArray x_val, y_val;
-	set_to_xy_pairs(real_set, x_val, y_val); // set values
+	set_to_xy_pdf(real_set, x_val, y_val); // set values
 	lhs_udist_register("DiscSetR", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -561,7 +561,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       HistogramBinRandomVariable* rv_rep
 	= (HistogramBinRandomVariable*)rv_i.random_variable_rep();
       RealRealMap h_bin_pairs; rv_rep->pull_parameter(H_BIN_PAIRS, h_bin_pairs);
-      RealArray x_val, y_val;  bins_to_xy_pairs(h_bin_pairs, x_val, y_val);
+      RealArray x_val, y_val;  bins_to_xy_cdf(h_bin_pairs, x_val, y_val);
+      // Note: continuous linear accumulates CDF with first y=0 and last y=1
       lhs_udist_register("HistBin", "continuous linear", av_cntr, x_val, y_val);
       break;
     }
@@ -603,7 +604,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntRealMap ir_map;  rv_rep->pull_parameter(H_PT_INT_PAIRS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;  map_to_xy_pairs(ir_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pdf(ir_map, x_val, y_val);
 	lhs_udist_register("HistPtInt", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -617,7 +618,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       StringRealMap sr_map;  rv_rep->pull_parameter(H_PT_STR_PAIRS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;  map_indices_to_xy_pairs(sr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_indices_to_xy_pdf(sr_map, x_val, y_val);
 	lhs_udist_register("HistPtString","discrete histogram",av_cntr,
 			   x_val, y_val);
       }
@@ -631,7 +632,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       RealRealMap rr_map;  rv_rep->pull_parameter(H_PT_REAL_PAIRS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;  map_to_xy_pairs(rr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pdf(rr_map, x_val, y_val);
 	lhs_udist_register("HistPtReal", "discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -643,7 +644,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntervalRandomVariable<Real>* rv_rep
 	= (IntervalRandomVariable<Real>*)rv_i.random_variable_rep();
       RealRealPairRealMap ci_bpa;  rv_rep->pull_parameter(CIU_BPA, ci_bpa);
-      RealArray x_val, y_val;  intervals_to_xy_pairs(ci_bpa, x_val, y_val);
+      // Note: continuous linear accumulates CDF with first y=0 and last y=1
+      RealArray x_val, y_val;  intervals_to_xy_cdf(ci_bpa, x_val, y_val);
       lhs_udist_register("ContInterval", "continuous linear", av_cntr,
 			 x_val, y_val);
       break;
@@ -653,7 +655,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 	= (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
       IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
       IntArray i_val;  RealArray x_val, y_val;
-      intervals_to_xy_pairs(di_bpa, i_val, y_val);  cast_data(i_val, x_val);
+      intervals_to_xy_pdf(di_bpa, i_val, y_val);  cast_data(i_val, x_val);
       lhs_udist_register("DiscInterval", "discrete histogram", av_cntr,
 			 x_val, y_val);
       break;
@@ -664,7 +666,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       IntRealMap ir_map;  rv_rep->pull_parameter(DUSI_VALUES_PROBS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;  map_to_xy_pairs(ir_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pdf(ir_map, x_val, y_val);
 	lhs_udist_register("DiscUncSetI","discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -678,7 +680,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       StringRealMap sr_map;  rv_rep->pull_parameter(DUSS_VALUES_PROBS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;  map_indices_to_xy_pairs(sr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_indices_to_xy_pdf(sr_map, x_val, y_val);
 	lhs_udist_register("DiscUncSetS","discrete histogram", av_cntr,
 			   x_val, y_val);
       }
@@ -692,7 +694,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       RealRealMap rr_map;  rv_rep->pull_parameter(DUSR_VALUES_PROBS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
-	RealArray x_val, y_val;  map_to_xy_pairs(rr_map, x_val, y_val);
+	RealArray x_val, y_val;  map_to_xy_pdf(rr_map, x_val, y_val);
 	lhs_udist_register("DiscUncSetR","discrete histogram", av_cntr,
 			   x_val, y_val);
       }

@@ -612,14 +612,14 @@ continuous_interval_distribution(const RealRealPairRealMap& ciu_bpa)
 
   parametricUpdate = false;
   if (distributionType == CONTINUOUS_INTERVAL_UNCERTAIN) {
-    RealVector xy_vec;  intervals_to_xy_vector(ciu_bpa, xy_vec);
+    RealVector xy_vec;  intervals_to_xy_pdf(ciu_bpa, xy_vec);
     if (!equivalent(distParams, xy_vec))
       { parametricUpdate = true; distParams = xy_vec; }
   }
   else {
     distributionType = CONTINUOUS_INTERVAL_UNCERTAIN;
     parametricUpdate = true;
-    intervals_to_xy_vector(ciu_bpa, distParams);
+    intervals_to_xy_pdf(ciu_bpa, distParams);
   }
   if (parametricUpdate)
     reset_gauss();
@@ -634,14 +634,14 @@ discrete_interval_distribution(const IntIntPairRealMap& diu_bpa)
 
   parametricUpdate = false;
   if (distributionType == DISCRETE_INTERVAL_UNCERTAIN) {
-    RealVector xy_vec;  intervals_to_xy_vector(diu_bpa, xy_vec);
+    RealVector xy_vec;  intervals_to_xy_pdf(diu_bpa, xy_vec);
     if (!equivalent(distParams, xy_vec))
       { parametricUpdate = true; distParams = xy_vec; }
   }
   else {
     distributionType = DISCRETE_INTERVAL_UNCERTAIN;
     parametricUpdate = true;
-    intervals_to_xy_vector(diu_bpa, distParams);
+    intervals_to_xy_pdf(diu_bpa, distParams);
   }
   if (parametricUpdate)
     reset_gauss();
