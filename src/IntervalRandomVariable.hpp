@@ -82,15 +82,12 @@ public:
   /// update intervalBPA
   void update(const std::map<std::pair<T, T>, Real>& bpa);
 
-  // verify that valueProbPairs is defined
-  //void check_vpp() const;
-  // activate valueProbPairs tracking by copying intervalBPA
-  //void activate_vpp();
+  /// verify that valueProbPairs is defined
+  void check_vpp() const;
+  /// activate valueProbPairs tracking by copying intervalBPA
+  void activate_vpp();
   /// update valueProbPairs if currently in use
   void update_vpp_if_active();
-
-  // error handler for use when fn is not defined
-  //void no_template_specialization(String fn) const;
 
   //
   //- Heading: Static member functions (global utilities)
@@ -110,7 +107,7 @@ protected:
   /// interval-probability pairs for basic probability assignment (BPA)
   std::map<std::pair<T, T>, Real> intervalBPA;
 
-  /// flattening of intervals into a histogram-like format
+  /// collapse (overlapping, disjoint) intervals into a histogram-like format
   /// (defined if needed for use in moments/PDF/CDF)
   std::map<T, Real> valueProbPairs;
 };
@@ -137,16 +134,6 @@ IntervalRandomVariable<T>::~IntervalRandomVariable()
 { }
 
 
-/*
-template <typename T>
-void IntervalRandomVariable<T>::no_template_specialization(String fn) const
-{
-  PCerr << "Error: no template specialization of " << fn << "() for "
-	<< "IntervalRandomVariable<T>."	<< std::endl;
-  abort_handler(-1);
-}
-
-
 template <typename T>
 void IntervalRandomVariable<T>::check_vpp() const
 {
@@ -164,7 +151,6 @@ void IntervalRandomVariable<T>::activate_vpp()
   if (valueProbPairs.empty()) // activate once to avoid copying repeatedly
     intervals_to_xy_pdf(intervalBPA, valueProbPairs);
 }
-*/
 
 
 template <typename T>

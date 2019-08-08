@@ -100,7 +100,7 @@ protected:
   //
 
   /// pairings of abscissas to bin counts
-  /// Note: assinged counts are assumed to be normalized (e.g., by Dakota NIDR)
+  /// Note: assigned counts are assumed to be normalized (e.g., by Dakota NIDR)
   RealRealMap binPairs;
 };
 

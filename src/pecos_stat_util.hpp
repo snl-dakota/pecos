@@ -304,11 +304,11 @@ inline void intervals_to_xy_pdf(const RealRealPairRealMap& ci_bpa,
     while (cum_int_index < num_params && x_val[cum_int_index] < u_bnd)
       { y_val[cum_int_index] += ci_density; ++cum_int_index; }
   }
-//#ifdef DEBUG
+#ifdef DEBUG
   for (j=0; j<num_params; ++j)
     PCout << "ciuv pdf: x_val[" << j << "] is " << x_val[j]
 	  << " y_val[" << j << "] is " << y_val[j] << '\n';
-//#endif // DEBUG
+#endif // DEBUG
 }
 
 
@@ -340,12 +340,6 @@ inline void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
   size_t i, num_params = h_bin_prs.size(), last_index = num_params - 1;
   RRMCIter cit = h_bin_prs.begin();
 
-  // Assume already normalized with sum = 1
-  //Real sum = 0.;
-  //RRMCIter end = --h_bin_prs.end(); // last y from DAKOTA must be zero
-  //for (; cit!=end; ++cit)
-  //  sum += cit->second;
-
   // Note: LHS continuous linear accumulates CDF with first y=0 and last y=1
   x_val.resize(num_params);  y_val.resize(num_params);
   y_val[0] = 0.;
@@ -354,7 +348,7 @@ inline void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
     y_val[i+1] = y_val[i] + cit->second/* /sum */;
   }
   x_val[last_index] = cit->first;
-  // ensure y_val[last_index] is 1. (h_bin_pairs uses normalized counts)
+  // normalize if necessary (h_bin_pairs should have normalized counts)
   Real& pdf_last = y_val[last_index];
   if (pdf_last != 1.) {
     for (i=1; i<last_index; ++i)
