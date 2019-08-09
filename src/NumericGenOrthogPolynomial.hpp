@@ -232,9 +232,9 @@ private:
   //- Heading: Data
   //
 
-  /// the type of non-Askey distribution: BOUNDED_NORMAL, LOGNORMAL,
+  /// the type of non-Askey distribution, e.g. BOUNDED_NORMAL, LOGNORMAL,
   /// BOUNDED_LOGNORMAL, LOGUNIFORM, TRIANGULAR, GUMBEL, FRECHET, WEIBULL,
-  /// HISTOGRAM_BIN, or STOCHASTIC_EXPANSION
+  /// HISTOGRAM_BIN, etc.
   short distributionType;
 
   /// distribution parameters (e.g., mean, std_dev, alpha, beta)
@@ -779,11 +779,10 @@ inline Real NumericGenOrthogPolynomial::length_scale() const
     WeibullRandomVariable::
       moments_from_params(distParams[0], distParams[1], mean, stdev);
     break;
-  case HISTOGRAM_BIN: {
-    RealRealMap hist_bin_prs_rrm;
-    copy_data(distParams, hist_bin_prs_rrm);
-    HistogramBinRandomVariable::
-      moments_from_params(hist_bin_prs_rrm, mean, stdev); break;
+  case HISTOGRAM_BIN: case CONTINUOUS_INTERVAL_UNCERTAIN: {
+    RealRealMap val_prob_prs;  copy_data(distParams, val_prob_prs);
+    HistogramBinRandomVariable::moments_from_params(val_prob_prs, mean, stdev);
+    break;
   }
   default:
     PCerr << "Error: distributionType " << distributionType << " not supported "

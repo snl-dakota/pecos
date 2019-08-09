@@ -201,16 +201,16 @@ void intervals_to_xy_pdf(const std::map<std::pair<T,T>, Real>& di_bpa,
   for (j=0; j<num_params; ++j, ++it)
     x_val[j] = *it;
 
-  // Calculate probability densities and account for overlapping intervals.
-  // Loop over the original intervals and see where they fall relative to
-  // the new, sorted intervals for the density calculation.
+  // Calculate quasi-densities (BPA value divided by its range) and account for
+  // overlapping intervals.  Loop over the original intervals and see where they
+  // fall relative to the new, sorted intervals for the density calculation.
   // Note: LHS discrete histogram assigns relative y counts for each x;
   //       here we accumulate PDF values across multiple intervals.
   y_val.assign(num_params, 0.);
   for (cit=di_bpa.begin(); cit!=di_bpa.end(); ++cit) {
     const std::pair<T,T>& bounds = cit->first;
     l_bnd = bounds.first;  u_bnd = bounds.second;
-    Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
+    Real bpa_density = cit->second / (u_bnd - l_bnd + 1); // BPA / #integers
     it = x_sort_unique.find(l_bnd);
     if (it == x_sort_unique.end()) {
       PCerr << "Error: lower bound not found in sorted set within LHSDriver "
@@ -219,7 +219,7 @@ void intervals_to_xy_pdf(const std::map<std::pair<T,T>, Real>& di_bpa,
     }
     index = std::distance(x_sort_unique.begin(), it);
     for (val=l_bnd; val<=u_bnd; ++val, ++index)
-      y_val[index] += di_density;
+      y_val[index] += bpa_density;
   }
 #ifdef DEBUG
   for (j=0; j<num_params; ++j)
@@ -288,21 +288,21 @@ inline void intervals_to_xy_pdf(const RealRealPairRealMap& ci_bpa,
   for (j=0; j<num_params; ++j, ++it)
     x_val[j] = *it;
 
-  // Calculate the probability densities, and account for the cases where there
-  // are overlapping intervals.  For the density calculation, we loop through
-  // the original intervals and accumulate densities for the newly sorted x_val.
+  // Calculate quasi-densities (BPA value divided by its range) and account for
+  // overlapping intervals.  For the density calculation, we loop through the
+  // original intervals and accumulate densities for the newly sorted x_val.
   y_val.assign(num_params, 0.);
   for (cit=ci_bpa.begin(); cit!=ci_bpa.end(); ++cit) {
     const RealRealPair& bounds = cit->first;
     Real l_bnd = bounds.first, u_bnd = bounds.second;
-    Real ci_density = cit->second / (u_bnd - l_bnd);
+    Real bpa_density = cit->second / (u_bnd - l_bnd);
     int cum_int_index = 0;
     while (l_bnd > x_val[cum_int_index])
       ++cum_int_index;
     // As for HistogramBinRandomVariable::pdf(), we adopt a convention of
     // a closed/inclusive lower bound and open/exclusive upper bound
     while (cum_int_index < num_params && x_val[cum_int_index] < u_bnd)
-      { y_val[cum_int_index] += ci_density; ++cum_int_index; }
+      { y_val[cum_int_index] += bpa_density; ++cum_int_index; }
   }
 #ifdef DEBUG
   for (j=0; j<num_params; ++j)
