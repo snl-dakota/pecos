@@ -279,34 +279,45 @@ void NatafTransformation::transform_correlations()
     return;
 
   const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
+  const BitArray&      x_active_corr = xDist.active_correlations();
+  bool                       no_mask = x_active_corr.empty();
   RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
 
   const std::vector<RandomVariable>& x_rv = xDist.random_variables();
   const ShortArray&               u_types = uDist.random_variable_types();
-  size_t i, j, num_rv = x_rv.size();
-  for (i=0; i<num_rv; ++i)
-    if (u_types[i] == STD_NORMAL)
-      for (j=0; j<i; ++j) {
-	Real corr = x_corr_matrix(i,j);
-	if (u_types[j] == STD_NORMAL && std::abs(corr) > 0.)
-	  mod_corr_matrix(i,j) *=
-	    x_rv[i].correlation_warping_factor(x_rv[j], corr);
-
-	// fill in upper half of symmetric matrix
-	//mod_corr_matrix(j,i) = mod_corr_matrix(i,j);
-      }
+  size_t i, j, cntr_i, cntr_j, num_v = x_rv.size(),
+    num_active_v = (no_mask) ? num_v : x_active_corr.count();
+  for (i=0, cntr_i=0; i<num_v; ++i)
+    if (no_mask || x_active_corr[i]) {
+      if (u_types[i] == STD_NORMAL)
+	for (j=0, cntr_j=0; j<i; ++j)
+	  if (no_mask || x_active_corr[j]) {
+	    Real corr = x_corr_matrix(cntr_i, cntr_j);
+	    if (u_types[j] == STD_NORMAL && std::abs(corr) > 0.)
+	      mod_corr_matrix(cntr_i, cntr_j) *=
+		x_rv[i].correlation_warping_factor(x_rv[j], corr);
+	    ++cntr_j;
+	  }
+      ++cntr_i;
+    }
 
   // Cholesky decomposition for modified correlation matrix
   RealSpdSolver corr_solver;
   corr_solver.setMatrix( Teuchos::rcp(&mod_corr_matrix, false) );
   corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
-  if (corrCholeskyFactorZ.numRows() != num_rv ||
-      corrCholeskyFactorZ.numCols() != num_rv)
-    corrCholeskyFactorZ.shape(num_rv, num_rv);
-  for (i=0; i<num_rv; ++i)
-    for (j=0; j<=i; ++j)
-      corrCholeskyFactorZ(i, j) = mod_corr_matrix(i, j);
+  if (corrCholeskyFactorZ.numRows() != num_active_v ||
+      corrCholeskyFactorZ.numCols() != num_active_v)
+    corrCholeskyFactorZ.shape(num_active_v, num_active_v);
+  for (i=0, cntr_i=0; i<num_v; ++i)
+    if (no_mask || x_active_corr[i]) {
+      for (j=0, cntr_j=0; j<=i; ++j)
+	if (no_mask || x_active_corr[j]) {
+	  corrCholeskyFactorZ(cntr_i, cntr_j) = mod_corr_matrix(cntr_i, cntr_j);
+	  ++cntr_j;
+	}
+      ++cntr_i;
+    }
 #ifdef DEBUG
   PCout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
 #endif
