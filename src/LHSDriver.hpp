@@ -76,6 +76,7 @@ public:
 			       const BitArray& active_vars = BitArray(),
 			       const BitArray& active_corr = BitArray());
 
+  /*
   /// generates a set of parameter samples from RandomVariable distributions
   /// for the uncertain variable subset
   void generate_uncertain_samples(
@@ -92,6 +93,7 @@ public:
   void generate_epistemic_samples(
     const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
     int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
+  */
 
   /// generates a set of parameter samples for a set of (correlated)
   /// normal distributions
@@ -219,6 +221,7 @@ inline void LHSDriver::advance_seed_sequence()
 }
 
 
+/*
 inline void LHSDriver::
 generate_uncertain_samples(const std::vector<RandomVariable>& random_vars,
 			   const RealSymMatrix& corr, int num_samples,
@@ -230,6 +233,7 @@ generate_uncertain_samples(const std::vector<RandomVariable>& random_vars,
     abort_handler(-1);
   }
   RealMatrix ranks;
+  // Note: insufficient to identify source x type if in transformed u space
   BitArray active_rv;            uncertain_subset(random_vars, active_rv);
   BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
   if (backfill_flag)
@@ -252,6 +256,7 @@ generate_aleatory_samples(const std::vector<RandomVariable>& random_vars,
     abort_handler(-1);
   }
   RealMatrix ranks;
+  // Note: insufficient to identify source x type if in transformed u space
   BitArray active_rv; aleatory_uncertain_subset(random_vars, active_rv);
   if (backfill_flag)
     generate_unique_samples(random_vars, corr, num_samples, samples_array,
@@ -273,6 +278,7 @@ generate_epistemic_samples(const std::vector<RandomVariable>& random_vars,
     abort_handler(-1);
   }
   RealMatrix ranks;
+  // Note: insufficient to identify source x type if in transformed u space
   BitArray active_rv;  epistemic_uncertain_subset(random_vars, active_rv);
   BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
   if (backfill_flag)
@@ -282,6 +288,7 @@ generate_epistemic_samples(const std::vector<RandomVariable>& random_vars,
     generate_samples(random_vars, corr, num_samples,
 		     samples_array, ranks, active_rv, active_corr);
 }
+*/
 
 
 inline void LHSDriver::

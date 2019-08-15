@@ -97,12 +97,12 @@ typedef bmth::
   fisher_f_dist;
 
 
+/*
 // -------------------------
 // Variable subset utilities
 // -------------------------
 
 class RandomVariable; // fwd declaration
-
 
 /// define BitArray corresponding to design/state subset of random variables
 void design_state_subset(const std::vector<RandomVariable>& random_vars,
@@ -116,7 +116,7 @@ void aleatory_uncertain_subset(const std::vector<RandomVariable>& random_vars,
 /// define BitArray corresponding to epistemic uncertain subset of random vars
 void epistemic_uncertain_subset(const std::vector<RandomVariable>& random_vars,
 				BitArray& subset);
-
+*/
 
 // ----------------------------------
 // Distribution parameter conversions
@@ -315,87 +315,24 @@ inline void intervals_to_xy_pdf(const RealRealPairRealMap& ci_bpa,
 //// NON-TEMPLATES ////
 
 
-inline void int_range_to_xy_pdf(int l_bnd,        int u_bnd,
-				RealArray& x_val, RealArray& y_val)
-{
-  // supports either discrete integer range or range of set indices
-
-  // Note: LHS discrete histogram assigns relative y counts for each x;
-  //       for int range, relative counts are equal.
-
-  int i, num_params = u_bnd - l_bnd + 1;
-  x_val.resize(num_params);  y_val.assign(num_params, 1.);
-  for (i=0; i<num_params; ++i)
-    x_val[i] = (Real)(l_bnd + i);
-}
+/// supports either discrete integer range or range of set indices.
+/// Note: LHS discrete histogram assigns relative y counts for each x;
+///       for int range, relative counts are equal.
+void int_range_to_xy_pdf(int l_bnd, int u_bnd,
+			 RealArray& x_val, RealArray& y_val);
 
 
-inline void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
-			   RealArray& x_val, RealArray& y_val)
-{
-  // histogram bins: pairs are defined from an abscissa in the first field
-  // and a count (not a density) in the second field.  This distinction is
-  // important for unequal bin widths.
-
-  size_t i, num_params = h_bin_prs.size(), last_index = num_params - 1;
-  RRMCIter cit = h_bin_prs.begin();
-
-  // Note: LHS continuous linear accumulates CDF with first y=0 and last y=1
-  x_val.resize(num_params);  y_val.resize(num_params);
-  y_val[0] = 0.;
-  for (i=0; i<last_index; ++i, ++cit) {
-    x_val[i]   = cit->first;
-    y_val[i+1] = y_val[i] + cit->second/* /sum */;
-  }
-  x_val[last_index] = cit->first;
-  // normalize if necessary (h_bin_pairs should have normalized counts)
-  Real& pdf_last = y_val[last_index];
-  if (pdf_last != 1.) {
-    for (i=1; i<last_index; ++i)
-      y_val[i] /= pdf_last;
-    pdf_last = 1.;
-  }
-#ifdef DEBUG
-  for (i=0; i<num_params; ++i)
-    PCout << "hbuv cdf: x_val[" << i << "] is " << x_val[i]
-	  << " y_val[" << i << "] is " << y_val[i] << '\n';
-#endif // DEBUG
-}
+/// histogram bins: pairs are defined from an abscissa in the first field
+/// and a count (not a density) in the second field.  This distinction is
+/// important for unequal bin widths.
+void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
+		    RealArray& x_val, RealArray& y_val);
 
 
 /// LHS "continuous linear" distribution accumulates a CDF with first y=0
 /// and last y=1.
-inline void intervals_to_xy_cdf(const RealRealPairRealMap& ci_bpa,
-				RealArray& x_val, RealArray& y_val)
-{
-  RealArray prob_dens;
-  intervals_to_xy_pdf(ci_bpa, x_val, prob_dens);
-  size_t i, num_params = x_val.size(), last_index = num_params - 1;
-
-  // LHS continuous linear accumulates CDF with first y=0 and last y=1:
-  // put the densities in a cumulative format necessary for LHS histograms.
-  // Note that x_val and y_val are defined as Real* for input to f77.
-  y_val.resize(num_params);
-  y_val[0] = 0.;
-  Real pdf;
-  for (i=1; i<num_params; ++i) {
-    pdf = prob_dens[i-1];
-    y_val[i] = (pdf > 0.) ? y_val[i-1] + pdf * (x_val[i] - x_val[i-1]) :
-                            y_val[i-1] + 1.e-4; // handle case of a gap
-  }
-  // normalize if necessary
-  Real& pdf_last = y_val[last_index];
-  if (pdf_last != 1.) {
-    for (i=1; i<last_index; ++i)
-      y_val[i] /= pdf_last;
-    pdf_last = 1.;
-  }
-#ifdef DEBUG
-  for (i=0; i<num_params; ++i)
-    PCout << "ciuv cdf: x_val[" << i << "] is " << x_val[i]
-	  << " y_val[" << i << "] is " << y_val[i] << '\n';
-#endif // DEBUG
-}
+void intervals_to_xy_cdf(const RealRealPairRealMap& ci_bpa,
+			 RealArray& x_val, RealArray& y_val);
 
 } // namespace Pecos
 
