@@ -264,7 +264,7 @@ inline void BoundedLognormalRandomVariable::
 push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case LN_MEAN: case LN_STD_DEV: case LN_LAMBDA: case LN_ZETA:
+  case LN_MEAN: case LN_STD_DEV: case LN_ERR_FACT: case LN_LAMBDA: case LN_ZETA:
     LognormalRandomVariable::push_parameter(dist_param, val); break;
   case LN_LWR_BND: lowerBnd = val; break;
   case LN_UPR_BND: upperBnd = val; break;
