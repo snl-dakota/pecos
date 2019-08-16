@@ -363,9 +363,9 @@ void NatafTransformation::transform_correlations()
       corrCholeskyFactorZ(v_i, v_j) = mod_corr_matrix(v_i, v_j);
   //else { ...map to active_vars... }
 
-//#ifdef DEBUG
+#ifdef DEBUG
   PCout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
-//#endif
+#endif
 
   // could pre-compute L^-1 to avoid solving L u = z repeatedly for u
   //corrCholeskyFactorZInv.shape(num_active_vars, num_active_vars);
