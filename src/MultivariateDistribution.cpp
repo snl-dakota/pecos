@@ -264,19 +264,18 @@ size_t MultivariateDistribution::active_variable_index(size_t i) const
   if (mvDistRep)
     return mvDistRep->active_variable_index(i);
   else { // forward to letter
-
-    // TO DO: this needs to be efficient --> may need to cache an index mapping
     const BitArray& active_vars = active_variables();
+    /* This approach may need to store an index mapping for fast lookup
     size_t v, index = _NPOS, num_v = active_vars.size(), count = 0, id = i+1;
     for (v=0; v<num_v; ++v) {
       if (active_vars[v]) ++count;
       if (count == id) { index = v; break; }
     }
-    /*
+    */
+    // Should be more efficient (presuming based on bit shifting)
     size_t index = active_vars.find_first(), cntr = 0;
     while (cntr < i)
       { index = active_vars.find_next(index); ++cntr; }
-    */
     return index;
   }
 }

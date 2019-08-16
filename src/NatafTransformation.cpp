@@ -251,7 +251,6 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
   corr_solver.solve();
   // Assign into u_vars, which may be a Teuchos::View
   u_vars.assign(tmp_u_vars);
-
 }
 
 
@@ -279,43 +278,94 @@ void NatafTransformation::transform_correlations()
     return;
 
   const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
-  const BitArray&      x_active_corr = xDist.active_correlations();
-  bool                       no_mask = x_active_corr.empty();
-  RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
+  const BitArray&        active_vars = xDist.active_variables();
+  const BitArray&        active_corr = xDist.active_correlations();
+  bool no_v_mask = active_vars.empty(), no_c_mask = active_corr.empty();
 
   // Enumerate the active correlations (ignoring the active variable subset)
   const std::vector<RandomVariable>& x_rv = xDist.random_variables();
   const ShortArray&               u_types = uDist.random_variable_types();
-  size_t i, j, cntr_i, cntr_j, num_v = x_rv.size(),
-    num_active_v = (no_mask) ? num_v : x_active_corr.count();
-  for (i=0, cntr_i=0; i<num_v; ++i)
-    if (no_mask || x_active_corr[i]) {
-      if (u_types[i] == STD_NORMAL)
-	for (j=0, cntr_j=0; j<i; ++j)
-	  if (no_mask || x_active_corr[j]) {
-	    Real corr = x_corr_matrix(cntr_i, cntr_j);
-	    if (u_types[j] == STD_NORMAL && std::abs(corr) > 0.)
-	      mod_corr_matrix(cntr_i, cntr_j) *=
-		x_rv[i].correlation_warping_factor(x_rv[j], corr);
-	    ++cntr_j;
-	  }
-      ++cntr_i;
+  size_t rv_i, rv_j, c_i, c_j, v_i, v_j, num_rv = x_rv.size(),
+    num_active_v = (no_v_mask) ? num_rv : active_vars.count(),
+    num_active_c = (no_c_mask) ? num_rv : active_corr.count();
+
+  // Loop over active variables using find_{first,next}:
+  // RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
+  // rv_i = rv_j = (no_c_mask) ? 0 : active_corr.find_first();
+  // for (c_i=0; i<num_active_c; ++c_i) {
+  //   //if (u_types[v_i] != STD_NORMAL) continue;
+  //   if (c_i) rv_j = (no_c_mask) ? 0 : active_corr.find_first();
+  //   for (c_j=0; c_j<c_i; ++c_j) {
+  //     Real corr_ij = x_corr_matrix(c_i, c_j);
+  //     if (/* u_types[v_j] == STD_NORMAL && */ std::abs(corr_ij) > 0.)
+  // 	mod_corr_matrix(c_i, c_j) *=
+  // 	  x_rv[rv_i].correlation_warping_factor(x_rv[rv_j], corr_ij);
+  //     rv_j = (no_c_mask) ? c_j : active_corr.find_next(rv_j);
+  //   }
+  //   rv_i = (no_c_mask) ? c_i : active_corr.find_next(rv_i);
+  // }
+
+  // Loop over all random variables, checking active_corr bits:
+  // RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
+  // for (rv_i=0, c_i=0; rv_i<num_rv; ++rv_i)
+  //   if (no_c_mask || active_corr[rv_i]) {
+  //     //if (u_types[rv_i] == STD_NORMAL)
+  // 	 for (rv_j=0, c_j=0; rv_j<rv_i; ++rv_j)
+  // 	   if (no_c_mask || active_corr[rv_j]) {
+  // 	     Real corr = x_corr_matrix(c_i, c_j);
+  // 	     if (/* u_types[j] == STD_NORMAL && */ std::abs(corr) > 0.)
+  // 	       mod_corr_matrix(c_i, c_j) *=
+  // 		 x_rv[rv_i].correlation_warping_factor(x_rv[rv_j], corr);
+  // 	     ++c_j;
+  // 	   }
+  //     ++c_i;
+  //   }
+
+  // Loop over all random variables, checking active_{vars,corr} bits:
+  RealSymMatrix mod_corr_matrix(num_active_v); // init to 0
+  bool active_c_i, active_v_i, active_c_j, active_v_j;
+  for (rv_i=0, c_i=0, v_i=0; rv_i<num_rv; ++rv_i) {
+    active_c_i = (no_c_mask || active_corr[rv_i]);
+    active_v_i = (no_v_mask || active_vars[rv_i]);
+    if (active_v_i) mod_corr_matrix(v_i, v_i) = 1.;
+    if (active_c_i && active_v_i) {
+      for (rv_j=0, c_j=0, v_j=0; rv_j<rv_i; ++rv_j) {
+	active_c_j = (no_c_mask || active_corr[rv_j]);
+        active_v_j = (no_v_mask || active_vars[rv_j]);
+	if (active_c_j && active_v_j) {
+	  Real corr = x_corr_matrix(c_i, c_j);
+	  if (std::abs(corr) > 0.)
+	    mod_corr_matrix(v_i, v_j) = corr *
+	      x_rv[rv_i].correlation_warping_factor(x_rv[rv_j], corr);
+	}
+	if (active_c_j) ++c_j;
+	if (active_v_j) ++v_j;
+      }
     }
+    if (active_c_i) ++c_i;
+    if (active_v_i) ++v_i;
+  }
 
   // Cholesky decomposition for modified correlation matrix
   RealSpdSolver corr_solver;
   corr_solver.setMatrix( Teuchos::rcp(&mod_corr_matrix, false) );
   corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
+  // Inflate as needed i discrepancy between active_rv and active_corr
   if (corrCholeskyFactorZ.numRows() != num_active_v ||
       corrCholeskyFactorZ.numCols() != num_active_v)
-    corrCholeskyFactorZ.shape(num_active_v, num_active_v);
-  for (i=0; i<num_active_v; ++i)
-    for (j=0; j<=i; ++j)
-      corrCholeskyFactorZ(i, j) = mod_corr_matrix(i, j);
-#ifdef DEBUG
+    corrCholeskyFactorZ.shape(num_active_v, num_active_v); // init to 0
+
+  // If mod_corr_matrix is kept in active_corr, need to map to active_vars
+  //if (active_vars == active_corr)
+  for (v_i=0; v_i<num_active_v; ++v_i)
+    for (v_j=0; v_j<=v_i; ++v_j)
+      corrCholeskyFactorZ(v_i, v_j) = mod_corr_matrix(v_i, v_j);
+  //else { ...map to active_vars... }
+
+//#ifdef DEBUG
   PCout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
-#endif
+//#endif
 
   // could pre-compute L^-1 to avoid solving L u = z repeatedly for u
   //corrCholeskyFactorZInv.shape(num_active_vars, num_active_vars);
