@@ -172,13 +172,19 @@ MultivariateDistribution::~MultivariateDistribution()
 
 const RandomVariable& MultivariateDistribution::random_variable(size_t i) const
 {
-  if (!mvDistRep) { // forward to letter
-    PCerr << "Error: random_variable(size_t) not supported for this "
-	  << "multivariate distribution type." << std::endl;
-    abort_handler(-1);
-  }
+  if (mvDistRep)
+    return mvDistRep->random_variable(i);
+  else // default definition
+    return random_variables()[i];
+}
 
-  return mvDistRep->random_variable(i);
+
+RandomVariable& MultivariateDistribution::random_variable(size_t i)
+{
+  if (mvDistRep)
+    return mvDistRep->random_variable(i);
+  else // default definition
+    return random_variables()[i];
 }
 
 
@@ -234,25 +240,73 @@ void MultivariateDistribution::random_variable_types(const ShortArray& rv_types)
 
 short MultivariateDistribution::random_variable_type(size_t i) const
 {
-  if (!mvDistRep) { // forward to letter
-    PCerr << "Error: random_variable_type(size_t) not supported for this "
-	  << "multivariate distribution type." << std::endl;
-    abort_handler(-1);
-  }
-
-  return mvDistRep->random_variable_type(i);
+  if (mvDistRep)
+    return mvDistRep->random_variable_type(i);
+  else // default definition
+    return random_variable_types()[i];
 }
 
 
 void MultivariateDistribution::random_variable_type(short rv_type, size_t i)
 {
   if (mvDistRep)
-    mvDistRep->random_variable_type(rv_type, i);
+    return mvDistRep->random_variable_type(rv_type, i);
   else { // forward to letter
     PCerr << "Error: random_variable_type(short, size_t) not supported for "
 	  << "this multivariate distribution type." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+size_t MultivariateDistribution::active_variable_index(size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->active_variable_index(i);
+  else { // forward to letter
+
+    // TO DO: this needs to be efficient --> may need to cache an index mapping
+    const BitArray& active_vars = active_variables();
+    size_t v, index = _NPOS, num_v = active_vars.size(), count = 0, id = i+1;
+    for (v=0; v<num_v; ++v) {
+      if (active_vars[v]) ++count;
+      if (count == id) { index = v; break; }
+    }
+    /*
+    size_t index = active_vars.find_first(), cntr = 0;
+    while (cntr < i)
+      { index = active_vars.find_next(index); ++cntr; }
+    */
+    return index;
+  }
+}
+
+
+const RandomVariable& MultivariateDistribution::
+active_random_variable(size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->active_random_variable(i);
+  else // not virtual
+    return random_variable(active_variable_index(i));
+}
+
+
+RandomVariable& MultivariateDistribution::active_random_variable(size_t i)
+{
+  if (mvDistRep)
+    return mvDistRep->active_random_variable(i);
+  else // not virtual
+    return random_variable(active_variable_index(i));
+}
+
+
+short MultivariateDistribution::active_random_variable_type(size_t i) const
+{
+  if (mvDistRep)
+    return mvDistRep->active_random_variable_type(i);
+  else // not virtual
+    return random_variable_type(active_variable_index(i));
 }
 
 

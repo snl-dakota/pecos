@@ -36,17 +36,21 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// return randomVars[i]
-  const RandomVariable& random_variable(size_t i) const;
   /// return randomVars
   const std::vector<RandomVariable>& random_variables() const;
   /// return randomVars
   std::vector<RandomVariable>& random_variables();
 
+  /// return randomVars[i]
+  const RandomVariable& random_variable(size_t i) const;
+  /// return randomVars[i]
+  RandomVariable& random_variable(size_t i);
+
   /// return ranVarTypes
   const ShortArray& random_variable_types() const;
   /// set ranVarTypes
   void random_variable_types(const ShortArray& rv_types);
+
   /// return ranVarTypes[i]
   short random_variable_type(size_t i) const;
   /// set ranVarTypes[i]
@@ -219,11 +223,6 @@ inline MarginalsCorrDistribution::~MarginalsCorrDistribution()
 { }
 
 
-inline const RandomVariable& MarginalsCorrDistribution::
-random_variable(size_t i) const
-{ return randomVars[i]; }
-
-
 inline const std::vector<RandomVariable>& MarginalsCorrDistribution::
 random_variables() const
 { return randomVars; }
@@ -232,6 +231,15 @@ random_variables() const
 inline std::vector<RandomVariable>& MarginalsCorrDistribution::
 random_variables()
 { return randomVars; }
+
+
+inline const RandomVariable& MarginalsCorrDistribution::
+random_variable(size_t i) const
+{ return randomVars[i]; }
+
+
+inline RandomVariable& MarginalsCorrDistribution::random_variable(size_t i)
+{ return randomVars[i]; }
 
 
 inline const ShortArray& MarginalsCorrDistribution::

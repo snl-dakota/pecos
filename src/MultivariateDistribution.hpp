@@ -42,17 +42,21 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// return randomVars[i] (marginal, when present)
-  virtual const RandomVariable& random_variable(size_t i) const;
   /// return randomVars (marginals, when present)
   virtual const std::vector<RandomVariable>& random_variables() const;
   /// return randomVars (marginals, when present)
   virtual std::vector<RandomVariable>& random_variables();
 
+  /// return randomVars[i] (marginal, when present)
+  virtual const RandomVariable& random_variable(size_t i) const;
+  /// return randomVars[i] (marginal, when present)
+  virtual RandomVariable& random_variable(size_t i);
+
   /// return ranVarTypes (marginals, when present)
   virtual const ShortArray& random_variable_types() const;
   /// set ranVarTypes (marginals, when present)
   virtual void random_variable_types(const ShortArray& rv_types);
+
   /// return ranVarTypes[i] (marginal, when present)
   virtual short random_variable_type(size_t i) const;
   /// set ranVarTypes[i] (marginal, when present)
@@ -107,6 +111,15 @@ public:
   //
   //- Heading: Member functions
   //
+
+  /// return index of i-th active variable
+  size_t active_variable_index(size_t i) const;
+  /// finds index of i-th active variable and returns randomVars[index]
+  const RandomVariable& active_random_variable(size_t i) const;
+  /// finds index of i-th active variable and returns randomVars[index]
+  RandomVariable& active_random_variable(size_t i);
+  /// finds index of i-th active variable and returns ranVarTypes[index]
+  short active_random_variable_type(size_t i) const;
 
   /// return correlationFlag
   bool correlation() const;
