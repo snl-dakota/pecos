@@ -202,9 +202,9 @@ public:
   //- Heading: Member functions
   //
 
-  /// Invoke virtual pull_parameter(short, T) and return result
-  template <typename T>
-  T pull_parameter(short dist_param) const;
+  // Invoke virtual pull_parameter(short, T) and return result
+  //template <typename T>
+  //T return_parameter(short dist_param) const;
 
   /// Draw a sample from the distribution using inverse_cdf on uniform[0,1]
   template <typename Engine>
@@ -270,13 +270,15 @@ private:
 };
 
 
+/*
 template <typename T>
-T RandomVariable::pull_parameter(short dist_param) const
+T RandomVariable::return_parameter(short dist_param) const
 {
   T val;
   pull_parameter(dist_param, val);
   return val;
 }
+*/
 
 
 template <typename Engine> 

@@ -139,13 +139,17 @@ public:
   void pull_parameters(short rv_type, short dist_param,
     Teuchos::SerialDenseVector<OrdinalType, ScalarType>& values) const;
 
-  /// return a scalar distribution parameter from randomVars[v]
+  /// return a distribution parameter from randomVars[v]
   template <typename ValueType>
   ValueType pull_parameter(size_t v, short dist_param) const;
   /// return array of values for one distribution parameter across the set
   /// of random variables with matching RV type
   template <typename ValueType>
   std::vector<ValueType> pull_parameters(short rv_type, short dist_param) const;
+
+  /// return the size of a (non-scalar) distribution parameter from randomVars[v]
+  template <typename ValueType>
+  size_t pull_parameter_size(size_t v, short dist_param) const;
 
   /*
   /// expand corrMatrix from probabilistic variables to combined variables
@@ -431,8 +435,19 @@ std::vector<ValueType> MarginalsCorrDistribution::
 pull_parameters(short rv_type, short dist_param) const
 {
   std::vector<ValueType> vals;
-  pull_parameters(rv_type, dist_param, vals);
+  pull_parameters<ValueType>(rv_type, dist_param, vals);
   return vals;
+}
+
+
+template <typename ValueType>
+size_t MarginalsCorrDistribution::
+pull_parameter_size(size_t v, short dist_param) const
+{
+  // overhead of one array copy instead of two or more
+  ValueType val;
+  randomVars[v].pull_parameter(dist_param, val);
+  return val.size();
 }
 
 

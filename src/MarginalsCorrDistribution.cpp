@@ -94,13 +94,18 @@ pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
     case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:           break;
 
     // push RV have standardized scale params; copy shape params
-    case STD_BETA:
-      push_rv.push_parameter(BE_ALPHA, pull_rv.pull_parameter<Real>(BE_ALPHA));
-      push_rv.push_parameter(BE_BETA,  pull_rv.pull_parameter<Real>(BE_BETA));
+    case STD_BETA: {
+      Real alpha;  pull_rv.pull_parameter(BE_ALPHA, alpha);
+      Real beta;   pull_rv.pull_parameter(BE_BETA,  beta);
+      push_rv.push_parameter(BE_ALPHA, alpha);
+      push_rv.push_parameter(BE_BETA,  beta);
       break;
-    case STD_GAMMA:
-      push_rv.push_parameter(GA_ALPHA, pull_rv.pull_parameter<Real>(GA_ALPHA));
+    }
+    case STD_GAMMA: {
+      Real alpha;  pull_rv.pull_parameter(GA_ALPHA, alpha);
+      push_rv.push_parameter(GA_ALPHA, alpha);
       break;
+    }
 
     // push RV are non-standard, pull all non-standard data from rv_in
     default:
@@ -109,13 +114,18 @@ pull_distribution_parameters(MultivariateDistribution* mv_dist_rep)
       case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:         break;
 
       // pull RV have standardized scale params; pull shape params
-      case STD_BETA:
-	push_rv.push_parameter(BE_ALPHA,pull_rv.pull_parameter<Real>(BE_ALPHA));
-	push_rv.push_parameter(BE_BETA, pull_rv.pull_parameter<Real>(BE_BETA));
+      case STD_BETA: {
+	Real alpha;  pull_rv.pull_parameter(BE_ALPHA, alpha);
+	Real beta;   pull_rv.pull_parameter(BE_BETA,  beta);
+	push_rv.push_parameter(BE_ALPHA, alpha);
+	push_rv.push_parameter(BE_BETA,  beta);
 	break;
-      case STD_GAMMA:
-	push_rv.push_parameter(GA_ALPHA,pull_rv.pull_parameter<Real>(GA_ALPHA));
+      }
+      case STD_GAMMA: {
+	Real alpha;  pull_rv.pull_parameter(GA_ALPHA, alpha);
+	push_rv.push_parameter(GA_ALPHA, alpha);
 	break;
+      }
 
       // pull and push RV are non-standardized; copy all params
       default:

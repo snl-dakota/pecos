@@ -96,10 +96,12 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
     case NORMAL:  x = x_rv_i.from_standard(z);  break;
-    case LOGNORMAL:
-      x = std::exp(x_rv_i.pull_parameter<Real>(LN_LAMBDA) +
-		   x_rv_i.pull_parameter<Real>(LN_ZETA) * z);
+    case LOGNORMAL: {
+      Real lambda;  x_rv_i.pull_parameter(LN_LAMBDA, lambda);
+      Real   zeta;  x_rv_i.pull_parameter(LN_ZETA,   zeta);
+      x = std::exp(lambda + zeta * z);
       break;
+    }
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
@@ -187,10 +189,12 @@ void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
     case NORMAL:    z = x_rv_i.to_standard(x); break;
-    case LOGNORMAL:
-      z = (std::log(x) - x_rv_i.pull_parameter<Real>(LN_LAMBDA)) /
-	                 x_rv_i.pull_parameter<Real>(LN_ZETA);
-      break;      
+    case LOGNORMAL: {
+      Real lambda;  x_rv_i.pull_parameter(LN_LAMBDA, lambda);
+      Real   zeta;  x_rv_i.pull_parameter(LN_ZETA,   zeta);
+      z = (std::log(x) - lambda) / zeta;
+      break;
+    }
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
@@ -838,11 +842,13 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       jacobian_xz(i, i) = 1.;
     else if (u_type == STD_NORMAL)
       switch (x_type) {
-      case NORMAL:    // z = (x - mean)/stdev
-	jacobian_xz(i, i) = x_rv_i.pull_parameter<Real>(N_STD_DEV);       break;
-      case LOGNORMAL: // z = (ln x - lambda)/zeta
-	jacobian_xz(i, i) = x_rv_i.pull_parameter<Real>(LN_ZETA) * x_vars[i];
+      case NORMAL:      // z = (x - mean)/stdev
+	x_rv_i.pull_parameter(N_STD_DEV, jacobian_xz(i, i));       break;
+      case LOGNORMAL: { // z = (ln x - lambda)/zeta
+	Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
+	jacobian_xz(i, i) = zeta * x_vars[i];
 	break;
+      }
       default:
 	trans_X_to_Z(x_vars[i], z_var, i);
 	jacobian_xz(i, i) = NormalRandomVariable::std_pdf(z_var)
@@ -852,12 +858,14 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       jacobian_xz(i, i)
 	= UniformRandomVariable::std_pdf() / x_rv_i.pdf(x_vars[i]);
     else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL)
-      jacobian_xz(i, i) = x_rv_i.pull_parameter<Real>(E_BETA);
+      x_rv_i.pull_parameter(E_BETA,  jacobian_xz(i, i));
     else if (u_type == STD_GAMMA       && x_type == GAMMA)
-      jacobian_xz(i, i) = x_rv_i.pull_parameter<Real>(GA_BETA);
-    else if (u_type == STD_BETA        && x_type == BETA)
-      jacobian_xz(i, i) = (x_rv_i.pull_parameter<Real>(BE_UPR_BND) -
-			   x_rv_i.pull_parameter<Real>(BE_LWR_BND)) / 2.;
+      x_rv_i.pull_parameter(GA_BETA, jacobian_xz(i, i));
+    else if (u_type == STD_BETA        && x_type == BETA) {
+      Real l_bnd;  x_rv_i.pull_parameter(BE_LWR_BND, l_bnd);
+      Real u_bnd;  x_rv_i.pull_parameter(BE_UPR_BND, u_bnd);
+      jacobian_xz(i, i) = (u_bnd - l_bnd) / 2.;
+    }
     else {
       PCerr << "Error: unsupported variable mapping for variable " << i
 	    << " in NatafTransformation::jacobian_dX_dZ()" << std::endl;
@@ -932,12 +940,14 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       jacobian_zx(i, i) = 1.;
     else if (u_type == STD_NORMAL)
       switch (x_type) {
-      case NORMAL:    // z = (x - mean)/stdev
-	jacobian_zx(i, i) = 1. / x_rv_i.pull_parameter<Real>(N_STD_DEV);  break;
-      case LOGNORMAL: // z = (ln x - lambda)/zeta
-	jacobian_zx(i, i)
-	  = 1. / (x_rv_i.pull_parameter<Real>(LN_ZETA) * x_vars[i]);
-	break;
+      case NORMAL: {    // z = (x - mean)/stdev
+	Real stdev;  x_rv_i.pull_parameter(N_STD_DEV, stdev);
+	jacobian_zx(i, i) = 1. / stdev;  break;
+      }
+      case LOGNORMAL: { // z = (ln x - lambda)/zeta
+	Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
+	jacobian_zx(i, i) = 1. / (zeta * x_vars[i]);  break;
+      }
       default:
 	trans_X_to_Z(x_vars[i], z_var, i);
 	jacobian_zx(i, i)
@@ -946,13 +956,19 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     else if (u_type == STD_UNIFORM)
       jacobian_zx(i, i)
 	= x_rv_i.pdf(x_vars[i]) / UniformRandomVariable::std_pdf();
-    else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL)
-      jacobian_zx(i, i) = 1. / x_rv_i.pull_parameter<Real>(E_BETA);
-    else if (u_type == STD_GAMMA       && x_type == GAMMA)
-      jacobian_zx(i, i) = 1. / x_rv_i.pull_parameter<Real>(GA_BETA);
-    else if (u_type == STD_BETA        && x_type == BETA)
-      jacobian_zx(i, i) = 2. / (x_rv_i.pull_parameter<Real>(BE_UPR_BND) -
-				x_rv_i.pull_parameter<Real>(BE_LWR_BND));
+    else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) {
+      Real beta;  x_rv_i.pull_parameter(E_BETA, beta);
+      jacobian_zx(i, i) = 1. / beta;
+    }
+    else if (u_type == STD_GAMMA       && x_type == GAMMA) {
+      Real beta;  x_rv_i.pull_parameter(GA_BETA, beta);
+      jacobian_zx(i, i) = 1. / beta;
+    }
+    else if (u_type == STD_BETA        && x_type == BETA) {
+      Real l_bnd;  x_rv_i.pull_parameter(BE_LWR_BND, l_bnd);
+      Real u_bnd;  x_rv_i.pull_parameter(BE_UPR_BND, u_bnd);
+      jacobian_zx(i, i) = 2. / (u_bnd -	l_bnd);
+    }
     else {
       PCerr << "Error: unsupported variable mapping for variable " << i
 	    << " in NatafTransformation::jacobian_dZ_dX()" << std::endl;
@@ -1157,7 +1173,7 @@ numerical_design_jacobian(const RealVector& x_vars,
 
       Pecos::RandomVariable& x_rv_i = xDist.active_random_variable(cv_index);
 
-      Real s0; x_rv_i.pull_parameter(acv_map2_target, s0);
+      Real s0;  x_rv_i.pull_parameter(acv_map2_target, s0);
 
       // Compute the offset for the ith gradient variable.
       // Enforce a minimum delta of fdgss*.01
@@ -1293,7 +1309,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       case NORMAL:
 	hessian_xz[i](i, i) = 0.; break;
       case LOGNORMAL: {	// dx/dz = zeta x --> d^2x/dz^2 = zeta dx/dz = zeta^2 x
-	Real zeta = x_rv_i.pull_parameter<Real>(LN_ZETA);
+	Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
 	hessian_xz[i](i, i) = zeta * zeta * x_vars[i]; break;
       }
       case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
@@ -1315,8 +1331,9 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       case UNIFORM:          case HISTOGRAM_BIN:
 	hessian_xz[i](i, i) = 0.; break;
       case LOGUNIFORM: {
-	Real log_range = std::log(x_rv_i.pull_parameter<Real>(LU_UPR_BND))
-	               - std::log(x_rv_i.pull_parameter<Real>(LU_LWR_BND));
+	Real l_bnd;  x_rv_i.pull_parameter(LU_LWR_BND, l_bnd);
+	Real u_bnd;  x_rv_i.pull_parameter(LU_UPR_BND, u_bnd);
+	Real log_range = std::log(u_bnd) - std::log(l_bnd);
 	hessian_xz[i](i, i) = log_range * log_range * x_vars[i] / 4.; break;
       }
       default:
