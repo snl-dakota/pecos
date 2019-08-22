@@ -56,10 +56,20 @@ public:
   /// set ranVarTypes[i]
   void random_variable_type(short rv_type, size_t i);
 
-  /// pull non-standardized distribution parameters from mv_dist
-  void pull_distribution_parameters(const MultivariateDistribution& mv_dist);
-  /// pull non-standardized distribution parameters from mv_dist
-  void pull_distribution_parameters(MultivariateDistribution* mv_dist_rep);
+  /// pull non-standardized distribution parameters from pull_mvd
+  void pull_distribution_parameters(const MultivariateDistribution& pull_mvd);
+  /// pull non-standardized distribution parameters from pull_mvd_rep
+  void pull_distribution_parameters(
+    const MultivariateDistribution* pull_mvd_rep);
+  /// pull non-standardized distribution parameters for a particular
+  /// random variable from pull_mvd
+  void pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
+				    size_t pull_index, size_t push_index);
+  /// pull non-standardized distribution parameters for a particular
+  /// random variable from pull_mvd_rep
+  void pull_distribution_parameters(
+    const MultivariateDistribution* pull_mvd_rep,
+    size_t pull_index, size_t push_index);
 
   /// return activeVars
   const BitArray& active_variables() const;
@@ -147,7 +157,7 @@ public:
   template <typename ValueType>
   std::vector<ValueType> pull_parameters(short rv_type, short dist_param) const;
 
-  /// return the size of a (non-scalar) distribution parameter from randomVars[v]
+  /// return the size of (non-scalar) distribution data from randomVars[v]
   template <typename ValueType>
   size_t pull_parameter_size(size_t v, short dist_param) const;
 
@@ -298,9 +308,28 @@ correlation_matrix(const RealSymMatrix& corr)
 //{ return corrCholeskyFactor; }
 
 
+/** For consistent random variable ordering. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution& mv_dist)
-{ pull_distribution_parameters(mv_dist.multivar_dist_rep()); }
+pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep)
+{
+  size_t i, num_rv = ranVarTypes.size();
+  for (i=0; i<num_rv; ++i)
+    pull_distribution_parameters(pull_mvd_rep, i, i);
+}
+
+
+inline void MarginalsCorrDistribution::
+pull_distribution_parameters(const MultivariateDistribution& pull_mvd)
+{ pull_distribution_parameters(pull_mvd.multivar_dist_rep()); }
+
+
+inline void MarginalsCorrDistribution::
+pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
+			     size_t pull_index, size_t push_index)
+{
+  pull_distribution_parameters(pull_mvd.multivar_dist_rep(),
+			       pull_index, push_index);
+}
 
 
 template <typename ValueType>
