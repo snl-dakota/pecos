@@ -143,7 +143,7 @@ public:
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, unsigned int val);
   /// update the value of the named distribution parameter
-  virtual void push_parameter(short dist_param, const IntSet& val) ;
+  virtual void push_parameter(short dist_param, const IntSet& val);
   /// update the value of the named distribution parameter
   virtual void push_parameter(short dist_param, const StringSet& val);
   /// update the value of the named distribution parameter

@@ -99,8 +99,7 @@ SetVariable<T>::SetVariable():
 
 
 template <typename T>
-SetVariable<T>::
-SetVariable(const std::set<T>& vals):
+SetVariable<T>::SetVariable(const std::set<T>& vals):
   RandomVariable(BaseConstructor()), setValues(vals)
 { }
 
@@ -151,7 +150,7 @@ void SetVariable<T>::push_parameter(short dist_param, const std::set<T>& vals)
 
 
 template <typename T>
-inline void SetVariable<T>::copy_parameters(const RandomVariable& rv)
+void SetVariable<T>::copy_parameters(const RandomVariable& rv)
 {
   switch (ranVarType) {
   case DISCRETE_SET_INT:     rv.pull_parameter(DSI_VALUES, setValues);  break;
@@ -247,7 +246,7 @@ moments_from_params(const std::set<T>& vals, Real& mean, Real& std_dev)
 
 /*
 template <>
-Real SetVariable<String>::mode() const
+inline Real SetVariable<String>::mode() const
 {
   Real mode, mode_prob;
   SRMCIter cit = setValues.begin();
@@ -271,7 +270,8 @@ inline RealRealPair SetVariable<String>::bounds() const
 /*
 template <>
 void SetVariable<String>::
-moments_from_params(const StringRealMap& s_prs, Real& mean, Real& std_dev)
+inline moments_from_params(const StringRealMap& s_prs,
+                           Real& mean, Real& std_dev)
 {
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
   // assume normalization (probs sum to 1.).
