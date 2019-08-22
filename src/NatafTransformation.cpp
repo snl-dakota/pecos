@@ -355,7 +355,7 @@ void NatafTransformation::transform_correlations()
   corr_solver.setMatrix( Teuchos::rcp(&mod_corr_matrix, false) );
   corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
-  // Inflate as needed i discrepancy between active_rv and active_corr
+  // Inflate as needed if discrepancy between active_rv and active_corr
   if (corrCholeskyFactorZ.numRows() != num_active_v ||
       corrCholeskyFactorZ.numCols() != num_active_v)
     corrCholeskyFactorZ.shape(num_active_v, num_active_v); // init to 0
