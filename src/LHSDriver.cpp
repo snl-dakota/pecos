@@ -506,7 +506,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       lhs_dist_register("Loguniform", "loguniform", av_cntr, dist_params);
       break;
     case TRIANGULAR:
-      dist_params.resize(2);
+      dist_params.resize(3);
       rv_i.pull_parameter(T_LWR_BND, dist_params[0]);
       rv_i.pull_parameter(T_MODE,    dist_params[1]);
       rv_i.pull_parameter(T_UPR_BND, dist_params[2]);
