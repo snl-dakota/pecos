@@ -371,6 +371,22 @@ pull_distribution_parameters(const MultivariateDistribution& mv_dist)
 }
 
 
+void MultivariateDistribution::
+pull_distribution_parameters(const MultivariateDistribution& mv_dist,
+			     const StringArray& pull_labels,
+			     const StringArray& push_labels)
+{
+  if (mvDistRep)
+    mvDistRep->pull_distribution_parameters(mv_dist, pull_labels, push_labels);
+  else { // forward to letter
+    PCerr << "Error: pull_distribution_parameters(MultivariateDistribution, "
+	  << "StringArray, StringArray)\n       not supported for this "
+	  <<  "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 RealRealPairArray MultivariateDistribution::moments() const
 {
   if (!mvDistRep) { // forward to letter

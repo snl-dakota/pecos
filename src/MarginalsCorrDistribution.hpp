@@ -61,6 +61,17 @@ public:
   /// pull non-standardized distribution parameters from pull_mvd_rep
   void pull_distribution_parameters(
     const MultivariateDistribution* pull_mvd_rep);
+
+  /// pull non-standardized distribution parameters from pull_mvd, aligning
+  /// variables based on label lookups
+  void pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
+    const StringArray& pull_labels, const StringArray& push_labels);
+  /// pull non-standardized distribution parameters from pull_mvd_rep, aligning
+  /// variables based on label lookups
+  void pull_distribution_parameters(
+    const MultivariateDistribution* pull_mvd_rep,
+    const StringArray& pull_labels, const StringArray& push_labels);
+
   /// pull non-standardized distribution parameters for a particular
   /// random variable from pull_mvd
   void pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
@@ -321,6 +332,32 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep)
 inline void MarginalsCorrDistribution::
 pull_distribution_parameters(const MultivariateDistribution& pull_mvd)
 { pull_distribution_parameters(pull_mvd.multivar_dist_rep()); }
+
+
+/** For potentially inconsistent random variable ordering that requires
+    a lookup. */
+inline void MarginalsCorrDistribution::
+pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
+			     const StringArray& pull_labels,
+			     const StringArray& push_labels)
+{
+  size_t i, num_rv = ranVarTypes.size();
+  for (i=0; i<num_rv; ++i) {
+    size_t push_index = find_index(push_labels, pull_labels[i]);
+    if (push_index != _NPOS)
+      pull_distribution_parameters(pull_mvd_rep, i, push_index);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::
+pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
+			     const StringArray& pull_labels,
+			     const StringArray& push_labels)
+{
+  pull_distribution_parameters(pull_mvd.multivar_dist_rep(),
+			       pull_labels, push_labels);
+}
 
 
 inline void MarginalsCorrDistribution::
