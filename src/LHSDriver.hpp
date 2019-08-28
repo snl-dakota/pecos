@@ -304,10 +304,14 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
   }
   size_t i, num_rv = n_means.length();
   std::vector<RandomVariable> random_vars(num_rv);
-  bool l_bnd = !n_l_bnds.empty(), u_bnd = !n_u_bnds.empty();
+  bool l_bnds = !n_l_bnds.empty(), u_bnds = !n_u_bnds.empty(), l_bnd, u_bnd;
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
   for (i=0; i<num_rv; ++i) {
+    l_bnd = (l_bnds && n_l_bnds[i] > -dbl_inf);
+    u_bnd = (u_bnds && n_u_bnds[i] <  dbl_inf);
     RandomVariable& rv_i = random_vars[i];
-    rv_i = RandomVariable(NORMAL);
+    rv_i = (l_bnd || u_bnd) ? RandomVariable(BOUNDED_NORMAL)
+                            : RandomVariable(NORMAL);
     rv_i.push_parameter(N_MEAN,    n_means[i]);
     rv_i.push_parameter(N_STD_DEV, n_std_devs[i]);
     if (l_bnd) rv_i.push_parameter(N_LWR_BND, n_l_bnds[i]);
