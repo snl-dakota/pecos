@@ -572,14 +572,14 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       lhs_dist_register("Poisson", "poisson", av_cntr, dist_params);
       break;
     case BINOMIAL: {
-      dist_params.resize(2);  int num_tr;
+      dist_params.resize(2);  unsigned int num_tr;
       rv_i.pull_parameter(BI_P_PER_TRIAL, dist_params[0]);
       rv_i.pull_parameter(BI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
       lhs_dist_register("Binomial", "binomial", av_cntr, dist_params);
       break;
     }
     case NEGATIVE_BINOMIAL: {
-      dist_params.resize(2);  int num_tr;
+      dist_params.resize(2);  unsigned int num_tr;
       rv_i.pull_parameter(NBI_P_PER_TRIAL, dist_params[0]);
       rv_i.pull_parameter(NBI_TRIALS, num_tr); dist_params[1] = (Real)num_tr;
       lhs_dist_register("NegBinomial", "negative binomial",av_cntr,dist_params);
@@ -591,7 +591,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       lhs_dist_register("Geometric", "geometric", av_cntr, dist_params);
       break;
     case HYPERGEOMETRIC: {
-      dist_params.resize(3);  int tot_pop, num_drw, sel_pop;
+      dist_params.resize(3);  unsigned int tot_pop, num_drw, sel_pop;
       rv_i.pull_parameter(HGE_TOT_POP, tot_pop); dist_params[0] = (Real)tot_pop;
       rv_i.pull_parameter(HGE_DRAWN,   num_drw); dist_params[1] = (Real)num_drw;
       rv_i.pull_parameter(HGE_SEL_POP, sel_pop); dist_params[2] = (Real)sel_pop;
@@ -867,17 +867,18 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 	}
 	// discrete aleatory uncertain
 	case BINOMIAL: { // finite support
-	  int num_tr;  rv_i.pull_parameter(BI_TRIALS, num_tr);
+	  unsigned int num_tr;  rv_i.pull_parameter(BI_TRIALS, num_tr);
 	  //discrete_strata_1d.push_back(1 + num_tr);
 	  max_unique *= 1 + num_tr;  break;
 	}
 	case HYPERGEOMETRIC: { // finite support
-	  int tot_p;  rv_i.pull_parameter(HGE_TOT_POP, tot_p);
-	  int sel_p;  rv_i.pull_parameter(HGE_SEL_POP, sel_p);
-	  int num_d;  rv_i.pull_parameter(HGE_DRAWN,   num_d);
+	  unsigned int tot_p;  rv_i.pull_parameter(HGE_TOT_POP, tot_p);
+	  unsigned int sel_p;  rv_i.pull_parameter(HGE_SEL_POP, sel_p);
+	  unsigned int num_d;  rv_i.pull_parameter(HGE_DRAWN,   num_d);
 	  //discrete_strata_1d.push_back(1 + std::min(num_d, sel_p) -
 	  //			        std::max(0, sel_p + num_d - tot_p));
-	  max_unique *= 1+std::min(num_d,sel_p)-std::max(0,sel_p+num_d-tot_p);
+	  max_unique *= 1 + std::min(num_d, sel_p) + tot_p
+	    - std::max(tot_p, sel_p + num_d); // care with unsigned
 	  break;
 	}
 	case HISTOGRAM_PT_INT: {

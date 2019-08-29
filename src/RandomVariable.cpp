@@ -232,8 +232,8 @@ RandomVariable::~RandomVariable()
 Real RandomVariable::cdf(Real x) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: cdf() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: cdf() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->cdf(x); // forward to letter
@@ -252,8 +252,8 @@ Real RandomVariable::ccdf(Real x) const
 Real RandomVariable::inverse_cdf(Real p_cdf) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: inverse_cdf() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: inverse_cdf() not supported for this random variable "
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->inverse_cdf(p_cdf); // forward to letter
@@ -272,8 +272,8 @@ Real RandomVariable::inverse_ccdf(Real p_ccdf) const
 Real RandomVariable::pdf(Real x) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: pdf() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: pdf() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->pdf(x); // forward to letter
@@ -284,7 +284,7 @@ Real RandomVariable::pdf_gradient(Real x) const
 {
   if (!ranVarRep) {
     PCerr << "Error: pdf_gradient() not supported for this random variable "
-	  << "type." << std::endl;
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->pdf_gradient(x); // forward to letter
@@ -294,8 +294,8 @@ Real RandomVariable::pdf_gradient(Real x) const
 Real RandomVariable::pdf_hessian(Real x) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: pdf_hessian() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: pdf_hessian() not supported for this random variable "
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->pdf_hessian(x); // forward to letter
@@ -337,7 +337,7 @@ Real RandomVariable::inverse_standard_cdf(Real p_cdf) const
 {
   if (!ranVarRep) {
     PCerr << "Error: inverse_standard_cdf() not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->inverse_standard_cdf(p_cdf); // forward to letter
@@ -348,7 +348,7 @@ Real RandomVariable::standard_pdf(Real z) const
 {
   if (!ranVarRep) {
     PCerr << "Error: standard_pdf() not supported for this random variable "
-	  << "type." << std::endl;
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->standard_pdf(z); // forward to letter
@@ -368,7 +368,7 @@ Real RandomVariable::log_standard_pdf_gradient(Real z) const
 {
   if (!ranVarRep) {
     PCerr << "Error: log_standard_pdf_gradient() not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   // default usage of standard_pdf() and standard_pdf_gradient() does
@@ -382,7 +382,7 @@ Real RandomVariable::log_standard_pdf_hessian(Real z) const
 {
   if (!ranVarRep) {
     PCerr << "Error: log_standard_pdf_hessian() not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   // default usage of standard_pdf{,_gradient,_hessian}() does not
@@ -395,8 +395,8 @@ Real RandomVariable::log_standard_pdf_hessian(Real z) const
 Real RandomVariable::to_standard(Real x) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: to_standard() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: to_standard() not supported for this random variable "
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->to_standard(x); // forward to letter
@@ -407,7 +407,7 @@ Real RandomVariable::from_standard(Real x) const
 {
   if (!ranVarRep) {
     PCerr << "Error: from_standard() not supported for this random variable "
-	  << "type." << std::endl;
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->from_standard(x); // forward to letter
@@ -420,7 +420,7 @@ void RandomVariable::pull_parameter(short dist_param, Real& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(Real) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -432,7 +432,7 @@ void RandomVariable::pull_parameter(short dist_param, int& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(int) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -444,7 +444,7 @@ void RandomVariable::pull_parameter(short dist_param, unsigned int& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(unsigned int) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -456,7 +456,7 @@ void RandomVariable::pull_parameter(short dist_param, IntSet& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(IntSet) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -468,7 +468,7 @@ void RandomVariable::pull_parameter(short dist_param, StringSet& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(StringSet) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -480,7 +480,7 @@ void RandomVariable::pull_parameter(short dist_param, RealSet& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(RealSet) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -492,7 +492,7 @@ void RandomVariable::pull_parameter(short dist_param, IntRealMap& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(IntRealMap) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -504,7 +504,7 @@ void RandomVariable::pull_parameter(short dist_param, StringRealMap& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(StringRealMap) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -516,7 +516,7 @@ void RandomVariable::pull_parameter(short dist_param, RealRealMap& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(RealRealMap) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -529,7 +529,7 @@ pull_parameter(short dist_param, IntIntPairRealMap& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(IntIntPairRealMap) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -542,7 +542,7 @@ pull_parameter(short dist_param, RealRealPairRealMap& val) const
     ranVarRep->pull_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: pull_parameter(RealRealPairRealMap) not supported for "
-	  << "this random variable type." << std::endl;
+	  << "this random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -554,7 +554,7 @@ void RandomVariable::push_parameter(short dist_param, Real val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(Real) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -566,7 +566,7 @@ void RandomVariable::push_parameter(short dist_param, int val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(int) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -578,7 +578,7 @@ void RandomVariable::push_parameter(short dist_param, unsigned int val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(unsigned int) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -590,7 +590,7 @@ void RandomVariable::push_parameter(short dist_param, const IntSet& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(IntSet) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -602,7 +602,7 @@ void RandomVariable::push_parameter(short dist_param, const StringSet& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(StringSet) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -614,7 +614,7 @@ void RandomVariable::push_parameter(short dist_param, const RealSet& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(RealSet) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -626,7 +626,7 @@ void RandomVariable::push_parameter(short dist_param, const IntRealMap& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(IntRealMap) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -638,7 +638,7 @@ void RandomVariable::push_parameter(short dist_param, const StringRealMap& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(StringRealMap) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -650,7 +650,7 @@ void RandomVariable::push_parameter(short dist_param, const RealRealMap& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(RealRealMap) not supported for this random "
-	  << "variable type." << std::endl;
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -663,7 +663,7 @@ push_parameter(short dist_param, const IntIntPairRealMap& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(IntIntPairRealMap) not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -676,7 +676,7 @@ push_parameter(short dist_param, const RealRealPairRealMap& val)
     ranVarRep->push_parameter(dist_param, val); // forward to letter
   else {
     PCerr << "Error: push_parameter(RealRealPairRealMap) not supported for "
-	  << "this random variable type." << std::endl;
+	  << "this random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
 }
@@ -697,8 +697,8 @@ void RandomVariable::copy_parameters(const RandomVariable& rv)
 Real RandomVariable::mean() const
 {
   if (!ranVarRep) {
-    PCerr << "Error: mean() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: mean() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->mean(); // forward to letter
@@ -717,8 +717,8 @@ Real RandomVariable::median() const
 Real RandomVariable::mode() const
 {
   if (!ranVarRep) {
-    PCerr << "Error: mode() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: mode() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->mode(); // forward to letter
@@ -737,8 +737,8 @@ Real RandomVariable::standard_deviation() const
 Real RandomVariable::variance() const
 {
   if (!ranVarRep) {
-    PCerr << "Error: variance() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: variance() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->variance(); // forward to letter
@@ -757,8 +757,8 @@ RealRealPair RandomVariable::moments() const
 RealRealPair RandomVariable::bounds() const
 {
   if (!ranVarRep) {
-    PCerr << "Error: bounds() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: bounds() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->bounds(); // forward to letter
@@ -781,7 +781,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 {
   if (!ranVarRep) {
     PCerr << "Error: correlation_warping_factor() not supported for this "
-	  << "random variable type." << std::endl;
+	  << "random variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->correlation_warping_factor(rv, corr); // forward to letter
@@ -791,8 +791,8 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 Real RandomVariable::dx_ds(short dist_param, short u_type, Real x, Real z) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: dx_ds() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: dx_ds() not supported for this random variable type ("
+	  << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->dx_ds(dist_param, u_type, x, z); // forward to letter
@@ -803,7 +803,7 @@ Real RandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
 {
   if (!ranVarRep) {
     PCerr << "Error: dz_ds_factor() not supported for this random variable "
-	  << "type." << std::endl;
+	  << "type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
   return ranVarRep->dz_ds_factor(u_type, x, z); // forward to letter
