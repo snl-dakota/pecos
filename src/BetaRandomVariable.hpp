@@ -436,6 +436,7 @@ inline void BetaRandomVariable::copy_parameters(const RandomVariable& rv)
   //UniformRandomVariable::copy_parameters(rv); // different enums used
   rv.pull_parameter(BE_LWR_BND, lowerBnd);
   rv.pull_parameter(BE_UPR_BND, upperBnd);
+  update_boost();
 }
 
 

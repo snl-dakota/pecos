@@ -225,6 +225,7 @@ inline void WeibullRandomVariable::copy_parameters(const RandomVariable& rv)
 {
   rv.pull_parameter(W_ALPHA, alphaStat);
   rv.pull_parameter(W_BETA,  betaStat);
+  update_boost(); // create a new weibullDist instance
 }
 
 

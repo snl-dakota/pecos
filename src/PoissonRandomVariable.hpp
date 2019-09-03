@@ -160,7 +160,10 @@ inline void PoissonRandomVariable::push_parameter(short dist_param, Real val)
 
 
 inline void PoissonRandomVariable::copy_parameters(const RandomVariable& rv)
-{ rv.pull_parameter(P_LAMBDA, poissonLambda); }
+{
+  rv.pull_parameter(P_LAMBDA, poissonLambda);
+  update_boost(); // create a new poissonDist instance
+}
 
 
 inline Real PoissonRandomVariable::mean() const

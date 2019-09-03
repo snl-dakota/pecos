@@ -197,7 +197,7 @@ push_parameter(short dist_param, unsigned int val)
 	  << std::endl;
     abort_handler(-1); break;
   }
-  update_boost(); // create a new binomialDist instance
+  update_boost(); // create a new negBinomialDist instance
 }
 
 
@@ -205,6 +205,7 @@ inline void NegBinomialRandomVariable::copy_parameters(const RandomVariable& rv)
 {
   rv.pull_parameter(NBI_P_PER_TRIAL, probPerTrial);
   rv.pull_parameter(NBI_TRIALS,      numTrials);
+  update_boost(); // create a new negBinomialDist instance
 }
 
 

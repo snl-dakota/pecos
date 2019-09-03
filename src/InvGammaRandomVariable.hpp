@@ -302,6 +302,7 @@ inline void InvGammaRandomVariable::copy_parameters(const RandomVariable& rv)
   rv.pull_parameter(IGA_ALPHA, alphaShape);
   //ExponentialRandomVariable::copy_parameters(rv); // different enum used
   rv.pull_parameter(IGA_BETA,  betaScale);
+  update_boost(); // create a new invGammaDist instance
 }
 
 

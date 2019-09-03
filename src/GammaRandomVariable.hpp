@@ -310,6 +310,7 @@ inline void GammaRandomVariable::copy_parameters(const RandomVariable& rv)
   rv.pull_parameter(GA_ALPHA, alphaShape);
   //ExponentialRandomVariable::copy_parameters(rv); // different enum used
   rv.pull_parameter(GA_BETA,  betaScale);
+  update_boost(); // create a new gammaDist instance
 }
 
 

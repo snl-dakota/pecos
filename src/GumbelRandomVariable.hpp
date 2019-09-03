@@ -229,6 +229,7 @@ inline void GumbelRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in GumbelRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+  //update_boost();
 }
 
 
@@ -236,6 +237,7 @@ inline void GumbelRandomVariable::copy_parameters(const RandomVariable& rv)
 {
   rv.pull_parameter(GU_ALPHA, alphaStat);
   rv.pull_parameter(GU_BETA,  betaStat);
+  //update_boost();
 }
 
 

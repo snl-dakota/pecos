@@ -188,6 +188,7 @@ copy_parameters(const RandomVariable& rv)
   rv.pull_parameter(HGE_TOT_POP, numTotalPop);
   rv.pull_parameter(HGE_SEL_POP, numSelectPop);
   rv.pull_parameter(HGE_DRAWN,   numDrawn);
+  update_boost(); // create a new hypergeomDist instance
 }
 
 

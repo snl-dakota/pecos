@@ -230,6 +230,7 @@ inline void TriangularRandomVariable::copy_parameters(const RandomVariable& rv)
   //UniformRandomVariable::copy_parameters(rv); // different enums used
   rv.pull_parameter(T_LWR_BND, lowerBnd);
   rv.pull_parameter(T_UPR_BND, upperBnd);
+  update_boost(); // create a new triangDist instance
 }
 
 

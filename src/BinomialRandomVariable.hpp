@@ -200,6 +200,7 @@ inline void BinomialRandomVariable::copy_parameters(const RandomVariable& rv)
 {
   rv.pull_parameter(BI_P_PER_TRIAL, probPerTrial);
   rv.pull_parameter(BI_TRIALS,      numTrials);
+  update_boost(); // create a new binomialDist instance
 }
 
 
