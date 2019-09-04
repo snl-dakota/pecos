@@ -265,6 +265,9 @@ size_t MultivariateDistribution::active_variable_index(size_t i) const
     return mvDistRep->active_variable_index(i);
   else { // forward to letter
     const BitArray& active_vars = active_variables();
+    if (active_vars.empty()) // no subset, all variables are active
+      return i;
+
     /* This approach may need to store an index mapping for fast lookup
     size_t v, index = _NPOS, num_v = active_vars.size(), count = 0, id = i+1;
     for (v=0; v<num_v; ++v) {
