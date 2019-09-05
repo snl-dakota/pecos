@@ -810,10 +810,10 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
   // > for finite support in other discrete, compute #support pts
 
   size_t i, num_rv = random_vars.size();//, num_finite_dv = 0;
-  bool finite_combinations = true;
+  bool finite_combinations = true, no_mask = active_vars.empty();
   // track discrete variables that have finite support
   for (i=0; i<num_rv; ++i) {
-    if (active_vars[i]) {
+    if (no_mask || active_vars[i]) {
       switch (random_vars[i].type()) {
       case DISCRETE_RANGE:
       case DISCRETE_SET_INT: case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
@@ -834,7 +834,7 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
   //IntArray discrete_strata_1d; discrete_strata_1d.reserve(num_finite_dv);
   if (finite_combinations)
     for (i=0; i<num_rv; ++i)
-      if (active_vars[i]) {
+      if (no_mask || active_vars[i]) {
 	const RandomVariable& rv_i = random_vars[i];
 	switch (rv_i.type()) {
 	// discrete design, state
