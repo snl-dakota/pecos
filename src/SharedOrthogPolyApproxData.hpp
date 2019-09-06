@@ -120,7 +120,7 @@ public:
   void coefficients_norms_flag(bool flag);
 
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
-  static void coefficients_norms_flag(bool flag, ShortArray& poly_types,
+  static void coefficients_norms_flag(bool flag,
 				      std::vector<BasisPolynomial>& poly_basis);
 
 protected:
@@ -558,19 +558,20 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 
 
 inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
-{ coefficients_norms_flag(flag,orthogPolyTypes,polynomialBasis); }
+{ coefficients_norms_flag(flag, polynomialBasis); }
 
 
 inline void SharedOrthogPolyApproxData::
-coefficients_norms_flag(bool flag, ShortArray& poly_types,
-			std::vector<BasisPolynomial>& poly_basis)
+coefficients_norms_flag(bool flag, std::vector<BasisPolynomial>& poly_basis)
 {
   //size_t i, num_basis = orthogPolyTypes.size();
   size_t i, num_basis = poly_basis.size();
-  for (i=0; i<num_basis; ++i)
-    if (poly_types[i] == NUM_GEN_ORTHOG)
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())
+  for (i=0; i<num_basis; ++i) {
+    BasisPolynomial& poly_basis_i = poly_basis[i];
+    if (poly_basis_i.basis_type() == NUM_GEN_ORTHOG)
+      ((NumericGenOrthogPolynomial*)poly_basis_i.polynomial_rep())
 	->coefficients_norms_flag(flag);
+  }
 }
 
 

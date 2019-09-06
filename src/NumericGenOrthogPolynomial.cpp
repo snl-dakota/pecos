@@ -508,8 +508,8 @@ inner_product(const RealVector& poly_coeffs1,
     break;
   }
   default:
-    PCerr << "Error: unsupported distribution type in NumericGenOrthog"
-	  << "Polynomial::inner_product()." << std::endl;
+    PCerr << "Error: unsupported distribution type (" << distributionType
+	  << ") in NumericGenOrthogPolynomial::inner_product()." << std::endl;
     abort_handler(-1);
     break;
   }
