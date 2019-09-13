@@ -1000,9 +1000,9 @@ public:
 
   /// remove the first entry from {vars,resp}Data, managing anchorIndex
   /// Note: inefficient for std::vector's, but needed in rare cases.
-  void pop_front();
+  void pop_front(size_t num_pop = 1);
   /// remove the last entry from {vars,resp}Data, managing anchorIndex
-  void pop_back();
+  void pop_back(size_t num_pop = 1);
 
   /// remove num_pop_pts entries from ends of active entry in {vars,resp}Data
   void pop(bool save_data = true);
@@ -1514,31 +1514,49 @@ push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
 }
 
 
-inline void SurrogateData::pop_back()
+inline void SurrogateData::pop_back(size_t num_pop)
 {
   SDVArray& sdv_array = sdRep->varsDataIter->second;
   SDRArray& sdr_array = sdRep->respDataIter->second;
-  if (!sdv_array.empty()) sdv_array.pop_back();
-  if (!sdr_array.empty()) sdr_array.pop_back();
-  if (retrieve_anchor_index() >= points()) // popped point was anchor
+  size_t len = std::min(sdv_array.size(), sdr_array.size());
+  if (len < num_pop) {
+    PCerr << "Error: insufficient size (" << len << ") for pop_back("
+	  << num_pop << ")." << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t start = len - num_pop;
+  SDVArray::iterator v_it = sdv_array.begin() + start;
+  SDRArray::iterator r_it = sdr_array.begin() + start;
+  sdv_array.erase(v_it, sdv_array.end());
+  sdr_array.erase(r_it, sdr_array.end());
+
+  if (retrieve_anchor_index() >= start) // popped point was anchor
     clear_anchor_index();
 }
 
 
-inline void SurrogateData::pop_front()
+inline void SurrogateData::pop_front(size_t num_pop)
 {
   SDVArray& sdv_array = sdRep->varsDataIter->second;
   SDRArray& sdr_array = sdRep->respDataIter->second;
-  if (!sdv_array.empty() && !sdr_array.empty()) {
-    sdv_array.erase(sdv_array.begin());
-    sdr_array.erase(sdr_array.begin());
-
-    size_t index = retrieve_anchor_index();
-    if (index == 0) // popped point was anchor
-      clear_anchor_index();
-    else if (index != _NPOS) // anchor (still) exists, decrement its index
-      anchor_index(index - 1);
+  size_t len = std::min(sdv_array.size(), sdr_array.size());
+  if (len < num_pop) {
+    PCerr << "Error: insufficient size (" << len << ") for pop_front("
+	  << num_pop << ")." << std::endl;
+    abort_handler(-1);
   }
+
+  SDVArray::iterator v_it = sdv_array.begin();
+  SDRArray::iterator r_it = sdr_array.begin();
+  sdv_array.erase(v_it, v_it + num_pop);
+  sdr_array.erase(r_it, r_it + num_pop);
+
+  size_t index = retrieve_anchor_index();
+  if (index < num_pop)     // anchor has been popped
+    clear_anchor_index();
+  else if (index != _NPOS) // anchor (still) exists, decrement its index
+    anchor_index(index - num_pop);
 }
 
 
