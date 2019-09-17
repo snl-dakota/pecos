@@ -450,6 +450,56 @@ RealVector MultivariateDistribution::lower_bounds() const
 }
 
 
+void MultivariateDistribution::
+lower_bounds(const RealVector& l_bnds, const BitArray& mask)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->lower_bounds(l_bnds, mask);
+  else {
+    PCerr << "Error: lower_bounds(RealVector, BitArray)\n       not supported "
+	  << "for this multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::
+lower_bounds(const IntVector& l_bnds, const BitArray& mask)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->lower_bounds(l_bnds, mask);
+  else {
+    PCerr << "Error: lower_bounds(IntVector, BitArray)\n       not supported "
+	  << "for this multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::lower_bound(Real l_bnd, size_t rv_index)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->lower_bound(l_bnd, rv_index);
+  else {
+    PCerr << "Error: lower_bound(Real, size_t)\n       not supported for this "
+	  <<  "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::lower_bound(int l_bnd, size_t rv_index)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->lower_bound(l_bnd, rv_index);
+  else {
+    PCerr << "Error: lower_bound(int, size_t)\n       not supported for this "
+	  <<  "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 RealVector MultivariateDistribution::upper_bounds() const
 {
   if (!mvDistRep) { // forward to letter
@@ -459,6 +509,56 @@ RealVector MultivariateDistribution::upper_bounds() const
   }
 
   return mvDistRep->upper_bounds();
+}
+
+
+void MultivariateDistribution::
+upper_bounds(const RealVector& u_bnds, const BitArray& mask)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->upper_bounds(u_bnds, mask);
+  else {
+    PCerr << "Error: upper_bounds(RealVector, BitArray)\n       not supported "
+	  << "for this multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::
+upper_bounds(const IntVector& u_bnds, const BitArray& mask)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->upper_bounds(u_bnds, mask);
+  else {
+    PCerr << "Error: upper_bounds(IntVector, BitArray)\n       not supported "
+	  << "for this multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::upper_bound(Real u_bnd, size_t rv_index)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->upper_bound(u_bnd, rv_index);
+  else {
+    PCerr << "Error: upper_bound(Real, size_t)\n       not supported for this "
+	  <<  "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::upper_bound(int u_bnd, size_t rv_index)
+{
+  if (mvDistRep) // forward to letter
+    mvDistRep->upper_bound(u_bnd, rv_index);
+  else {
+    PCerr << "Error: upper_bound(int, size_t)\n       not supported for this "
+	  <<  "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
 }
 
 // Vector input / Joint:

@@ -91,10 +91,32 @@ public:
 
   /// return lower and upper bounds for multivariate distribution
   virtual RealRealPairArray bounds() const;
+
   /// return lower bounds for multivariate distribution
   virtual RealVector lower_bounds() const;
+  /// set lower bounds for multivariate distribution
+  virtual void lower_bounds(const RealVector& l_bnds,
+			    const BitArray& mask = BitArray());
+  /// set lower bounds for multivariate distribution
+  virtual void lower_bounds(const IntVector& l_bnds,
+			    const BitArray& mask = BitArray());
+  /// set lower bound for a variable within multivariate distribution
+  virtual void lower_bound(Real l_bnd, size_t rv_index);
+  /// set lower bound for a variable within multivariate distribution
+  virtual void lower_bound(int l_bnd, size_t rv_index);
+
   /// return upper bounds for multivariate distribution
   virtual RealVector upper_bounds() const;
+  /// set upper bounds for multivariate distribution
+  virtual void upper_bounds(const RealVector& u_bnds,
+			    const BitArray& mask = BitArray());
+  /// set upper bounds for multivariate distribution
+  virtual void upper_bounds(const IntVector& u_bnds,
+			    const BitArray& mask = BitArray());
+  /// set upper bound for a variable within multivariate distribution
+  virtual void upper_bound(Real u_bnd, size_t rv_index);
+  /// set upper bound for a variable within multivariate distribution
+  virtual void upper_bound(int u_bnd, size_t rv_index);
 
   /// return the multivariate PDF value for the random variables
   virtual Real pdf(const RealVector& pt) const;
