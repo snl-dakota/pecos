@@ -62,7 +62,7 @@ public:
   Real mode() const;
   Real standard_deviation() const;
   Real variance() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //
   //- Heading: Member functions
@@ -212,7 +212,7 @@ inline Real HypergeometricRandomVariable::variance() const
 { return bmth::variance(*hypergeomDist); }
 
 
-inline RealRealPair HypergeometricRandomVariable::bounds() const
+inline RealRealPair HypergeometricRandomVariable::distribution_bounds() const
 {
   unsigned int npr = numSelectPop + numDrawn,
     l_bnd = (npr > numTotalPop) ? npr - numTotalPop : 0;// care w/ unsigned math

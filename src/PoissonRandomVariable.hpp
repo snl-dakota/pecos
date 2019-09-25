@@ -60,7 +60,7 @@ public:
   Real mode() const;
   Real standard_deviation() const;
   Real variance() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //
   //- Heading: Member functions
@@ -186,7 +186,7 @@ inline Real PoissonRandomVariable::variance() const
 { return bmth::variance(*poissonDist); }
 
 
-inline RealRealPair PoissonRandomVariable::bounds() const
+inline RealRealPair PoissonRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

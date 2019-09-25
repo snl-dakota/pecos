@@ -65,7 +65,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
   
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
@@ -242,7 +242,7 @@ inline Real FrechetRandomVariable::variance() const
 }
 
 
-inline RealRealPair FrechetRandomVariable::bounds() const
+inline RealRealPair FrechetRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

@@ -60,7 +60,7 @@ public:
   Real variance() const;
   
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real coefficient_of_variation() const;
 
@@ -379,7 +379,7 @@ inline RealRealPair HistogramBinRandomVariable::moments() const
 }
 
 
-inline RealRealPair HistogramBinRandomVariable::bounds() const
+inline RealRealPair HistogramBinRandomVariable::distribution_bounds() const
 {
   return RealRealPair(valueProbPairs.begin()->first,
 		      (--valueProbPairs.end())->first);

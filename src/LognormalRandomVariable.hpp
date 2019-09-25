@@ -65,7 +65,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
 
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real coefficient_of_variation() const;
 
@@ -306,7 +306,7 @@ inline Real LognormalRandomVariable::variance() const
 }
 
 
-inline RealRealPair LognormalRandomVariable::bounds() const
+inline RealRealPair LognormalRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

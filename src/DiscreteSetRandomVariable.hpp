@@ -60,7 +60,7 @@ public:
   Real variance() const;
   
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real coefficient_of_variation() const;
 
@@ -88,7 +88,7 @@ public:
 
   static Real mode(const std::map<T, Real>& vals_probs);
 
-  static RealRealPair bounds(const std::map<T, Real>& vals_probs);
+  static RealRealPair distribution_bounds(const std::map<T, Real>& vals_probs);
 
   static void moments_from_params(const std::map<T, Real>& vals_probs,
 				  Real& mean, Real& std_dev);
@@ -294,7 +294,7 @@ Real DiscreteSetRandomVariable<T>::mode(const std::map<T, Real>& vals_probs)
 
 template <typename T>
 RealRealPair DiscreteSetRandomVariable<T>::
-bounds(const std::map<T, Real>& vals_probs)
+distribution_bounds(const std::map<T, Real>& vals_probs)
 {
   RealRealPair bnds;
   bnds.first  = (Real)vals_probs.begin()->first;   // lower bound
@@ -368,8 +368,8 @@ Real DiscreteSetRandomVariable<T>::coefficient_of_variation() const
 
 
 template <typename T>
-RealRealPair DiscreteSetRandomVariable<T>::bounds() const
-{ return bounds(valueProbPairs); }
+RealRealPair DiscreteSetRandomVariable<T>::distribution_bounds() const
+{ return distribution_bounds(valueProbPairs); }
 
 
 /// for T-valued histogram, return a real-valued mean and std dev
@@ -501,7 +501,7 @@ mode(const StringRealMap& vals_probs)
 
 template <>
 inline RealRealPair DiscreteSetRandomVariable<String>::
-bounds(const StringRealMap& vals_probs)
+distribution_bounds(const StringRealMap& vals_probs)
 {
   RealRealPair bnds;
   bnds.first  = 0.;                            // index lower bound

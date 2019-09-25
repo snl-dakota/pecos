@@ -99,12 +99,49 @@ public:
   /// assemble standard deviations from RandomVariable::standard_deviation()
   RealVector std_deviations() const;
 
-  /// assemble lower and upper bounds from RandomVariable::bounds()
-  RealRealPairArray bounds() const;
-  /// assemble lower bounds from RandomVariable::bounds()
-  RealVector lower_bounds() const;
-  /// assemble upper bounds from RandomVariable::bounds()
-  RealVector upper_bounds() const;
+  /// assemble distribution lower and upper bounds from RandomVariable::bounds()
+  RealRealPairArray distribution_bounds() const;
+  /// assemble distribution lower bounds from RandomVariable::bounds()
+  RealVector distribution_lower_bounds() const;
+  /// assemble distribution upper bounds from RandomVariable::bounds()
+  RealVector distribution_upper_bounds() const;
+
+  // these bounds are distinct from distribution bounds: for Dakota, they are
+  // "global" bounds; in Pecos, they include RangeVariable bounds
+
+  /// set real lower bounds for variable ranges
+  void lower_bounds(const RealVector& l_bnds,const BitArray& mask = BitArray());
+  /// set integer lower bounds for variable ranges
+  void lower_bounds(const IntVector& l_bnds, const BitArray& mask = BitArray());
+  /// set real lower bound for a variable range
+  void lower_bound(Real l_bnd, size_t rv_index);
+  /// set int lower bound for a variable range
+  void lower_bound(int  l_bnd, size_t rv_index);
+
+  /// set real upper bounds for variable ranges
+  void upper_bounds(const RealVector& u_bnds,const BitArray& mask = BitArray());
+  /// set int  upper bounds for variable ranges
+  void upper_bounds(const IntVector& u_bnds, const BitArray& mask = BitArray());
+  /// set real upper bound for a variable range
+  void upper_bound(Real u_bnd, size_t rv_index);
+  /// set int  upper bound for a variable range
+  void upper_bound(int  u_bnd, size_t rv_index);
+
+  /* This requires clients to bypass the base class and cast a rep pointer
+  template <typename OrdinalType, typename ScalarType>
+  void lower_bounds(
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& l_bnds,
+    const BitArray& mask = BitArray());
+  template <typename ScalarType>
+  void lower_bound(ScalarType l_bnd, size_t rv_index);
+
+  template <typename OrdinalType, typename ScalarType>
+  void upper_bounds(
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& u_bnds,
+    const BitArray& mask = BitArray());
+  template <typename ScalarType>
+  void upper_bound(ScalarType u_bnd, size_t rv_index);
+  */
 
   //
   //- Heading: Member function definitions
@@ -605,63 +642,175 @@ inline RealVector MarginalsCorrDistribution::std_deviations() const
 }
 
 
-inline RealRealPairArray MarginalsCorrDistribution::bounds() const
+inline RealRealPairArray MarginalsCorrDistribution::distribution_bounds() const
 {
   size_t i, num_v = randomVars.size();
   RealRealPairArray bnds;
   if (activeVars.empty()) {
     bnds.resize(num_v);
     for (i=0; i<num_v; ++i)
-      bnds[i] = randomVars[i].bounds();
+      bnds[i] = randomVars[i].distribution_bounds();
   }
   else {
     bnds.resize(activeVars.count());
     size_t av_cntr = 0;
     for (i=0; i<num_v; ++i)
       if (activeVars[i])
-	bnds[av_cntr++] = randomVars[i].bounds();
+	bnds[av_cntr++] = randomVars[i].distribution_bounds();
   }
   return bnds;
 }
 
 
-inline RealVector MarginalsCorrDistribution::lower_bounds() const
+inline RealVector MarginalsCorrDistribution::distribution_lower_bounds() const
 {
   size_t i, num_v = randomVars.size();
   RealVector lwr_bnds;
   if (activeVars.empty()) {
     lwr_bnds.sizeUninitialized(num_v);
     for (i=0; i<num_v; ++i)
-      lwr_bnds[i] = randomVars[i].bounds().first;
+      lwr_bnds[i] = randomVars[i].distribution_bounds().first;
   }
   else {
     lwr_bnds.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
     for (i=0; i<num_v; ++i)
       if (activeVars[i])
-	lwr_bnds[av_cntr++] = randomVars[i].bounds().first;
+	lwr_bnds[av_cntr++] = randomVars[i].distribution_bounds().first;
   }
   return lwr_bnds;
 }
 
 
-inline RealVector MarginalsCorrDistribution::upper_bounds() const
+inline RealVector MarginalsCorrDistribution::distribution_upper_bounds() const
 {
   size_t i, num_v = randomVars.size();
   RealVector upr_bnds;
   if (activeVars.empty()) {
     upr_bnds.sizeUninitialized(num_v);
     for (i=0; i<num_v; ++i)
-      upr_bnds[i] = randomVars[i].bounds().second;
+      upr_bnds[i] = randomVars[i].distribution_bounds().second;
   }
   else {
     upr_bnds.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
     for (i=0; i<num_v; ++i)
       if (activeVars[i])
-	upr_bnds[av_cntr++] = randomVars[i].bounds().second;
+	upr_bnds[av_cntr++] = randomVars[i].distribution_bounds().second;
   }
   return upr_bnds;
+}
+
+
+inline void MarginalsCorrDistribution::
+lower_bounds(const RealVector& l_bnds, const BitArray& mask)
+{
+  size_t i, num_v = randomVars.size();
+  if (mask.empty())
+    for (i=0; i<num_v; ++i)
+      randomVars[i].lower_bound(l_bnds[i]);
+  else {
+    size_t av_cntr = 0, num_av = mask.count();
+    for (i=0; i<num_v; ++i)
+      if (mask[i])
+	randomVars[i].lower_bound(l_bnds[av_cntr++]);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::
+lower_bounds(const IntVector& l_bnds, const BitArray& mask)
+{
+  size_t i, num_v = randomVars.size();
+  if (mask.empty())
+    for (i=0; i<num_v; ++i)
+      randomVars[i].lower_bound(l_bnds[i]);
+  else {
+    size_t av_cntr = 0, num_av = mask.count();
+    for (i=0; i<num_v; ++i)
+      if (mask[i])
+	randomVars[i].lower_bound(l_bnds[av_cntr++]);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::lower_bound(Real l_bnd, size_t rv_index)
+{
+  if (rv_index < randomVars.size())
+    randomVars[rv_index].lower_bound(l_bnd);
+  else {
+    PCerr << "Error: rv_index (" << rv_index << ") out of range in Marginals"
+	  << "CorrDistribution::lower_bound(Real, size_t)" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::lower_bound(int l_bnd, size_t rv_index)
+{
+  if (rv_index < randomVars.size())
+    randomVars[rv_index].lower_bound(l_bnd);
+  else {
+    PCerr << "Error: rv_index (" << rv_index << ") out of range in Marginals"
+	  << "CorrDistribution::lower_bound(int, size_t)" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::
+upper_bounds(const RealVector& u_bnds, const BitArray& mask)
+{
+  size_t i, num_v = randomVars.size();
+  if (mask.empty())
+    for (i=0; i<num_v; ++i)
+      randomVars[i].upper_bound(u_bnds[i]);
+  else {
+    size_t av_cntr = 0, num_av = mask.count();
+    for (i=0; i<num_v; ++i)
+      if (mask[i])
+	randomVars[i].upper_bound(u_bnds[av_cntr++]);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::
+upper_bounds(const IntVector& u_bnds, const BitArray& mask)
+{
+  size_t i, num_v = randomVars.size();
+  if (mask.empty())
+    for (i=0; i<num_v; ++i)
+      randomVars[i].upper_bound(u_bnds[i]);
+  else {
+    size_t av_cntr = 0, num_av = mask.count();
+    for (i=0; i<num_v; ++i)
+      if (mask[i])
+	randomVars[i].upper_bound(u_bnds[av_cntr++]);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::upper_bound(Real u_bnd, size_t rv_index)
+{
+  if (rv_index < randomVars.size())
+    randomVars[rv_index].upper_bound(u_bnd);
+  else {
+    PCerr << "Error: rv_index (" << rv_index << ") out of range in Marginals"
+	  << "CorrDistribution::upper_bound(Real, size_t)" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void MarginalsCorrDistribution::upper_bound(int u_bnd, size_t rv_index)
+{
+  if (rv_index < randomVars.size())
+    randomVars[rv_index].upper_bound(u_bnd);
+  else {
+    PCerr << "Error: rv_index (" << rv_index << ") out of range in Marginals"
+	  << "CorrDistribution::upper_bound(int, size_t)" << std::endl;
+    abort_handler(-1);
+  }
 }
 
 

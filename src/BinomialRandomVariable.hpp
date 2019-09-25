@@ -62,7 +62,7 @@ public:
   Real mode() const;
   Real standard_deviation() const;
   Real variance() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //
   //- Heading: Member functions
@@ -224,7 +224,7 @@ inline Real BinomialRandomVariable::variance() const
 { return bmth::variance(*binomialDist); }
 
 
-inline RealRealPair BinomialRandomVariable::bounds() const
+inline RealRealPair BinomialRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

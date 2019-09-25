@@ -176,8 +176,18 @@ public:
   /// return the distribution mean and standard deviation as a pair
   /** default is only overridden when more efficient to compute together */
   virtual RealRealPair moments() const;
+
   /// return the distribution lower and upper bounds as a pair
-  virtual RealRealPair bounds() const;
+  virtual RealRealPair distribution_bounds() const;
+
+  //virtual Real pull_lower_bound() const;
+  //virtual int  pull_lower_bound() const;
+  //virtual void push_lower_bound(Real l_bnd);
+  //virtual void push_lower_bound(int  l_bnd);
+  virtual void lower_bound(Real l_bnd);
+  virtual void lower_bound(int  l_bnd);
+  virtual void upper_bound(Real l_bnd);
+  virtual void upper_bound(int  l_bnd);
 
   /// compute the coefficient of variation (used to compute selected
   /// correlation warping factors); defined for semi-infinite distributions

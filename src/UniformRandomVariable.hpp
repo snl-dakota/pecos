@@ -72,7 +72,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
   
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
@@ -353,7 +353,7 @@ inline Real UniformRandomVariable::variance() const
 }
 
 
-inline RealRealPair UniformRandomVariable::bounds() const
+inline RealRealPair UniformRandomVariable::distribution_bounds() const
 { return RealRealPair(lowerBnd, upperBnd); }
 
 

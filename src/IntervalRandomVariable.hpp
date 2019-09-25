@@ -64,7 +64,7 @@ public:
   Real variance() const;
   
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //Real coefficient_of_variation() const;
 
@@ -352,7 +352,7 @@ Real IntervalRandomVariable<T>::mode() const
 
 
 template <typename T>
-RealRealPair IntervalRandomVariable<T>::bounds() const
+RealRealPair IntervalRandomVariable<T>::distribution_bounds() const
 {
   T l_bnd, u_bnd;
   if (valueProbPairs.empty()) {

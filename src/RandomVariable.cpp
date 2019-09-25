@@ -754,14 +754,62 @@ RealRealPair RandomVariable::moments() const
 }
 
 
-RealRealPair RandomVariable::bounds() const
+RealRealPair RandomVariable::distribution_bounds() const
 {
   if (!ranVarRep) {
-    PCerr << "Error: bounds() not supported for this random variable type ("
-	  << ranVarType << ")." << std::endl;
+    PCerr << "Error: distribution_bounds() not supported for this random "
+	  << "variable type (" << ranVarType << ")." << std::endl;
     abort_handler(-1);
   }
-  return ranVarRep->bounds(); // forward to letter
+  return ranVarRep->distribution_bounds(); // forward to letter
+}
+
+
+void RandomVariable::lower_bound(Real l_bnd)
+{
+  if (ranVarRep)
+    ranVarRep->lower_bound(l_bnd); // forward to letter
+  else {
+    PCerr << "Error: lower_bound(Real) not supported for this random "
+	  << "variable type (" << ranVarType << ")." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::lower_bound(int l_bnd)
+{
+  if (ranVarRep)
+    ranVarRep->lower_bound(l_bnd); // forward to letter
+  else {
+    PCerr << "Error: lower_bound(int) not supported for this random "
+	  << "variable type (" << ranVarType << ")." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::upper_bound(Real u_bnd)
+{
+  if (ranVarRep)
+    ranVarRep->upper_bound(u_bnd); // forward to letter
+  else {
+    PCerr << "Error: upper_bound(Real) not supported for this random "
+	  << "variable type (" << ranVarType << ")." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void RandomVariable::upper_bound(int u_bnd)
+{
+  if (ranVarRep)
+    ranVarRep->upper_bound(u_bnd); // forward to letter
+  else {
+    PCerr << "Error: upper_bound(int) not supported for this random "
+	  << "variable type (" << ranVarType << ")." << std::endl;
+    abort_handler(-1);
+  }
 }
 
 

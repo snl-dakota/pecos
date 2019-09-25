@@ -90,10 +90,12 @@ public:
   virtual RealVector std_deviations() const;
 
   /// return lower and upper bounds for multivariate distribution
-  virtual RealRealPairArray bounds() const;
-
+  virtual RealRealPairArray distribution_bounds() const;
   /// return lower bounds for multivariate distribution
-  virtual RealVector lower_bounds() const;
+  virtual RealVector distribution_lower_bounds() const;
+  /// return upper bounds for multivariate distribution
+  virtual RealVector distribution_upper_bounds() const;
+
   /// set lower bounds for multivariate distribution
   virtual void lower_bounds(const RealVector& l_bnds,
 			    const BitArray& mask = BitArray());
@@ -105,8 +107,6 @@ public:
   /// set lower bound for a variable within multivariate distribution
   virtual void lower_bound(int l_bnd, size_t rv_index);
 
-  /// return upper bounds for multivariate distribution
-  virtual RealVector upper_bounds() const;
   /// set upper bounds for multivariate distribution
   virtual void upper_bounds(const RealVector& u_bnds,
 			    const BitArray& mask = BitArray());

@@ -58,7 +58,7 @@ public:
   RealRealPair moments() const;
   Real coefficient_of_variation() const;
   */
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   void pull_parameter(short dist_param, std::set<T>& vals) const;
   void push_parameter(short dist_param, const std::set<T>& vals);
@@ -210,7 +210,7 @@ Real SetVariable<T>::mode() const
 
 
 template <typename T>
-RealRealPair SetVariable<T>::bounds() const
+RealRealPair SetVariable<T>::distribution_bounds() const
 {
   // set values are sorted
   T l_bnd = *setValues.begin(), u_bnd = *(--setValues.end());
@@ -260,7 +260,7 @@ inline Real SetVariable<String>::mode() const
 
 
 template <>
-inline RealRealPair SetVariable<String>::bounds() const
+inline RealRealPair SetVariable<String>::distribution_bounds() const
 {
   size_t last_index = setValues.size() - 1;
   return RealRealPair(0., (Real)last_index);

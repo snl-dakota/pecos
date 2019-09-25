@@ -65,7 +65,7 @@ public:
   Real variance() const;
   
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //Real coefficient_of_variation() const;
 
@@ -73,6 +73,9 @@ public:
   void push_parameter(short dist_param, T  val);
 
   void copy_parameters(const RandomVariable& rv);
+
+  void lower_bound(T l_bnd);
+  void upper_bound(T l_bnd);
 
   //
   //- Heading: Member functions
@@ -165,7 +168,7 @@ void RangeVariable<T>::push_parameter(short dist_param, T val)
 
 
 template <typename T>
-inline void RangeVariable<T>::copy_parameters(const RandomVariable& rv)
+void RangeVariable<T>::copy_parameters(const RandomVariable& rv)
 {
   switch (ranVarType) {
   case CONTINUOUS_RANGE:
@@ -179,7 +182,17 @@ inline void RangeVariable<T>::copy_parameters(const RandomVariable& rv)
 
 
 template <typename T>
-inline void RangeVariable<T>::no_template_specialization(String fn) const
+void RangeVariable<T>::lower_bound(T l_bnd)
+{ lowerBnd = l_bnd; }
+
+
+template <typename T>
+void RangeVariable<T>::upper_bound(T u_bnd)
+{ upperBnd = u_bnd; }
+
+
+template <typename T>
+void RangeVariable<T>::no_template_specialization(String fn) const
 {
   PCerr << "Error: no template specialization of " << fn << "() for "
 	<< "RangeVariable<T>." << std::endl;
@@ -223,7 +236,7 @@ Real RangeVariable<T>::ccdf(Real x) const
 
 
 template <typename T>
-inline Real RangeVariable<T>::inverse_cdf(Real p_cdf) const
+Real RangeVariable<T>::inverse_cdf(Real p_cdf) const
 { no_template_specialization("inverse_cdf"); return 0.; }
 
 
@@ -288,7 +301,7 @@ moments_from_params(const std::set<T>& vals, Real& mean, Real& std_dev)
 
 
 template <typename T>
-RealRealPair RangeVariable<T>::bounds() const
+RealRealPair RangeVariable<T>::distribution_bounds() const
 { return RealRealPair((Real)lowerBnd, (Real)upperBnd); }
 
 

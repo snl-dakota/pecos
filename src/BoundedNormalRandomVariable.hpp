@@ -67,7 +67,7 @@ public:
   Real variance() const;
 
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real coefficient_of_variation() const;
 
@@ -361,7 +361,7 @@ inline RealRealPair BoundedNormalRandomVariable::moments() const
 }
 
 
-inline RealRealPair BoundedNormalRandomVariable::bounds() const
+inline RealRealPair BoundedNormalRandomVariable::distribution_bounds() const
 { return RealRealPair(lowerBnd, upperBnd); }
 
 

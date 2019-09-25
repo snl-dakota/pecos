@@ -67,7 +67,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
   
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
@@ -261,7 +261,7 @@ inline Real GumbelRandomVariable::variance() const
 { return PI*PI/(6.*alphaStat*alphaStat); }
 
 
-inline RealRealPair GumbelRandomVariable::bounds() const
+inline RealRealPair GumbelRandomVariable::distribution_bounds() const
 {
   Real dbl_inf = std::numeric_limits<Real>::infinity();
   return RealRealPair(-dbl_inf, dbl_inf);
