@@ -28,6 +28,9 @@ initialize_types(const ShortArray& rv_types, const BitArray& active_vars)
   randomVars.resize(num_v);
   for (i=0; i<num_v; ++i)
     randomVars[i] = RandomVariable(rv_types[i]);
+
+  // assign globalBndsFlag
+  check_global_bounds();
 }
 
 

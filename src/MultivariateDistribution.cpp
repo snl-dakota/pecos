@@ -463,9 +463,7 @@ RealVector MultivariateDistribution::distribution_upper_bounds() const
 
 
 bool MultivariateDistribution::global_bounds() const
-{
-  return (mvDistRep) ? mvDistRep->global_bounds() : true; // for now
-}
+{ return (mvDistRep) ? mvDistRep->global_bounds() : false; }
 
 
 void MultivariateDistribution::

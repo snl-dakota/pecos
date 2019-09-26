@@ -220,6 +220,8 @@ public:
 				  size_t num_trail_v);
   */
 
+  /// set globalBndsFlag based on ranVarTypes
+  void check_global_bounds();
   /// verify that randomVars[i].type() equals rv_type
   void check_random_variable_type(size_t i, short rv_type) const;
 
@@ -269,6 +271,10 @@ protected:
   /// then no subset: correlations are provided for all variables)
   BitArray activeCorr;
 
+  /// precompute the presence of random variables that support global bounds,
+  /// for fto accelerate run-time operations
+  bool globalBndsFlag;
+
 private:
 
   //
@@ -279,7 +285,7 @@ private:
 
 
 inline MarginalsCorrDistribution::MarginalsCorrDistribution():
-  MultivariateDistribution(BaseConstructor())
+  MultivariateDistribution(BaseConstructor()), globalBndsFlag(false)
 { }
 
 
@@ -306,23 +312,17 @@ inline RandomVariable& MarginalsCorrDistribution::random_variable(size_t i)
 { return randomVars[i]; }
 
 
-inline const ShortArray& MarginalsCorrDistribution::
-random_variable_types() const
-{ return ranVarTypes; }
-
-
-inline void MarginalsCorrDistribution::
-random_variable_types(const ShortArray& rv_types)
-{ ranVarTypes = rv_types; }
-
-
-inline short MarginalsCorrDistribution::random_variable_type(size_t i) const
-{ return ranVarTypes[i]; }
-
-
-inline void MarginalsCorrDistribution::
-random_variable_type(short rv_type, size_t i)
-{ ranVarTypes[i] = rv_type; }
+inline void MarginalsCorrDistribution::check_global_bounds()
+{
+  // As a first cut, identify range variables (design, state) as having
+  // "global" bounds, which need to synchronize from global parameter space
+  // updates, separate from distribution parameter updates
+  globalBndsFlag = false;
+  size_t i, num_rv = ranVarTypes.size();
+  for (i=0; i<num_rv; ++i)
+    if (ranVarTypes[i] == CONTINUOUS_RANGE || ranVarTypes[i] == DISCRETE_RANGE)
+      { globalBndsFlag = true; break; }
+}
 
 
 inline void MarginalsCorrDistribution::
@@ -332,6 +332,44 @@ check_random_variable_type(size_t i, short rv_type) const
     PCerr << "Error: inconsistent random variable type in MarginalsCorr"
 	  << "Distribution::check_random_variable_type()." << std::endl;
     abort_handler(-1);
+  }
+}
+
+
+inline const ShortArray& MarginalsCorrDistribution::
+random_variable_types() const
+{ return ranVarTypes; }
+
+
+inline void MarginalsCorrDistribution::
+random_variable_types(const ShortArray& rv_types)
+{
+  ranVarTypes = rv_types;
+  check_global_bounds();
+}
+
+
+inline short MarginalsCorrDistribution::random_variable_type(size_t i) const
+{ return ranVarTypes[i]; }
+
+
+inline void MarginalsCorrDistribution::
+random_variable_type(short rv_type, size_t i)
+{
+  bool new_rv_global = (rv_type == CONTINUOUS_RANGE ||
+			rv_type ==   DISCRETE_RANGE);
+  if (globalBndsFlag) {
+    short& curr_rv_type   = ranVarTypes[i];
+    bool   curr_rv_global = (curr_rv_type == CONTINUOUS_RANGE ||
+			     curr_rv_type ==   DISCRETE_RANGE);
+    curr_rv_type = rv_type;
+    if (curr_rv_global && !new_rv_global) // previous global type removed
+      check_global_bounds();              // --> check for flag update
+  }
+  else { // no current types define global bnds --> update globalBndsFlag
+         // to true if incoming rv_type defines global bnds
+    ranVarTypes[i] = rv_type;
+    globalBndsFlag = new_rv_global;
   }
 }
 
@@ -705,16 +743,7 @@ inline RealVector MarginalsCorrDistribution::distribution_upper_bounds() const
 
 
 inline bool MarginalsCorrDistribution::global_bounds() const
-{
-  // As a first cut, identify range variables (design, state) as having
-  // "global" bounds, which need to synchronize from global parameter space
-  // updates, separate from distribution parameter updates
-  bool found = false;
-  size_t i, num_rv = ranVarTypes.size();
-  for (i=0; i<num_rv; ++i)
-    if (ranVarTypes[i] == CONTINUOUS_RANGE || ranVarTypes[i] == DISCRETE_RANGE)
-      { found = true; break; }
-}
+{ return globalBndsFlag; }
 
 
 inline void MarginalsCorrDistribution::
