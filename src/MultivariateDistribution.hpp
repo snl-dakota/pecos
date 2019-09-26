@@ -96,6 +96,10 @@ public:
   /// return upper bounds for multivariate distribution
   virtual RealVector distribution_upper_bounds() const;
 
+  /// indicate presence of data beyond distribution bounds, which define the
+  /// "global" parameter space
+  virtual bool global_bounds() const;
+
   /// set lower bounds for multivariate distribution
   virtual void lower_bounds(const RealVector& l_bnds,
 			    const BitArray& mask = BitArray());

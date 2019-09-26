@@ -462,6 +462,12 @@ RealVector MultivariateDistribution::distribution_upper_bounds() const
 }
 
 
+bool MultivariateDistribution::global_bounds() const
+{
+  return (mvDistRep) ? mvDistRep->global_bounds() : true; // for now
+}
+
+
 void MultivariateDistribution::
 lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 {

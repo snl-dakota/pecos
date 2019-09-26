@@ -109,6 +109,8 @@ public:
   // these bounds are distinct from distribution bounds: for Dakota, they are
   // "global" bounds; in Pecos, they include RangeVariable bounds
 
+  bool global_bounds() const;
+
   /// set real lower bounds for variable ranges
   void lower_bounds(const RealVector& l_bnds,const BitArray& mask = BitArray());
   /// set integer lower bounds for variable ranges
@@ -699,6 +701,19 @@ inline RealVector MarginalsCorrDistribution::distribution_upper_bounds() const
 	upr_bnds[av_cntr++] = randomVars[i].distribution_bounds().second;
   }
   return upr_bnds;
+}
+
+
+inline bool MarginalsCorrDistribution::global_bounds() const
+{
+  // As a first cut, identify range variables (design, state) as having
+  // "global" bounds, which need to synchronize from global parameter space
+  // updates, separate from distribution parameter updates
+  bool found = false;
+  size_t i, num_rv = ranVarTypes.size();
+  for (i=0; i<num_rv; ++i)
+    if (ranVarTypes[i] == CONTINUOUS_RANGE || ranVarTypes[i] == DISCRETE_RANGE)
+      { found = true; break; }
 }
 
 
