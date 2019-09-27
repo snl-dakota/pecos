@@ -32,18 +32,17 @@ void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
 
   // Note: LHS continuous linear accumulates CDF with first y=0 and last y=1
   x_val.resize(num_params);  y_val.resize(num_params);
-  y_val[0] = 0.;
-  for (i=0; i<last_index; ++i, ++cit) {
-    x_val[i]   = cit->first;
-    y_val[i+1] = y_val[i] + cit->second/* /sum */;
-  }
-  x_val[last_index] = cit->first;
+  for (i=0; i<num_params; ++i, ++cit)
+    x_val[i] = cit->first;
+  y_val[0] = 0.;  cit = h_bin_prs.begin();
+  for (i=0; i<last_index; ++i, ++cit)
+    y_val[i+1] = y_val[i] + cit->second * (x_val[i+1] - x_val[i]);
   // normalize if necessary (h_bin_pairs should have normalized counts)
-  Real& pdf_last = y_val[last_index];
-  if (pdf_last != 1.) {
+  Real& cdf_last = y_val[last_index];
+  if (cdf_last != 1.) {
     for (i=1; i<last_index; ++i)
-      y_val[i] /= pdf_last;
-    pdf_last = 1.;
+      y_val[i] /= cdf_last;
+    cdf_last = 1.;
   }
 #ifdef DEBUG
   for (i=0; i<num_params; ++i)
@@ -71,11 +70,11 @@ void intervals_to_xy_cdf(const RealRealPairRealMap& ci_bpa,
                             y_val[i-1] + 1.e-4; // handle case of a gap
   }
   // normalize if necessary
-  Real& pdf_last = y_val[last_index];
-  if (pdf_last != 1.) {
+  Real& cdf_last = y_val[last_index];
+  if (cdf_last != 1.) {
     for (i=1; i<last_index; ++i)
-      y_val[i] /= pdf_last;
-    pdf_last = 1.;
+      y_val[i] /= cdf_last;
+    cdf_last = 1.;
   }
 #ifdef DEBUG
   for (i=0; i<num_params; ++i)

@@ -323,7 +323,7 @@ void int_range_to_xy_pdf(int l_bnd, int u_bnd,
 
 
 /// histogram bins: pairs are defined from an abscissa in the first field
-/// and a count (not a density) in the second field.  This distinction is
+/// and a density (not a count) in the second field.  This distinction is
 /// important for unequal bin widths.
 void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
 		    RealArray& x_val, RealArray& y_val);
