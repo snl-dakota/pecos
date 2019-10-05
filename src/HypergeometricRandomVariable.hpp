@@ -93,6 +93,8 @@ protected:
 
   /// create a new hypergeomDist instance
   void update_boost();
+  /// create a new hypergeomDist instance if parameter set is valid
+  void update_boost_conditionally();
 
   //
   //- Heading: Data
@@ -178,7 +180,7 @@ push_parameter(short dist_param, unsigned int val)
 	  << std::endl;
     abort_handler(-1); break;
   }
-  update_boost(); // create a new hypergeomDist instance
+  update_boost_conditionally(); // create a new hypergeomDist instance
 }
 
 
@@ -225,6 +227,18 @@ inline void HypergeometricRandomVariable::update_boost()
 {
   if (hypergeomDist) delete hypergeomDist;
   hypergeomDist = new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop);
+}
+
+
+inline void HypergeometricRandomVariable::update_boost_conditionally()
+{
+  // old is now invalid
+  if (hypergeomDist) { delete hypergeomDist; hypergeomDist = NULL; }
+  // new may not be valid as of yet
+  if (numDrawn <= numTotalPop && numSelectPop <= numTotalPop)
+    hypergeomDist
+      = new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop);
+  // else wait for pending param updates
 }
 
 

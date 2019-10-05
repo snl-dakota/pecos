@@ -90,6 +90,8 @@ protected:
 
   /// create a new triangDist instance
   void update_boost();
+  /// create a new triangDist instance if parameter set is valid
+  void update_boost_conditionally();
 
   //
   //- Heading: Data
@@ -220,7 +222,7 @@ inline void TriangularRandomVariable::push_parameter(short dist_param, Real val)
 	  << " in TriangularRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
-  update_boost(); // create a new triangDist instance
+  update_boost_conditionally();// create new triangDist instance if valid params
 }
 
 
@@ -341,6 +343,17 @@ inline void TriangularRandomVariable::update_boost()
 {
   if (triangDist) delete triangDist;
   triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+}
+
+
+inline void TriangularRandomVariable::update_boost_conditionally()
+{
+  // old is now invalid
+  if (triangDist) { delete triangDist; triangDist = NULL; }
+  // new may not be valid as of yet
+  if (lowerBnd <= triangularMode && triangularMode <= upperBnd)
+    triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+  // else wait for pending param updates
 }
 
 
