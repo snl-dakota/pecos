@@ -27,7 +27,7 @@ Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
     break;
 
   case 1:
-    t1_val = 1.0 + (2.0+totalPop+selectPop)/((-numDrawn)*(totalPop+1.0))*x;
+    t1_val = 1.0 + (2.0+totalPop+selectPop)/((-(Real)numDrawn)*(totalPop+1.0))*x;
     break;
 
   case 2:
