@@ -19,31 +19,33 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
   switch ( order ) {
   case 0:
     result = 1.; break;
+
   case 1:
-    result = (lambdaStat-x)/lambdaStat; break;
-  case 2:{
-    Real alpha2 = lambdaStat*lambdaStat;
-    result = (alpha2+x*(-2.*lambdaStat+x-1.))/alpha2;
+    result = 1. - x/lambdaStat; break;
+
+  case 2:
+    result = 1. + x*(-2.*lambdaStat+x-1.)/(lambdaStat*lambdaStat); break;
+
+  case 3: {
+    Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2;
+    result = 1. + x*(-3.*lam2+(2.+3.*lambdaStat-x)*(-1.+x))/lam3;
     break;
   }
-  case 3:{
-    Real alpha2 = lambdaStat*lambdaStat, alpha3 = lambdaStat*alpha2;
-    result=(alpha3+(-3.*alpha2+(2.+3.*lambdaStat-x)*(-1.+x))*x)/alpha3;
+
+  case 4: {
+    Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2, x2 = x*x;
+    result = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*(1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))*x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2);
     break;
   }
-  case 4:{
-    Real alpha2 = lambdaStat*lambdaStat, alpha3 = lambdaStat*alpha2, x2 = x*x;
-    result = (alpha3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*(1.+lambdaStat+alpha2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))*x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(alpha2*alpha2);
-    break;
-  }
-  default:{
+
+  default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real alpha2 = lambdaStat*lambdaStat, alpha3 = lambdaStat*alpha2,x2 = x*x,
-      Ch_nm1 = (alpha3+(-3.*alpha2+(2.+3.*lambdaStat-x)*(-1.+x))*x)/alpha3, //3
-      Ch_n = (alpha3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
-	      (1.+lambdaStat+alpha2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
-	      *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(alpha2*alpha2); //4
-    for ( size_t i=4; i<order; i++ ) {
+    Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2,x2 = x*x,
+      Ch_nm1 = 1.+x*(-3.*lam2+(2.+3.*lambdaStat-x)*(-1.+x))/lam3,  //3
+      Ch_n = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
+	      (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
+	      *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2); //4
+    for (size_t i=4; i<order; i++) {
       result = ((i+lambdaStat-x)*Ch_n-i*Ch_nm1)/lambdaStat; // Ch_nplus1
       if (i != order-1) {
 	Ch_nm1 = Ch_n;
@@ -65,24 +67,25 @@ Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
   switch ( order ) {
   case 0:
     result = 0.; break;
+
   case 1:
-    result = -1/lambdaStat; break;
-  case 2:{
-    Real alpha2 = lambdaStat*lambdaStat;
-    result = (2.*(-lambdaStat+x)-1.)/alpha2;
+    result = -1./lambdaStat; break;
+
+  case 2:
+    result = (2.*(-lambdaStat+x)-1.)/(lambdaStat*lambdaStat); break;
+
+  case 3:
+    result = (-2.+(6.-3.*x)*x+lambdaStat*(-3.-3.*lambdaStat+6.*x))
+           / (lambdaStat*lambdaStat*lambdaStat);
+    break;
+
+  case 4: {
+    Real lam2 = lambdaStat*lambdaStat;
+    result = (-6.+lambdaStat*(-10.+(-10.-4.*lambdaStat)*lambdaStat)+x*(22.+lambdaStat*(28.+12.*lambdaStat)+x*(-18.-12.*lambdaStat+4.*x)))/(lam2*lam2);
     break;
   }
-  case 3:{
-    Real alpha3 = lambdaStat*lambdaStat*lambdaStat;
-    result=(-2.+(6.-3.*x)*x+lambdaStat*(-3.-3.*lambdaStat+6.*x))/alpha3;
-    break;
-  }
-  case 4:{
-    Real alpha2 = lambdaStat*lambdaStat;
-    result = (-6.+lambdaStat*(-10.+(-10.-4.*lambdaStat)*lambdaStat)+x*(22.+lambdaStat*(28.+12.*lambdaStat)+x*(-18.-12.*lambdaStat+4.*x)))/(alpha2*alpha2);
-    break;
-  }
-  default:{
+
+  default: {
     // Support higher order polynomials using the 3 point recursion formula:
     Real dChdx_nm1 = type1_gradient(x,3), dChdx_n =  type1_gradient(x,4);
     for ( size_t i=4; i<order; i++ ) {
@@ -98,33 +101,26 @@ Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
   return result;
 };
 
+
 Real CharlierOrthogPolynomial::type1_hessian( Real x, unsigned short order )
 {
   Real result = 0.;
   switch ( order ) {
-  case 0:{
-    result = 0.;
+  case 0: case 1:
+    result = 0.; break;
+
+  case 2:
+    result = 2./(lambdaStat*lambdaStat); break;
+
+  case 3:
+    result=6.*(lambdaStat-x+1.)/(lambdaStat*lambdaStat*lambdaStat); break;
+
+  case 4: {
+    Real lam2 = lambdaStat*lambdaStat;
+    result = (2.*(11.+6.*lam2+2.*lambdaStat*(7.-6.*x)+6.*(-3.+x)*x))/lam2*lam2;
     break;
   }
-  case 1:{
-    result = 0.;
-    break;
-  }
-  case 2:{
-    Real alpha2 = lambdaStat*lambdaStat;
-    result = 2./alpha2;
-    break;
-  }
-  case 3:{
-    Real alpha3 = lambdaStat*lambdaStat*lambdaStat;
-    result=6.*(lambdaStat-x+1.)/alpha3;
-    break;
-  }
-  case 4:{
-    Real alpha2 = lambdaStat*lambdaStat;
-    result = (2.*(11.+6.*alpha2+2.*lambdaStat*(7.-6.*x)+6.*(-3.+x)*x))/alpha2*alpha2;
-    break;
-  }
+
   default:{
     // Support higher order polynomials using the 3 point recursion formula:
     Real d2Chdx2_nm1 = type1_hessian(x,3), d2Chdx2_n = type1_hessian(x,4);

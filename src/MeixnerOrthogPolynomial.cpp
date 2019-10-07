@@ -27,23 +27,20 @@ Real MeixnerOrthogPolynomial::type1_value(Real x, unsigned short order)
     break;
 
   case 1:
-    t1_val = (probPerTrial*nt + (probPerTrial-1.)*x)/(probPerTrial*nt);
+    t1_val = 1. + x*(probPerTrial-1.)/(probPerTrial*nt);
     break;
 
   case 2: {
     Real ppt2 = probPerTrial*probPerTrial, pm1 = probPerTrial-1., ntp1 = nt+1.;
-    t1_val = (ppt2*nt*ntp1 + (2.*probPerTrial*ntp1-pm1)*pm1*x + pm1*pm1*x*x)/
-      (ppt2*nt*ntp1);
+    t1_val = 1. + x*pm1*(2.*probPerTrial*ntp1 - pm1 + pm1*x) / (ppt2*nt*ntp1);
     break;
   }
 
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real om1 = (Real)order-1., ppt2 = probPerTrial*probPerTrial,
-      pm1 = probPerTrial-1., pnt = probPerTrial*nt, ntp1 = nt+1.,
-      ppt2ntntp1 = ppt2*nt*ntp1,  Kc_nm1 = (pnt + pm1*x) / pnt, //1
-      Kc_n = (ppt2ntntp1 + x*pm1*((2.*probPerTrial*ntp1-pm1) + pm1*x))
-           /  ppt2ntntp1,//2
+    Real om1 = (Real)order-1., ntp1 = nt+1., ppt2 = probPerTrial*probPerTrial,
+      pm1 = probPerTrial-1., pnt = probPerTrial*nt, Kc_nm1 = 1. + x*pm1/pnt, //1
+      Kc_n = 1. + x*pm1*(2.*probPerTrial*ntp1 - pm1 + pm1*x)/(ppt2*nt*ntp1), //2
       A = probPerTrial*(om1+nt);
     for (size_t i=3; i<order; i++) {
       t1_val = ((om1 + A + pm1*x)*Kc_n - om1*Kc_nm1) / A; // Kc_nplus1
