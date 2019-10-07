@@ -19,7 +19,7 @@ namespace Pecos {
 
 Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
-  Real t1_val;
+  Real t1_val, nt = (Real)numTrials;
 
   switch (order) {
   case 0:
@@ -27,20 +27,27 @@ Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
     break;
 
   case 1:
-    t1_val = (probPerTrial*Real(numTrials) - x)/(probPerTrial*Real(numTrials));
+    t1_val = (probPerTrial*nt - x)/(probPerTrial*nt);
     break;
 
   case 2: {
-    Real omN = 1. - numTrials;
-    t1_val = (probPerTrial*probPerTrial*numTrials*omN + (1.0-2.0*probPerTrial*omN)*x - x*x)/(probPerTrial*probPerTrial*numTrials*omN);
+    Real omN = 1. - nt, ppt2 = probPerTrial*probPerTrial;
+    t1_val = (ppt2*nt*omN + (1.-2.*probPerTrial*omN)*x - x*x)/(ppt2*nt*omN);
     break;
   }
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real om1 = Real(order) - 1.;
-    // TO DO: unroll this call stack with a loop (as for other Polynomials)
-    Real fm2 = type1_value(x, order-2), fm1 = type1_value(x, order-1);
-    t1_val = ((probPerTrial*(numTrials-om1)+om1*(1.0-probPerTrial)-x)*fm1 - om1*(1.0-probPerTrial)*fm2)/(probPerTrial*(numTrials-om1));
+    Real om1 = (Real)order -1., omN = 1.-nt, ppt2 = probPerTrial*probPerTrial,
+      Kc_nm1 = (probPerTrial*nt - x)/(probPerTrial*nt),                     //1
+      Kc_n = (ppt2*nt*omN + (1.-2.*probPerTrial*omN)*x - x*x)/(ppt2*nt*omN),//2
+      A = probPerTrial*(nt-om1), C = om1*(1.-probPerTrial);
+    for (size_t i=3; i<order; i++) {
+      t1_val = ((A+C-x)*Kc_n - C*Kc_nm1)/A; // Kc_nplus1
+      if (i != order-1) {
+	Kc_nm1 = Kc_n;
+	Kc_n   = t1_val;
+      }
+    }
     break;
   }
   }

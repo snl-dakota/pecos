@@ -40,7 +40,7 @@ Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
     Real om1 = Real(order) - 1., A = (om1+tp+sp+1.)*(om1+tp+1.)*(nd-om1)/
         ((2.*om1+tp+sp+1.)*(2.*om1+tp+sp+2.)),
       C = om1*(om1+tp+sp+nd+1.)*(om1+sp)/((2.*om1+tp+sp)*(2.*om1+tp+sp+1.)),
-      Ha_nm1 = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x, //1
+      Ha_nm1 = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x,                             //1
       Ha_n   = 1. - 2.*(3.+tp+sp)*x/(nd*(tp+1.))
              + (3.+tp+sp)*(4.+tp+sp)/((tp+1.)*(tp+2.)*nd*(nd-1.))*x*(x-1.); //2
     for (size_t i=3; i<order; i++) {
@@ -50,7 +50,6 @@ Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
 	Ha_n   = t1_val;
       }
     }
-
     break;
   }
   }
