@@ -19,7 +19,7 @@ namespace Pecos {
 
 Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
-  Real t1_val;
+  Real t1_val, nd = (Real)numDrawn, tp = (Real)totalPop, sp = (Real)selectPop;
 
   switch (order) {
   case 0:
@@ -27,21 +27,30 @@ Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
     break;
 
   case 1:
-    t1_val = 1.0 + (2.0+totalPop+selectPop)/((-(Real)numDrawn)*(totalPop+1.0))*x;
+    t1_val = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x;
     break;
 
   case 2:
-    t1_val = 1.0 - 2.0*(3.0+totalPop+selectPop)*x/(numDrawn*(totalPop+1.0)) + (3.0+totalPop+selectPop)*(4.0+totalPop+selectPop)/((totalPop+1.0)*(totalPop+2.0)*numDrawn*(numDrawn-1.0))*x*(x-1.0);
+    t1_val = 1. - 2.*(3.+tp+sp)*x/(nd*(tp+1.))
+           + (3.+tp+sp)*(4.+tp+sp)/((tp+1.)*(tp+2.)*nd*(nd-1.))*x*(x-1.);
     break;
 
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real omN = 1.0 - selectPop, om1 = Real(order) - 1.0;
-    // TO DO: unroll this call stack with a loop (as for other Polynomials)
-    Real fm2 = type1_value(x, order-2), fm1 = type1_value(x, order-1);
-    Real A = (om1+totalPop+selectPop+1.0)*(om1+totalPop+1.0)*(numDrawn-om1)/((2.0*om1+totalPop+selectPop+1.0)*(2.0*om1+totalPop+selectPop+2.0));
-    Real C = om1*(om1+totalPop+selectPop+numDrawn+1.0)*(om1+selectPop)/((2.0*om1+totalPop+selectPop)*(2.0*om1+totalPop+selectPop+1.0));
-    t1_val = ((A+C-x)*fm1 - C*fm2)/A;
+    Real om1 = Real(order) - 1., A = (om1+tp+sp+1.)*(om1+tp+1.)*(nd-om1)/
+        ((2.*om1+tp+sp+1.)*(2.*om1+tp+sp+2.)),
+      C = om1*(om1+tp+sp+nd+1.)*(om1+sp)/((2.*om1+tp+sp)*(2.*om1+tp+sp+1.)),
+      Ha_nm1 = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x, //1
+      Ha_n   = 1. - 2.*(3.+tp+sp)*x/(nd*(tp+1.))
+             + (3.+tp+sp)*(4.+tp+sp)/((tp+1.)*(tp+2.)*nd*(nd-1.))*x*(x-1.); //2
+    for (size_t i=3; i<order; i++) {
+      t1_val = ((A+C-x)*Ha_n - C*Ha_nm1)/A; // Ha_nplus1
+      if (i != order-1) {
+	Ha_nm1 = Ha_n;
+	Ha_n   = t1_val;
+      }
+    }
+
     break;
   }
   }
