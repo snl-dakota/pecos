@@ -75,7 +75,6 @@ public:
   RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
-
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
   Real dz_ds_factor(short u_type, Real x, Real z) const;
 
@@ -110,6 +109,11 @@ public:
 
   static void moments_from_params(Real lwr, Real upr, Real& mean,
 				  Real& std_dev);
+
+  static Real corr_warp_fact(const RandomVariable& rv, Real corr);
+  static Real dx_ds_fact(short dist_param, short u_type, short rv_type,
+			 Real x, Real z);
+  static Real dz_ds_fact(short u_type, Real range, Real x, Real z);
 
 protected:
 
@@ -359,10 +363,25 @@ inline RealRealPair UniformRandomVariable::distribution_bounds() const
 
 inline Real UniformRandomVariable::
 correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{ return corr_warp_fact(rv, corr); }
+
+
+inline Real UniformRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{ return dx_ds_fact(dist_param, u_type, ranVarType, x, z); }
+
+
+inline Real UniformRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{ return dz_ds_fact(u_type, upperBnd - lowerBnd, x, z); }
+
+
+inline Real UniformRandomVariable::
+corr_warp_fact(const RandomVariable& rv, Real corr)
 {
   // correlation warping factor for transformations to STD_NORMAL space
   // Der Kiureghian and Liu, ASCE JEM 112:1, 1986
-  Real COV;
+  Real COV_rv;
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
   // Der Kiureghian & Liu: Table 4
@@ -375,18 +394,23 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 
   // Der Kiureghian & Liu: Table 5 (quadratic approximations in COV,corr)
   case GAMMA:       case STD_GAMMA:        // Max Error 0.1%
-    COV = rv.coefficient_of_variation();
-    return 1.023 + (-0.007 + 0.127*COV)*COV + 0.002*corr*corr; break;
+    COV_rv = rv.coefficient_of_variation();
+    return 1.023 + (-0.007 + 0.127*COV_rv)*COV_rv + 0.002*corr*corr; break;
   case FRECHET:                            // Max Error 2.1%
-    COV = rv.coefficient_of_variation();
-    return 1.033 + ( 0.305 + 0.405*COV)*COV + 0.074*corr*corr; break;
+    COV_rv = rv.coefficient_of_variation();
+    return 1.033 + ( 0.305 + 0.405*COV_rv)*COV_rv + 0.074*corr*corr; break;
   case WEIBULL:                            // Max Error 0.5%
-    COV = rv.coefficient_of_variation();
-    return 1.061 + (-0.237 + 0.379*COV)*COV - 0.005*corr*corr; break;
+    COV_rv = rv.coefficient_of_variation();
+    return 1.061 + (-0.237 + 0.379*COV_rv)*COV_rv - 0.005*corr*corr; break;
 
-  // warping factors are defined once for lower triangle based on uv order
-  case NORMAL: case STD_NORMAL: case LOGNORMAL:
-    return rv.correlation_warping_factor(*this, corr); break;
+  // can avoid code duplication by flipping pair, but conflicts with static defn
+  //case NORMAL: case STD_NORMAL: case LOGNORMAL:
+  //  return rv.correlation_warping_factor(*this, corr); break;
+  case NORMAL: case STD_NORMAL: // Max Error 0.0%
+    return 1.023326707946488488; break;
+  case LOGNORMAL: // Max Error 0.7%
+    COV_rv = rv.coefficient_of_variation();
+    return 1.019 + (0.014 + 0.249*COV_rv)*COV_rv + 0.01*corr*corr; break;
 
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for UniformRV."<<std::endl;
@@ -399,37 +423,37 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
     with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
     while dz_ds_factor() manages contributions in the correlated case. */
 inline Real UniformRandomVariable::
-dx_ds(short dist_param, short u_type, Real x, Real z) const
+dx_ds_fact(short dist_param, short u_type, short rv_type, Real x, Real z)
 {
-  // to STD_NORMAL:  x = L + Phi(z) (U - L)
-  // to STD_UNIFORM: x = L + (z + 1)*(U - L)/2
+  // Note: we require information from both transformed space (e.g. u_type, z)
+  //       and original space (rv_type, x) for this operation.  In
+  //       NatafTransformation, this is called on the xDist RandomVariable.
+
+  // to STD_NORMAL:  x = L +  Phi(z) (U - L)
+  // to STD_UNIFORM: x = L + (z + 1) (U - L) / 2
   bool u_type_err = false, dist_err = false;
   switch (dist_param) {
   case U_LWR_BND: case CR_LWR_BND:
     // Deriv of Uniform w.r.t. its Lower Bound
     switch (u_type) {
-    //case STD_NORMAL:  return NormalRandomVariable::std_ccdf(z); break;
-    //case STD_UNIFORM: return std_ccdf(z); break;
-    // The following is equivalent with fewer operations:
-    case STD_NORMAL: case STD_UNIFORM: return ccdf(x); break;
-    default: u_type_err = true;                        break;
+    case STD_NORMAL:  return NormalRandomVariable::std_ccdf(z);/*ccdf(x)*/break;
+    case STD_UNIFORM:
+      return UniformRandomVariable::std_ccdf(z);/*ccdf(x)*/               break;
+    default: u_type_err = true;                                           break;
     }
     break;
   case U_UPR_BND: case CR_UPR_BND:
     // Deriv of Uniform w.r.t. its Upper Bound
     switch (u_type) {
-    //case STD_NORMAL:  return NormalRandomVariable::std_cdf(z); break;
-    //case STD_UNIFORM: return std_cdf(z);                       break;
-    // The following is equivalent with fewer operations:
-    case STD_NORMAL: case STD_UNIFORM: return cdf(x); break;
-    default:          u_type_err = true;                       break;
+    case STD_NORMAL:  return  NormalRandomVariable::std_cdf(z);/*cdf(x)*/ break;
+    case STD_UNIFORM: return UniformRandomVariable::std_cdf(z);/*cdf(x)*/ break;
+    default:          u_type_err = true;                                  break;
     }
     break;
   //case U_LOCATION: - TO DO
   //case U_SCALE:    - TO DO
   case NO_TARGET: // can occur for all_variables Jacobians
-    if (ranVarType == CONTINUOUS_RANGE ||
-	ranVarType == CONTINUOUS_INTERVAL_UNCERTAIN)
+    if (rv_type == CONTINUOUS_RANGE || rv_type == CONTINUOUS_INTERVAL_UNCERTAIN)
       return 0.;
     else dist_err = true;
     break;
@@ -439,10 +463,10 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
 
   if (u_type_err)
     PCerr << "Error: unsupported u-space type " << u_type
-	  << " in UniformRandomVariable::dx_ds()." << std::endl;
+	  << " in UniformRandomVariable::dx_ds_fact()." << std::endl;
   if (dist_err)
     PCerr << "Error: mapping failure for distribution parameter " << dist_param
-	  << " in UniformRandomVariable::dx_ds()." << std::endl;
+	  << " in UniformRandomVariable::dx_ds_fact()." << std::endl;
   if (u_type_err || dist_err)
     abort_handler(-1);
   return 0.;
@@ -454,18 +478,22 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
     u and z are constants.  For the correlated case, u is a constant, but 
     z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
 inline Real UniformRandomVariable::
-dz_ds_factor(short u_type, Real x, Real z) const
+dz_ds_fact(short u_type, Real range, Real x, Real z)
 {
-  // to STD_NORMAL:  x = L + Phi(z) (U - L)
-  // to STD_UNIFORM: x = L + (z + 1)*(U - L)/2
+  // Note: we require information from both transformed space (e.g. u_type, z)
+  //       and original space (range, x) for this operation.  In
+  //       NatafTransformation, this is called on the xDist RandomVariable.
+
+  // to STD_NORMAL:  x = L + Phi(z)  (U - L)
+  // to STD_UNIFORM: x = L + (z + 1) (U - L) / 2
   switch (u_type) {
   case STD_NORMAL:
-    return (upperBnd-lowerBnd) * NormalRandomVariable::std_pdf(z); break;
+    return range *  NormalRandomVariable::std_pdf(z); break;
   case STD_UNIFORM:
-    return (upperBnd-lowerBnd) * std_pdf();                        break;
+    return range * UniformRandomVariable::std_pdf();  break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type
-	  << " in UniformRandomVariable::dz_ds_factor()." << std::endl;
+	  << " in UniformRandomVariable::dz_ds_fact()." << std::endl;
     abort_handler(-1); return 0.; break;
   }
 }

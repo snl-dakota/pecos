@@ -67,6 +67,9 @@ public:
   RealRealPair moments() const;
   RealRealPair distribution_bounds() const;
 
+  void lower_bound(T l_bnd);
+  void upper_bound(T l_bnd);
+
   //Real coefficient_of_variation() const;
 
   void pull_parameter(short dist_param, T& val) const;
@@ -74,8 +77,9 @@ public:
 
   void copy_parameters(const RandomVariable& rv);
 
-  void lower_bound(T l_bnd);
-  void upper_bound(T l_bnd);
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -305,6 +309,23 @@ RealRealPair RangeVariable<T>::distribution_bounds() const
 { return RealRealPair((Real)lowerBnd, (Real)upperBnd); }
 
 
+template <typename T>
+Real RangeVariable<T>::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{ no_template_specialization("correlation_warping_factor"); return 0.; }
+
+
+template <typename T>
+Real RangeVariable<T>::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{ no_template_specialization("dx_ds"); return 0.; }
+
+
+template <typename T>
+Real RangeVariable<T>::dz_ds_factor(short u_type, Real x, Real z) const
+{ no_template_specialization("dz_ds_factor"); return 0.; }
+
+
 //// SPECIALIZATIONS ////
 
 
@@ -341,6 +362,27 @@ inline RealRealPair RangeVariable<Real>::moments() const
     moments_from_params(lowerBnd, upperBnd, moms.first, moms.second);
   return moms;
 }
+
+
+template <>
+inline Real RangeVariable<Real>::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{ return UniformRandomVariable::corr_warp_fact(rv, corr); }
+
+
+template <>
+inline Real RangeVariable<Real>::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  return UniformRandomVariable::
+    dx_ds_fact(dist_param, u_type, ranVarType, x, z);
+}
+
+
+template <>
+inline Real RangeVariable<Real>::
+dz_ds_factor(short u_type, Real x, Real z) const
+{ return UniformRandomVariable::dz_ds_fact(u_type, upperBnd - lowerBnd, x, z); }
 
 } // namespace Pecos
 
