@@ -803,14 +803,29 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 			const BitArray& active_vars,
 			const BitArray& active_corr)
 {
-  // compute the number of total possible combinations of discrete variables
-  // > for range variables, use ub-lb+1
-  // > for BPA variables, overlay unique ranges
-  // > for {set,map} variables, use {set,map}.size()
-  // > for finite support in other discrete, compute #support pts
+  // ***************************************************************************
+  // IMPORTANT NOTE: this heuristic approach emphasizes having unique discrete
+  // samples irregardless of their relative probability. As such, ANY STATISTICS
+  // GENERATED FROM THESE SAMPLES WILL BE INVALID --> routine should only be
+  // used for generating space-filling designs, e.g. for building surrogates
+  // or approximating epistemic bounds.
+  // ***************************************************************************
+  // Approach 1 (current): accept a new sample if unique in cont+disc space.
+  // > if mixed, first aggregate sample will be accepted with strata intact
+  //   but discrete stratification will not be enhanced.
+  // > if discrete only, iteration will occur irregardless of strata/probs.
+  // Approach 2 (original): accept a new sample if unique in discrete subset.
+  // > if mixed or discrete, iteration will occur irregardless of strata/probs
+  //   and accepted samples are only from newly generated sets.
+  // Approach 3 (TO DO?): preserve cont strata from a single cont+disc sample
+  // --> backfill only the disc subset with generated sets of discrete samples.
+  // > This approach preserves cont strata; but ignores disc strata/probs
+  // ***************************************************************************
 
+  // determine if the RV set has a finite set of possible sample points
   size_t i, num_rv = random_vars.size();//, num_finite_dv = 0;
   bool finite_combinations = true, no_mask = active_vars.empty();
+  size_t num_av = (no_mask) ? num_rv : active_vars.count();
   // track discrete variables that have finite support
   for (i=0; i<num_rv; ++i) {
     if (no_mask || active_vars[i]) {
@@ -830,9 +845,15 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
     if (!finite_combinations) break;
   }
 
-  size_t max_unique = (finite_combinations) ? 1 : _NPOS;
+  // if finite, compute number of possible discrete combinations
+  // > for range variables, use ub-lb+1
+  // > for BPA variables, overlay unique ranges
+  // > for {set,map} variables, use {set,map}.size()
+  // > for finite support in other discrete, compute #support pts
+  size_t max_unique = _NPOS;
   //IntArray discrete_strata_1d; discrete_strata_1d.reserve(num_finite_dv);
-  if (finite_combinations)
+  if (finite_combinations) {
+    max_unique = 1;
     for (i=0; i<num_rv; ++i)
       if (no_mask || active_vars[i]) {
 	const RandomVariable& rv_i = random_vars[i];
@@ -945,27 +966,53 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 	}
 	}
       }
+  }
 
+  bool complete = false;
+  RealMatrix new_samples;  RealArray new_samp_i(num_av);
+  std::set<RealArray> unique_samples;
+  size_t unique_cntr = 0, iter = 0, max_iter = 1000;
 
   // If the number of samples requested is greater than the maximum possible
   // number of discrete samples then we must allow replicates of the discrete
   // variables to obtain the desired number of variables.  If not then we can
   // proceed with generating a unique set of discrete samples.
-  if (finite_combinations && max_unique < num_samples) {
+  if (max_unique < num_samples) {
 
-    // *** TO DO:  set max_iter at ~5 to allow some improvement?
-    // *** BETTER: allow iteration to continue iff new > old && new < target
+    // Allow iteration to continue if new > old
+    PCout << "Warning: LHS backfill was requested, but the discrete variables "
+	  << "provided\n         do not have enough unique values ("
+	  << max_unique << ") to obtain the number of\n         samples "
+	  << "requested.  Backfill iterations will be attempted to increase\n"
+	  << "         the number of unique samples until no further progress "
+	  << "is detected." << std::endl;
 
-    PCout << "LHS backfill was requested, but the discrete variables provided "
-	  << "do not have enough unique values (" << max_unique
-	  << ") to obtain the number of samples requested.  Replicated "
-	  << "discrete samples have therefore been allowed.\n";
-    generate_samples(random_vars, corr, num_samples, samples, sample_ranks,
-		     active_vars, active_corr);
+    size_t unique_cntr_prev = 0;
+    while (!complete && iter < max_iter) {
+      generate_samples(random_vars, corr, num_samples, new_samples,
+		       sample_ranks, active_vars, active_corr);
+
+      // Sort real-valued samples and replace until # unique >= # requested.
+      // > For now, don't try to replace only the discrete subset.
+      // > Preserve original sample ordering --> don't truncate an ordered set
+      //   (omitting tail of ordered set could bias coverage).
+      for (i=0; i<num_samples; ++i) {
+	const Real* samp_i = new_samples[i];
+	if (test_unique(random_vars, active_vars, samp_i, unique_samples)) {
+	  copy_data(samp_i, num_av, samples[unique_cntr++]); // append
+	  if (unique_cntr >= num_samples)
+	    { complete = true; break; }
+	}
+      }
+      ++iter;
+      if (unique_cntr == unique_cntr_prev)  complete = true;
+      else               unique_cntr_prev = unique_cntr;
+    }
   }
   else {
-    if (samples.numRows() != num_rv || samples.numCols() != num_samples)
-      samples.shapeUninitialized(num_rv, num_samples);
+    if (samples.numRows() != num_av || samples.numCols() != num_samples)
+      samples.shapeUninitialized(num_av, num_samples);
+
     // Currently sample_ranks will always be returned empty. It should only be
     // filled when NonDSampling::sampleRanksMode > 0. But I cannot see anywhere
     // in the code where this is true.
@@ -988,10 +1035,6 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
     // Eliminate redundant samples by resampling if necessary.  Could pad
     // num_samples in anticipation of duplicates, but this would alter LHS
     // stratification that could be intended, so use num_samples for now.
-    bool unique, complete = false;
-    RealMatrix new_samples;  RealArray new_samp_i(num_rv);
-    std::set<RealArray> unique_samples;
-    size_t unique_cntr = 0, iter = 0, max_iter = 1000;
     while (!complete && iter < max_iter) {
       generate_samples(random_vars, corr, num_samples, new_samples,
 		       sample_ranks, active_vars, active_corr);
@@ -1001,9 +1044,9 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
       // > Preserve original sample ordering --> don't truncate an ordered set
       //   (omitting tail of ordered set could bias coverage).
       for (i=0; i<num_samples; ++i) {
-	copy_data(new_samples[i], num_rv, new_samp_i);  // vector for sorting
-	if (unique_samples.insert(new_samp_i).second) { // true if inserted
-	  copy_data(new_samples[i], num_rv, samples[unique_cntr++]); // append
+	const Real* samp_i = new_samples[i];
+	if (test_unique(random_vars, active_vars, samp_i, unique_samples)) {
+	  copy_data(samp_i, num_av, samples[unique_cntr++]); // append
 	  if (unique_cntr >= num_samples)
 	    { complete = true; break; }
 	}
@@ -1011,7 +1054,6 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
       ++iter;
 
       ////////////////////////////////////////
-
       /*
       if (initial) { // pack initial sample set
 	for (i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
@@ -1060,8 +1102,52 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 	}
       }
       */
+      ////////////////////////////////////////
     }
   }
+  if (unique_cntr < num_samples) {
+    PCerr << "Warning: iterations completed with number of unique samples ("
+	  << unique_cntr << ")\n         less than target (" << num_samples
+	  << ")." << std::endl;
+    samples.reshape(num_av, unique_cntr);
+  }
+}
+
+
+bool LHSDriver::
+test_unique(const std::vector<RandomVariable>& random_vars,
+	    const BitArray& active_vars, const Real* new_samp,
+	    std::set<RealArray>& unique_samples)
+{
+  bool full_match = false; // hardwire this for right now
+
+  size_t num_rv = random_vars.size();
+  bool  no_mask = active_vars.empty();
+  RealArray new_samp_v;
+  if (full_match) {
+    size_t num_av = (no_mask) ? num_rv : active_vars.count();
+    new_samp_v.resize(num_av);
+    copy_data(new_samp, num_av, new_samp_v);  // vector for sorting
+  }
+  else { // check for discrete match
+    size_t i, cntr = 0;
+    for (i=0; i<num_rv; ++i)
+      if (no_mask || active_vars[i]) {
+	switch (random_vars[i].type()) {
+	case DISCRETE_RANGE:
+	case DISCRETE_SET_INT: case DISCRETE_SET_STRING: case DISCRETE_SET_REAL:
+	case BINOMIAL:         case NEGATIVE_BINOMIAL:
+	case GEOMETRIC:        case HYPERGEOMETRIC:
+	case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
+	case DISCRETE_INTERVAL_UNCERTAIN:   case DISCRETE_UNCERTAIN_SET_INT:
+	case DISCRETE_UNCERTAIN_SET_STRING: case DISCRETE_UNCERTAIN_SET_REAL:
+	  new_samp_v.push_back(new_samp[cntr]);  break;
+	}
+	++cntr;
+      }
+  }
+  // returns pair<iterator,bool>
+  return unique_samples.insert(new_samp_v).second;
 }
 
 } // namespace Pecos

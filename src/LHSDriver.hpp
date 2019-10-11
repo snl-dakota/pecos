@@ -148,6 +148,10 @@ private:
   /// create F77 string label from base name + padding (field = 32 chars)
   void f77name32(const char* name, String& label);
 
+  bool test_unique(const std::vector<RandomVariable>& random_vars,
+		   const BitArray& active_vars, const Real* new_samp,
+		   std::set<RealArray>& unique_samples);
+
   //
   //- Heading: Data
   //
