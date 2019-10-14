@@ -88,6 +88,8 @@ public:
   virtual RealVector means() const;
   /// return marginal standard deviations for multivariate distribution
   virtual RealVector std_deviations() const;
+  /// return marginal variances for multivariate distribution
+  virtual RealVector variances() const;
 
   /// return lower and upper bounds for multivariate distribution
   virtual RealRealPairArray distribution_bounds() const;

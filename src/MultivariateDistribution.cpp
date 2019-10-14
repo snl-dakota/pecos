@@ -414,6 +414,18 @@ RealVector MultivariateDistribution::means() const
 }
 
 
+RealVector MultivariateDistribution::variances() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: variances() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->variances();
+}
+
+
 RealVector MultivariateDistribution::std_deviations() const
 {
   if (!mvDistRep) { // forward to letter

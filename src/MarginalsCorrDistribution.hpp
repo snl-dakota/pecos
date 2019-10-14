@@ -98,6 +98,8 @@ public:
   RealVector means() const;
   /// assemble standard deviations from RandomVariable::standard_deviation()
   RealVector std_deviations() const;
+  /// assemble variances from RandomVariable::variance()
+  RealVector variances() const;
 
   /// assemble distribution lower and upper bounds from RandomVariable::bounds()
   RealRealPairArray distribution_bounds() const;
@@ -679,6 +681,26 @@ inline RealVector MarginalsCorrDistribution::std_deviations() const
 	std_devs[av_cntr++] = randomVars[i].standard_deviation();
   }
   return std_devs;
+}
+
+
+inline RealVector MarginalsCorrDistribution::variances() const
+{
+  size_t i, num_v = randomVars.size();
+  RealVector vars;
+  if (activeVars.empty()) {
+    vars.sizeUninitialized(num_v);
+    for (i=0; i<num_v; ++i)
+      vars[i] = randomVars[i].variance();
+  }
+  else {
+    vars.sizeUninitialized(activeVars.count());
+    size_t av_cntr = 0;
+    for (i=0; i<num_v; ++i)
+      if (activeVars[i])
+	vars[av_cntr++] = randomVars[i].variance();
+  }
+  return vars;
 }
 
 
