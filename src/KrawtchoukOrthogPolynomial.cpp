@@ -37,16 +37,16 @@ Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
   }
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real om1 = (Real)order-1., omN = 1.-nt, ppt2 = probPerTrial*probPerTrial,
+    Real omN = 1.-nt, ppt2 = probPerTrial*probPerTrial,
       Kc_nm1 = 1. - x/(probPerTrial*nt),                         //1
-      Kc_n   = 1. + x*(1.-2.*probPerTrial*omN - x)/(ppt2*nt*omN),//2
+      Kc_n   = 1. + x*(1.-2.*probPerTrial*omN - x)/(ppt2*nt*omN);//2
+    Real om1, A, C;
+    for (size_t i=3; i<=order; i++) {
+      om1 = (Real)i-1.;
       A = probPerTrial*(nt-om1), C = om1*(1.-probPerTrial);
-    for (size_t i=3; i<order; i++) {
       t1_val = ((A+C-x)*Kc_n - C*Kc_nm1)/A; // Kc_nplus1
-      if (i != order-1) {
-	Kc_nm1 = Kc_n;
-	Kc_n   = t1_val;
-      }
+      Kc_nm1 = Kc_n;
+      Kc_n   = t1_val;
     }
     break;
   }

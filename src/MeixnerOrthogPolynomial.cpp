@@ -38,16 +38,16 @@ Real MeixnerOrthogPolynomial::type1_value(Real x, unsigned short order)
 
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real om1 = (Real)order-1., ntp1 = nt+1., ppt2 = probPerTrial*probPerTrial,
+    Real ntp1 = nt+1., ppt2 = probPerTrial*probPerTrial,
       pm1 = probPerTrial-1., pnt = probPerTrial*nt, Kc_nm1 = 1. + x*pm1/pnt, //1
-      Kc_n = 1. + x*pm1*(2.*probPerTrial*ntp1 - pm1 + pm1*x)/(ppt2*nt*ntp1), //2
+      Kc_n = 1. + x*pm1*(2.*probPerTrial*ntp1 - pm1 + pm1*x)/(ppt2*nt*ntp1); //2
+    Real om1, A;
+    for (size_t i=3; i<=order; i++) {
+      om1 = (Real)i-1.;
       A = probPerTrial*(om1+nt);
-    for (size_t i=3; i<order; i++) {
       t1_val = ((om1 + A + pm1*x)*Kc_n - om1*Kc_nm1) / A; // Kc_nplus1
-      if (i != order-1) {
-	Kc_nm1 = Kc_n;
-	Kc_n   = t1_val;
-      }
+      Kc_nm1 = Kc_n;
+      Kc_n   = t1_val;
     }
     break;
   }

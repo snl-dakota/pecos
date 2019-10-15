@@ -159,7 +159,7 @@ namespace {
   //------------------------------------
   // Compute known exact orthogonality value
   //------------------------------------
-  Real hahn_exact_orthog(unsigned int a, unsigned int b, unsigned int N, short order)
+  Real hahn_exact_orthog(unsigned int a, unsigned int b, int N, short order)
   {
     Real value =   std::pow(-1,order)*BasisPolynomial::pochhammer((order+a+b+1.0),(N+1))*BasisPolynomial::pochhammer((b+1.0),order)
                   *BasisPolynomial::factorial(order)/((2.0*order+a+b+1.0)*BasisPolynomial::pochhammer((a+1.0),order)

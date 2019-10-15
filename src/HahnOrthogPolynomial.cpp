@@ -37,18 +37,17 @@ Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
 
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real om1 = Real(order) - 1., A = (om1+tp+sp+1.)*(om1+tp+1.)*(nd-om1)/
-        ((2.*om1+tp+sp+1.)*(2.*om1+tp+sp+2.)),
-      C = om1*(om1+tp+sp+nd+1.)*(om1+sp)/((2.*om1+tp+sp)*(2.*om1+tp+sp+1.)),
-      Ha_nm1 = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x,                             //1
+    Real Ha_nm1 = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x,                          //1
       Ha_n   = 1. - 2.*(3.+tp+sp)*x/(nd*(tp+1.))
              + (3.+tp+sp)*(4.+tp+sp)/((tp+1.)*(tp+2.)*nd*(nd-1.))*x*(x-1.); //2
-    for (size_t i=3; i<order; i++) {
+    Real om1, A, C;
+    for (size_t i=3; i<=order; i++) {
+      om1 = (Real)i-1.;
+      A = (om1+tp+sp+1.)*(om1+tp+1.)*(nd-om1)/((2.*om1+tp+sp+1.)*(2.*om1+tp+sp+2.));
+      C = om1*(om1+tp+sp+nd+1.)*(om1+sp)/((2.*om1+tp+sp)*(2.*om1+tp+sp+1.));
       t1_val = ((A+C-x)*Ha_n - C*Ha_nm1)/A; // Ha_nplus1
-      if (i != order-1) {
-	Ha_nm1 = Ha_n;
-	Ha_n   = t1_val;
-      }
+      Ha_nm1 = Ha_n;
+      Ha_n   = t1_val;
     }
     break;
   }
