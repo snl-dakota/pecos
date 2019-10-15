@@ -243,12 +243,12 @@ protected:
   Real pdf(const RealVector& pt) const;
   Real log_pdf(const RealVector& pt) const;
 
-  Real pdf(Real val, size_t i) const;
-  Real pdf_gradient(Real val, size_t i) const;
-  Real pdf_hessian(Real val, size_t i) const;
-  Real log_pdf(Real val, size_t i) const;
-  Real log_pdf_gradient(Real val, size_t i) const;
-  Real log_pdf_hessian(Real val, size_t i) const;
+  Real pdf(Real val, size_t rv_index) const;
+  Real pdf_gradient(Real val, size_t rv_index) const;
+  Real pdf_hessian(Real val, size_t rv_index) const;
+  Real log_pdf(Real val, size_t rv_index) const;
+  Real log_pdf_gradient(Real val, size_t rv_index) const;
+  Real log_pdf_hessian(Real val, size_t rv_index) const;
 
   /// copy marginals + correlation data between representations
   void copy_rep(MultivariateDistribution* mvd_rep);
@@ -306,12 +306,13 @@ random_variables()
 
 
 inline const RandomVariable& MarginalsCorrDistribution::
-random_variable(size_t i) const
-{ return randomVars[i]; }
+random_variable(size_t rv_index) const
+{ return randomVars[rv_index]; }
 
 
-inline RandomVariable& MarginalsCorrDistribution::random_variable(size_t i)
-{ return randomVars[i]; }
+inline RandomVariable& MarginalsCorrDistribution::
+random_variable(size_t rv_index)
+{ return randomVars[rv_index]; }
 
 
 inline void MarginalsCorrDistribution::check_global_bounds()
@@ -328,9 +329,9 @@ inline void MarginalsCorrDistribution::check_global_bounds()
 
 
 inline void MarginalsCorrDistribution::
-check_random_variable_type(size_t i, short rv_type) const
+check_random_variable_type(size_t rv_index, short rv_type) const
 {
-  if (randomVars[i].type() != rv_type) {
+  if (randomVars[rv_index].type() != rv_type) {
     PCerr << "Error: inconsistent random variable type in MarginalsCorr"
 	  << "Distribution::check_random_variable_type()." << std::endl;
     abort_handler(-1);
@@ -351,17 +352,18 @@ random_variable_types(const ShortArray& rv_types)
 }
 
 
-inline short MarginalsCorrDistribution::random_variable_type(size_t i) const
-{ return ranVarTypes[i]; }
+inline short MarginalsCorrDistribution::
+random_variable_type(size_t rv_index) const
+{ return ranVarTypes[rv_index]; }
 
 
 inline void MarginalsCorrDistribution::
-random_variable_type(short rv_type, size_t i)
+random_variable_type(short rv_type, size_t rv_index)
 {
   bool new_rv_global = (rv_type == CONTINUOUS_RANGE ||
 			rv_type ==   DISCRETE_RANGE);
   if (globalBndsFlag) {
-    short& curr_rv_type   = ranVarTypes[i];
+    short& curr_rv_type   = ranVarTypes[rv_index];
     bool   curr_rv_global = (curr_rv_type == CONTINUOUS_RANGE ||
 			     curr_rv_type ==   DISCRETE_RANGE);
     curr_rv_type = rv_type;
@@ -370,7 +372,7 @@ random_variable_type(short rv_type, size_t i)
   }
   else { // no current types define global bnds --> update globalBndsFlag
          // to true if incoming rv_type defines global bnds
-    ranVarTypes[i] = rv_type;
+    ranVarTypes[rv_index] = rv_type;
     globalBndsFlag = new_rv_global;
   }
 }
@@ -402,9 +404,9 @@ correlation_matrix(const RealSymMatrix& corr)
 inline void MarginalsCorrDistribution::
 pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep)
 {
-  size_t i, num_rv = ranVarTypes.size();
-  for (i=0; i<num_rv; ++i)
-    pull_distribution_parameters(pull_mvd_rep, i, i);
+  size_t v, num_rv = ranVarTypes.size();
+  for (v=0; v<num_rv; ++v)
+    pull_distribution_parameters(pull_mvd_rep, v, v);
 }
 
 
@@ -420,11 +422,11 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
 			     const StringArray& pull_labels,
 			     const StringArray& push_labels)
 {
-  size_t i, num_rv = ranVarTypes.size();
-  for (i=0; i<num_rv; ++i) {
-    size_t push_index = find_index(push_labels, pull_labels[i]);
+  size_t v, num_rv = ranVarTypes.size();
+  for (v=0; v<num_rv; ++v) {
+    size_t push_index = find_index(push_labels, pull_labels[v]);
     if (push_index != _NPOS)
-      pull_distribution_parameters(pull_mvd_rep, i, push_index);
+      pull_distribution_parameters(pull_mvd_rep, v, push_index);
   }
 }
 
@@ -491,10 +493,10 @@ push_parameters(short rv_type, short dist_param,
   // TO DO: would like to retire this version if Dakota migrates from Teuchos
   //        to std::vector for dist params
 
-  size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.length();
-  for (rv=0; rv < num_rv && cntr < num_vals; ++rv)
-    if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].push_parameter(dist_param, values[cntr++]);
+  size_t v, num_v = ranVarTypes.size(), cntr = 0, num_vals = values.length();
+  for (v=0; v < num_v && cntr < num_vals; ++v)
+    if (ranVarTypes[v] == rv_type)
+      randomVars[v].push_parameter(dist_param, values[cntr++]);
 }
 
 
@@ -505,10 +507,10 @@ push_parameters(short rv_type, short dist_param,
 {
   // rv_type eliminates need to check for dist_param support
 
-  size_t rv, num_rv = ranVarTypes.size(), cntr = 0, num_vals = values.size();
-  for (rv=0; rv < num_rv && cntr < num_vals; ++rv)
-    if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].push_parameter(dist_param, values[cntr++]);
+  size_t v, num_v = ranVarTypes.size(), cntr = 0, num_vals = values.size();
+  for (v=0; v < num_v && cntr < num_vals; ++v)
+    if (ranVarTypes[v] == rv_type)
+      randomVars[v].push_parameter(dist_param, values[cntr++]);
 }
 
 
@@ -541,10 +543,10 @@ pull_parameters(short rv_type, short dist_param,
 
   values.resize(std::count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
 
-  size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
-  for (rv=0; rv<num_rv; ++rv)
-    if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].pull_parameter(dist_param, values[cntr++]);
+  size_t v, num_v = ranVarTypes.size(), cntr = 0;
+  for (v=0; v<num_v; ++v)
+    if (ranVarTypes[v] == rv_type)
+      randomVars[v].pull_parameter(dist_param, values[cntr++]);
 }
 
 
@@ -555,13 +557,13 @@ pull_parameters(short rv_type, short dist_param,
 {
   // rv_type eliminates need to check for dist_param support
 
-  size_t rv, num_rv = ranVarTypes.size(), cntr = 0;
+  size_t v, num_v = ranVarTypes.size(), cntr = 0;
   values.sizeUninitialized(
     std::count(ranVarTypes.begin(), ranVarTypes.end(), rv_type));
 
-  for (rv=0; rv<num_rv; ++rv)
-    if (ranVarTypes[rv] == rv_type)
-      randomVars[rv].pull_parameter(dist_param, values[cntr++]);
+  for (v=0; v<num_v; ++v)
+    if (ranVarTypes[v] == rv_type)
+      randomVars[v].pull_parameter(dist_param, values[cntr++]);
 }
 
 
@@ -599,7 +601,8 @@ pull_parameter_size(size_t v, short dist_param) const
 /* These APIs are not currently needed but could be useful in the future:
 template <typename VectorType>
 void MarginalsCorrDistribution::
-push_parameters(size_t v, const ShortArray& dist_params, const VectorType& values)
+push_parameters(size_t v, const ShortArray& dist_params,
+                const VectorType& values)
 {
   // set multiple distribution parameters for a single variable
 
@@ -616,29 +619,29 @@ push_parameters(short dist_param, const VectorType& values)
 {
   // Without rv_type, query RV for dist_param support to match values to RV
 
-  size_t rv, num_rv = randomVars.size(), cntr = 0, num_vals = values.length();
-  for (rv=0; rv < num_rv && cntr < num_vals; ++rv)
-    if (randomVars[rv].supports(dist_param))
-      randomVars[rv].push_parameter(dist_param, values[cntr++]);
+  size_t v, num_v = randomVars.size(), cntr = 0, num_vals = values.length();
+  for (v=0; v < num_v && cntr < num_vals; ++v)
+    if (randomVars[v].supports(dist_param))
+      randomVars[v].push_parameter(dist_param, values[cntr++]);
 }
 */
 
 
 inline RealRealPairArray MarginalsCorrDistribution::moments() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealRealPairArray mom;
   if (activeVars.empty()) {
     mom.resize(num_v);
-    for (i=0; i<num_v; ++i)
-      mom[i] = randomVars[i].moments();
+    for (v=0; v<num_v; ++v)
+      mom[v] = randomVars[v].moments();
   }
   else {
     mom.resize(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	mom[av_cntr++] = randomVars[i].moments();
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	mom[av_cntr++] = randomVars[v].moments();
   }
   return mom;
 }
@@ -646,19 +649,19 @@ inline RealRealPairArray MarginalsCorrDistribution::moments() const
 
 inline RealVector MarginalsCorrDistribution::means() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealVector means;
   if (activeVars.empty()) {
     means.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      means[i] = randomVars[i].mean();
+    for (v=0; v<num_v; ++v)
+      means[v] = randomVars[v].mean();
   }
   else {
     means.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	means[av_cntr++] = randomVars[i].mean();
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	means[av_cntr++] = randomVars[v].mean();
   }
   return means;
 }
@@ -666,19 +669,19 @@ inline RealVector MarginalsCorrDistribution::means() const
 
 inline RealVector MarginalsCorrDistribution::std_deviations() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealVector std_devs;
   if (activeVars.empty()) {
     std_devs.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      std_devs[i] = randomVars[i].standard_deviation();
+    for (v=0; v<num_v; ++v)
+      std_devs[v] = randomVars[v].standard_deviation();
   }
   else {
     std_devs.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	std_devs[av_cntr++] = randomVars[i].standard_deviation();
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	std_devs[av_cntr++] = randomVars[v].standard_deviation();
   }
   return std_devs;
 }
@@ -686,19 +689,19 @@ inline RealVector MarginalsCorrDistribution::std_deviations() const
 
 inline RealVector MarginalsCorrDistribution::variances() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealVector vars;
   if (activeVars.empty()) {
     vars.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      vars[i] = randomVars[i].variance();
+    for (v=0; v<num_v; ++v)
+      vars[v] = randomVars[v].variance();
   }
   else {
     vars.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	vars[av_cntr++] = randomVars[i].variance();
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	vars[av_cntr++] = randomVars[v].variance();
   }
   return vars;
 }
@@ -706,19 +709,19 @@ inline RealVector MarginalsCorrDistribution::variances() const
 
 inline RealRealPairArray MarginalsCorrDistribution::distribution_bounds() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealRealPairArray bnds;
   if (activeVars.empty()) {
     bnds.resize(num_v);
-    for (i=0; i<num_v; ++i)
-      bnds[i] = randomVars[i].distribution_bounds();
+    for (v=0; v<num_v; ++v)
+      bnds[v] = randomVars[v].distribution_bounds();
   }
   else {
     bnds.resize(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	bnds[av_cntr++] = randomVars[i].distribution_bounds();
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	bnds[av_cntr++] = randomVars[v].distribution_bounds();
   }
   return bnds;
 }
@@ -726,19 +729,19 @@ inline RealRealPairArray MarginalsCorrDistribution::distribution_bounds() const
 
 inline RealVector MarginalsCorrDistribution::distribution_lower_bounds() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealVector lwr_bnds;
   if (activeVars.empty()) {
     lwr_bnds.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      lwr_bnds[i] = randomVars[i].distribution_bounds().first;
+    for (v=0; v<num_v; ++v)
+      lwr_bnds[v] = randomVars[v].distribution_bounds().first;
   }
   else {
     lwr_bnds.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	lwr_bnds[av_cntr++] = randomVars[i].distribution_bounds().first;
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	lwr_bnds[av_cntr++] = randomVars[v].distribution_bounds().first;
   }
   return lwr_bnds;
 }
@@ -746,19 +749,19 @@ inline RealVector MarginalsCorrDistribution::distribution_lower_bounds() const
 
 inline RealVector MarginalsCorrDistribution::distribution_upper_bounds() const
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   RealVector upr_bnds;
   if (activeVars.empty()) {
     upr_bnds.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      upr_bnds[i] = randomVars[i].distribution_bounds().second;
+    for (v=0; v<num_v; ++v)
+      upr_bnds[v] = randomVars[v].distribution_bounds().second;
   }
   else {
     upr_bnds.sizeUninitialized(activeVars.count());
     size_t av_cntr = 0;
-    for (i=0; i<num_v; ++i)
-      if (activeVars[i])
-	upr_bnds[av_cntr++] = randomVars[i].distribution_bounds().second;
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	upr_bnds[av_cntr++] = randomVars[v].distribution_bounds().second;
   }
   return upr_bnds;
 }
@@ -771,15 +774,15 @@ inline bool MarginalsCorrDistribution::global_bounds() const
 inline void MarginalsCorrDistribution::
 lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   if (mask.empty())
-    for (i=0; i<num_v; ++i)
-      randomVars[i].lower_bound(l_bnds[i]);
+    for (v=0; v<num_v; ++v)
+      randomVars[v].lower_bound(l_bnds[v]);
   else {
-    size_t av_cntr = 0, num_av = mask.count();
-    for (i=0; i<num_v; ++i)
-      if (mask[i])
-	randomVars[i].lower_bound(l_bnds[av_cntr++]);
+    size_t av_cntr = 0;
+    for (v=0; v<num_v; ++v)
+      if (mask[v])
+	randomVars[v].lower_bound(l_bnds[av_cntr++]);
   }
 }
 
@@ -787,15 +790,15 @@ lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 inline void MarginalsCorrDistribution::
 lower_bounds(const IntVector& l_bnds, const BitArray& mask)
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   if (mask.empty())
-    for (i=0; i<num_v; ++i)
-      randomVars[i].lower_bound(l_bnds[i]);
+    for (v=0; v<num_v; ++v)
+      randomVars[v].lower_bound(l_bnds[v]);
   else {
-    size_t av_cntr = 0, num_av = mask.count();
-    for (i=0; i<num_v; ++i)
-      if (mask[i])
-	randomVars[i].lower_bound(l_bnds[av_cntr++]);
+    size_t av_cntr = 0;
+    for (v=0; v<num_v; ++v)
+      if (mask[v])
+	randomVars[v].lower_bound(l_bnds[av_cntr++]);
   }
 }
 
@@ -827,15 +830,15 @@ inline void MarginalsCorrDistribution::lower_bound(int l_bnd, size_t rv_index)
 inline void MarginalsCorrDistribution::
 upper_bounds(const RealVector& u_bnds, const BitArray& mask)
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   if (mask.empty())
-    for (i=0; i<num_v; ++i)
-      randomVars[i].upper_bound(u_bnds[i]);
+    for (v=0; v<num_v; ++v)
+      randomVars[v].upper_bound(u_bnds[v]);
   else {
-    size_t av_cntr = 0, num_av = mask.count();
-    for (i=0; i<num_v; ++i)
-      if (mask[i])
-	randomVars[i].upper_bound(u_bnds[av_cntr++]);
+    size_t av_cntr = 0;
+    for (v=0; v<num_v; ++v)
+      if (mask[v])
+	randomVars[v].upper_bound(u_bnds[av_cntr++]);
   }
 }
 
@@ -843,15 +846,15 @@ upper_bounds(const RealVector& u_bnds, const BitArray& mask)
 inline void MarginalsCorrDistribution::
 upper_bounds(const IntVector& u_bnds, const BitArray& mask)
 {
-  size_t i, num_v = randomVars.size();
+  size_t v, num_v = randomVars.size();
   if (mask.empty())
-    for (i=0; i<num_v; ++i)
-      randomVars[i].upper_bound(u_bnds[i]);
+    for (v=0; v<num_v; ++v)
+      randomVars[v].upper_bound(u_bnds[v]);
   else {
-    size_t av_cntr = 0, num_av = mask.count();
-    for (i=0; i<num_v; ++i)
-      if (mask[i])
-	randomVars[i].upper_bound(u_bnds[av_cntr++]);
+    size_t av_cntr = 0;
+    for (v=0; v<num_v; ++v)
+      if (mask[v])
+	randomVars[v].upper_bound(u_bnds[av_cntr++]);
   }
 }
 
@@ -880,29 +883,32 @@ inline void MarginalsCorrDistribution::upper_bound(int u_bnd, size_t rv_index)
 }
 
 
-inline Real MarginalsCorrDistribution::pdf(Real val, size_t i) const
-{ return randomVars[i].pdf(val); }
-
-
-inline Real MarginalsCorrDistribution::pdf_gradient(Real val, size_t i) const
-{ return randomVars[i].pdf_gradient(val); }
-
-
-inline Real MarginalsCorrDistribution::pdf_hessian(Real val, size_t i) const
-{ return randomVars[i].pdf_hessian(val); }
-
-
-inline Real MarginalsCorrDistribution::log_pdf(Real val, size_t i) const
-{ return randomVars[i].log_pdf(val); }
+inline Real MarginalsCorrDistribution::pdf(Real val, size_t rv_index) const
+{ return randomVars[rv_index].pdf(val); }
 
 
 inline Real MarginalsCorrDistribution::
-log_pdf_gradient(Real val, size_t i) const
-{ return randomVars[i].log_pdf_gradient(val); }
+pdf_gradient(Real val, size_t rv_index) const
+{ return randomVars[rv_index].pdf_gradient(val); }
 
 
-inline Real MarginalsCorrDistribution::log_pdf_hessian(Real val, size_t i) const
-{ return randomVars[i].log_pdf_hessian(val); }
+inline Real MarginalsCorrDistribution::
+pdf_hessian(Real val, size_t rv_index) const
+{ return randomVars[rv_index].pdf_hessian(val); }
+
+
+inline Real MarginalsCorrDistribution::log_pdf(Real val, size_t rv_index) const
+{ return randomVars[rv_index].log_pdf(val); }
+
+
+inline Real MarginalsCorrDistribution::
+log_pdf_gradient(Real val, size_t rv_index) const
+{ return randomVars[rv_index].log_pdf_gradient(val); }
+
+
+inline Real MarginalsCorrDistribution::
+log_pdf_hessian(Real val, size_t rv_index) const
+{ return randomVars[rv_index].log_pdf_hessian(val); }
 
 
 inline Real MarginalsCorrDistribution::pdf(const RealVector& pt) const
@@ -914,12 +920,16 @@ inline Real MarginalsCorrDistribution::pdf(const RealVector& pt) const
 	  << "independent random variables." << std::endl;
     abort_handler(-1);
   }
-  size_t i, num_v = randomVars.size();
-  bool subset_rv = !activeVars.empty();
+  size_t v, num_v = randomVars.size();
   Real density = 1.;
-  for (i=0; i<num_v; ++i)
-    if (!subset_rv || activeVars[i])
-      density *= pdf(pt[i], i);
+  if (activeVars.empty())
+    for (v=0; v<num_v; ++v)
+      density *= pdf(pt[v], v);
+  else
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	density *= pdf(pt[v], v);
+
   return density;
 }
 
@@ -933,25 +943,29 @@ inline Real MarginalsCorrDistribution::log_pdf(const RealVector& pt) const
 	  << "independent random variables." << std::endl;
     abort_handler(-1);
   }
-  size_t i, num_v = randomVars.size();
-  bool subset_rv = !activeVars.empty();
+  size_t v, num_v = randomVars.size();
   Real log_density = 0.;
-  for (i=0; i<num_v; ++i)
-    if (!subset_rv || activeVars[i])
-      log_density += log_pdf(pt[i], i);
+  if (activeVars.empty())
+    for (v=0; v<num_v; ++v)
+      log_density += log_pdf(pt[v], v);
+  else
+    for (v=0; v<num_v; ++v)
+      if (activeVars[v])
+	log_density += log_pdf(pt[v], v);
+
   return log_density;
 }
 
 
 template <typename Engine> 
-Real MarginalsCorrDistribution::draw_sample(size_t i, Engine& rng) const
-{ return randomVars[i].draw_sample(rng); }
+Real MarginalsCorrDistribution::draw_sample(size_t rv_index, Engine& rng) const
+{ return randomVars[rv_index].draw_sample(rng); }
 
 
 template <typename Engine> 
 Real MarginalsCorrDistribution::
-draw_standard_sample(size_t i, Engine& rng) const
-{ return randomVars[i].draw_standard_sample(rng); }
+draw_standard_sample(size_t rv_index, Engine& rng) const
+{ return randomVars[rv_index].draw_standard_sample(rng); }
 
 } // namespace Pecos
 
