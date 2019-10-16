@@ -24,7 +24,7 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
     result = 1. - x/lambdaStat; break;
 
   case 2:
-    result = 1. + x*(-2.*lambdaStat+x-1.)/(lambdaStat*lambdaStat); break;
+    result = 1. + x*(x-1.-2.*lambdaStat)/(lambdaStat*lambdaStat); break;
 
   case 3: {
     Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2;
@@ -34,7 +34,9 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
 
   case 4: {
     Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2, x2 = x*x;
-    result = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*(1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))*x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2);
+    result = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
+	      (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
+	      *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2);
     break;
   }
 
