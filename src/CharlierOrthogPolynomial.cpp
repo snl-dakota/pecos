@@ -15,7 +15,7 @@ namespace Pecos {
 
 Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
 {
-  Real result = 1.;
+  Real result;
   switch ( order ) {
   case 0:
     result = 1.; break;
@@ -45,12 +45,11 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
       Ch_n = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
 	      (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
 	      *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2); //4
-    for (size_t i=4; i<order; i++) {
-      result = ((i+lambdaStat-x)*Ch_n-i*Ch_nm1)/lambdaStat; // Ch_nplus1
-      if (i != order-1) {
-	Ch_nm1 = Ch_n;
-	Ch_n   = result;
-      }
+    for (size_t i=5; i<=order; i++) {
+      Real om1 = (Real)i - 1.;
+      result = ((om1+lambdaStat-x)*Ch_n-om1*Ch_nm1)/lambdaStat; // Ch_nplus1
+      if (i < order)
+	{ Ch_nm1 = Ch_n;  Ch_n = result; }
     }
     break;
     // The recusion above produces a different result to the following recursion
@@ -61,9 +60,10 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
   return result;
 }
 
+
 Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
 {
-  Real result = 0.;
+  Real result;
   switch ( order ) {
   case 0:
     result = 0.; break;
@@ -81,19 +81,26 @@ Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
 
   case 4: {
     Real lam2 = lambdaStat*lambdaStat;
-    result = (-6.+lambdaStat*(-10.+(-10.-4.*lambdaStat)*lambdaStat)+x*(22.+lambdaStat*(28.+12.*lambdaStat)+x*(-18.-12.*lambdaStat+4.*x)))/(lam2*lam2);
+    result = (-6.+lambdaStat*(-10.+(-10.-4.*lambdaStat)*lambdaStat)+
+	      x*(22.+lambdaStat*(28.+12.*lambdaStat)+
+		 x*(-18.-12.*lambdaStat+4.*x)))/(lam2*lam2);
     break;
   }
 
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real dChdx_nm1 = type1_gradient(x,3), dChdx_n =  type1_gradient(x,4);
-    for ( size_t i=4; i<order; i++ ) {
-      result = ((i+lambdaStat-x)*dChdx_n-type1_value(x,order)-i*dChdx_nm1)/lambdaStat;
-      if (i != order-1) {
-	dChdx_nm1 = dChdx_n;
-	dChdx_n   = result;
-      }
+    Real lam2 = lambdaStat*lambdaStat;
+    Real dChdx_nm1 = (-2.+(6.-3.*x)*x+lambdaStat*(-3.-3.*lambdaStat+6.*x))
+                   / (lambdaStat*lam2),
+         dChdx_n   = (-6.+lambdaStat*(-10.+(-10.-4.*lambdaStat)*lambdaStat)+
+		      x*(22.+lambdaStat*(28.+12.*lambdaStat)+
+			 x*(-18.-12.*lambdaStat+4.*x)))/(lam2*lam2);
+    for ( size_t i=5; i<=order; i++ ) {
+      Real om1 = (Real)i - 1.;
+      result = ((om1+lambdaStat-x)*dChdx_n-type1_value(x,order)-om1*dChdx_nm1)
+	     / lambdaStat;
+      if (i < order)
+	{ dChdx_nm1 = dChdx_n;	dChdx_n = result; }
     }
     break;
   }
@@ -104,7 +111,7 @@ Real CharlierOrthogPolynomial::type1_gradient( Real x, unsigned short order )
 
 Real CharlierOrthogPolynomial::type1_hessian( Real x, unsigned short order )
 {
-  Real result = 0.;
+  Real result;
   switch ( order ) {
   case 0: case 1:
     result = 0.; break;
@@ -113,23 +120,27 @@ Real CharlierOrthogPolynomial::type1_hessian( Real x, unsigned short order )
     result = 2./(lambdaStat*lambdaStat); break;
 
   case 3:
-    result=6.*(lambdaStat-x+1.)/(lambdaStat*lambdaStat*lambdaStat); break;
+    result = 6.*(lambdaStat-x+1.)/(lambdaStat*lambdaStat*lambdaStat); break;
 
   case 4: {
     Real lam2 = lambdaStat*lambdaStat;
-    result = (2.*(11.+6.*lam2+2.*lambdaStat*(7.-6.*x)+6.*(-3.+x)*x))/lam2*lam2;
+    result
+      = (2.*(11.+6.*lam2+2.*lambdaStat*(7.-6.*x)+6.*(-3.+x)*x))/(lam2*lam2);
     break;
   }
 
   default:{
     // Support higher order polynomials using the 3 point recursion formula:
-    Real d2Chdx2_nm1 = type1_hessian(x,3), d2Chdx2_n = type1_hessian(x,4);
-    for ( size_t i=4; i<order; i++ ) {
-      result = ((i+lambdaStat-x)*d2Chdx2_n-2.*type1_gradient(x,order)-i*d2Chdx2_nm1)/lambdaStat;
-      if (i != order-1) {
-	d2Chdx2_nm1 = d2Chdx2_n;
-	d2Chdx2_n   = result;
-      }
+    Real lam2 = lambdaStat*lambdaStat;
+    Real d2Chdx2_nm1 = 6.*(lambdaStat-x+1.)/(lam2*lambdaStat),
+         d2Chdx2_n   = (2.*(11.+6.*lam2+2.*lambdaStat*(7.-6.*x)+6.*(-3.+x)*x))
+                     / (lam2*lam2);
+    for ( size_t i=5; i<=order; i++ ) {
+      Real om1 = (Real)i - 1.;
+      result = ((om1+lambdaStat-x)*d2Chdx2_n-2.*type1_gradient(x,order)
+		-om1*d2Chdx2_nm1)/lambdaStat;
+      if (i < order)
+	{ d2Chdx2_nm1 = d2Chdx2_n;  d2Chdx2_n = result; }
     }
     break;
   }

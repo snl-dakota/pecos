@@ -46,8 +46,8 @@ Real MeixnerOrthogPolynomial::type1_value(Real x, unsigned short order)
       om1 = (Real)i-1.;
       A = probPerTrial*(om1+nt);
       t1_val = ((om1 + A + pm1*x)*Kc_n - om1*Kc_nm1) / A; // Kc_nplus1
-      Kc_nm1 = Kc_n;
-      Kc_n   = t1_val;
+      if (i < order)
+	{ Kc_nm1 = Kc_n;  Kc_n = t1_val; }
     }
     break;
   }
@@ -55,6 +55,5 @@ Real MeixnerOrthogPolynomial::type1_value(Real x, unsigned short order)
 
   return t1_val;
 }
-
 
 } // namespace Pecos

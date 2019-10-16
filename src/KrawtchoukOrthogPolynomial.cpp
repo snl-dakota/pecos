@@ -45,8 +45,8 @@ Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
       om1 = (Real)i-1.;
       A = probPerTrial*(nt-om1), C = om1*(1.-probPerTrial);
       t1_val = ((A+C-x)*Kc_n - C*Kc_nm1)/A; // Kc_nplus1
-      Kc_nm1 = Kc_n;
-      Kc_n   = t1_val;
+      if (i < order)
+	{ Kc_nm1 = Kc_n;  Kc_n = t1_val; }
     }
     break;
   }
@@ -54,6 +54,5 @@ Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
 
   return t1_val;
 }
-
 
 } // namespace Pecos
