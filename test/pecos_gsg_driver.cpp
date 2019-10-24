@@ -144,9 +144,9 @@ int main(int argc, char* argv[])
     quadRule = GENZ_KEISTER   ;
   }
 
-  if ( verb>2) {
+  if (verb > 2)
     PCout << "Instantiating IncrementalSparseGridDriver:\n";
-  }
+
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
@@ -161,9 +161,8 @@ int main(int argc, char* argv[])
 				   refine_cntl);
   int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
-  if (verb>2) { 
+  if (verb > 2)
     PCout << "Instantiating basis...\n";
-  }
 
   std::vector<BasisPolynomial> poly_basis(nvar); // array of envelopes
   for (int i=0; i<nvar; ++i) {
@@ -172,15 +171,13 @@ int main(int argc, char* argv[])
   }
   csg_driver->initialize_grid(poly_basis);
 
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "  - done\n";
-  }
 
   // Instantiate Pecos Objects
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "Instantiating pecos objects...\n";
-  }
-  ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID, // expsolnapp
+  ExpansionConfigOptions expcfgopt(INCREMENTAL_SPARSE_GRID, // expsolnapp
                                    DEFAULT_BASIS,        // expbassus
 				   NO_COMBINE,           // exp combine type
 				   NO_DISCREP,           // discrepancy type
@@ -209,9 +206,8 @@ int main(int argc, char* argv[])
     poly_approx[iQoI].assign_rep(new 
       ProjectOrthogPolyApproximation(shared_data), false); // assign letter
 
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "  - done\n";
-  }
  
 #ifdef GSGREST
   /* Define saved data*/
@@ -229,9 +225,9 @@ int main(int argc, char* argv[])
   csg_driver->compute_grid(var_sets);
   int numPts = var_sets.numCols();
   assert(nvar==var_sets.numRows());
-  if ( verb > 1 ) { 
+  if (verb > 1) { 
     PCout<<var_sets<<endl; 
-    if ( verb > 2 ) {
+    if (verb > 2) {
       PCout << "Evaluate function on reference grid, ";
       PCout << "instantiate SurrogateData and compute coefficients ...\n"; 
     }
@@ -250,8 +246,9 @@ int main(int argc, char* argv[])
 
   // Create SurrogateData instances and assign to 
   // ProjectOrthogPolyApproximation instances
+  bool handle = true;
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateData     sdi;
+    SurrogateData sdi(handle);
     for( int jCol = 0; jCol < numPts; jCol++) {
       SurrogateDataVars sdv(nvar,0,0);
       SurrogateDataResp sdr(1,nvar); // no gradient or hessian
@@ -268,9 +265,8 @@ int main(int argc, char* argv[])
     poly_approx[iQoI].print_coefficients(PCout,false);
   }
   
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "  - done\n";
-  }
 
   // start refinement
   csg_driver->initialize_sets();
@@ -289,10 +285,9 @@ int main(int argc, char* argv[])
     std::vector<short unsigned int> asave;
 
     a = csg_driver->active_multi_index();
-    if ( verb > 1 ) {
-      PCout<<"Refine, iteration: "<<iter+1<<'\n';
-      PCout<<"  ... starting variance:\n"<<respVariance<<'\n';
-    }
+    if (verb > 1)
+      PCout<<"Refine, iteration: "<<iter+1
+	   <<"\n  ... starting variance:\n"<<respVariance<<'\n';
  
 #ifdef GSGREST
     /* Iterate through all proposed sets and save/exit if some vals
@@ -324,9 +319,8 @@ int main(int argc, char* argv[])
       numPts = 0;
       if (shared_poly_data->push_available()) {
 
-        if ( verb>1 ) {
+        if (verb > 1)
           PCout<<"Restoring existing index set:\n"<<*it<<endl;
-	}
 
         // Set available -> restore in csg and the rest
 	csg_driver->push_set();
@@ -347,7 +341,7 @@ int main(int argc, char* argv[])
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 	csg_driver->compute_trial_grid(var_sets);
         numPts = var_sets.numCols();
-        if ( verb>1 ) {
+        if (verb > 1) {
           PCout<<"Computing new index set:\n"<<*it<<endl;
           //PCout<<RealMatrix(var_sets,Teuchos::TRANS)<<endl;
 	}
@@ -385,14 +379,14 @@ int main(int argc, char* argv[])
 	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
 	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
       }
-      if ( verb > 1 ) {
+      if (verb > 1) {
         PCout<<"  ... new variance:\n";
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) 
 	  PCout<<respVarianceNew[iQoI]<<" ";
 	PCout<<"\n";
       }
       respVarianceNew -= respVariance;
-      if ( verb > 1 ) {
+      if (verb > 1) {
         PCout<<"  ... delta variance:\n";
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) 
 	  PCout<<respVarianceNew[iQoI]<<" ";
@@ -415,10 +409,9 @@ int main(int argc, char* argv[])
 
     } /* End iteration over proposed sets */
 
-    if ( verb>1 ) {
-      PCout<<"Choosing :\n"<<asave<<std::endl ;
-      PCout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
-    }
+    if (verb > 1)
+      PCout<<"Choosing :\n"<<asave
+	   <<"\n  ... with relative variance: "<<deltaVar<<std::endl ;
     
     if ( asave.size() > 0 ) {
       csg_driver->update_sets(asave);

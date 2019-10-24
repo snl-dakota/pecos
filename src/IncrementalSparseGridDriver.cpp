@@ -479,8 +479,9 @@ increment_unique_points_weights(size_t start_index, const UShort2DArray& sm_mi,
   RealMatrix& a2_t2w, RealVector& zv, RealVector& r1v, RealVector& r2v,
   IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
   int& num_u1, IntArray& sind2, BitArray& isu2, IntArray& uind2,
-  IntArray& uset2, int& num_u2, IntArray& unique_index_map, RealMatrix& pts,
-  RealVector& t1_wts, RealMatrix& t2_wts, bool update_1d_pts_wts)
+  IntArray& uset2, int& num_u2, IntArray& unique_index_map,
+  bool update_1d_pts_wts, RealMatrix& pts, RealVector& t1_wts,
+  RealMatrix& t2_wts)
 {
   size_t i, j, num_sm_mi = sm_mi.size();
   int m = numVars, n1 = a1_pts.numCols(), tp_n2, n2 = 0;
@@ -502,6 +503,8 @@ increment_unique_points_weights(size_t start_index, const UShort2DArray& sm_mi,
     }
     n2 += tp_n2;
   }
+
+  if (!n2) return;
 
   // ----
   // INC2

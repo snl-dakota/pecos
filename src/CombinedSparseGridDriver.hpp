@@ -198,6 +198,7 @@ protected:
 				     const IntArray& sm_coeffs,
 				     const UShort3DArray& colloc_key,
 				     IntArray& unique_index_map,
+				     bool update_1d_pts_wts,
 				     RealMatrix& var_sets, RealVector& t1_wts,
 				     RealMatrix& t2_wts);
   /// modular helper for public reference_unique(RealMatrix&)
@@ -206,8 +207,8 @@ protected:
     Sizet2DArray& colloc_ind, int& num_colloc_pts, RealMatrix& a1_pts,
     RealVector& a1_t1w, RealMatrix& a1_t2w, RealVector& zv, RealVector& r1v,
     IntArray& sind1, BitArray& isu1, IntArray& uind1, IntArray& uset1,
-    int& num_u1, IntArray& unique_index_map, RealMatrix& var_sets,
-    RealVector& t1_wts, RealMatrix& t2_wts);
+    int& num_u1, IntArray& unique_index_map, bool update_1d_pts_wts,
+    RealMatrix& var_sets, RealVector& t1_wts, RealMatrix& t2_wts);
 
   /// aggregate point and weight sets across one or more tensor products
   void compute_tensor_points_weights(const UShort2DArray& sm_mi,
@@ -619,16 +620,18 @@ inline void CombinedSparseGridDriver::
 compute_unique_points_weights(const UShort2DArray& sm_mi,
 			      const IntArray& sm_coeffs,
 			      const UShort3DArray& colloc_key,
-			      IntArray& unique_index_map, RealMatrix& var_sets,
+			      IntArray& unique_index_map,
+			      bool update_1d_pts_wts, RealMatrix& var_sets,
 			      RealVector& t1_wts, RealMatrix& t2_wts)
 {
   RealMatrix a1_pts, a1_t2w;  RealVector a1_t1w, zv, r1v;
   Sizet2DArray colloc_ind;    int num_colloc_pts, num_u1;
   BitArray isu1;              IntArray sind1, uind1, uset1;
   compute_unique_points_weights(sm_mi, sm_coeffs, colloc_key, colloc_ind,
-				num_colloc_pts, a1_pts, a1_t1w, a1_t2w, zv, r1v,
-				sind1, isu1, uind1, uset1, num_u1,
-				unique_index_map, var_sets, t1_wts, t2_wts);
+				num_colloc_pts, a1_pts, a1_t1w, a1_t2w, zv,
+				r1v, sind1, isu1, uind1, uset1, num_u1,
+				unique_index_map, update_1d_pts_wts,
+				var_sets, t1_wts, t2_wts);
 }
 
 

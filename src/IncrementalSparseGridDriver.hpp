@@ -118,7 +118,7 @@ public:
   void update_collocation_key();
 
   /// define a1{Points,Type1Weights,Type2Weights} based on the reference grid
-  void reference_unique();
+  void reference_unique(bool update_1d_pts_wts = true);
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for trailing index sets within smolyakMultiIndex
   void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
@@ -141,8 +141,8 @@ private:
     RealVector& r2v, IntArray& sind1, BitArray& isu1, IntArray& uind1,
     IntArray& uset1, int& num_u1, IntArray& sind2, BitArray& isu2,
     IntArray& uind2, IntArray& uset2, int& num_u2, IntArray& unique_index_map,
-    RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts,
-    bool update_1d_pts_wts);
+    bool update_1d_pts_wts, RealMatrix& pts, RealVector& t1_wts,
+    RealMatrix& t2_wts);
   /// modular helper for public merge_unique()
   void merge_unique_points_weights(const UShort2DArray& sm_mi,
     const IntArray& sm_coeffs, const IntArray& sm_coeffs_ref,
@@ -430,15 +430,16 @@ inline void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
 }
 
 
-inline void IncrementalSparseGridDriver::reference_unique()
+inline void IncrementalSparseGridDriver::
+reference_unique(bool update_1d_pts_wts)
 {
   compute_unique_points_weights(smolMIIter->second, smolCoeffsIter->second,
     collocKeyIter->second, collocIndIter->second, numPtsIter->second,
     a1PIter->second, a1T1WIter->second, a1T2WIter->second, zVec[activeKey],
     r1Vec[activeKey], sortIndex1[activeKey], isUniq1Iter->second,
     uniqInd1Iter->second, uniqSet1Iter->second, numUniq1Iter->second,
-    uniqIndMapIter->second, varSetsIter->second, t1WtIter->second,
-    t2WtIter->second);
+    uniqIndMapIter->second, update_1d_pts_wts, varSetsIter->second,
+    t1WtIter->second, t2WtIter->second);
 }
 
 
@@ -453,8 +454,8 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
     sortIndex1[activeKey], isUniq1Iter->second, uniqInd1Iter->second,
     uniqSet1Iter->second, numUniq1Iter->second, sortIndex2[activeKey],
     isUniq2Iter->second,  uniqInd2Iter->second, uniqSet2Iter->second,
-    numUniq2Iter->second, uniqIndMapIter->second, varSetsIter->second,
-    t1WtIter->second, t2WtIter->second, update_1d_pts_wts);
+    numUniq2Iter->second, uniqIndMapIter->second, update_1d_pts_wts,
+    varSetsIter->second,  t1WtIter->second, t2WtIter->second);
 }
 
 

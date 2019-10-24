@@ -542,7 +542,7 @@ void CombinedSparseGridDriver::combine_grid()
   // Define combined points and weights to support expectation() calls
   compute_unique_points_weights(combinedSmolyakMultiIndex,
 				combinedSmolyakCoeffs,  combinedCollocKey,
-				combinedUniqueIndexMap, combinedVarSets,
+				combinedUniqueIndexMap, false, combinedVarSets,
 				combinedT1WeightSets,   combinedT2WeightSets);
   // colloc indices are only regenerated for promotions in combined_to_active()
 }
@@ -690,13 +690,13 @@ compute_unique_points_weights(const UShort2DArray& sm_mi,
 			      RealMatrix& a1_t2w, RealVector& zv,
 			      RealVector& r1v, IntArray& sind1, BitArray& isu1,
 			      IntArray& uind1, IntArray& uset1, int& num_u1,
-			      IntArray& unique_index_map, RealMatrix& var_sets,
+			      IntArray& unique_index_map,
+			      bool update_1d_pts_wts, RealMatrix& var_sets,
 			      RealVector& t1_wts, RealMatrix& t2_wts)
 {
   // define a1 pts/wts
   compute_tensor_points_weights(sm_mi, colloc_key, 0, sm_mi.size(),
-				false, // 1d pts/wts already computed
-				a1_pts, a1_t1w, a1_t2w);
+				update_1d_pts_wts, a1_pts, a1_t1w, a1_t2w);
   // ----
   // INC1
   // ----
