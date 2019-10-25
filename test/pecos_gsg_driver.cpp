@@ -364,6 +364,7 @@ int main(int argc, char* argv[])
 	    sdr.response_function(fev(jCol,iQoI));
 	    sdi.push_back(sdv,sdr);
 	  } // done loop over number of points
+	  sdi.pop_count(numPts);
 	} // done loop over QoIs
         
 	shared_poly_data->increment_data();
@@ -398,14 +399,13 @@ int main(int argc, char* argv[])
         asave = *it;
       }
 
-      csg_driver->pop_set();
-
       shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	poly_approx[iQoI].pop_coefficients(true);
 	// Also restore the corresponding surrogate data
 	poly_approx[iQoI].surrogate_data().pop(true);
       }
+      csg_driver->pop_set(); // reverse order from increment
 
     } /* End iteration over proposed sets */
 
