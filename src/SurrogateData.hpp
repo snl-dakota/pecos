@@ -2206,7 +2206,7 @@ inline void SurrogateData::size_active_sdr(const SurrogateData& sd) const
   size_t num_pts = sdr_array.size();
   if (num_pts) {
     const SurrogateDataResp& sdr0 = sdr_array[0];
-    short bits = sdr0.active_bits();
+    short bits = sdr0.active_bits(); // assume homogeneity in deriv data
     size_t i, num_deriv_v = sdr0.derivative_variables();
     SDRArray& new_sdr_array = sdRep->respDataIter->second;
     new_sdr_array.resize(num_pts);

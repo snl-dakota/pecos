@@ -123,14 +123,17 @@ void PolynomialApproximation::response_data_to_surplus_data()
     size_t j, k, num_deriv_vars = modSurrData.num_derivative_variables();
     std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = sdv_array[i].continuous_variables();
-      delta_val = orig_fn_val = sdr_array[i].response_function();
-      if (expansionCoeffGradFlag)
-	copy_data(sdr_array[i].response_gradient(), orig_fn_grad);
+      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
+      const SurrogateDataResp& orig_sdr  = sdr_array[i];
+      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
+      short                 surplus_bits = surplus_sdr.active_bits();
+      delta_val = orig_fn_val = orig_sdr.response_function();
+      if (surplus_bits & 2)
+	copy_data(orig_sdr.response_gradient(), orig_fn_grad);
       for (r_cit=resp_data_map.begin(), j=0; r_cit->first!=key; ++r_cit, ++j) {
 	stored_val = stored_value(c_vars, r_cit->first);
 	delta_val /= stored_val;
-	if (expansionCoeffGradFlag) { // recurse using levels j and j-1
+	if (surplus_bits & 2) { // recurse using levels j and j-1
 	  const RealVector& stored_grad
 	    = stored_gradient_nonbasis_variables(c_vars, r_cit->first);
 	  if (j == 0)
@@ -150,28 +153,31 @@ void PolynomialApproximation::response_data_to_surplus_data()
 	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
 	}
       }
-      if (expansionCoeffFlag)
-	surplus_sdr_array[i].response_function(delta_val);
-      if (expansionCoeffGradFlag)
-	surplus_sdr_array[i].response_gradient(delta_grad);
+      if (surplus_bits & 1)
+	surplus_sdr.response_function(delta_val);
+      if (surplus_bits & 2)
+	surplus_sdr.response_gradient(delta_grad);
     }
     break;
   }
   default: //case ADD_COMBINE: (correction specification not required)
     for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = sdv_array[i].continuous_variables();
-      if (expansionCoeffFlag) {
-	delta_val = sdr_array[i].response_function();
+      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
+      const SurrogateDataResp& orig_sdr  = sdr_array[i];
+      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
+      short                 surplus_bits = surplus_sdr.active_bits();
+      if (surplus_bits & 1) {
+	delta_val = orig_sdr.response_function();
 	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
 	  delta_val -= stored_value(c_vars, r_cit->first);
-	surplus_sdr_array[i].response_function(delta_val);
+	surplus_sdr.response_function(delta_val);
       }
-      if (expansionCoeffGradFlag) {
-	copy_data(sdr_array[i].response_gradient(), delta_grad);
+      if (surplus_bits & 2) {
+	copy_data(orig_sdr.response_gradient(), delta_grad);
 	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
 	  delta_grad -=
 	    stored_gradient_nonbasis_variables(c_vars, r_cit->first);
-	surplus_sdr_array[i].response_gradient(delta_grad);
+	surplus_sdr.response_gradient(delta_grad);
       }
     }
     break;
@@ -238,10 +244,11 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   case MULT_COMBINE: {
     size_t num_deriv_vars = surrData.num_derivative_variables();
     for (i=0; i<num_pts; ++i) {
-      const SurrogateDataResp& lf_sdr =    lf_sdr_array[i];
-      const SurrogateDataResp& hf_sdr =    hf_sdr_array[i];
-      SurrogateDataResp&    delta_sdr = delta_sdr_array[i];
-      short corr_order = (expansionCoeffGradFlag) ? 1 : 0;
+      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
+      short                 delta_bits = delta_sdr.active_bits();
+      short                 corr_order = (delta_bits & 2) ? 1 : 0;
       if (discrepCalc.check_multiplicative(hf_sdr.response_function(),
 					   lf_sdr.response_function(),
 					   corr_order)) {
@@ -249,10 +256,10 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
 	      << "\n       Please change to additive discrepancy." << std::endl;
 	abort_handler(-1);
       }
-      if (expansionCoeffFlag)
+      if (delta_bits & 1)
 	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
 	  lf_sdr.response_function(), delta_sdr.response_function_view());
-      if (expansionCoeffGradFlag) {
+      if (delta_bits & 2) {
 	RealVector delta_grad(delta_sdr.response_gradient_view());	
 	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
 	  hf_sdr.response_gradient(), lf_sdr.response_function(),
@@ -263,13 +270,14 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   }
   default: //case ADD_COMBINE: (correction specification not required)
     for (i=0; i<num_pts; ++i) {
-      const SurrogateDataResp& lf_sdr =    lf_sdr_array[i];
-      const SurrogateDataResp& hf_sdr =    hf_sdr_array[i];
-      SurrogateDataResp&    delta_sdr = delta_sdr_array[i];
-      if (expansionCoeffFlag)
+      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
+      short                 delta_bits = delta_sdr.active_bits();
+      if (delta_bits & 1)
 	discrepCalc.compute_additive(hf_sdr.response_function(),
 	  lf_sdr.response_function(), delta_sdr.response_function_view());
-      if (expansionCoeffGradFlag) {
+      if (delta_bits & 2) {
 	RealVector delta_grad(delta_sdr.response_gradient_view());
 	discrepCalc.compute_additive(hf_sdr.response_gradient(),
 	  lf_sdr.response_gradient(), delta_grad);
