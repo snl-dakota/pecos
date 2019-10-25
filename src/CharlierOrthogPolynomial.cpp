@@ -153,8 +153,7 @@ Real CharlierOrthogPolynomial::type1_hessian( Real x, unsigned short order )
 
 Real CharlierOrthogPolynomial::norm_squared( unsigned short order )
 {
-  return std::pow( lambdaStat, order ) *
-    boost::math::factorial<Real>( (Real)order );
+  return std::pow( lambdaStat, order ) * boost::math::factorial<Real>( order );
 }
 
 } // namespace Pecos
