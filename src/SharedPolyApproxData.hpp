@@ -351,7 +351,7 @@ public:
   /// allocate poly_basis based on basis_types and colloc_rules
   static void initialize_polynomial_basis(const ShortArray& basis_types,
     const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);
-  /// pass distribution parameters from dp to poly_basis
+  /// pass distribution parameters from u_dist to poly_basis
   static void update_basis_distribution_parameters(
     const MultivariateDistribution& u_dist,
     std::vector<BasisPolynomial>& poly_basis);
