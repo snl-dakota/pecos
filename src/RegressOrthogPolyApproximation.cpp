@@ -1309,7 +1309,7 @@ covariance(PolynomialApproximation* poly_approx_2)
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  bool same = (ropa_2 == this), std_mode = data_rep->nonRandomIndices.empty();
+  bool same = (ropa_2 == this);
 
   // Error check for required data
   if ( !expansionCoeffFlag ||
@@ -1320,6 +1320,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   }
 
   if (same) {
+    bool std_mode = data_rep->nonRandomIndices.empty();
     if (std_mode && (compVarIter->second & 1))
       return expMomentsIter->second[1];
     else {
@@ -1357,12 +1358,22 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  return (same) ?
-    variance(data_rep->combinedMultiIndex, combinedExpCoeffs,
-	     combinedSparseIndices) :
-    covariance(data_rep->combinedMultiIndex, combinedExpCoeffs,
-	       combinedSparseIndices, ropa_2->combinedExpCoeffs,
-	       ropa_2->combinedSparseIndices);
+  if (same) {
+    bool std_mode = data_rep->nonRandomIndices.empty();
+    if (std_mode && (compVarIter->second & 1))
+      return expMomentsIter->second[1];
+    else {
+      Real var = variance(data_rep->combinedMultiIndex, combinedExpCoeffs,
+			  combinedSparseIndices);
+      if (std_mode)
+	{ expMomentsIter->second[1] = var; compVarIter->second |= 1; }
+      return var;
+    }
+  }
+  else
+    return covariance(data_rep->combinedMultiIndex, combinedExpCoeffs,
+		      combinedSparseIndices, ropa_2->combinedExpCoeffs,
+		      ropa_2->combinedSparseIndices);
 }
 
 
@@ -1490,19 +1501,31 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   if (combinedSparseIndices.empty() && ropa_2->combinedSparseIndices.empty())
     return OrthogPolyApproximation::covariance(x, poly_approx_2);
 
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  bool same = (this == ropa_2), all_mode = !data_rep->nonRandomIndices.empty();
+  const UShortArray& key = data_rep->activeKey;
+
   // Error check for required data
   if ( !expansionCoeffFlag ||
-       ( this != ropa_2 && !ropa_2->expansionCoeffFlag )) {
+       ( !same && !ropa_2->expansionCoeffFlag )) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  return covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
-		    combinedSparseIndices, ropa_2->combinedExpCoeffs,
-		    ropa_2->combinedSparseIndices);
+  if ( same && all_mode && (compVarIter->second & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+    return expMomentsIter->second[1];
+
+  Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
+			  combinedSparseIndices, ropa_2->combinedExpCoeffs,
+			  ropa_2->combinedSparseIndices);
+  if (same && all_mode) {
+    expMomentsIter->second[1] = covar;
+    compVarIter->second |= 1;  xPrevVar[key] = x;
+  }
+  return covar;
 }
 
 
