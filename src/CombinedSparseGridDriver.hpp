@@ -81,9 +81,8 @@ public:
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
 
-  /// initialize all sparse grid settings (distribution params already
-  /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
+  void initialize_grid_parameters(const MultivariateDistribution& mv_dist);
 
   void clear_inactive();
   void clear_keys();

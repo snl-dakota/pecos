@@ -42,8 +42,6 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
   trackCollocDetails     = track_colloc;
   trackUniqueProdWeights = track_uniq_prod_wts;
 
-  // set a rule-dependent duplicateTol
-  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
   // set levelGrowthToOrder
@@ -56,12 +54,21 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
 
-  // set a rule-dependent duplicateTol
-  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
   // set levelGrowthToOrder
   initialize_growth_pointers();
+}
+
+
+void CombinedSparseGridDriver::
+initialize_grid_parameters(const MultivariateDistribution& mv_dist)
+{
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(mv_dist, polynomialBasis);
+
+  // set a rule-dependent duplicateTol
+  initialize_duplicate_tolerance(); // depends on length scale from dist params
 }
 
 

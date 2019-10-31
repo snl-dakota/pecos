@@ -85,7 +85,7 @@ initialize_grid_parameters(const MultivariateDistribution& mv_dist)
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag =
       (verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_ALPHA)) ||
-       verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_ALPHA)));
+       verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_BETA)));
     break;
   case GEN_GAUSS_LAGUERRE: // STD_GAMMA: check only alpha params
     err_flag =
