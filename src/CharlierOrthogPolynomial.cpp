@@ -32,27 +32,32 @@ Real CharlierOrthogPolynomial::type1_value( Real x, unsigned short order )
     break;
   }
 
-  case 4: {
-    Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2, x2 = x*x;
-    result = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
-	      (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
-	      *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2);
-    break;
-  }
+  // This version is not consistent with recursion below (breaks the unit test)
+  //case 4: {
+  //  Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2, x2 = x*x;
+  //  result = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
+  //            (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
+  //            *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2);
+  //  break;
+  //}
 
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2,x2 = x*x,
-      Ch_nm1 = 1.+x*(-3.*lam2+(2.+3.*lambdaStat-x)*(-1.+x))/lam3,  //3
-      Ch_n = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
-	      (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
-	      *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2); //4
-    for (size_t i=5; i<=order; i++) {
-      Real om1 = (Real)i - 1.;
-      result = ((om1+lambdaStat-x)*Ch_n-om1*Ch_nm1)/lambdaStat; // Ch_nplus1
-      if (i < order)
-	{ Ch_nm1 = Ch_n;  Ch_n = result; }
-    }
+    Real fm2 = type1_value(x, order-2);
+    Real fm1 = type1_value(x, order-1);
+    result = ( (Real(order)-1.0+lambdaStat-x)*fm1 - (Real(order)-1.0)*fm2 ) / lambdaStat;
+    // Unroll recursion for performance
+    //Real lam2 = lambdaStat*lambdaStat, lam3 = lambdaStat*lam2,x2 = x*x,
+    //  Ch_nm1 = 1.+x*(-3.*lam2+(2.+3.*lambdaStat-x)*(-1.+x))/lam3,  //3
+    //  Ch_n = (lam3*(2.+lambdaStat)-2.*(3.+2.*lambdaStat)*
+    //          (1.+lambdaStat+lam2)*x+(11.+2.*lambdaStat*(7.+3.*lambdaStat))
+    //          *x2-2.*(3.+2.*lambdaStat)*x2*x + x2*x2)/(lam2*lam2); //4
+    //for (size_t i=5; i<=order; i++) {
+    //  Real om1 = (Real)i - 1.;
+    //  result = ((om1+lambdaStat-x)*Ch_n-om1*Ch_nm1)/lambdaStat; // Ch_nplus1
+    //  if (i < order)
+    //    { Ch_nm1 = Ch_n;  Ch_n = result; }
+    //}
     break;
     // The recusion above produces a different result to the following recursion
     // Ch_n(x,a)=1/a*x*Ch_n(x-1,a) - Ch_n(x,a)

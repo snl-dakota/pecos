@@ -41,14 +41,14 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  Real type1_value( Real x, unsigned short order );
-  Real type1_gradient( Real x, unsigned short order );
-  Real type1_hessian( Real x, unsigned short order );
-  Real norm_squared( unsigned short order );
+  Real type1_value( Real x, unsigned short order ) override;
+  Real type1_gradient( Real x, unsigned short order ) override;
+  Real type1_hessian( Real x, unsigned short order ) override;
+  Real norm_squared( unsigned short order ) override;
 
-  void pull_parameter(short dist_param, Real& param);
-  void push_parameter(short dist_param, Real  param);
-  bool parameterized() const;
+  void pull_parameter(short dist_param, Real& param) const override;
+  void push_parameter(short dist_param, Real  param) override;
+  bool parameterized() const override;
 
 private: 
   
@@ -70,7 +70,7 @@ inline CharlierOrthogPolynomial::~CharlierOrthogPolynomial()
 
 
 inline void CharlierOrthogPolynomial::
-pull_parameter(short dist_param, Real& param)
+pull_parameter(short dist_param, Real& param) const
 {
   switch (dist_param) {
   case P_LAMBDA: param = lambdaStat; break;
