@@ -48,8 +48,6 @@ public:
 
   /// size derived class data attributes
   virtual void allocate_arrays() = 0;
-  /// size component Sobol arrays
-  virtual void allocate_component_sobol();
 
   /// initialize product (covariance) accumulators with pointers to other QoI
   virtual void initialize_covariance(PolynomialApproximation* poly_approx_2);
@@ -319,6 +317,9 @@ public:
   /// get ExpansionConfigOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
+  /// clear Sobol' indices when inactive
+  void clear_component_sobol();
+
   /// return sobolIndices
   const RealVector& sobol_indices() const;
   /// return totalSobolIndices
@@ -376,6 +377,8 @@ protected:
 			 const RealMatrix& t2_coeffs, const RealVector& t1_wts,
 			 const RealMatrix& t2_wts, RealVector& moments);
 
+  /// size component Sobol arrays
+  void allocate_component_sobol();
   /// size total Sobol arrays
   void allocate_total_sobol();
 
@@ -710,6 +713,15 @@ expansion_coefficient_gradient_flag(bool grad_flag)
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
 { return expansionCoeffGradFlag; }
+
+
+inline void PolynomialApproximation::clear_component_sobol()
+{
+  //if (data_rep->expConfigOptions.vbdFlag)
+    sobolIndices = 0.;
+  //else
+  //  sobolIndices.resize(0);
+}
 
 
 inline const RealVector& PolynomialApproximation::sobol_indices() const
