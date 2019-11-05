@@ -701,7 +701,7 @@ assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
   BasisPolynomial& poly_i =             polynomialBasis[i];
   RealArray&       pts_1d =      collocPts1D[lev_index][i];
   RealArray&    t1_wts_1d = type1CollocWts1D[lev_index][i];
-  if (poly_i.parametric_update() || pts_1d.empty() || t1_wts_1d.empty()) {
+  if (poly_i.collocation_reset() || pts_1d.empty() || t1_wts_1d.empty()) {
     pts_1d    = poly_i.collocation_points(quad_order);
     t1_wts_1d = poly_i.type1_collocation_weights(quad_order);
   }
@@ -711,7 +711,7 @@ assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 #endif // DEBUG
   if (computeType2Weights) {
     RealArray& t2_wts_1d = type2CollocWts1D[lev_index][i];
-    if (t2_wts_1d.empty())
+    if (poly_i.collocation_reset() || t2_wts_1d.empty())
       t2_wts_1d = poly_i.type2_collocation_weights(quad_order);
 #ifdef DEBUG
     PCout << "type2CollocWts1D[" << lev_index << "][" << i << "]:\n"

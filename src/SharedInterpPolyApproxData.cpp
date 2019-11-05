@@ -145,7 +145,7 @@ void SharedInterpPolyApproxData::allocate_data()
     = driverRep->polynomial_basis();
   size_t i;
   for (i=0; i<numVars; ++i)
-    if (num_int_poly_basis[i].parametric_update())
+    if (num_int_poly_basis[i].collocation_reset())
       { param_update = true; break; }
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -443,7 +443,7 @@ update_interpolation_basis(unsigned short lev_index, size_t var_index)
 	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
 	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
       }
-      else if (num_int_poly_basis_v.parametric_update())
+      else if (num_int_poly_basis_v.collocation_reset())
 	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
     }
     else if (poly_basis_lv.is_null()) { // can share reps for efficiency

@@ -151,6 +151,10 @@ public:
   /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */
   virtual void reset_gauss();
+  /// return state of Gauss pts/wts, true if the arrays were reset
+  /// (due to distribution parameter changes). 
+  /** This is defined only for orthogonal polynomials. */
+  virtual bool collocation_reset() const;
 
   /// (calculate and) return ptFactor
   virtual Real point_factor();
@@ -207,8 +211,8 @@ public:
   /// return basisPolyType
   short basis_type() const;
 
-  /// return parametricUpdate
-  bool parametric_update() const;
+  // return parametricUpdate
+  //bool parametric_update() const;
 
   /// returns polyRep for access to derived class member functions
   /// that are not mapped to the top BasisPolynomial level
@@ -236,9 +240,9 @@ protected:
   /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
   short basisPolyType;
 
-  /// flag indicating presence of a parametric update to the basis polynomial,
-  /// such that previous points/weights may not be reused
-  bool parametricUpdate;
+  // flag indicating presence of a parametric update to the basis polynomial,
+  // such that previous points/weights may not be reused
+  //bool parametricUpdate;
 
   /// weight discrepancy factor between Abramowitz-Stegun and PDF orthogonality
   Real wtFactor;
@@ -270,8 +274,8 @@ inline short BasisPolynomial::basis_type() const
 { return (polyRep) ? polyRep->basisPolyType : basisPolyType; }
 
 
-inline bool BasisPolynomial::parametric_update() const
-{ return (polyRep) ? polyRep->parametricUpdate : parametricUpdate; }
+//inline bool BasisPolynomial::parametric_update() const
+//{ return (polyRep) ? polyRep->parametricUpdate : parametricUpdate; }
 
 
 inline BasisPolynomial* BasisPolynomial::polynomial_rep() const

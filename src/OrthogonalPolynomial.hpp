@@ -45,8 +45,8 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// destroy history of Gauss pts/wts due to change in distribution parameters
   void reset_gauss();
+  bool collocation_reset() const;
 
   //
   //- Heading: Member functions
@@ -120,6 +120,10 @@ inline OrthogonalPolynomial::~OrthogonalPolynomial()
 
 inline void OrthogonalPolynomial::reset_gauss()
 { collocPoints.clear(); collocWeights.clear(); }
+
+
+inline bool OrthogonalPolynomial::collocation_reset() const
+{ return (collocPoints.empty() || collocWeights.empty()); }
 
 
 inline bool OrthogonalPolynomial::
