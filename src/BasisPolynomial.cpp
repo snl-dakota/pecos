@@ -470,16 +470,9 @@ void BasisPolynomial::reset_gauss()
 
 bool BasisPolynomial::collocation_reset() const
 {
-  if (polyRep)
-    return polyRep->collocation_reset();
-  else {
-    PCerr << "Error: collocation_reset() not available for this basis "
-	  << "polynomial type." << std::endl;
-    abort_handler(-1);
-    return false;
-  }
-  //else
-  //  return false;
+  return (polyRep) ? polyRep->collocation_reset() :
+    false; // default for non-parameterized / non-orthogonal polynomials
+           // (e.g., PiecewiseInterp)
 }
 
 

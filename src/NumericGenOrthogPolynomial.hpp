@@ -140,6 +140,8 @@ protected:
   Real length_scale() const;
 
   void precompute_rules(unsigned short order);
+  void reset_gauss();
+  bool collocation_reset() const;
 
 private:
 
@@ -214,9 +216,11 @@ private:
 				const RealVector& poly_coeffs2,
 				NGFPType weight_fn, Real start, Real end);
   /// compute an integral using the native Gaussian quadrature rule
-  /// (up to order 2m-1 based on collocPoints and collocWeights of order m)
+  /// (up to order 2m-1 based on Gauss points and weights of order m)
   Real native_quadrature_integral(const RealVector& poly_coeffs1,
-				  const RealVector& poly_coeffs2);
+				  const RealVector& poly_coeffs2,
+				  const RealArray& colloc_pts,
+				  const RealArray& colloc_wts);
 
   /// retrieve the value of the 1-D generated polynomial (of given
   /// coefficients) for a given parameter value
@@ -241,11 +245,16 @@ private:
   RealVector distParams;
 
   /// flag identifying the need to compute polyCoeffs and orthogPolyNormsSq
-  /// (if false, only collocPoints and collocWeights are computed)
+  /// (if false, only collocation points and weights are computed)
   bool coeffsNormsFlag;
 
   /// coefficients of the orthogonal polynomials, from order 0 to m
   RealVectorArray polyCoeffs;
+
+  /// map of Gauss points that have been computed for each order
+  UShortRealArrayMap collocPointsMap;
+  /// map of Gauss weights that have been computed for each order
+  UShortRealArrayMap collocWeightsMap;
 
   /// alpha three-term recurrence parameters: alpha3TR[i] multiplied
   /// by polyCoeffs[i] contributes to polyCoeffs[i+1]
@@ -763,7 +772,21 @@ inline void NumericGenOrthogPolynomial::precompute_rules(unsigned short order)
 {
   if (polyCoeffs.size() <= order)
     solve_eigenproblem(order);
+  // TO DO: sweep through colloc{Points,Weights}Map
+  // > solve_eigenproblem() currently sweeps out a range of polyCoeffs
+  //   but only generates one set of Gauss pts/wts per eigensolve
 }
+
+
+inline void NumericGenOrthogPolynomial::reset_gauss()
+{
+  OrthogonalPolynomial::reset_gauss();
+  polyCoeffs.clear(); collocPointsMap.clear(); collocWeightsMap.clear();
+}
+
+
+inline bool NumericGenOrthogPolynomial::collocation_reset() const
+{ return (collocPointsMap.empty() || collocWeightsMap.empty()); }
 
 } // namespace Pecos
 

@@ -154,6 +154,7 @@ typedef std::vector<StringRealMap>        StringRealMapArray;
 typedef std::vector<RealRealMap>          RealRealMapArray;
 typedef std::vector<RealRealPairRealMap>  RealRealPairRealMapArray;
 typedef std::vector<IntIntPairRealMap>    IntIntPairRealMapArray;
+typedef std::map<unsigned short, RealArray> UShortRealArrayMap;
 typedef std::map<int, RealVector>         IntRealVectorMap;
 typedef std::map<UShortMultiSet,   Real>  UShortMultiSetRealMap;
 typedef std::map<UShort2DMultiSet, Real>  UShort2DMultiSetRealMap;

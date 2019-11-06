@@ -119,7 +119,10 @@ inline OrthogonalPolynomial::~OrthogonalPolynomial()
 
 
 inline void OrthogonalPolynomial::reset_gauss()
-{ collocPoints.clear(); collocWeights.clear(); }
+{
+  collocPoints.clear();     collocWeights.clear();
+  tripleProductMap.clear(); tripleProductOrder.clear();
+}
 
 
 inline bool OrthogonalPolynomial::collocation_reset() const
