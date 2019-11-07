@@ -209,6 +209,9 @@ protected:
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);
 
+  /// clear collocPts1D and type{1,2}CollocWts1D
+  void clear_1d_collocation_points_weights();
+
   //
   //- Heading: Data
   //
@@ -319,6 +322,11 @@ type1_collocation_weights_1d() const
 inline const Real3DArray& IntegrationDriver::
 type2_collocation_weights_1d() const
 { return type2CollocWts1D; }
+
+
+/** Don't worry about preserving layout as {update,assign}_1d can manage. */
+inline void IntegrationDriver::clear_1d_collocation_points_weights()
+{ collocPts1D.clear(); type1CollocWts1D.clear(); type2CollocWts1D.clear(); }
 
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const

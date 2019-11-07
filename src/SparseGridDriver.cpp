@@ -84,7 +84,7 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
   if (aniso_wts.empty()) {
     if (!curr_aniso_wts.empty()) { // change from current
       curr_aniso_wts.sizeUninitialized(0);
-      clear_grid(); // clear state to mandate a grid / grid size update
+      clear_size(); // clear state to mandate a grid / grid size update
     }
   }
   else {
@@ -105,7 +105,7 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
     if (dim_iso) {
       if (!curr_aniso_wts.empty()) {
 	curr_aniso_wts.sizeUninitialized(0);
-	clear_grid(); // clear state to mandate a grid / grid size update
+	clear_size(); // clear state to mandate a grid / grid size update
       }
     }
     else {
@@ -143,7 +143,7 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       }
       // indicate need for numCollocPts update
       if (curr_aniso_wts != prev_aniso_wts)
-	clear_grid(); // clear state to mandate a grid / grid size update
+	clear_size(); // clear state to mandate a grid / grid size update
     }
   }
 }

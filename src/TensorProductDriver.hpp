@@ -250,6 +250,9 @@ inline void TensorProductDriver::clear_keys()
   variableSets.clear();      varSetsIter =    variableSets.end();
   type1WeightSets.clear();      t1WtIter = type1WeightSets.end();
   type2WeightSets.clear();      t2WtIter = type2WeightSets.end();
+
+  // this database is shared among all keys (not currently used by TPQ)
+  //clear_1d_collocation_points_weights();
 }
 
 

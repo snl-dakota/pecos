@@ -147,8 +147,9 @@ public:
     const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
     short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
-  /// set flag indicating that the grid (and its size) requires updating
-  void clear_grid();
+  /// set flag indicating that grid details have changed and the size
+  /// calculation requires updating
+  void clear_size();
 
   /// return pushIndex (cached lookup result in derived Driver classes)
   size_t push_index() const;
@@ -340,6 +341,7 @@ inline void SparseGridDriver::update_active_iterators()
   }
   numPtsIter = numCollocPts.find(activeKey);
   if (numPtsIter == numCollocPts.end()) {
+    // assign special value for grid_size() (instead of 1 pt for ssgLev 0)
     std::pair<UShortArray, int> ui_pair(activeKey, 0);
     numPtsIter = numCollocPts.insert(ui_pair).first;
   }
@@ -368,6 +370,9 @@ inline void SparseGridDriver::clear_keys()
   axisLowerBounds.clear(); //axisLBndsIter = axisLowerBounds.end();
 
   oldMultiIndex.clear();  activeMultiIndex.clear();  poppedTrialSets.clear();
+
+  // this database is shared among all keys
+  clear_1d_collocation_points_weights();
 }
 
 
@@ -375,7 +380,7 @@ inline int SparseGridDriver::collocation_points() const
 { return numPtsIter->second; }
 
 
-inline void SparseGridDriver::clear_grid()
+inline void SparseGridDriver::clear_size()
 { numPtsIter->second = 0; } // special value indicating a grid update is reqd
 
 
@@ -391,7 +396,7 @@ inline void SparseGridDriver::level(unsigned short ssg_level)
 {
   if (ssgLevIter->second != ssg_level) {
     ssgLevIter->second = ssg_level;
-    clear_grid();
+    clear_size();
   }
 }
 
