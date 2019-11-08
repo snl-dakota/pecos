@@ -176,9 +176,12 @@ initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 
   // reset bookkeeping (e.g., 1D rules) if indicated
   size_t i, num_basis = polynomialBasis.size();
+  bool reset_grid_size = false;
   for (i=0; i<num_basis; ++i)
     if (polynomialBasis[i].collocation_reset())
-      reset_1d_collocation_points_weights(i);
+      { reset_1d_collocation_points_weights(i); reset_grid_size = true; }
+  if (reset_grid_size)
+    clear_size();
 }
 
 
