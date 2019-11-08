@@ -206,6 +206,7 @@ protected:
 					    const UShortArray& lev_index,
 					    const SizetList& subset_indices);
   /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
+  /// using points/weights of order quad_order
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);
 

@@ -26,41 +26,6 @@ static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:
 namespace Pecos {
 
 
-void SparseGridDriver::assign_1d_collocation_points_weights()
-{
-  // resize arrays
-  unsigned short ssg_lev = ssgLevIter->second;
-  size_t i, num_levels = ssg_lev + 1, curr_lev;
-  curr_lev = collocPts1D.size();
-  if (num_levels > curr_lev) {
-    collocPts1D.resize(num_levels);
-    for (i=curr_lev; i<num_levels; ++i)
-      collocPts1D[i].resize(numVars);
-  }
-  curr_lev = type1CollocWts1D.size();
-  if (num_levels > curr_lev) {
-    type1CollocWts1D.resize(num_levels);
-    for (i=curr_lev; i<num_levels; ++i)
-      type1CollocWts1D[i].resize(numVars);
-  }
-  curr_lev = type2CollocWts1D.size();
-  if (computeType2Weights && num_levels > curr_lev) {
-    type2CollocWts1D.resize(num_levels);
-    for (i=curr_lev; i<num_levels; ++i)
-      type2CollocWts1D[i].resize(numVars);
-  }
-  // assign values
-  // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
-  unsigned short l_index, q_order;
-  for (i=0; i<numVars; i++)
-    for (l_index=0; l_index<num_levels; ++l_index) {
-      level_to_order(i, l_index, q_order);
-      IntegrationDriver::
-	assign_1d_collocation_points_weights(i, q_order, l_index);
-    }
-}
-
-
 void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 {
   RealVector aniso_wts;
@@ -204,6 +169,19 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 }
 
 
+void SparseGridDriver::
+initialize_grid_parameters(const MultivariateDistribution& mv_dist)
+{
+  IntegrationDriver::initialize_grid_parameters(mv_dist);
+
+  // reset bookkeeping (e.g., 1D rules) if indicated
+  size_t i, num_basis = polynomialBasis.size();
+  for (i=0; i<num_basis; ++i)
+    if (polynomialBasis[i].collocation_reset())
+      reset_1d_collocation_points_weights(i);
+}
+
+
 void SparseGridDriver::precompute_rules()
 {
   unsigned short l, m, ssg_lev = ssgLevIter->second;
@@ -221,6 +199,55 @@ void SparseGridDriver::precompute_rules()
       level_to_order(i, l, m); // max order is full aniso level[dim]
       polynomialBasis[i].precompute_rules(m);
     }
+  }
+}
+
+
+void SparseGridDriver::assign_1d_collocation_points_weights()
+{
+  // resize arrays
+  unsigned short ssg_lev = ssgLevIter->second;
+  size_t i, num_levels = ssg_lev + 1, curr_lev;
+  curr_lev = collocPts1D.size();
+  if (num_levels > curr_lev) {
+    collocPts1D.resize(num_levels);
+    for (i=curr_lev; i<num_levels; ++i)
+      collocPts1D[i].resize(numVars);
+  }
+  curr_lev = type1CollocWts1D.size();
+  if (num_levels > curr_lev) {
+    type1CollocWts1D.resize(num_levels);
+    for (i=curr_lev; i<num_levels; ++i)
+      type1CollocWts1D[i].resize(numVars);
+  }
+  curr_lev = type2CollocWts1D.size();
+  if (computeType2Weights && num_levels > curr_lev) {
+    type2CollocWts1D.resize(num_levels);
+    for (i=curr_lev; i<num_levels; ++i)
+      type2CollocWts1D[i].resize(numVars);
+  }
+  // assign values
+  // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
+  unsigned short l_index, q_order;
+  for (i=0; i<numVars; i++)
+    for (l_index=0; l_index<num_levels; ++l_index) {
+      level_to_order(i, l_index, q_order);
+      IntegrationDriver::
+	assign_1d_collocation_points_weights(i, q_order, l_index);
+    }
+}
+
+
+void SparseGridDriver::reset_1d_collocation_points_weights(size_t i)
+{
+  unsigned short lev, order;  size_t num_lev = collocPts1D.size();
+  BasisPolynomial& poly_i = polynomialBasis[i];
+  for (lev=0; lev<num_lev; ++lev) {
+    level_to_order(i, lev, order);
+    collocPts1D[lev][i]        = poly_i.collocation_points(order);
+    type1CollocWts1D[lev][i]   = poly_i.type1_collocation_weights(order);
+    if (computeType2Weights)
+      type2CollocWts1D[lev][i] = poly_i.type2_collocation_weights(order);
   }
 }
 

@@ -93,7 +93,7 @@ void TensorProductDriver::combine_grid()
   }
 
   UShortArray comb_order;
-  update_quadrature_order_from_level_index(combinedLevelIndex, comb_order);
+  level_to_order(combinedLevelIndex, comb_order);
   compute_tensor_grid(comb_order, combinedLevelIndex, combinedVarSets,
 		      combinedT1WeightSets, combinedT2WeightSets,
 		      combinedCollocKey);
@@ -127,7 +127,7 @@ void TensorProductDriver::combined_to_active(bool clear_combined)
     t2WtIter->second       = combinedT2WeightSets;
   }
 
-  update_quadrature_order_from_level_index();
+  level_to_order();
 }
 
 

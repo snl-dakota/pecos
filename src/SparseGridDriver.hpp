@@ -133,6 +133,7 @@ public:
   void active_key(const UShortArray& key);
   void clear_inactive();
   void clear_keys();
+  void initialize_grid_parameters(const MultivariateDistribution& mv_dist);
 
   //
   //- Heading: Member functions
@@ -160,6 +161,8 @@ public:
 
   /// initialize collocPts1D and type{1,2}CollocWts1D
   void assign_1d_collocation_points_weights();
+  /// reset collocPts1D[*][i] and type{1,2}CollocWts1D[*][i] for all levels
+  void reset_1d_collocation_points_weights(size_t i);
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();

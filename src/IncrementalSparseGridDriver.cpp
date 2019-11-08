@@ -35,8 +35,6 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 				    bc_options, growth_rate);
   trackUniqueProdWeights = track_uniq_prod_wts;
 
-  // set a rule-dependent duplicateTol
-  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   //initialize_rule_pointers();
   // set levelGrowthToOrder
@@ -49,8 +47,6 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
 
-  // set a rule-dependent duplicateTol
-  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   //initialize_rule_pointers();
   // set levelGrowthToOrder

@@ -131,20 +131,24 @@ private:
 
   /// update {levelInd,collocKey}Iter based on activeKey
   void update_active_iterators();
-  
-  /// update levelIndex from quadOrder
-  void update_level_index_from_quadrature_order();
-  /// update lev_index from q_ord
-  void update_level_index_from_quadrature_order(const UShortArray& q_ord,
-						UShortArray& lev_index);
-  /// update levelIndex[i] from quadOrder[i]
-  void update_level_index_from_quadrature_order(size_t i);
 
-  /// update quadOrder from levelIndex
-  void update_quadrature_order_from_level_index();
+  /// update lev_index from q_ord
+  void order_to_level(const UShortArray& q_ord,	UShortArray& lev_index);
+  /// update levelIndex from quadOrder
+  void order_to_level();
+  /// update levelIndex[i] from quadOrder[i]
+  void order_to_level(size_t i);
+  /// update level from order
+  void order_to_level(size_t i, unsigned short order, unsigned short& level);
+
   /// update q_ord from lev_index
-  void update_quadrature_order_from_level_index(const UShortArray& lev_index,
-						UShortArray& q_ord);
+  void level_to_order(const UShortArray& lev_index, UShortArray& q_ord);
+  /// update quadOrder from levelIndex
+  void level_to_order();
+  /// update quadOrder[i] from levelIndex[i]
+  void level_to_order(size_t i);
+  /// update order from level
+  void level_to_order(size_t i, unsigned short level, unsigned short& order);
 
   //
   //- Heading: Data
@@ -267,7 +271,7 @@ inline void TensorProductDriver::update_active_iterators()
     std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
     levelIndIter = levelIndex.insert(ua_pair).first;
   }
-  update_quadrature_order_from_level_index(); // empty for new levelIndex
+  level_to_order(); // empty for new levelIndex
 
   collocKeyIter = collocKey.find(activeKey);
   if (collocKeyIter == collocKey.end()) {
@@ -293,8 +297,7 @@ inline void TensorProductDriver::update_active_iterators()
 
 
 inline void TensorProductDriver::
-update_level_index_from_quadrature_order(const UShortArray& q_ord,
-					 UShortArray& lev_index)
+order_to_level(const UShortArray& q_ord, UShortArray& lev_index)
 {
   size_t i, len = q_ord.size();
   if (lev_index.size() != len) lev_index.resize(len);
@@ -303,18 +306,21 @@ update_level_index_from_quadrature_order(const UShortArray& q_ord,
 }
 
 
-inline void TensorProductDriver::update_level_index_from_quadrature_order()
-{ update_level_index_from_quadrature_order(quadOrder, levelIndIter->second); }
+inline void TensorProductDriver::order_to_level()
+{ order_to_level(quadOrder, levelIndIter->second); }
 
 
-inline void TensorProductDriver::
-update_level_index_from_quadrature_order(size_t i)
+inline void TensorProductDriver::order_to_level(size_t i)
 { levelIndIter->second[i] = quadOrder[i] - 1; }
 
 
 inline void TensorProductDriver::
-update_quadrature_order_from_level_index(const UShortArray& lev_index,
-					 UShortArray& q_ord)
+order_to_level(size_t i, unsigned short order, unsigned short& level)
+{ level = order - 1; }
+
+
+inline void TensorProductDriver::
+level_to_order(const UShortArray& lev_index, UShortArray& q_ord)
 {
   size_t i, len = lev_index.size();
   if (q_ord.size() != len) q_ord.resize(len);
@@ -323,17 +329,26 @@ update_quadrature_order_from_level_index(const UShortArray& lev_index,
 }
 
 
-inline void TensorProductDriver::update_quadrature_order_from_level_index()
-{ update_quadrature_order_from_level_index(levelIndIter->second, quadOrder); }
+inline void TensorProductDriver::level_to_order()
+{ level_to_order(levelIndIter->second, quadOrder); }
+
+
+inline void TensorProductDriver::level_to_order(size_t i)
+{ quadOrder[i] = levelIndIter->second[i] + 1; }
+
+
+inline void TensorProductDriver::
+level_to_order(size_t i, unsigned short level, unsigned short& order)
+{ order = level + 1; }
 
 
 inline void TensorProductDriver::quadrature_order(const UShortArray& quad_order)
-{ quadOrder = quad_order; update_level_index_from_quadrature_order(); }
+{ quadOrder = quad_order;  order_to_level(); }
 
 
 inline void TensorProductDriver::
 quadrature_order(unsigned short order, size_t i)
-{ quadOrder[i] = order; update_level_index_from_quadrature_order(i); }
+{ quadOrder[i] = order;  order_to_level(i); }
 
 
 inline const UShortArray& TensorProductDriver::quadrature_order() const

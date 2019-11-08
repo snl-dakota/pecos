@@ -64,8 +64,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 void CombinedSparseGridDriver::
 initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
-  SharedPolyApproxData::
-    update_basis_distribution_parameters(mv_dist, polynomialBasis);
+  SparseGridDriver::initialize_grid_parameters(mv_dist);
 
   // set a rule-dependent duplicateTol
   initialize_duplicate_tolerance(); // depends on length scale from dist params

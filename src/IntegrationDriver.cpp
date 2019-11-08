@@ -252,18 +252,9 @@ initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
   if (driverRep)
     driverRep->initialize_grid_parameters(mv_dist); // fwd to letter
-  else { // default implementation
+  else // default implementation
     SharedPolyApproxData::
       update_basis_distribution_parameters(mv_dist, polynomialBasis);
-    // review w.r.t. NonDExpansion::initialize_expansion() -->
-    // u_space_sampler.reset() in   [ *** CONSOLIDATE HERE? *** ]
-    // > don't want to reset adaptations here, perhaps in initialize_grid()
-    // > then reset bookkeeping (e.g., 1D rules) if indicated here ...
-    size_t i, num_basis = polynomialBasis.size();
-    for (i=0; i<num_basis; ++i)
-      if (polynomialBasis[i].collocation_reset())
-	{ /* reset_collocation_data(); */ break; }
-  }
 }
 
 

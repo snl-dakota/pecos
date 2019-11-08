@@ -775,6 +775,7 @@ inline void NumericGenOrthogPolynomial::precompute_rules(unsigned short order)
   // TO DO: sweep through colloc{Points,Weights}Map
   // > solve_eigenproblem() currently sweeps out a range of polyCoeffs
   //   but only generates one set of Gauss pts/wts per eigensolve
+  // > alternatively, reuse available polyCoeffs in solve_eigenproblem()
 }
 
 
