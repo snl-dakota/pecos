@@ -173,15 +173,15 @@ void SparseGridDriver::
 initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
   IntegrationDriver::initialize_grid_parameters(mv_dist);
+  if (basisParamUpdates.any()) clear_size(); // clear number of colloc points
 
-  // reset bookkeeping (e.g., 1D rules) if indicated
-  size_t i, num_basis = polynomialBasis.size();
-  bool reset_grid_size = false;
-  for (i=0; i<num_basis; ++i)
-    if (polynomialBasis[i].collocation_reset())
-      { reset_1d_collocation_points_weights(i); reset_grid_size = true; }
-  if (reset_grid_size)
-    clear_size();
+  // assign is unnecessary as reset/update are sufficiently robust
+  //if (collocPts1D.empty())
+  //  assign_1d_collocation_points_weights();
+  //else {
+    reset_1d_collocation_points_weights();  // replace invalidated pt/wt sets
+    update_1d_collocation_points_weights(); // augment 1-D pt/wt sets
+  //}
 }
 
 
@@ -206,9 +206,10 @@ void SparseGridDriver::precompute_rules()
 }
 
 
-void SparseGridDriver::assign_1d_collocation_points_weights()
+void SparseGridDriver::resize_1d_collocation_points_weights()
 {
-  // resize arrays
+  // resize arrays in a one-sided manner (don't prune 1D points)
+
   unsigned short ssg_lev = ssgLevIter->second;
   size_t i, num_levels = ssg_lev + 1, curr_lev;
   curr_lev = collocPts1D.size();
@@ -229,11 +230,35 @@ void SparseGridDriver::assign_1d_collocation_points_weights()
     for (i=curr_lev; i<num_levels; ++i)
       type2CollocWts1D[i].resize(numVars);
   }
-  // assign values
+}
+
+
+/*
+void SparseGridDriver::assign_1d_collocation_points_weights()
+{
+  resize_1d_collocation_points_weights();
+
   // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
-  unsigned short l_index, q_order;
-  for (i=0; i<numVars; i++)
+  unsigned short l_index, q_order, num_levels = ssgLevIter->second + 1;
+  for (size_t i=0; i<numVars; i++)
     for (l_index=0; l_index<num_levels; ++l_index) {
+      level_to_order(i, l_index, q_order);
+      IntegrationDriver::
+	assign_1d_collocation_points_weights(i, q_order, l_index);
+    }
+}
+*/
+
+
+void SparseGridDriver::update_1d_collocation_points_weights()
+{
+  unsigned short curr_levels = collocPts1D.size();
+  resize_1d_collocation_points_weights();
+
+  // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
+  unsigned short l_index, q_order, num_levels = ssgLevIter->second + 1;
+  for (l_index=curr_levels; l_index<num_levels; ++l_index)
+    for (size_t i=0; i<numVars; i++) {
       level_to_order(i, l_index, q_order);
       IntegrationDriver::
 	assign_1d_collocation_points_weights(i, q_order, l_index);
@@ -241,8 +266,20 @@ void SparseGridDriver::assign_1d_collocation_points_weights()
 }
 
 
+void SparseGridDriver::reset_1d_collocation_points_weights()
+{
+  // re-assign 1D pts/wts per variable, if indicated by basisParamUpdates
+  size_t v, num_v = basisParamUpdates.size();
+  for (v=0; v<num_v; ++v)
+    if (basisParamUpdates[v])
+      reset_1d_collocation_points_weights(v);
+}
+
+
 void SparseGridDriver::reset_1d_collocation_points_weights(size_t i)
 {
+  // replaces only the existing pts/wts (no resizing)
+
   unsigned short lev, order;  size_t num_lev = collocPts1D.size();
   BasisPolynomial& poly_i = polynomialBasis[i];
   for (lev=0; lev<num_lev; ++lev) {

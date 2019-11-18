@@ -64,7 +64,12 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 void CombinedSparseGridDriver::
 initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
-  SparseGridDriver::initialize_grid_parameters(mv_dist);
+  if (trackCollocDetails) // use default 1D updating
+    SparseGridDriver::initialize_grid_parameters(mv_dist);
+  else {                  // no 1D updating required
+    IntegrationDriver::initialize_grid_parameters(mv_dist);
+    if (basisParamUpdates.any()) clear_size(); // clear number of colloc points
+  }
 
   // set a rule-dependent duplicateTol
   initialize_duplicate_tolerance(); // depends on length scale from dist params
@@ -455,26 +460,31 @@ void CombinedSparseGridDriver::compute_grid()
 {
   assign_smolyak_arrays();
 
-  // For efficiency reasons, incremental sparse grid definition uses
-  // different point orderings than sgmg/sgmga.  Therefore, the
-  // reference grid computations are kept completely separate.
+  // ensure active numCollocPts is up to date
+  grid_size();
 
-  // ------------------------------------
-  // Compute collocation points
-  // ------------------------------------
-  grid_size(); // ensure active numCollocPts is up to date
+  // ---------------------------------
+  // Compute unique sparse grid points
+  // ---------------------------------
+  // Note: incremental sparse grid definition uses different point orderings
+  // than sgmg/sgmga (approach below).  Therefore, the Combined implementation
+  // below is overridden for Incremental (reference grids are kept separate).
   IntArray& unique_index_map = uniqIndMapIter->second;
   compute_unique_points_weights(ssgLevIter->second, anisoWtsIter->second,
 				numPtsIter->second, unique_index_map,
 				varSetsIter->second, t1WtIter->second,
 				t2WtIter->second);
 
+  // update sparse grid collocation data, if tracking is active
+  // > this is for Pecos; sgmg/sgmga does not use any of this data
+  // > ordering: collocIndices requires unique_index_map from above
   if (trackCollocDetails) {
     UShort3DArray& colloc_key = collocKeyIter->second;
     assign_collocation_key(smolMIIter->second, colloc_key); // define collocKey
     assign_collocation_indices(colloc_key, unique_index_map,
 			       collocIndIter->second);  // define collocIndices
-    assign_1d_collocation_points_weights(); // define 1-D point/weight sets
+    // 1D pt/wt assignments are now managed in initialize_grid_parameters()
+    //assign_1d_collocation_points_weights();
   }
 
 #ifdef DEBUG
@@ -769,7 +779,7 @@ compute_tensor_points_weights(const UShort2DArray& sm_mi,
     if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
       UShortArray quad_order(numVars);
       level_to_order(sm_index, quad_order);
-      update_1d_collocation_points_weights(quad_order, sm_index);
+      assign_1d_collocation_points_weights(quad_order, sm_index);
     }
     num_tp_pts = colloc_key[i].size();
     for (j=0; j<num_tp_pts; ++j, ++cntr) {

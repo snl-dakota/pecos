@@ -82,9 +82,11 @@ public:
   virtual void active_key(const UShortArray& key);
   /// remove all keyed data sets
   virtual void clear_keys();
-
   /// clear inactive grid settings following their usage/combination
   virtual void clear_inactive();
+
+  /// reset the grid state (undo refinements)
+  virtual void reset();
 
   /// return the key of the maximal stored grid state
   virtual const UShortArray& maximal_grid();
@@ -134,9 +136,14 @@ public:
 			   RealMatrix& variable_sets,
 			   UShort2DArray& colloc_key);
 
-  /// update collocPts1D and type{1,2}CollocWts1D
-  void update_1d_collocation_points_weights(const UShortArray& quad_order,
+  /// assign collocPts1D and type{1,2}CollocWts1D for level/order
+  void assign_1d_collocation_points_weights(const UShortArray& quad_order,
 					    const UShortArray& lev_index);
+  /// assign collocPts1D and type{1,2}CollocWts1D for level/order
+  /// for subset variables
+  void assign_1d_collocation_points_weights(const UShortArray& quad_order,
+					    const UShortArray& lev_index,
+					    const SizetList& subset_indices);
 
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
@@ -144,6 +151,9 @@ public:
   std::vector<BasisPolynomial>& polynomial_basis();
   /// set polynomialBasis
   void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
+
+  /// return basisParamUpdates
+  const BitArray& polynomial_basis_parameter_updates() const;
 
   /// set driverMode
   void mode(short driver_mode);
@@ -201,15 +211,12 @@ protected:
 			   RealMatrix& t2_weight_sets,
 			   UShort2DArray& colloc_key);
 
-  /// update collocPts1D and type{1,2}CollocWts1D for subset variables
-  void update_1d_collocation_points_weights(const UShortArray& quad_order,
-					    const UShortArray& lev_index,
-					    const SizetList& subset_indices);
+  /// resize collocPts1D and type{1,2}CollocWts1D
+  void resize_1d_collocation_points_weights(const UShortArray& lev_index);
   /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
   /// using points/weights of order quad_order
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);
-
   /// clear collocPts1D and type{1,2}CollocWts1D
   void clear_1d_collocation_points_weights();
 
@@ -232,6 +239,8 @@ protected:
   /// array of one-dimensional orthogonal polynomials used in
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
+  /// set of flags indicating parameter updates to polynomialBasis
+  BitArray basisParamUpdates;
 
   /// num_levels_per_var x numVars sets of 1D collocation points
   Real3DArray collocPts1D;
@@ -300,6 +309,11 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
+inline const BitArray& IntegrationDriver::
+polynomial_basis_parameter_updates() const
+{ return (driverRep) ? driverRep->basisParamUpdates : basisParamUpdates; }
+
+
 inline void IntegrationDriver::mode(short driver_mode)
 {
   if (driverRep) driverRep->driverMode = driver_mode;
@@ -328,6 +342,34 @@ type2_collocation_weights_1d() const
 /** Don't worry about preserving layout as {update,assign}_1d can manage. */
 inline void IntegrationDriver::clear_1d_collocation_points_weights()
 { collocPts1D.clear(); type1CollocWts1D.clear(); type2CollocWts1D.clear(); }
+
+
+inline void IntegrationDriver::
+assign_1d_collocation_points_weights(const UShortArray& quad_order,
+				     const UShortArray& lev_index)
+{
+  // resize arrays
+  resize_1d_collocation_points_weights(lev_index);
+  // assign values
+  for (size_t i=0; i<numVars; ++i)
+    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
+}
+
+
+inline void IntegrationDriver::
+assign_1d_collocation_points_weights(const UShortArray& quad_order,
+				     const UShortArray& lev_index,
+				     const SizetList& subset_indices)
+{
+  // resize arrays (all variables for simplicity)
+  resize_1d_collocation_points_weights(lev_index);
+  // assign values for subset variables (for memory efficiency)
+  SizetList::const_iterator cit;  size_t i;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    i = *cit;
+    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
+  }
+}
 
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const

@@ -606,7 +606,7 @@ void HierarchSparseGridDriver::compute_grid()
   bool clear = (refineControl != NO_CONTROL); // restore prev state if refined
   update_smolyak_multi_index(clear);          // compute smolyakMultiIndex
   assign_collocation_key();                   // compute collocKey
-  assign_1d_collocation_points_weights();     // define 1-D point/weight sets
+  //assign_1d_collocation_points_weights();   // handled in init_grid_params()
 
   if (nestedGrid) {
     compute_points_weights(smolMIIter->second, collocKeyIter->second,
@@ -915,7 +915,7 @@ compute_points_weights(const UShortArray& sm_index,
   // update collocPts1D, type1CollocWts1D, and type2CollocWts1D
   UShortArray total_order;
   level_to_order(sm_index, total_order);
-  update_1d_collocation_points_weights(total_order, sm_index);
+  assign_1d_collocation_points_weights(total_order, sm_index);
 
   // define points and type 1/2 weights; weights are products of 1D weights
   for (k=0; k<num_tp_pts; ++k) {

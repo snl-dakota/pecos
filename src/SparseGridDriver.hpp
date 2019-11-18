@@ -133,6 +133,7 @@ public:
   void active_key(const UShortArray& key);
   void clear_inactive();
   void clear_keys();
+  void reset();
   void initialize_grid_parameters(const MultivariateDistribution& mv_dist);
 
   //
@@ -159,10 +160,13 @@ public:
   /// polynomial (efficiency optimization when rules are expensive to compute)
   void precompute_rules();
 
-  /// initialize collocPts1D and type{1,2}CollocWts1D
-  void assign_1d_collocation_points_weights();
-  /// reset collocPts1D[*][i] and type{1,2}CollocWts1D[*][i] for all levels
-  void reset_1d_collocation_points_weights(size_t i);
+  // initialize collocPts1D and type{1,2}CollocWts1D
+  //void assign_1d_collocation_points_weights();
+  /// expand and update collocPts1D and type{1,2}CollocWts1D
+  void update_1d_collocation_points_weights();
+  /// reset collocPts1D and type{1,2}CollocWts1D for variables with a
+  /// distribution parameter change
+  void reset_1d_collocation_points_weights();
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();
@@ -277,6 +281,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// reset collocPts1D[*][i] and type{1,2}CollocWts1D[*][i] for all levels
+  void reset_1d_collocation_points_weights(size_t i);
+  /// resize arrays: collocPts1D,type1CollocWts1D,type2CollocWts1D
+  void resize_1d_collocation_points_weights();
+
   //
   //- Heading: Data
   //
@@ -385,6 +394,10 @@ inline int SparseGridDriver::collocation_points() const
 
 inline void SparseGridDriver::clear_size()
 { numPtsIter->second = 0; } // special value indicating a grid update is reqd
+
+
+inline void SparseGridDriver::reset()
+{ IntegrationDriver::reset();  clear_size(); }
 
 
 inline size_t SparseGridDriver::push_index() const

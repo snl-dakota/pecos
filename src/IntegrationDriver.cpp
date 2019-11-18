@@ -248,13 +248,104 @@ assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr)
 
 
 void IntegrationDriver::
+initialize_grid(const MultivariateDistribution& u_dist,
+		const ExpansionConfigOptions& ec_options,
+		const BasisConfigOptions& bc_options)
+{
+  if (driverRep)
+    driverRep->initialize_grid(u_dist, ec_options, bc_options);
+  else {
+    const ShortArray&   u_types = u_dist.random_variable_types();
+    const BitArray& active_vars = u_dist.active_variables();
+    numVars = (active_vars.empty()) ? u_types.size() : active_vars.count();
+    ShortArray basis_types;
+    if (ec_options.expBasisType == NODAL_INTERPOLANT ||
+	ec_options.expBasisType == HIERARCHICAL_INTERPOLANT) {
+      driverMode = INTERPOLATION_MODE;
+      SharedInterpPolyApproxData::
+	initialize_driver_types_rules(u_dist, bc_options,
+				      basis_types, collocRules);
+    }
+    else {
+      driverMode = INTEGRATION_MODE;
+      SharedPolyApproxData::
+	initialize_orthogonal_basis_types_rules(u_dist, bc_options,
+						basis_types, collocRules);
+    }
+
+    SharedPolyApproxData::
+      initialize_polynomial_basis(basis_types, collocRules, polynomialBasis);
+    // Note: basis dist params are updated in initialize_grid_parameters()
+
+    for (size_t i=0; i<numVars; i++)
+      if (basis_types[i] == HERMITE_INTERP ||
+	  basis_types[i] == PIECEWISE_CUBIC_INTERP)
+	{ computeType2Weights = true; break; }
+  }
+}
+
+
+/** protected function called only from derived class letters. */
+void IntegrationDriver::
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
+{
+  if (driverRep)
+    driverRep->initialize_grid(poly_basis);
+  else {
+    numVars         = poly_basis.size();
+    polynomialBasis = poly_basis; // shallow copy
+
+    // For setting driverMode, basis_type is insufficient since incoming basis
+    // is the driver basis (not the interp poly basis).  collocRules is also
+    // insufficient since we want to sync on #pts (not integrand precision) for
+    // nested Gauss as well.  Currently, it is set separately via driver.mode().
+    //driverMode = (ec_options.expBasisType == NODAL_INTERPOLANT ||
+    //		    ec_options.expBasisType == HIERARCHICAL_INTERPOLANT)
+    //           ? INTERPOLATION_MODE : INTEGRATION_MODE;
+
+    collocRules.resize(numVars);
+    for (size_t i=0; i<numVars; i++) {
+      // update collocRules
+      collocRules[i] = poly_basis[i].collocation_rule();
+      // define computeType2Weights
+      short basis_type = poly_basis[i].basis_type();
+      if (basis_type == HERMITE_INTERP || basis_type == PIECEWISE_CUBIC_INTERP)
+	computeType2Weights = true;
+    }
+  }
+}
+
+
+void IntegrationDriver::
 initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
   if (driverRep)
     driverRep->initialize_grid_parameters(mv_dist); // fwd to letter
-  else // default implementation
-    SharedPolyApproxData::
-      update_basis_distribution_parameters(mv_dist, polynomialBasis);
+  else { // default (also employed as part of derived implementations)
+
+    // perform only one update prior to reset(), in case of multiple calls
+    if (basisParamUpdates.empty()) {
+      // propagate random variable distribution params to polynomialBasis
+      SharedPolyApproxData::
+	update_basis_distribution_parameters(mv_dist, polynomialBasis);
+
+      // activate flags for distribution parameter updates (removed in reset())
+      size_t v, num_v = polynomialBasis.size();
+      basisParamUpdates.resize(num_v);
+      for (v=0; v<num_v; ++v)
+	basisParamUpdates[v] = (polynomialBasis[v].parameterized()) ?
+	  polynomialBasis[v].parameter_update() : false;
+    }
+  }
+}
+
+
+void IntegrationDriver::reset()
+{
+  if (driverRep)
+    driverRep->reset(); // fwd to letter
+  else // default (also employed as part of derived implementations)
+    basisParamUpdates.clear();
 }
 
 
@@ -412,78 +503,6 @@ const RealMatrix& IntegrationDriver::combined_type2_weight_sets()
 }
 
 
-void IntegrationDriver::
-initialize_grid(const MultivariateDistribution& u_dist,
-		const ExpansionConfigOptions& ec_options,
-		const BasisConfigOptions& bc_options)
-{
-  if (driverRep)
-    driverRep->initialize_grid(u_dist, ec_options, bc_options);
-  else {
-    const ShortArray&   u_types = u_dist.random_variable_types();
-    const BitArray& active_vars = u_dist.active_variables();
-    numVars = (active_vars.empty()) ? u_types.size() : active_vars.count();
-    ShortArray basis_types;
-    if (ec_options.expBasisType == NODAL_INTERPOLANT ||
-	ec_options.expBasisType == HIERARCHICAL_INTERPOLANT) {
-      driverMode = INTERPOLATION_MODE;
-      SharedInterpPolyApproxData::
-	initialize_driver_types_rules(u_dist, bc_options,
-				      basis_types, collocRules);
-    }
-    else {
-      driverMode = INTEGRATION_MODE;
-      SharedPolyApproxData::
-	initialize_orthogonal_basis_types_rules(u_dist, bc_options,
-						basis_types, collocRules);
-    }
-
-    SharedPolyApproxData::
-      initialize_polynomial_basis(basis_types, collocRules, polynomialBasis);
-
-    // Note: this update to polynomialBasis is managed at run time
-    //SharedPolyApproxData::
-    //  update_basis_distribution_parameters(mv_dist, polynomialBasis);
-
-    for (size_t i=0; i<numVars; i++)
-      if (basis_types[i] == HERMITE_INTERP ||
-	  basis_types[i] == PIECEWISE_CUBIC_INTERP)
-	{ computeType2Weights = true; break; }
-  }
-}
-
-
-/** protected function called only from derived class letters. */
-void IntegrationDriver::
-initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
-{
-  if (driverRep)
-    driverRep->initialize_grid(poly_basis);
-  else {
-    numVars         = poly_basis.size();
-    polynomialBasis = poly_basis; // shallow copy
-
-    // For setting driverMode, basis_type is insufficient since incoming basis
-    // is the driver basis (not the interp poly basis).  collocRules is also
-    // insufficient since we want to sync on #pts (not integrand precision) for
-    // nested Gauss as well.  Currently, it is set separately via driver.mode().
-    //driverMode = (ec_options.expBasisType == NODAL_INTERPOLANT ||
-    //		    ec_options.expBasisType == HIERARCHICAL_INTERPOLANT)
-    //           ? INTERPOLATION_MODE : INTEGRATION_MODE;
-
-    collocRules.resize(numVars);
-    for (size_t i=0; i<numVars; i++) {
-      // update collocRules
-      collocRules[i] = poly_basis[i].collocation_rule();
-      // define computeType2Weights
-      short basis_type = poly_basis[i].basis_type();
-      if (basis_type == HERMITE_INTERP || basis_type == PIECEWISE_CUBIC_INTERP)
-	computeType2Weights = true;
-    }
-  }
-}
-
-
 void IntegrationDriver::active_key(const UShortArray& key)
 {
   if (driverRep)
@@ -554,7 +573,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
     num_colloc_pts *= quad_order[i];
 
   // update collocPts1D, type1CollocWts1D, and type2CollocWts1D
-  update_1d_collocation_points_weights(quad_order, lev_index);
+  assign_1d_collocation_points_weights(quad_order, lev_index);
 
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
@@ -612,7 +631,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
     num_colloc_pts *= quad_order[i];
 
   // update collocPts1D only for the subset variables
-  update_1d_collocation_points_weights(quad_order, lev_index, subset_indices);
+  assign_1d_collocation_points_weights(quad_order, lev_index, subset_indices);
 
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
@@ -641,8 +660,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
 
 
 void IntegrationDriver::
-update_1d_collocation_points_weights(const UShortArray& quad_order,
-				     const UShortArray& lev_index)
+resize_1d_collocation_points_weights(const UShortArray& lev_index)
 {
   // resize arrays
   size_t i, size_1d = collocPts1D.size(), max_index = lev_index[0];
@@ -659,38 +677,6 @@ update_1d_collocation_points_weights(const UShortArray& quad_order,
 	type2CollocWts1D[i].resize(numVars);
     }
   }
-  // assign values
-  for (i=0; i<numVars; ++i)
-    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
-}
-
-
-void IntegrationDriver::
-update_1d_collocation_points_weights(const UShortArray& quad_order,
-				     const UShortArray& lev_index,
-				     const SizetList& subset_indices)
-{
-  // resize arrays (all variables for simplicity)
-  size_t i, size_1d = collocPts1D.size(), max_index = lev_index[0];
-  for (i=1; i<numVars; ++i)
-    if (lev_index[i] > max_index)
-      max_index = lev_index[i];
-  if (max_index >= size_1d) {
-    collocPts1D.resize(max_index+1); type1CollocWts1D.resize(max_index+1);
-    for (i=size_1d; i<=max_index; ++i)
-      { collocPts1D[i].resize(numVars); type1CollocWts1D[i].resize(numVars); }
-    if (computeType2Weights) {
-      type2CollocWts1D.resize(max_index+1);
-      for (i=size_1d; i<=max_index; ++i)
-	type2CollocWts1D[i].resize(numVars);
-    }
-  }
-  // assign values for subset variables (for memory efficiency)
-  SizetList::const_iterator cit;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    i = *cit;
-    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
-  }
 }
 
 
@@ -698,20 +684,21 @@ void IntegrationDriver::
 assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 				     unsigned short lev_index)
 {
-  BasisPolynomial& poly_i =             polynomialBasis[i];
   RealArray&       pts_1d =      collocPts1D[lev_index][i];
   RealArray&    t1_wts_1d = type1CollocWts1D[lev_index][i];
-  if (poly_i.collocation_reset() || pts_1d.empty() || t1_wts_1d.empty()) {
+  BasisPolynomial& poly_i =             polynomialBasis[i];
+  bool       param_update =           basisParamUpdates[i];
+  if (param_update || pts_1d.empty())
     pts_1d    = poly_i.collocation_points(quad_order);
+  if (param_update || t1_wts_1d.empty())
     t1_wts_1d = poly_i.type1_collocation_weights(quad_order);
-  }
 #ifdef DEBUG
   PCout << "collocPts1D[" << lev_index << "][" << i << "]:\n" << pts_1d
 	<< "type1CollocWts1D[" << lev_index << "][" << i << "]:\n" << t1_wts_1d;
 #endif // DEBUG
   if (computeType2Weights) {
     RealArray& t2_wts_1d = type2CollocWts1D[lev_index][i];
-    if (poly_i.collocation_reset() || t2_wts_1d.empty())
+    if (param_update || t2_wts_1d.empty())
       t2_wts_1d = poly_i.type2_collocation_weights(quad_order);
 #ifdef DEBUG
     PCout << "type2CollocWts1D[" << lev_index << "][" << i << "]:\n"

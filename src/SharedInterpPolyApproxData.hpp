@@ -343,7 +343,11 @@ private:
   /// update polynomialBasis after a change in quadrature order
   void update_tensor_interpolation_basis(const UShortArray& lev_index);
   /// update polynomialBasis after a change in sparse grid level
-  void update_sparse_interpolation_basis(unsigned short max_level);
+  void update_sparse_interpolation_basis(unsigned short start_level,
+					 unsigned short   max_level);
+  /// update polynomialBasis for all existing levels for any dimensions
+  /// with distribution parameter updates
+  void update_interpolation_basis(const BitArray& param_updates);
   /// update polynomialBasis for a variable index after an update in level
   void update_interpolation_basis(unsigned short lev_index, size_t var_index);
   /// for a particular level, find index of basis v2 that matches basis v1
