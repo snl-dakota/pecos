@@ -46,7 +46,10 @@ public:
   //
 
   void reset_gauss();
-  bool collocation_reset() const;
+  bool parameter_update() const;
+  bool points_defined(unsigned short order) const;
+  bool type1_weights_defined(unsigned short order) const;
+  //bool type2_weights_defined(unsigned short order) const;
 
   //
   //- Heading: Member functions
@@ -80,11 +83,11 @@ protected:
   //- Heading: Data
   //
 
-  /// collocation points for one-dimensional quadrature
-  /// (x parameter values for which Poly_n(x) = 0)
-  RealArray collocPoints;
-  /// collocation weights for one-dimensional quadrature
-  RealArray collocWeights;
+  /// Gauss points computed for each order, used for one-dimensional quadrature
+  UShortRealArrayMap collocPointsMap;
+  /// type 1 Gauss weights computed for each order, used for one-dimensional
+  /// quadrature
+  UShortRealArrayMap collocWeightsMap;
 
   /// the type of integration rule associated with the orthogonal polynomial
   /** In most cases, this is just the corresponding Gauss quadrature
@@ -105,7 +108,7 @@ private:
   /// and retrieved with triple_product(key)
   UShortMultiSetRealMap tripleProductMap;
   /// tracks precomputations to prevent redundancy
-  UShortMultiSet tripleProductOrder;
+  UShortMultiSet        tripleProductOrder;
 };
 
 
@@ -120,13 +123,24 @@ inline OrthogonalPolynomial::~OrthogonalPolynomial()
 
 inline void OrthogonalPolynomial::reset_gauss()
 {
-  collocPoints.clear();     collocWeights.clear();
+  collocPointsMap.clear();  collocWeightsMap.clear();
   tripleProductMap.clear(); tripleProductOrder.clear();
 }
 
 
-inline bool OrthogonalPolynomial::collocation_reset() const
-{ return (collocPoints.empty() || collocWeights.empty()); }
+/** true following initialization or reset_gauss() */
+inline bool OrthogonalPolynomial::parameter_update() const
+{ return (collocPointsMap.empty() && collocWeightsMap.empty()); }
+
+
+inline bool OrthogonalPolynomial::
+points_defined(unsigned short order) const
+{ return (collocPointsMap.find(order) != collocPointsMap.end()); }
+
+
+inline bool OrthogonalPolynomial::
+type1_weights_defined(unsigned short order) const
+{ return (collocWeightsMap.find(order) != collocWeightsMap.end()); }
 
 
 inline bool OrthogonalPolynomial::

@@ -125,7 +125,7 @@ push_parameter(short dist_param, Real param)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) { // first pass
     switch (dist_param) {
     case     GA_ALPHA: alphaPoly = param - 1.; break;// alpha stat to alpha poly
     case GENLAG_ALPHA: alphaPoly = param;      break;

@@ -94,7 +94,7 @@ push_parameter(short dist_param, Real param)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) // first pass
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) // first pass
     lambdaStat = param;
   else if (!real_compare(lambdaStat, param))
     { lambdaStat = param;  reset_gauss(); }

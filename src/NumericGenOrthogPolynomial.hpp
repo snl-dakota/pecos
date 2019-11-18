@@ -141,7 +141,6 @@ protected:
 
   void precompute_rules(unsigned short order);
   void reset_gauss();
-  bool collocation_reset() const;
 
 private:
 
@@ -250,11 +249,6 @@ private:
 
   /// coefficients of the orthogonal polynomials, from order 0 to m
   RealVectorArray polyCoeffs;
-
-  /// map of Gauss points that have been computed for each order
-  UShortRealArrayMap collocPointsMap;
-  /// map of Gauss weights that have been computed for each order
-  UShortRealArrayMap collocWeightsMap;
 
   /// alpha three-term recurrence parameters: alpha3TR[i] multiplied
   /// by polyCoeffs[i] contributes to polyCoeffs[i+1]
@@ -780,14 +774,7 @@ inline void NumericGenOrthogPolynomial::precompute_rules(unsigned short order)
 
 
 inline void NumericGenOrthogPolynomial::reset_gauss()
-{
-  OrthogonalPolynomial::reset_gauss();
-  polyCoeffs.clear(); collocPointsMap.clear(); collocWeightsMap.clear();
-}
-
-
-inline bool NumericGenOrthogPolynomial::collocation_reset() const
-{ return (collocPointsMap.empty() || collocWeightsMap.empty()); }
+{ OrthogonalPolynomial::reset_gauss();  polyCoeffs.clear(); }
 
 } // namespace Pecos
 

@@ -468,11 +468,39 @@ void BasisPolynomial::reset_gauss()
 }
 
 
-bool BasisPolynomial::collocation_reset() const
+bool BasisPolynomial::parameter_update() const
 {
-  return (polyRep) ? polyRep->collocation_reset() :
-    false; // default for non-parameterized / non-orthogonal polynomials
-           // (e.g., PiecewiseInterp)
+  if (polyRep)
+    return polyRep->parameter_update();
+  else // default for non-parametric polynomials (e.g., PiecewiseInterp)
+    return false;
+}
+
+
+bool BasisPolynomial::points_defined(unsigned short order) const
+{
+  if (polyRep)
+    return polyRep->points_defined(order);
+  else // default
+    return false;
+}
+
+
+bool BasisPolynomial::type1_weights_defined(unsigned short order) const
+{
+  if (polyRep)
+    return polyRep->type1_weights_defined(order);
+  else // default
+    return false;
+}
+
+
+bool BasisPolynomial::type2_weights_defined(unsigned short order) const
+{
+  if (polyRep)
+    return polyRep->type2_weights_defined(order);
+  else // default
+    return false;
 }
 
 

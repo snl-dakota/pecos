@@ -151,10 +151,19 @@ public:
   /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */
   virtual void reset_gauss();
-  /// return state of Gauss pts/wts, true if the arrays were reset
-  /// (due to distribution parameter changes). 
+  /// return true if state of basis polynomial was reset due to distribution
+  /// parameter change(s)
   /** This is defined only for orthogonal polynomials. */
-  virtual bool collocation_reset() const;
+  virtual bool parameter_update() const;
+  /// return state of Gauss pts, true if array of points has been computed
+  /// for this order (since last distribution parameter change)
+  virtual bool points_defined(unsigned short order) const;
+  /// return state of Gauss type 1 weights, true if array of weights has been
+  /// computed for this order (since last distribution parameter change)
+  virtual bool type1_weights_defined(unsigned short order) const;
+  /// return state of Gauss type 2 weights, true if array of weights has been
+  /// computed for this order (since last distribution parameter change)
+  virtual bool type2_weights_defined(unsigned short order) const;
 
   /// (calculate and) return ptFactor
   virtual Real point_factor();

@@ -108,7 +108,7 @@ push_parameter(short dist_param, unsigned int param)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) { // first pass
     switch (dist_param) {
     case HGE_TOT_POP:  totalPop = param; break;
     case HGE_SEL_POP: selectPop = param; break;
