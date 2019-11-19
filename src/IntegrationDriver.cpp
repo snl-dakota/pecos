@@ -323,7 +323,7 @@ initialize_grid_parameters(const MultivariateDistribution& mv_dist)
     driverRep->initialize_grid_parameters(mv_dist); // fwd to letter
   else { // default (also employed as part of derived implementations)
 
-    // perform only one update prior to reset(), in case of multiple calls
+    // perform only one update since last reset(), in case of multiple calls
     if (basisParamUpdates.empty()) {
       // propagate random variable distribution params to polynomialBasis
       SharedPolyApproxData::

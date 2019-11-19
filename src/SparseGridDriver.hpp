@@ -397,7 +397,7 @@ inline void SparseGridDriver::clear_size()
 
 
 inline void SparseGridDriver::reset()
-{ IntegrationDriver::reset();  clear_size(); }
+{ IntegrationDriver::reset(); clear_size(); }
 
 
 inline size_t SparseGridDriver::push_index() const
