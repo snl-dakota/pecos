@@ -233,7 +233,7 @@ void RegressOrthogPolyApproximation::pop_coefficients(bool save_data)
   RealMatrix& exp_grads  = expCoeffGradsIter->second;
   SizetSet&   sparse_ind = sparseIndIter->second;
 
-  // store the incremented coeff state for possible push'
+  // store the incremented coeff state for possible push
   if (save_data) {
     poppedExpCoeffs[key].push_back(exp_coeffs);
     poppedExpCoeffGrads[key].push_back(exp_grads);
@@ -273,18 +273,16 @@ void RegressOrthogPolyApproximation::push_coefficients()
     = poppedExpCoeffGrads.find(key);
   std::map<UShortArray, SizetSetDeque>::iterator pss_it
     = poppedSparseInd.find(key);
-  RealVectorDeque::iterator rv_it;  RealMatrixDeque::iterator rm_it;
-  SizetSetDeque::iterator   ss_it;
   if (prv_it != poppedExpCoeffs.end()) {
-    rv_it = prv_it->second.begin();     std::advance(rv_it, p_index);
+    RealVectorDeque::iterator rv_it = prv_it->second.begin() + p_index;
     expCoeffsIter->second = *rv_it;     prv_it->second.erase(rv_it);
   }
   if (prm_it != poppedExpCoeffGrads.end()) {
-    rm_it = prm_it->second.begin();     std::advance(rm_it, p_index);
+    RealMatrixDeque::iterator rm_it = prm_it->second.begin() + p_index;
     expCoeffGradsIter->second = *rm_it; prm_it->second.erase(rm_it);
   }
   if (pss_it != poppedSparseInd.end()) {
-    ss_it = pss_it->second.begin();     std::advance(ss_it, p_index);
+    SizetSetDeque::iterator ss_it = pss_it->second.begin() + p_index;
     sparseIndIter->second = *ss_it;     pss_it->second.erase(ss_it);
   }
 

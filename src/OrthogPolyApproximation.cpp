@@ -54,7 +54,7 @@ void OrthogPolyApproximation::clear_inactive()
     = expansionCoeffGrads.begin();
   while (ec_it != expansionCoeffs.end())
     if (ec_it == expCoeffsIter) // preserve active
-      { ++ec_it, ++eg_it; }
+      { ++ec_it; ++eg_it; }
     else // clear inactive: postfix increments manage iterator invalidations
       { expansionCoeffs.erase(ec_it++); expansionCoeffGrads.erase(eg_it++); }
 }

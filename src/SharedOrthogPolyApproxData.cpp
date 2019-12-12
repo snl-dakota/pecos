@@ -151,8 +151,12 @@ bool SharedOrthogPolyApproxData::push_available()
   }
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
   //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
-  default:
-    return !poppedMultiIndex[activeKey].empty(); break;
+  default: {
+    std::map<UShortArray, UShort2DArrayDeque>::iterator it
+      = poppedMultiIndex.find(activeKey);
+    return (it != poppedMultiIndex.end() && !it->second.empty());
+    break;
+  }
   }
 }
 
