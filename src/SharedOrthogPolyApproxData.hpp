@@ -87,6 +87,9 @@ public:
   /// get multiIndex[key]
   const UShort2DArray& multi_index(const UShortArray& key) const;
 
+  /// return multiIndex (all keys)
+  const std::map<UShortArray, UShort2DArray>& multi_index_map();
+
   /// retrieve size of multiIndex
   size_t expansion_terms() const;
 
@@ -415,6 +418,11 @@ multi_index(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline const std::map<UShortArray, UShort2DArray>& SharedOrthogPolyApproxData::
+multi_index_map()
+{ return multiIndex; }
 
 
 inline size_t SharedOrthogPolyApproxData::expansion_terms() const
