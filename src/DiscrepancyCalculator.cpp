@@ -12,6 +12,7 @@
 //- Checked by:
 
 #include "DiscrepancyCalculator.hpp"
+#include "SurrogateData.hpp"
 
 static const char rcsId[]="@(#) $Id: DiscrepancyCalculator.cpp 7024 2010-10-16 01:24:42Z mseldre $";
 
@@ -140,6 +141,92 @@ compute_multiplicative(Real truth_fn, const RealVector& truth_grad,
       discrep_hess(r,c) = ( truth_hess(r,c) * approx_fn - approx_hess(r,c) *
 	truth_fn + ratio2 * approx_grad[r] * approx_grad[c] - truth_grad[r] *
 	approx_grad[c] - approx_grad[r] * truth_grad[c] ) / approx_sq;
+}
+
+
+void DiscrepancyCalculator::
+compute(const SDRArray& hf_sdr_array, const SDRArray& lf_sdr_array,
+	SDRArray& delta_sdr_array, short combine_type)
+{
+  size_t i, num_pts = std::min(hf_sdr_array.size(), lf_sdr_array.size());
+
+  // Note: SurrogateData::size_active_sdr() is used to allocate delta_sdr_array
+
+  switch (combine_type) {
+  case MULT_COMBINE:
+    for (i=0; i<num_pts; ++i) {
+      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
+      short                 delta_bits = delta_sdr.active_bits();
+      short                 corr_order = (delta_bits & 2) ? 1 : 0;
+      if (check_multiplicative(hf_sdr.response_function(),
+			       lf_sdr.response_function(), corr_order)) {
+	PCerr << "Error: numerical FPE in computing multiplicative discrepancy."
+	      << "\n       Please change to additive discrepancy." << std::endl;
+	abort_handler(-1);
+      }
+      if (delta_bits & 1)
+	compute_multiplicative(hf_sdr.response_function(),
+			       lf_sdr.response_function(),
+			       delta_sdr.response_function_view());
+      if (delta_bits & 2) {
+	RealVector delta_grad(delta_sdr.response_gradient_view());
+	compute_multiplicative(hf_sdr.response_function(),
+			       hf_sdr.response_gradient(),
+			       lf_sdr.response_function(),
+			       lf_sdr.response_gradient(), delta_grad);
+      }
+    }
+    break;
+  default: //case ADD_COMBINE: (correction specification not required)
+    for (i=0; i<num_pts; ++i) {
+      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
+      short                 delta_bits = delta_sdr.active_bits();
+      if (delta_bits & 1)
+	compute_additive(hf_sdr.response_function(), lf_sdr.response_function(),
+			 delta_sdr.response_function_view());
+      if (delta_bits & 2) {
+	RealVector delta_grad(delta_sdr.response_gradient_view());
+	compute_additive(hf_sdr.response_gradient(), lf_sdr.response_gradient(),
+			 delta_grad);
+      }
+    }
+    break;
+  }
+}
+
+
+void DiscrepancyCalculator::
+compute(SurrogateData& surr_data, const UShortArray& hf_key,
+	const UShortArray& lf_key, SurrogateData& mod_surr_data,
+	short combine_type)
+{
+  surr_data.active_key(hf_key);
+  const SDRArray& hf_sdr_array = surr_data.response_data();
+
+  if (mod_surr_data.is_null()) mod_surr_data = SurrogateData(hf_key);
+  else                         mod_surr_data.active_key(hf_key);
+
+  // levels 1 -- L use AGGREGATED_MODELS mode: modSurrData computes discrepancy
+  // between LF data (approxData[0] from Dakota::PecosApproximation; receives
+  // level l-1 data) and HF data (approxData[1] from Dakota::PecosApproximation;
+  // receives level l data).
+  // > SDR and popped SDR instances are distinct; only pop counts are copied
+  mod_surr_data.copy_active_sdv(surr_data, SHALLOW_COPY);
+  mod_surr_data.size_active_sdr(surr_data);
+  mod_surr_data.anchor_index(surr_data.anchor_index());
+  mod_surr_data.pop_count_stack(surr_data.pop_count_stack());
+  // TO DO: do this more incrementally as data sets evolve across levels
+
+  std::map<UShortArray, SDRArray>::const_iterator r_cit
+    = surr_data.response_data_map().find(lf_key);
+  const SDRArray& lf_sdr_array = r_cit->second;
+
+  compute(hf_sdr_array, lf_sdr_array,
+	  mod_surr_data.response_data(), combine_type);
 }
 
 } // namespace Pecos

@@ -188,18 +188,12 @@ void PolynomialApproximation::response_data_to_surplus_data()
 void PolynomialApproximation::response_data_to_discrepancy_data()
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
-  else                       modSurrData.active_key(key);
-  if (key != surrData.active_key()) {
+  const UShortArray& hf_key = data_rep->activeKey;
+  if (hf_key != surrData.active_key()) {
     PCerr << "Error: active key mismatch in PolynomialApproximation::"
 	  << "response_data_to_discrepancy_data()." << std::endl;
     abort_handler(-1);
   }
-
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = surrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator r_cit = resp_data_map.begin();
 
   // Keep surrData and modSurrData distinct (don't share reps since copy() will
   // not restore independence when it is needed).  Rather use distinct arrays
@@ -207,86 +201,23 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   // > level 0 mode is BYPASS_SURROGATE: both SDVs & SDRs can be shallow copies
   // > shallow copies of popped arrays support replicated pops on modSurrData
   //   (applied to distinct arrays of shared instances)
-  if (key == r_cit->first) { // first entry -> no discrepancy/surplus
+  std::map<UShortArray, SDRArray>::const_iterator r_cit
+    = surrData.response_data_map().begin();
+  if (hf_key == r_cit->first) { // first entry -> no discrepancy/surplus
+    if (modSurrData.is_null()) modSurrData = SurrogateData(hf_key);
+    else                       modSurrData.active_key(hf_key);
     modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
-    return;
   }
-
-  // levels 1 -- L use AGGREGATED_MODELS mode: modSurrData computes discrepancy
-  // between LF data (approxData[0] from Dakota::PecosApproximation; receives
-  // level l-1 data) and HF data (approxData[1] from Dakota::PecosApproximation;
-  // receives level l data).
-  // > SDR and popped SDR instances are distinct; only pop counts are copied
-  modSurrData.copy_active_sdv(surrData, SHALLOW_COPY);
-  modSurrData.size_active_sdr(surrData);
-  modSurrData.anchor_index(surrData.anchor_index());
-  modSurrData.pop_count_stack(surrData.pop_count_stack());
-  // TO DO: do this more incrementally as data sets evolve across levels
-
-  // More efficient to roll up contributions from each level expansion than
-  // to combine expansions and then eval once.  Approaches are equivalent for
-  // additive roll up.
-  size_t i, num_pts = surrData.points();
-  const SDVArray&    sdv_array = surrData.variables_data();
-  const SDRArray& hf_sdr_array = surrData.response_data();
-
-  // ***************************************************************************
-  // TO DO: improve encapsulation by passing surrogate key
-  // (currently replicates logic in NonDExpansion::configure_indices())
-  UShortArray lf_key;  paired_lf_key(key, lf_key);
-  r_cit = resp_data_map.find(lf_key);
-  const SDRArray& lf_sdr_array = r_cit->second;
-  // ***************************************************************************
-
-  DiscrepancyCalculator discrepCalc;
-  SDRArray& delta_sdr_array = modSurrData.response_data();
-  switch (data_rep->expConfigOptions.combineType) {
-  case MULT_COMBINE: {
-    size_t num_deriv_vars = surrData.num_derivative_variables();
-    for (i=0; i<num_pts; ++i) {
-      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
-      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
-      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
-      short                 delta_bits = delta_sdr.active_bits();
-      short                 corr_order = (delta_bits & 2) ? 1 : 0;
-      if (discrepCalc.check_multiplicative(hf_sdr.response_function(),
-					   lf_sdr.response_function(),
-					   corr_order)) {
-	PCerr << "Error: numerical FPE in computing multiplicative discrepancy."
-	      << "\n       Please change to additive discrepancy." << std::endl;
-	abort_handler(-1);
-      }
-      if (delta_bits & 1)
-	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
-	  lf_sdr.response_function(), delta_sdr.response_function_view());
-      if (delta_bits & 2) {
-	RealVector delta_grad(delta_sdr.response_gradient_view());	
-	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
-	  hf_sdr.response_gradient(), lf_sdr.response_function(),
-	  lf_sdr.response_gradient(), delta_grad);
-      }
-    }
-    break;
+  else {
+    // TO DO: improve encapsulation by passing surrogate key (currently
+    //        replicates logic in NonDExpansion::configure_indices())
+    UShortArray lf_key;  paired_lf_key(hf_key, lf_key);
+    // compute response discrepancies and store in modSurrData
+    DiscrepancyCalculator::compute(surrData, hf_key, lf_key, modSurrData,
+				   data_rep->expConfigOptions.combineType);
+    // compute faults from scratch (aggregates LF,HF failures)
+    modSurrData.data_checks();
   }
-  default: //case ADD_COMBINE: (correction specification not required)
-    for (i=0; i<num_pts; ++i) {
-      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
-      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
-      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
-      short                 delta_bits = delta_sdr.active_bits();
-      if (delta_bits & 1)
-	discrepCalc.compute_additive(hf_sdr.response_function(),
-	  lf_sdr.response_function(), delta_sdr.response_function_view());
-      if (delta_bits & 2) {
-	RealVector delta_grad(delta_sdr.response_gradient_view());
-	discrepCalc.compute_additive(hf_sdr.response_gradient(),
-	  lf_sdr.response_gradient(), delta_grad);
-      }
-    }
-    break;
-  }
-
-  modSurrData.data_checks(); // from scratch (aggregate LF,HF failures)
 }
 
 
