@@ -211,7 +211,7 @@ void PolynomialApproximation::response_data_to_discrepancy_data()
   else {
     // TO DO: improve encapsulation by passing surrogate key (currently
     //        replicates logic in NonDExpansion::configure_indices())
-    UShortArray lf_key;  paired_lf_key(hf_key, lf_key);
+    UShortArray lf_key; DiscrepancyCalculator::modified_lf_key(hf_key, lf_key);
     // compute response discrepancies and store in modSurrData
     DiscrepancyCalculator::compute(surrData, hf_key, lf_key, modSurrData,
 				   data_rep->expConfigOptions.combineType);

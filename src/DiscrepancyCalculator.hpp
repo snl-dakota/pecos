@@ -118,6 +118,9 @@ public:
 		      const UShortArray& lf_key, SurrogateData& mod_surr_data,
 		      short combine_type);
 
+  /// define a LF key corresponding to incoming HF key
+  static void modified_lf_key(const UShortArray& hf_key, UShortArray& lf_key);
+
   /*
   /// function for applying additive correction to an approximate response
   void apply_additive(const Variables& vars, Response& approx_response);
@@ -204,6 +207,20 @@ compute_multiplicative(Real truth_fn, const RealVector& truth_grad,
   if (data_bits & 4)
     compute_multiplicative(truth_fn, truth_grad, truth_hess, approx_fn,
 			   approx_grad, approx_hess, discrep_hess);
+}
+
+
+inline void DiscrepancyCalculator::
+modified_lf_key(const UShortArray& hf_key, UShortArray& lf_key)
+{
+  if (hf_key.back() > 0) {
+    // decrement trailing index
+    lf_key = hf_key; --lf_key.back();
+    // append the HF key in order to tag a particular (discrepancy) pairing
+    lf_key.insert(lf_key.end(), hf_key.begin(), hf_key.end());
+  }
+  else
+    lf_key.clear();
 }
 
 } // namespace Pecos
