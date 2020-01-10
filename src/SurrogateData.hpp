@@ -1021,6 +1021,8 @@ public:
   size_t pop_count() const;
   /// assign popCountStack[activeKey]
   void pop_count_stack(const SizetArray& pop_count) const;
+  /// return popCountStack[key]
+  const SizetArray& pop_count_stack(const UShortArray& key) const;
   /// return popCountStack[activeKey]
   const SizetArray& pop_count_stack() const;
   /// assign popCountStack
@@ -1090,7 +1092,9 @@ public:
   short failed_anchor_data() const;
   /// assign active failedRespData
   void failed_response_data(const SizetShortMap& fail_data) const;
-  /// return active failedRespData
+  /// return failedRespData[key]
+  const SizetShortMap& failed_response_data(const UShortArray& key) const;
+  /// return failedRespData[activeKey]
   const SizetShortMap& failed_response_data() const;
 
   /// assign activeKey and update active iterators
@@ -1750,17 +1754,13 @@ inline size_t SurrogateData::pop_count() const
 }
 
 
+inline const SizetArray& SurrogateData::
+pop_count_stack(const UShortArray& key) const
+{ return sdRep->popCountStack[key]; }
+
+
 inline const SizetArray& SurrogateData::pop_count_stack() const
-{
-  std::map<UShortArray, SizetArray>& pop_count_map = sdRep->popCountStack;
-  const UShortArray& key = sdRep->activeKey;
-  std::map<UShortArray, SizetArray>::iterator it = pop_count_map.find(key);
-  if (it == pop_count_map.end()) {
-    std::pair<UShortArray, SizetArray> us_pair(key, SizetArray());
-    it = pop_count_map.insert(us_pair).first; // create empty array for key
-  }
-  return it->second;
-}
+{ return pop_count_stack(sdRep->activeKey); }
 
 
 inline void SurrogateData::pop_count_stack(const SizetArray& pop_count) const
@@ -1940,17 +1940,13 @@ failed_response_data(const SizetShortMap& fail_data) const
 { sdRep->failedRespData[sdRep->activeKey] = fail_data; }
 
 
+inline const SizetShortMap& SurrogateData::
+failed_response_data(const UShortArray& key) const
+{ return sdRep->failedRespData[key]; }
+
+
 inline const SizetShortMap& SurrogateData::failed_response_data() const
-{
-  std::map<UShortArray, SizetShortMap>& fail_resp_data = sdRep->failedRespData;
-  const UShortArray& key = sdRep->activeKey;
-  std::map<UShortArray, SizetShortMap>::iterator cit = fail_resp_data.find(key);
-  if (cit == fail_resp_data.end()) {
-    std::pair<UShortArray, SizetShortMap> ssm_pair(key, SizetShortMap());
-    cit = fail_resp_data.insert(ssm_pair).first; // create empty array for key
-  }
-  return cit->second;
-}
+{ return failed_response_data(sdRep->activeKey); }
 
 
 inline void SurrogateData::
@@ -2201,15 +2197,19 @@ inline void SurrogateData::size_active_sdr(const SurrogateData& sd) const
 {
   const UShortArray& key = sd.active_key();
   if (sdRep->activeKey != key) active_key(key);
+  size_active_sdr(sd.response_data());
+}
 
-  const SDRArray& sdr_array = sd.response_data();
+
+inline void SurrogateData::size_active_sdr(const SDRArray& sdr_array) const
+{
   size_t num_pts = sdr_array.size();
+  SDRArray& new_sdr_array = sdRep->respDataIter->second;
+  new_sdr_array.resize(num_pts);
   if (num_pts) {
     const SurrogateDataResp& sdr0 = sdr_array[0];
     short bits = sdr0.active_bits(); // assume homogeneity in deriv data
     size_t i, num_deriv_v = sdr0.derivative_variables();
-    SDRArray& new_sdr_array = sdRep->respDataIter->second;
-    new_sdr_array.resize(num_pts);
     for (i=0; i<num_pts; ++i)
       new_sdr_array[i] = SurrogateDataResp(bits, num_deriv_v);
   }

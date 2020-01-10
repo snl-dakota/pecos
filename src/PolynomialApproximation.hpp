@@ -335,10 +335,6 @@ protected:
   const SurrogateData& surrogate_data() const;
   SurrogateData& surrogate_data();
 
-  void modified_surrogate_data(const SurrogateData& data);
-  const SurrogateData& modified_surrogate_data() const;
-  SurrogateData& modified_surrogate_data();
-
   void compute_coefficients();
 
   /// generic base class function mapped to gradient_basis_variables(x)
@@ -357,14 +353,13 @@ protected:
   //- Heading: Member functions
   //
 
-  /// update modSurrData from surrData based on deep or shallow copy
+  /// update surrData to define aggregated data from raw data, when indicated
+  /// by an active aggregated key
   void synchronize_surrogate_data();
-  /// compute hierarchical surpluses from the surrData active key
-  /// and store in same key within modSurrData
+  /// compute hierarchical surpluses for the surrData active key from the
+  /// surplus difference between a (constituent) raw data key and the
+  /// previous surrogate prediction
   void response_data_to_surplus_data();
-  /// compute discrepancy data using surrData keys (HF and LF pairs)
-  /// and store in modSurrData
-  void response_data_to_discrepancy_data();
 
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
@@ -385,14 +380,10 @@ protected:
 
   /// SurrogateData instance containing the variables (shared) and response
   /// (unique) data arrays for constructing a surrogate of a single response
-  /// function; this is the original unmodified data set for one or more level
-  /// keys, prior to any potential manipulations by the approximation classes.
+  /// function; this includes the original unmodified data set for one or more
+  /// level keys as well as combinations for aggregated keys (e.g., additive
+  /// or multiplicative discrepancies)
   SurrogateData surrData;
-  /// SurrogateData instance used in current approximation builds, potentially
-  /// reflecting data modifications (e.g., calculation of hierarchical surplus
-  /// of surrData level relative to previous surrogate level or model
-  /// discrepancy between two consecutive surrData level keys)
-  SurrogateData modSurrData;
 
   /// flag for calculation of expansion coefficients from response values
   bool expansionCoeffFlag;
@@ -523,20 +514,6 @@ inline SurrogateData& PolynomialApproximation::surrogate_data()
 
 inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
 { surrData = data; }
-
-
-inline const SurrogateData& PolynomialApproximation::
-modified_surrogate_data() const
-{ return modSurrData; }
-
-
-inline SurrogateData& PolynomialApproximation::modified_surrogate_data()
-{ return modSurrData; }
-
-
-inline void PolynomialApproximation::
-modified_surrogate_data(const SurrogateData& data)
-{ modSurrData = data; } // shared rep
 
 
 inline void PolynomialApproximation::clear_computed_bits()

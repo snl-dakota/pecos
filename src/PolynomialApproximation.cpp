@@ -32,18 +32,18 @@ void PolynomialApproximation::compute_coefficients()
     return;
   }
 
-  // update modSurrData from surrData
+  // update surrData (if active aggregation key)
   synchronize_surrogate_data();
 
   // For testing of anchor point logic:
-  //modSurrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
+  //surrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
 
   // anchor point, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/*_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  if (!modSurrData.points()) {
+  if (!surrData.points()) {
     PCerr << "Error: nonzero number of sample points required in Polynomial"
 	  << "Approximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
@@ -54,73 +54,68 @@ void PolynomialApproximation::compute_coefficients()
 void PolynomialApproximation::synchronize_surrogate_data()
 {
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  switch (data_rep->expConfigOptions.discrepancyType) {
+  const UShortArray& active_key = data_rep->activeKey;
+  if (active_key != surrData.active_key()) {
+    PCerr << "Error: active key mismatch in PolynomialApproximation::"
+	  << "synchronize_surrogate_data()." << std::endl;
+    abort_handler(-1);
+  }
+
+  // level 0: surrData non-aggregated key stores raw data
+  short discrep_type = data_rep->expConfigOptions.discrepancyType;
+  if (!discrep_type || !DiscrepancyCalculator::aggregated_key(active_key))
+    return;
+
+  switch (discrep_type) {
   case RECURSIVE_DISCREP:
     response_data_to_surplus_data();     break;
   case DISTINCT_DISCREP:
-    response_data_to_discrepancy_data(); break;
-  default: // allow use of approxData or modSurrData, even if no modifications
-    // depending on ctor for modSurrData, may be NULL or just empty
-    if (modSurrData.is_null()) // shared rep (linking once is sufficient)
-      modSurrData = surrData;
-    else if (modSurrData.points() == 0) // retain independence: shallow data cp
-      modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
+    // If an aggregated (discrepancy) key is active, compute the necessary
+    // aggregation from the latest model datasets
+    DiscrepancyCalculator::compute(surrData, active_key,
+				   data_rep->expConfigOptions.combineType);
     break;
   }
 }
 
 
 /** When using a recursive approximation, subtract current polynomial approx
-    prediction from the modSurrData so that we form expansion on the surplus */
+    prediction from the surrData so that we form expansion on the surplus. */
 void PolynomialApproximation::response_data_to_surplus_data()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
-  else                       modSurrData.active_key(key);
-  if (key != surrData.active_key()) {
-    PCerr << "Error: active key mismatch in PolynomialApproximation::"
-	  << "response_data_to_surplus_data()." << std::endl;
+  // levels 1 -- L: surrData aggregated key stores hierarchical surplus between
+  // level l data (approxData from Dakota::PecosApproximation) and the level
+  // l-1 surrogate.
+  UShortArray hf_key, lf_key; // in surplus case, LF key is a dummy
+  extract_keys(active_key, hf_key, lf_key);
+
+  //surr_data.active_key(delta_key);
+  surr_data.variables_data(surr_data.variables_data(hf_key)); // shallow copies
+  surr_data.anchor_index(surr_data.anchor_index(hf_key));
+  surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
+
+  const SDVArray& sdv_array = surrData.variables_data();
+  std::map<UShortArray, SDRArray>& resp_map = surrData.response_data_map();
+  std::map<UShortArray, SDRArray>::iterator hf_it = resp_map.find(hf_key);
+  if (hf_it == resp_map.end()) {
+    Cerr << "Error: key lookup failure for individual fidelity in Polynomial"
+	 << "Approximation::response_data_to_surplus_data()" << std::endl;
     abort_handler(-1);
   }
-
-  // Keep surrData and modSurrData distinct (don't share reps since copy() will
-  // not restore independence when it is needed).  Rather use distinct arrays
-  // with shallow copies of SDV,SDR instances when they will not be modified.
-  // > level 0: both SDVs and SDRs can be shallow copies
-  // > shallow copies of popped arrays support replicated pops on modSurrData
-  //   (applied to distinct arrays of shared instances)
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = surrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator r_cit = resp_data_map.begin();
-  if (key == r_cit->first) { // first entry -> no discrepancy/surplus
-    modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
-    return;
-  }
-
-  // levels 1 -- L: modSurrData computes hierarchical surplus between level l
-  // data (approxData[0] from Dakota::PecosApproximation) and the level l-1
-  // approximation.
-  // > SDR and popped SDR instances are distinct; only pop counts are copied
-  modSurrData.copy_active_sdv(surrData, SHALLOW_COPY);
-  modSurrData.size_active_sdr(surrData);
-  modSurrData.anchor_index(surrData.anchor_index());
-  modSurrData.pop_count_stack(surrData.pop_count_stack());
-  // TO DO: do this more incrementally as data sets evolve across levels
+  const SDRArray& hf_sdr_array = hf_it->second;
+  surrData.size_active_sdr(hf_sdr_array);
+  SDRArray& surplus_sdr_array = surrData.response_data();
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
   size_t i, num_pts = surrData.points();
-  const SDVArray&   sdv_array =    surrData.variables_data();
-  const SDRArray&   sdr_array =    surrData.response_data();
-  SDRArray& surplus_sdr_array = modSurrData.response_data();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
     Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
     RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
-    size_t j, k, num_deriv_vars = modSurrData.num_derivative_variables();
+    size_t j, k, num_deriv_vars = surrData.num_derivative_variables();
     std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
       const RealVector&          c_vars  = sdv_array[i].continuous_variables();
@@ -182,42 +177,10 @@ void PolynomialApproximation::response_data_to_surplus_data()
     }
     break;
   }
-}
 
-
-void PolynomialApproximation::response_data_to_discrepancy_data()
-{
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray& hf_key = data_rep->activeKey;
-  if (hf_key != surrData.active_key()) {
-    PCerr << "Error: active key mismatch in PolynomialApproximation::"
-	  << "response_data_to_discrepancy_data()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // Keep surrData and modSurrData distinct (don't share reps since copy() will
-  // not restore independence when it is needed).  Rather use distinct arrays
-  // with shallow copies of SDV,SDR instances when they will not be modified.
-  // > level 0 mode is BYPASS_SURROGATE: both SDVs & SDRs can be shallow copies
-  // > shallow copies of popped arrays support replicated pops on modSurrData
-  //   (applied to distinct arrays of shared instances)
-  std::map<UShortArray, SDRArray>::const_iterator r_cit
-    = surrData.response_data_map().begin();
-  if (hf_key == r_cit->first) { // first entry -> no discrepancy/surplus
-    if (modSurrData.is_null()) modSurrData = SurrogateData(hf_key);
-    else                       modSurrData.active_key(hf_key);
-    modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
-  }
-  else {
-    // TO DO: improve encapsulation by passing surrogate key (currently
-    //        replicates logic in NonDExpansion::configure_indices())
-    UShortArray lf_key; DiscrepancyCalculator::modified_lf_key(hf_key, lf_key);
-    // compute response discrepancies and store in modSurrData
-    DiscrepancyCalculator::compute(surrData, hf_key, lf_key, modSurrData,
-				   data_rep->expConfigOptions.combineType);
-    // compute faults from scratch (aggregates LF,HF failures)
-    modSurrData.data_checks();
-  }
+  // compute discrepancy faults from scratch (mostly mirrors HF failures but
+  // might possibly add new ones for multiplicative FPE)
+  surrData.data_checks();
 }
 
 

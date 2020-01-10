@@ -32,7 +32,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
   const UShort4DArray& colloc_key = data_rep->hsg_driver()->collocation_key();
   size_t i, j, k, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    num_deriv_v = modSurrData.num_derivative_variables();
+    num_deriv_v = surrData.num_derivative_variables();
 
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -69,7 +69,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 
   // checking num_points is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total
-  //size_t num_points = modSurrData.points();
+  //size_t num_points = surrData.points();
   //bool update_exp_form =
   //  ( (expansionCoeffFlag     && exp_t1_coeffs.length() != num_points) ||
   //    (expansionCoeffGradFlag && exp_t1_coeff_grads.numCols() != num_points));
@@ -98,7 +98,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
     compute_recursive_coefficients();
   else
-    // modSurrData is comprised of discrepancy data (for active keys beyond
+    // surrData is comprised of discrepancy data (for active keys beyond
     // the first) and we estimate hierarchical coefficients for each key
     // independent of all others
     compute_distinct_coefficients();
@@ -111,7 +111,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, v, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    cntr = 0, c_index, num_deriv_vars = modSurrData.num_derivative_variables();
+    cntr = 0, c_index, num_deriv_vars = surrData.num_derivative_variables();
   bool empty_c_index = colloc_index.empty(),
     use_derivs = data_rep->basisConfigOptions.useDerivs;
 
@@ -121,8 +121,8 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 
   // always use modified surrogate data to build interpolants for either
   // the base or discrepancy levels (according to the active key)
-  const SDVArray& sdv_array = modSurrData.variables_data();
-  const SDRArray& sdr_array = modSurrData.response_data();
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   // level 0
   c_index = (empty_c_index) ? cntr++ : colloc_index[0][0][0];
@@ -248,8 +248,8 @@ increment_coefficients(const UShortArray& index_set)
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  const SDVArray& sdv_array = modSurrData.variables_data();
-  const SDRArray& sdr_array = modSurrData.response_data();
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   size_t lev, old_levels = exp_t1_coeffs.size(), set, old_sets,
     pt, old_pts = 0;
@@ -709,7 +709,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   const Sizet3DArray& comb_sm_map
     = hsg_driver->combined_smolyak_multi_index_map();
   size_t i, lev, set, pt, num_lev = comb_key.size(), num_sets, num_tp_pts,
-    num_v = modSurrData.num_derivative_variables();
+    num_v = surrData.num_derivative_variables();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   // Resize combined expansion arrays and initialize to zero.
@@ -3747,11 +3747,11 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 {
   // Hierarchically interpolate R_1 * R_2 exactly as for R, i.e., hierarch
   // interp of discrepancies in R_1 * R_2 for model indices > first
-  // > For R, the differences are already in modSurrData as computed by
-  //   PolynomialApproximation::response_data_to_discrepancy_data()
+  // > For R, the differences are already in surrData as computed by
+  //   PolynomialApproximation::synchronize_surrogate_data()
   // **********************************************************************
   // > TO DO: carrying delta(R_1 R_2) and delta((R-1-mu_1)(R_2-mu_2))
-  //          within additional modSurrData keys could eliminate need to
+  //          within additional surrData keys could eliminate need to
   //          recompute, but unlike R, all covariance pairs must be tracked.
   // **********************************************************************
   // > only need to integrate terms in incr_key, but need to build up to them
@@ -4352,9 +4352,9 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
        t1c_cit2  = hip_approx_2->expansionType1Coeffs.begin(),
        t2c_cit1  = expansionType2Coeffs.begin(),
        t2c_cit2  = hip_approx_2->expansionType2Coeffs.begin(),
-       sdv_cit   = modSurrData.variables_data_map().begin(),
-       sdr1_cit  = modSurrData.response_data_map().begin(),
-       sdr2_cit  = hip_approx_2->modSurrData.response_data_map().begin(),
+       sdv_cit   = surrData.variables_data_map().begin(),
+       sdr1_cit  = surrData.response_data_map().begin(),
+       sdr2_cit  = hip_approx_2->surrData.response_data_map().begin(),
        v_cit     = hsg_driver->variable_sets_map().begin(),
        sm_cit    = hsg_driver->smolyak_multi_index_map().begin(),
        ck_cit    = hsg_driver->collocation_key_map().begin(),
@@ -4371,7 +4371,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
       central_product_interpolant(v_cit->second, sm_cit->second, ck_cit->second,
 	t1c_cit1->second, t2c_cit1->second, t1c_cit2->second, t2c_cit2->second,
 	same, mean_1, mean_2, cov_t1c, cov_t2c, p_cit->second);
-    else // use modSurrData & colloc_indices for forming central product interp
+    else // use surrData & colloc_indices for forming central product interp
       central_product_interpolant(sdv_cit->second, sdr1_cit->second,
 	sdr2_cit->second, mean_1, mean_2, sm_cit->second, ck_cit->second,
 	ci_cit->second, cov_t1c, cov_t2c, p_cit->second);
@@ -4858,7 +4858,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	// member dimensions later used in value()/gradient_basis_variables().
 	m_t1_wts_ls[m_index] = member_wt;
 	m_index_ls[m_index]  = (empty_c_index) ? p_cntr++ :
-	  colloc_index[lev][set][pt];   // links back to modSurrData c_vars
+	  colloc_index[lev][set][pt];   // links back to surrData c_vars
 	m_key_ls[m_index]    = key_lsp; // links back to interp polynomials
 
 	// now do the same for the type2 coeffs and weights
@@ -4909,7 +4909,7 @@ central_product_member_coefficients(const BitArray& m_bits,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
-  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDVArray& sdv_array = surrData.variables_data();
   bool empty_c_index = m_colloc_index.empty();
 
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt, cntr = 0,

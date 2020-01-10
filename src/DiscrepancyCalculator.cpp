@@ -200,33 +200,32 @@ compute(const SDRArray& hf_sdr_array, const SDRArray& lf_sdr_array,
 
 
 void DiscrepancyCalculator::
-compute(SurrogateData& surr_data, const UShortArray& hf_key,
-	const UShortArray& lf_key, SurrogateData& mod_surr_data,
+compute(SurrogateData& surr_data, const UShortArray& delta_key,
 	short combine_type)
 {
-  surr_data.active_key(hf_key);
-  const SDRArray& hf_sdr_array = surr_data.response_data();
+  UShortArray hf_key, lf_key;  extract_keys(delta_key, hf_key, lf_key);
 
-  if (mod_surr_data.is_null()) mod_surr_data = SurrogateData(hf_key);
-  else                         mod_surr_data.active_key(hf_key);
+  std::map<UShortArray, SDRArray>& resp_map = surr_data.response_data_map();
+  std::map<UShortArray, SDRArray>::iterator lf_it = resp_map.find(lf_key);
+  std::map<UShortArray, SDRArray>::iterator hf_it = resp_map.find(hf_key);
+  if (lf_it == resp_map.end() || hf_it == resp_map.end()) {
+    Cerr << "Error: key lookup failure for individual fidelity in Discrepancy"
+	 << "Calculator::compute()" << std::endl;
+    abort_handler(-1);
+  }
 
-  // levels 1 -- L use AGGREGATED_MODELS mode: modSurrData computes discrepancy
-  // between LF data (approxData[0] from Dakota::PecosApproximation; receives
-  // level l-1 data) and HF data (approxData[1] from Dakota::PecosApproximation;
-  // receives level l data).
-  // > SDR and popped SDR instances are distinct; only pop counts are copied
-  mod_surr_data.copy_active_sdv(surr_data, SHALLOW_COPY);
-  mod_surr_data.size_active_sdr(surr_data);
-  mod_surr_data.anchor_index(surr_data.anchor_index());
-  mod_surr_data.pop_count_stack(surr_data.pop_count_stack());
-  // TO DO: do this more incrementally as data sets evolve across levels
+  surr_data.active_key(delta_key);
+  surr_data.variables_data(surr_data.variables_data(hf_key)); // shallow copies
+  surr_data.anchor_index(surr_data.anchor_index(hf_key));
+  surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
 
-  std::map<UShortArray, SDRArray>::const_iterator r_cit
-    = surr_data.response_data_map().find(lf_key);
-  const SDRArray& lf_sdr_array = r_cit->second;
+  // TO DO: do this more incrementally (based on curr state of delta sdr_array)
+  const SDRArray& hf_sdr_array = hf_it->second;
+  surr_data.size_active_sdr(hf_sdr_array);
+  compute(hf_sdr_array, lf_it->second, surr_data.response_data(), combine_type);
 
-  compute(hf_sdr_array, lf_sdr_array,
-	  mod_surr_data.response_data(), combine_type);
+  // compute discrepancy faults from scratch (aggregates LF,HF failures)
+  surr_data.data_checks();
 }
 
 } // namespace Pecos

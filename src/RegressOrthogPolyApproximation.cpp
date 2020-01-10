@@ -111,7 +111,7 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
   // Set solver parameters
   RealVector noise_tols = data_rep->regressConfigOptions.noiseTols; // copy
   if ( CSOpts.solver == EQ_CON_LEAST_SQ_REGRESSION )
-    CSOpts.numFunctionSamples = modSurrData.points();
+    CSOpts.numFunctionSamples = surrData.points();
   if ( CSOpts.solver == LASSO_REGRESSION )
     CSOpts.delta = data_rep->regressConfigOptions.l2Penalty;
   if ( noise_tols.empty() ) {
@@ -176,7 +176,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   // check data set for gradients/constraints/faults to determine settings
-  modSurrData.data_checks();
+  surrData.data_checks();
 #ifdef DEBUG
   data_rep->gradient_check();
 #endif // DEBUG
@@ -461,8 +461,8 @@ void RegressOrthogPolyApproximation::run_regression()
   // data of point 1, and so on.
 
   // Currently nothing is done  to modify the regression linear system matrices
-  // A and B if modSurrData.anchor() is true, as currently modSurrData.anchor()
-  // is always false. If in the future modSurrData.anchor() is enabled then
+  // A and B if surrData.anchor() is true, as currently surrData.anchor()
+  // is always false. If in the future surrData.anchor() is enabled then
   // A must be adjusted to include the extra constraint information associated
   // with the anchor data. That is, if using EQ_CON_LEAST_SQUARES C matrix 
   // (top block of A ) must contain the fn and grad data of anchor point.
@@ -485,7 +485,7 @@ void RegressOrthogPolyApproximation::run_regression()
     if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
 	 ORTHOG_LEAST_INTERPOLATION ) { // SINGLE OLI SOLVE
       remove_faulty_data( A, B, points, index_mapping, faultInfo,
-			  modSurrData.failed_response_data() );
+			  surrData.failed_response_data() );
       //faultInfo.under_determined = false;
       PCout << "Forming least interpolant for " << points.numCols()
 	    << " points.\n";
@@ -495,7 +495,7 @@ void RegressOrthogPolyApproximation::run_regression()
     else { // SINGLE CS SOLVE
       RealMatrix points_dummy;
       remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
-			  modSurrData.failed_response_data() );
+			  surrData.failed_response_data() );
       //faultInfo.under_determined = A.numRows() < A.numCols();
       PCout << "Applying regression to compute " << data_rep->expansion_terms()
 	    << " chaos coefficients using " << A.numRows() << " equations.\n";
@@ -1686,10 +1686,10 @@ void RegressOrthogPolyApproximation::set_fault_info()
   bool under_determined = false, reuse_solver_data,
     anchor_fn = false, anchor_grad = false;
 
-  // compute order of data contained within modSurrData
+  // compute order of data contained within surrData
   short data_order = (expansionCoeffFlag) ? 1 : 0;
-  if (modSurrData.num_gradient_variables())  data_order |= 2;
-  //if (modSurrData.num_hessian_variables()) data_order |= 4;
+  if (surrData.num_gradient_variables())  data_order |= 2;
+  //if (surrData.num_hessian_variables()) data_order |= 4;
 
   // verify support for basisConfigOptions.useDerivs, which indicates usage of
   // derivative data with respect to expansion variables (aleatory or combined)
@@ -1720,7 +1720,7 @@ void RegressOrthogPolyApproximation::set_fault_info()
     abort_handler(-1);
 
   // compute data counts
-  const SizetShortMap& failed_resp_data = modSurrData.failed_response_data();
+  const SizetShortMap& failed_resp_data = surrData.failed_response_data();
   size_t num_failed_surr_fn = 0, num_failed_surr_grad = 0,
     num_v = sharedDataRep->numVars;
   SizetShortMap::const_iterator fit; bool faults_differ = false;
@@ -1731,11 +1731,11 @@ void RegressOrthogPolyApproximation::set_fault_info()
     // if failure omissions are not consistent, manage differing Psi matrices
     if ( (fail_bits & data_order) != data_order ) faults_differ = true;
   }
-  num_surr_data_pts = modSurrData.points();
+  num_surr_data_pts = surrData.points();
   num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn;
   num_data_pts_grad = num_surr_data_pts - num_failed_surr_grad;
-  if (modSurrData.anchor()) {
-    short failed_anchor_data = modSurrData.failed_anchor_data();
+  if (surrData.anchor()) {
+    short failed_anchor_data = surrData.failed_anchor_data();
     if ((data_order & 1) && !(failed_anchor_data & 1)) anchor_fn   = true;
     if ((data_order & 2) && !(failed_anchor_data & 2)) anchor_grad = true;
   }
@@ -1762,20 +1762,20 @@ void RegressOrthogPolyApproximation::set_fault_info()
 		      under_determined, num_data_pts_fn, num_data_pts_grad,
 		      reuse_solver_data, total_eqns, num_surr_data_pts,
 		      num_v, data_rep->basisConfigOptions.useDerivs,
-		      modSurrData.num_derivative_variables() );
+		      surrData.num_derivative_variables() );
 }
 
 
 void RegressOrthogPolyApproximation::
 build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
 {
-  size_t i, j, a_cntr = 0, num_surr_data_pts = modSurrData.points(),
+  size_t i, j, a_cntr = 0, num_surr_data_pts = surrData.points(),
     num_v = sharedDataRep->numVars,  a_grad_cntr = 0;
   int num_rows_A, num_cols_A = multi_index.size(), // candidate expansion size
     num_data_pts_fn   = num_surr_data_pts, // failed data is removed downstream
     num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
-  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDVArray& sdv_array = surrData.variables_data();
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -1828,14 +1828,14 @@ void RegressOrthogPolyApproximation::
 build_linear_system( RealMatrix &A, RealMatrix &B,
 		     const UShort2DArray& multi_index)
 {
-  size_t i, j, b_cntr = 0, num_surr_data_pts = modSurrData.points(),
-    num_deriv_v = modSurrData.num_derivative_variables(),
+  size_t i, j, b_cntr = 0, num_surr_data_pts = surrData.points(),
+    num_deriv_v = surrData.num_derivative_variables(),
     num_v = sharedDataRep->numVars, b_grad_cntr = 0;
   int num_rows_B, num_coeff_rhs, num_grad_rhs = num_deriv_v, num_rhs,
     num_data_pts_fn   = num_surr_data_pts, // failed data is removed downstream
     num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
-  const SDRArray& sdr_array = modSurrData.response_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   // populate A
   build_linear_system(A, multi_index);
@@ -1898,9 +1898,9 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
   build_linear_system(A, B, multi_index);
 
   // populate points
-  size_t i, j, num_surr_data_pts = modSurrData.points(),
+  size_t i, j, num_surr_data_pts = surrData.points(),
     num_v = sharedDataRep->numVars;
-  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDVArray& sdv_array = surrData.variables_data();
   points.shapeUninitialized( num_v, num_surr_data_pts );
   for (i=0; i<num_surr_data_pts; ++i) {
     const RealVector& c_vars = sdv_array[i].continuous_variables();
@@ -1976,7 +1976,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   RealMatrix A, B;
   build_linear_system( A, B, multi_index );
 
-  int num_data_pts_fn = modSurrData.points();
+  int num_data_pts_fn = surrData.points();
 
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   SharedRegressOrthogPolyApproxData* data_rep
@@ -1992,8 +1992,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
   int cv_seed = data_rep->regressConfigOptions.randomSeed; 
   cv_iterator.set_seed( cv_seed );
-  cv_iterator.set_fault_data( faultInfo,
-			      modSurrData.failed_response_data() );
+  cv_iterator.set_fault_data( faultInfo, surrData.failed_response_data() );
   
   data_rep->CSTool.set_linear_solver( CSOpts );
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
@@ -2040,8 +2039,8 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   // CV is complete, now compute final solution with all data points:
   IntVector index_mapping;
   RealMatrix points_dummy;
-  remove_faulty_data( A, b, points_dummy, index_mapping,
-		      faultInfo, modSurrData.failed_response_data() );
+  remove_faulty_data( A, b, points_dummy, index_mapping, faultInfo,
+		      surrData.failed_response_data() );
   int num_rows_V = A.numRows(), num_cols_V = A.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
   select_solver(false); // CV no longer active for final soln
@@ -2074,7 +2073,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   RealMatrix A, B;
   build_linear_system( A, B );
 
-  int num_data_pts_fn = modSurrData.points();
+  int num_data_pts_fn = surrData.points();
 
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   SharedRegressOrthogPolyApproxData* data_rep
@@ -2096,8 +2095,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
   int cv_seed = data_rep->regressConfigOptions.randomSeed; 
   cv_iterator.set_seed( cv_seed );
-  cv_iterator.set_fault_data( faultInfo,
-			      modSurrData.failed_response_data() );
+  cv_iterator.set_fault_data( faultInfo, surrData.failed_response_data() );
   
   RealVector basis_scores;
   basis_scores.sizeUninitialized( ao0 - min_order + 1 );
@@ -2182,7 +2180,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   IntVector index_mapping;
   RealMatrix points_dummy;
   remove_faulty_data( vandermonde_submatrix, b, points_dummy, index_mapping,
-		      faultInfo, modSurrData.failed_response_data() );
+		      faultInfo, surrData.failed_response_data() );
   int num_rows_V = vandermonde_submatrix.numRows(),
       num_cols_V = vandermonde_submatrix.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
@@ -2245,7 +2243,7 @@ compressed_sensing( RealMatrix &A, RealMatrix &B )
     }
   }
   else {
-    int i, j, num_grad_rhs = modSurrData.num_derivative_variables(),
+    int i, j, num_grad_rhs = surrData.num_derivative_variables(),
       num_coeff_rhs = ( !multiple_rhs && expansionCoeffGradFlag ) ? 0 : 1;
     if (sparseSoln) { // exploit CS sparsity
       // overlay sparse solutions into an aggregated set of sparse indices
@@ -2310,9 +2308,9 @@ least_interpolation( RealMatrix &pts, RealMatrix &vals )
   // Note 2: multiIndex size check captures first QoI pass as well as reentrancy
   //         (changes in points sets for OUU and mixed UQ) due to clear() in
   //         SharedRegressOrthogPolyApproxData::allocate_data().
-  bool faults = !modSurrData.failed_response_data().empty(),
+  bool faults = !surrData.failed_response_data().empty(),
     inconsistent_prev = ( data_rep->multi_index().empty() ||
-      modSurrData.active_response_size() != data_rep->pivotHistory.numRows() );
+      surrData.active_response_size() != data_rep->pivotHistory.numRows() );
   if (faults || inconsistent_prev) {
     // compute the least factorization that interpolates this data set
     UShort2DArray local_multi_index; IntVector k;
@@ -2640,8 +2638,7 @@ update_sparse_coeff_grads(Real* dense_coeffs, int row,
   // build sparse exp_coeff_grads
   size_t num_exp_terms = sparse_indices.size();
   if (exp_coeff_grads.numCols() != num_exp_terms)
-    exp_coeff_grads.reshape(modSurrData.num_derivative_variables(),
-			    num_exp_terms);
+    exp_coeff_grads.reshape(surrData.num_derivative_variables(), num_exp_terms);
   int j; SizetSet::const_iterator cit;
   for (j=0, cit=sparse_indices.begin(); j<num_exp_terms; ++j, ++cit)
     exp_coeff_grads(row, j) = dense_coeffs[*cit];

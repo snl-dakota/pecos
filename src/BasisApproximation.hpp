@@ -63,13 +63,6 @@ public:
   /// get PolynomialApproximation::surrData (non-const)
   virtual SurrogateData& surrogate_data();
 
-  /// set PolynomialApproximation::modSurrData
-  virtual void modified_surrogate_data(const SurrogateData& data);
-  /// get PolynomialApproximation::modSurrData (const)
-  virtual const SurrogateData& modified_surrogate_data() const;
-  /// get PolynomialApproximation::modSurrData (non-const)
-  virtual SurrogateData& modified_surrogate_data();
-
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;

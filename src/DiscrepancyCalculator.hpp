@@ -112,10 +112,9 @@ public:
   static void compute(const SDRArray& hf_sdr_array,
 		      const SDRArray& lf_sdr_array,
 		      SDRArray& delta_sdr_array, short combine_type);
-  /// compute discrepancies between two keys in surr_data and write to
-  /// mod_surr_data
-  static void compute(SurrogateData& surr_data, const UShortArray& hf_key,
-		      const UShortArray& lf_key, SurrogateData& mod_surr_data,
+  /// compute discrepancies between two model keys in surr_data and store
+  /// results in the discrepancy key
+  static void compute(SurrogateData& surr_data, const UShortArray& delta_key,
 		      short combine_type);
 
   /// define a model key including data group, model form, and resolution
@@ -124,7 +123,9 @@ public:
 		       unsigned short lev, UShortArray& key);
   /// decrement an incoming model key to correspond to the next lower
   /// resolution or fidelity within a model sequence
-  static void decrement_key(UShortArray& key);
+  static bool decrement_key(UShortArray& key);
+  /// test whether key is an aggregated (e.g., discrepancy) key
+  static bool aggregated_key(UShortArray& key);
   /// aggregate two model keys to indicate a data combination
   /// (e.g., a discrepancy)
   static void aggregate_keys(const UShortArray& key1, const UShortArray& key2,
@@ -255,7 +256,7 @@ modified_lf_key(const UShortArray& hf_key, UShortArray& lf_key)
 */
 
 
-inline void DiscrepancyCalculator::decrement_key(UShortArray& key)
+inline bool DiscrepancyCalculator::decrement_key(UShortArray& key)
 {
   // decrement the active index, if present, to create a key within the same
   // group id but with the next lower resolution in the sequence
@@ -273,12 +274,36 @@ inline void DiscrepancyCalculator::decrement_key(UShortArray& key)
   // > more robust approach would be to pass in a multilev boolean
   unsigned short &form = key[1], &lev = key[2];
   if      (lev  && lev  != USHRT_MAX)
-    --lev;
+    { --lev;  return true; }
   else if (form && form != USHRT_MAX)
-    --form;
+    { --form; return true; }
   //else no op (already at coarsest resolution / lowest fidelity)
+  return false;
 
-  // Old logic for {form} | {form,lev} format was just --key.back();
+  // Old logic for {form} | {form,lev} format was simply --key.back();
+}
+
+
+inline bool DiscrepancyCalculator::aggregated_key(UShortArray& key)
+{
+  size_t len = key.size();
+  switch (len) {
+  case 0: case 3: // no key or single model (not aggregated)
+    return false; break;
+  case 1: case 2:
+    PCerr << "Error: invalid key size for {group,{form,lev}} format in "
+	  << "DiscrepancyCalculator::aggregated_key()" << std::endl;
+    abort_handler(-1);
+    return false; break;
+  default: {
+    if (len-1 % 2) { // expect {form,lev} pairs following group
+      PCerr << "Error: invalid key size for {group,{form,lev}} format in "
+	    << "DiscrepancyCalculator::aggregated_key()" << std::endl;
+      abort_handler(-1);
+    }
+    return true;  break;
+  }
+  }
 }
 
 

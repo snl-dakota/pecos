@@ -53,10 +53,10 @@ void InterpPolyApproximation::test_interpolation()
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-    const SDVArray& sdv_array = modSurrData.variables_data();
-    const SDRArray& sdr_array = modSurrData.response_data();
+    const SDVArray& sdv_array = surrData.variables_data();
+    const SDRArray& sdr_array = surrData.response_data();
 
-    size_t i, index = 0, num_colloc_pts = modSurrData.points(),
+    size_t i, index = 0, num_colloc_pts = surrData.points(),
       num_v = sharedDataRep->numVars, w7 = WRITE_PRECISION+7;
     Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
       val_rmse = 0., grad_rmse = 0.;

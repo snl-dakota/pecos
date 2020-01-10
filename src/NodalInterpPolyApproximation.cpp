@@ -29,8 +29,8 @@ void NodalInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  size_t num_colloc_pts = modSurrData.points(),
-    num_deriv_vars = modSurrData.num_derivative_variables();
+  size_t num_colloc_pts = surrData.points(),
+    num_deriv_vars = surrData.num_derivative_variables();
   if (expansionCoeffFlag) { // else coeff arrays not entered into maps
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     if (exp_t1_coeffs.length() != num_colloc_pts)
@@ -70,8 +70,8 @@ void NodalInterpPolyApproximation::compute_coefficients()
 
   allocate_arrays();
 
-  const SDRArray& sdr_array = modSurrData.response_data();
-  size_t num_colloc_pts = modSurrData.points(); int i;
+  const SDRArray& sdr_array = surrData.response_data();
+  size_t num_colloc_pts = surrData.points(); int i;
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -106,7 +106,7 @@ void NodalInterpPolyApproximation::pop_coefficients(bool save_data)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   update_active_iterators(data_rep->activeKey);
 
-  size_t new_colloc_pts = modSurrData.points();
+  size_t new_colloc_pts = surrData.points();
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     exp_t1_coeffs.resize(new_colloc_pts);
@@ -132,10 +132,10 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
   update_active_iterators(data_rep->activeKey);
 
   // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
-  synchronize_surrogate_data(); // modSurrData updates required
+  synchronize_surrogate_data(); // surrData updates required
 
-  size_t old_colloc_pts, new_colloc_pts = modSurrData.points();
-  const SDRArray& sdr_array = modSurrData.response_data();
+  size_t old_colloc_pts, new_colloc_pts = surrData.points();
+  const SDRArray& sdr_array = surrData.response_data();
   bool append
     = (data_rep->expConfigOptions.expCoeffsSolnApproach != QUADRATURE);
   if (expansionCoeffFlag) {

@@ -601,7 +601,7 @@ private:
   /// to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void promote_all_popped_coefficients();
 
-  /// helper function for common case where coefficients and modSurrData
+  /// helper function for common case where coefficients and surrData
   /// are synchronized
   void integrate_response_moments(size_t num_moments,
 				  const UShort3DArray& sm_mi,
@@ -609,7 +609,7 @@ private:
 				  const Sizet3DArray&  colloc_index,
 				  const SDVArray& sdv_array,
 				  const SDRArray& sdr_array);
-  /// helper function for expansion combination case where modSurrData
+  /// helper function for expansion combination case where surrData
   /// does not span the aggregate set of combined terms
   void integrate_response_moments(size_t num_moments,
 				  const RealMatrix2DArray& var_sets,
@@ -959,9 +959,9 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
 	expT1CoeffsIter->second, expT2CoeffsIter->second,
         hsg_driver->type1_hierarchical_weight_sets(),
         hsg_driver->type2_hierarchical_weight_sets());
-    else // colloc_index is valid -> can pull from modSurrData vars/responses
+    else // colloc_index is valid -> can pull from surrData vars/responses
       integrate_response_moments(num_moments, sm_mi, colloc_key, colloc_ind,
-        modSurrData.variables_data(), modSurrData.response_data());
+        surrData.variables_data(), surrData.response_data());
   }
 }
 
@@ -1000,11 +1000,6 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
       prod_t1c, prod_t2c, set_partition);
   }
   // use SurrogateData instance + colloc_indices for forming product interp
-  else if (true) // current uses are modSurrData; possible future conditional
-    product_interpolant(modSurrData.variables_data(),
-      modSurrData.response_data(), hip_approx_2->modSurrData.response_data(),
-      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
-      hsg_driver->collocation_indices(), prod_t1c, prod_t2c, set_partition);
   else
     product_interpolant(surrData.variables_data(),
       surrData.response_data(), hip_approx_2->surrData.response_data(),
@@ -1049,12 +1044,6 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
       cov_t1_coeffs, cov_t2_coeffs, set_partition);
   }
   // use SurrogateData instance + colloc_indices for forming product interp
-  else if (true) // current uses are modSurrData; possible future conditional
-    central_product_interpolant(modSurrData.variables_data(),
-      modSurrData.response_data(), hip_approx_2->modSurrData.response_data(),
-      mean_1, mean_2, hsg_driver->smolyak_multi_index(),
-      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
-      cov_t1_coeffs, cov_t2_coeffs, set_partition);
   else
     central_product_interpolant(surrData.variables_data(),
       surrData.response_data(), hip_approx_2->surrData.response_data(),
@@ -1086,12 +1075,6 @@ central_product_gradient_interpolant(
       mean1_grad, mean2_grad, cov_t1c_grads, set_partition);
   }
   // use SurrogateData instance + colloc_indices for forming product interp
-  else if (true) // current uses are modSurrData; possible future conditional
-    central_product_gradient_interpolant(modSurrData.variables_data(),
-      modSurrData.response_data(), hip_approx_2->modSurrData.response_data(),
-      mean_1, mean_2, mean1_grad, mean2_grad, hsg_driver->smolyak_multi_index(),
-      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
-      cov_t1c_grads, set_partition);
   else
     central_product_gradient_interpolant(surrData.variables_data(),
       surrData.response_data(), hip_approx_2->surrData.response_data(),

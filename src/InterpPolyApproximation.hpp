@@ -130,9 +130,6 @@ inline bool InterpPolyApproximation::
 update_active_iterators(const UShortArray& key)
 {
   surrData.active_key(key);
-  if (!modSurrData.is_null())
-    modSurrData.active_key(key);
-
   PolynomialApproximation::update_active_iterators(key);
   return true;
 }
