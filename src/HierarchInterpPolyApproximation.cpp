@@ -4344,8 +4344,17 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
   std::map<UShortArray,  Sizet3DArray>::const_iterator ci_cit;
   std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
-  std::map<UShortArray, SDVArray>::const_iterator sdv_cit;
-  std::map<UShortArray, SDRArray>::const_iterator sdr1_cit, sdr2_cit;
+
+  const std::map<UShortArray, SDVArray>& vars_data_map
+    = surrData.filtered_variables_data_map();
+  std::map<UShortArray, SDVArray>::const_iterator sdv_cit
+    = vars_data_map.begin();
+  const std::map<UShortArray, SDRArray>& resp_data_map1
+    = surrData.filtered_response_data_map();              // singleton keys only
+  const std::map<UShortArray, SDRArray>& resp_data_map2
+    = hip_approx_2->surrData.filtered_response_data_map();// singleton keys only
+  std::map<UShortArray, SDRArray>::const_iterator
+    sdr1_cit = resp_data_map1.begin(), sdr2_cit = resp_data_map2.begin();
 
   bool same = (this == hip_approx_2),
     track_c_index = hsg_driver->track_collocation_indices();
@@ -4354,9 +4363,6 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
        t1c_cit2  = hip_approx_2->expansionType1Coeffs.begin(),
        t2c_cit1  = expansionType2Coeffs.begin(),
        t2c_cit2  = hip_approx_2->expansionType2Coeffs.begin(),
-       sdv_cit   = surrData.variables_data_map().begin(),
-       sdr1_cit  = surrData.response_data_map().begin(),
-       sdr2_cit  = hip_approx_2->surrData.response_data_map().begin(),
        v_cit     = hsg_driver->variable_sets_map().begin(),
        sm_cit    = hsg_driver->smolyak_multi_index_map().begin(),
        ck_cit    = hsg_driver->collocation_key_map().begin(),

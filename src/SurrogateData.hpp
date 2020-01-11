@@ -10,6 +10,7 @@
 #define SURROGATE_DATA_HPP
 
 #include "pecos_data_types.hpp"
+#include "DiscrepancyCalculator.hpp"
 #include <boost/math/special_functions/fpclassify.hpp> //for boostmath::isfinite
 
 
@@ -845,10 +846,15 @@ private:
   std::map<UShortArray, SDVArray> varsData;
   /// iterator to active entry within varsData
   std::map<UShortArray, SDVArray>::iterator varsDataIter;
+  /// filtered database of variable data sets, a subset drawn from varsData
+  std::map<UShortArray, SDVArray> filteredVarsData;
+  
   /// database of reference response data sets, with lookup by model/level index
   std::map<UShortArray, SDRArray> respData;
   /// iterator to active entry within respData
   std::map<UShortArray, SDRArray>::iterator respDataIter;
+  /// filtered database of response data sets, a subset drawn from respData
+  std::map<UShortArray, SDRArray> filteredRespData;
 
   /// sets of popped variables data sets, with lookup by model/level index.
   /// Each popped set is an SDVArray extracted from varsData.
@@ -989,10 +995,19 @@ public:
 
   /// get varsData
   const std::map<UShortArray, SDVArray>& variables_data_map() const;
+  /// build/return filteredVarsData, pulling aggregated/nonaggregated
+  /// keys from varsData
+  const std::map<UShortArray, SDVArray>&
+    filtered_variables_data_map(bool aggregated = false) const;
   /// set varsData
   void variables_data_map(const std::map<UShortArray, SDVArray>& vars_map);
+
   /// get respData
   const std::map<UShortArray, SDRArray>& response_data_map() const;
+  /// get build/return filteredRespData, pulling aggregated/nonaggregated
+  /// keys from respData
+  const std::map<UShortArray, SDRArray>&
+    filtered_response_data_map(bool aggregated = false) const;
   /// set respData
   void response_data_map(const std::map<UShortArray, SDRArray>& resp_map);
 
@@ -1502,6 +1517,22 @@ variables_data_map() const
 { return sdRep->varsData; }
 
 
+inline const std::map<UShortArray, SDVArray>& SurrogateData::
+filtered_variables_data_map(bool aggregated) const
+{
+  const std::map<UShortArray, SDVArray>& vars_map = sdRep->varsData;
+  std::map<UShortArray, SDVArray>&  filt_vars_map = sdRep->filteredVarsData;
+  std::map<UShortArray, SDVArray>::const_iterator cit;
+
+  filt_vars_map.clear();
+  for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+    if ( aggregated &&  DiscrepancyCalculator::aggregated_key(cit->first) ||
+	!aggregated && !DiscrepancyCalculator::aggregated_key(cit->first) )
+      filt_vars_map.insert(*cit);
+  return filt_vars_map;
+}
+
+
 inline void SurrogateData::
 variables_data_map(const std::map<UShortArray, SDVArray>& vars_map)
 { sdRep->varsData = vars_map; }
@@ -1510,6 +1541,22 @@ variables_data_map(const std::map<UShortArray, SDVArray>& vars_map)
 inline const std::map<UShortArray, SDRArray>& SurrogateData::
 response_data_map() const
 { return sdRep->respData; }
+
+
+inline const std::map<UShortArray, SDRArray>& SurrogateData::
+filtered_response_data_map(bool aggregated) const
+{
+  const std::map<UShortArray, SDRArray>& resp_map = sdRep->respData;
+  std::map<UShortArray, SDRArray>&  filt_resp_map = sdRep->filteredRespData;
+  std::map<UShortArray, SDRArray>::const_iterator cit;
+
+  filt_resp_map.clear();
+  for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+    if ( aggregated &&  DiscrepancyCalculator::aggregated_key(cit->first) ||
+	!aggregated && !DiscrepancyCalculator::aggregated_key(cit->first) )
+      filt_resp_map.insert(*cit);
+  return filt_resp_map;
+}
 
 
 inline void SurrogateData::

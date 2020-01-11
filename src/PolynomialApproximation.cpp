@@ -99,7 +99,7 @@ void PolynomialApproximation::response_data_to_surplus_data()
   surrData.pop_count_stack(surrData.pop_count_stack(hf_key));
 
   const std::map<UShortArray, SDRArray>& resp_data_map
-    = surrData.response_data_map();
+    = surrData.filtered_response_data_map(); // singleton keys only
   std::map<UShortArray, SDRArray>::const_iterator r_cit
     = resp_data_map.find(hf_key);
   if (r_cit == resp_data_map.end()) {
