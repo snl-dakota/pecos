@@ -125,7 +125,7 @@ public:
   /// resolution or fidelity within a model sequence
   static bool decrement_key(UShortArray& key);
   /// test whether key is an aggregated (e.g., discrepancy) key
-  static bool aggregated_key(UShortArray& key);
+  static bool aggregated_key(const UShortArray& key);
   /// aggregate two model keys to indicate a data combination
   /// (e.g., a discrepancy)
   static void aggregate_keys(const UShortArray& key1, const UShortArray& key2,
@@ -284,7 +284,7 @@ inline bool DiscrepancyCalculator::decrement_key(UShortArray& key)
 }
 
 
-inline bool DiscrepancyCalculator::aggregated_key(UShortArray& key)
+inline bool DiscrepancyCalculator::aggregated_key(const UShortArray& key)
 {
   size_t len = key.size();
   switch (len) {
@@ -352,12 +352,13 @@ extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
   switch (num_keys) {
   case 1:
     key1 = aggregate_key;   key2.clear();  break;
-  case 2: // normal case
+  case 2: { // normal case
     UShortArray::const_iterator start1 = aggregate_key.begin() + 1,
       end1 = start1 + 2, end2 = end1 + 2;
     key1.assign(1, group);  key1.insert(key1.end(), start1, end1);
     key2.assign(1, group);  key2.insert(key2.end(),   end1, end2);
     break;
+  }
   default:
     PCerr << "Error: bad aggregate key size in DiscrepancyCalculator::"
 	  << "extract_keys()" << std::endl;

@@ -160,14 +160,14 @@ combined_to_active(bool clear_combined)
 {
   OrthogPolyApproximation::combined_to_active(clear_combined);
 
-  // Create synthetic modSurrData for the combined-now-active coeffs, for
-  // supporting FINAL_RESULTS processing (numerical moments on combined grid)
-  // Note: exclude CUBATURE and SAMPLING, which lack combined grids.
+  // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
+  // processing (numerical moments on combined grid) for the combined-now-active
+  // coeffs.  Note: exclude CUBATURE and SAMPLING, which lack combined grids.
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
-    synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+    synthetic_surrogate_data(surrData); // overwrite data for activeKey
     break;
   }
 }

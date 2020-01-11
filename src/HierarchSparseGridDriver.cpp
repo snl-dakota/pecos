@@ -893,7 +893,7 @@ void HierarchSparseGridDriver::combined_to_active(bool clear_combined)
   // collocation indices are invalidated by expansion combination since the
   // corresponding hierarchical expansions involve overlays of data that no
   // longer reflect individual evaluations (to match collocIndices restoration,
-  // new modSurrData must be defined in HierarchInterpPolyApproximation)
+  // HierarchInterpPolyApproximation invokes synthetic_surrogate_data())
   collocIndIter->second.clear();// don't carry over any old indexing
   assign_collocation_indices(); // default sequential ordering across lev,set,pt
 }

@@ -769,23 +769,23 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
 
-  // use modSurrData: original single-level or synthetic combined
-  const SDRArray& sdr_array = modSurrData.response_data();
+  // use surrData: original single-level or synthetic combined
+  const SDRArray& sdr_array = surrData.response_data();
   size_t i, num_pts = sdr_array.size();
   RealVector data_fns(num_pts);
   for (i=0; i<num_pts; ++i)
     data_fns[i] = sdr_array[i].response_function();
 
   /*
-  // For MLMF, augment modSurrData using evaluations from stored expansions.
+  // For MLMF, augment surrData using evaluations from stored expansions.
   // This fn is used in final expansion post-processing so combined_to_active()
   // has been applied.
   //
   // Note: this is a mixed implementation --> mixes direct response integration
-  // (using modSurrData for maximal grid / active expansion, ignoring combined
+  // (using surrData for maximal grid / active expansion, ignoring combined
   // coefficients) with surrogate integration (prior to clear_inactive(),
   // interpolate uncombined/non-active expansions onto maximal grid since
-  // these response data aren't available for non-maximal modSurrData keys).
+  // these response data aren't available for non-maximal surrData keys).
   // > similar to NodalInterpPolyApproximation::combine_coefficients(), which
   //   is then used in NIPA::integrate_response_moments()
   // > consider deactivating response moment integration for ML expansions
@@ -806,7 +806,7 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
     std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
     std::map<UShortArray, RealVector>::const_iterator ec_cit;
     short combine_type = data_rep->expConfigOptions.combineType;
-    const SDVArray& sdv_array = modSurrData.variables_data();
+    const SDVArray& sdv_array = surrData.variables_data();
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
 	 ++ec_cit, ++mi_cit)
       if (ec_cit != expCoeffsIter) {

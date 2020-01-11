@@ -83,26 +83,31 @@ void PolynomialApproximation::synchronize_surrogate_data()
     prediction from the surrData so that we form expansion on the surplus. */
 void PolynomialApproximation::response_data_to_surplus_data()
 {
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  const UShortArray&  active_key = data_rep->activeKey;
+
   // levels 1 -- L: surrData aggregated key stores hierarchical surplus between
   // level l data (approxData from Dakota::PecosApproximation) and the level
   // l-1 surrogate.
   UShortArray hf_key, lf_key; // in surplus case, LF key is a dummy
-  extract_keys(active_key, hf_key, lf_key);
+  DiscrepancyCalculator::extract_keys(active_key, hf_key, lf_key);
 
-  //surr_data.active_key(delta_key);
-  surr_data.variables_data(surr_data.variables_data(hf_key)); // shallow copies
-  surr_data.anchor_index(surr_data.anchor_index(hf_key));
-  surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
-
+  surrData.variables_data(surrData.variables_data(hf_key)); // shallow copies
   const SDVArray& sdv_array = surrData.variables_data();
-  std::map<UShortArray, SDRArray>& resp_map = surrData.response_data_map();
-  std::map<UShortArray, SDRArray>::iterator hf_it = resp_map.find(hf_key);
-  if (hf_it == resp_map.end()) {
-    Cerr << "Error: key lookup failure for individual fidelity in Polynomial"
-	 << "Approximation::response_data_to_surplus_data()" << std::endl;
+
+  surrData.anchor_index(surrData.anchor_index(hf_key));
+  surrData.pop_count_stack(surrData.pop_count_stack(hf_key));
+
+  const std::map<UShortArray, SDRArray>& resp_data_map
+    = surrData.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator r_cit
+    = resp_data_map.find(hf_key);
+  if (r_cit == resp_data_map.end()) {
+    PCerr << "Error: key lookup failure for individual fidelity in Polynomial"
+	  << "Approximation::response_data_to_surplus_data()" << std::endl;
     abort_handler(-1);
   }
-  const SDRArray& hf_sdr_array = hf_it->second;
+  const SDRArray& hf_sdr_array = r_cit->second;
   surrData.size_active_sdr(hf_sdr_array);
   SDRArray& surplus_sdr_array = surrData.response_data();
 
@@ -119,13 +124,14 @@ void PolynomialApproximation::response_data_to_surplus_data()
     std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
       const RealVector&          c_vars  = sdv_array[i].continuous_variables();
-      const SurrogateDataResp& orig_sdr  = sdr_array[i];
+      const SurrogateDataResp& orig_sdr  =      hf_sdr_array[i];
       SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
       short                 surplus_bits = surplus_sdr.active_bits();
       delta_val = orig_fn_val = orig_sdr.response_function();
       if (surplus_bits & 2)
 	copy_data(orig_sdr.response_gradient(), orig_fn_grad);
-      for (r_cit=resp_data_map.begin(), j=0; r_cit->first!=key; ++r_cit, ++j) {
+      for (r_cit=resp_data_map.begin(), j=0; r_cit->first!=active_key;
+	   ++r_cit, ++j) {
 	stored_val = stored_value(c_vars, r_cit->first);
 	delta_val /= stored_val;
 	if (surplus_bits & 2) { // recurse using levels j and j-1
@@ -140,7 +146,7 @@ void PolynomialApproximation::response_data_to_surplus_data()
 				fn_val_jm1 * stored_grad[j] );
 	  }
 	  look_ahead_cit = r_cit; ++look_ahead_cit;
-	  if (look_ahead_cit->first == key)
+	  if (look_ahead_cit->first == active_key)
 	    for (k=0; k<num_deriv_vars; ++k)
 	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
 	                    / fn_val_j;
@@ -158,18 +164,18 @@ void PolynomialApproximation::response_data_to_surplus_data()
   default: //case ADD_COMBINE: (correction specification not required)
     for (i=0; i<num_pts; ++i) {
       const RealVector&          c_vars  = sdv_array[i].continuous_variables();
-      const SurrogateDataResp& orig_sdr  = sdr_array[i];
+      const SurrogateDataResp& orig_sdr  =      hf_sdr_array[i];
       SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
       short                 surplus_bits = surplus_sdr.active_bits();
       if (surplus_bits & 1) {
 	delta_val = orig_sdr.response_function();
-	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
+	for (r_cit = resp_data_map.begin(); r_cit->first != active_key; ++r_cit)
 	  delta_val -= stored_value(c_vars, r_cit->first);
 	surplus_sdr.response_function(delta_val);
       }
       if (surplus_bits & 2) {
 	copy_data(orig_sdr.response_gradient(), delta_grad);
-	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
+	for (r_cit = resp_data_map.begin(); r_cit->first != active_key; ++r_cit)
 	  delta_grad -=
 	    stored_gradient_nonbasis_variables(c_vars, r_cit->first);
 	surplus_sdr.response_gradient(delta_grad);

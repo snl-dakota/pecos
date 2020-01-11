@@ -205,12 +205,13 @@ compute(SurrogateData& surr_data, const UShortArray& delta_key,
 {
   UShortArray hf_key, lf_key;  extract_keys(delta_key, hf_key, lf_key);
 
-  std::map<UShortArray, SDRArray>& resp_map = surr_data.response_data_map();
-  std::map<UShortArray, SDRArray>::iterator lf_it = resp_map.find(lf_key);
-  std::map<UShortArray, SDRArray>::iterator hf_it = resp_map.find(hf_key);
-  if (lf_it == resp_map.end() || hf_it == resp_map.end()) {
-    Cerr << "Error: key lookup failure for individual fidelity in Discrepancy"
-	 << "Calculator::compute()" << std::endl;
+  const std::map<UShortArray, SDRArray>& resp_map
+    = surr_data.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator
+    lf_cit = resp_map.find(lf_key), hf_cit = resp_map.find(hf_key);
+  if (lf_cit == resp_map.end() || hf_cit == resp_map.end()) {
+    PCerr << "Error: key lookup failure for individual fidelity in Discrepancy"
+	  << "Calculator::compute()" << std::endl;
     abort_handler(-1);
   }
 
@@ -220,9 +221,9 @@ compute(SurrogateData& surr_data, const UShortArray& delta_key,
   surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
 
   // TO DO: do this more incrementally (based on curr state of delta sdr_array)
-  const SDRArray& hf_sdr_array = hf_it->second;
+  const SDRArray& hf_sdr_array = hf_cit->second;
   surr_data.size_active_sdr(hf_sdr_array);
-  compute(hf_sdr_array, lf_it->second, surr_data.response_data(), combine_type);
+  compute(hf_sdr_array, lf_cit->second, surr_data.response_data(),combine_type);
 
   // compute discrepancy faults from scratch (aggregates LF,HF failures)
   surr_data.data_checks();

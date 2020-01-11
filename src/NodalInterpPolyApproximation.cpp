@@ -376,9 +376,9 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   // resize sobolIndices to sync with resize of sobolIndexMap
   allocate_component_sobol();
 
-  // Create a dummy modSurrData for the combined-now-active coeffs, for
-  // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
-  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+  // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
+  // processing (integration, VBD, etc.) for the combined-now-active coeffs
+  synthetic_surrogate_data(surrData); // overwrite data for activeKey
 
   // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
   // multifidelity_expansion()), then previous active stats are invalidated.
@@ -3595,9 +3595,9 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
     }
   }
   */
-  else { // use modSurrData: original single-level or synthetic combined
+  else { // use surrData: original single-level or synthetic combined
     IntegrationDriver* driver_rep = data_rep->driverRep;
-    const SDRArray& sdr_array = modSurrData.response_data();
+    const SDRArray& sdr_array = surrData.response_data();
     size_t i, num_pts = sdr_array.size();
     RealVector t1_exp(num_pts);
     if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native

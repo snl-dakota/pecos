@@ -947,6 +947,7 @@ public:
   void size_active_sdv(const SurrogateData& sd) const;
   void copy_active_sdv(const SurrogateData& sd, short sdv_mode) const;
   void copy_active_pop_sdv(const SurrogateData& sd, short sdv_mode) const;
+  void size_active_sdr(const SDRArray& sdr_array) const;
   void size_active_sdr(const SurrogateData& sd) const;
   void copy_active_sdr(const SurrogateData& sd, short sdr_mode) const;
   void copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const;
@@ -972,6 +973,8 @@ public:
   void variables_data(const SDVArray& sdv_array);
   /// get varsData[activeKey]
   const SDVArray& variables_data() const;
+  /// get varsData[key]
+  const SDVArray& variables_data(const UShortArray& key) const;
   /// get varsData[activeKey]
   SDVArray& variables_data();
 
@@ -979,6 +982,8 @@ public:
   void response_data(const SDRArray& sdr_array);
   /// get respData[activeKey]
   const SDRArray& response_data() const;
+  /// get respData[key]
+  const SDRArray& response_data(const UShortArray& key) const;
   /// get respData[activeKey]
   SDRArray& response_data();
 
@@ -1466,6 +1471,11 @@ inline const SDVArray& SurrogateData::variables_data() const
 { return sdRep->varsDataIter->second; }
 
 
+inline const SDVArray& SurrogateData::
+variables_data(const UShortArray& key) const
+{ return sdRep->varsData[key]; }
+
+
 inline SDVArray& SurrogateData::variables_data()
 { return sdRep->varsDataIter->second; }
 
@@ -1476,6 +1486,11 @@ inline void SurrogateData::response_data(const SDRArray& sdr_array)
 
 inline const SDRArray& SurrogateData::response_data() const
 { return sdRep->respDataIter->second; }
+
+
+inline const SDRArray& SurrogateData::
+response_data(const UShortArray& key) const
+{ return sdRep->respData[key]; }
 
 
 inline SDRArray& SurrogateData::response_data()
@@ -2193,14 +2208,6 @@ copy_active_pop_sdv(const SurrogateData& sd, short sdv_mode) const
 }
 
 
-inline void SurrogateData::size_active_sdr(const SurrogateData& sd) const
-{
-  const UShortArray& key = sd.active_key();
-  if (sdRep->activeKey != key) active_key(key);
-  size_active_sdr(sd.response_data());
-}
-
-
 inline void SurrogateData::size_active_sdr(const SDRArray& sdr_array) const
 {
   size_t num_pts = sdr_array.size();
@@ -2213,6 +2220,14 @@ inline void SurrogateData::size_active_sdr(const SDRArray& sdr_array) const
     for (i=0; i<num_pts; ++i)
       new_sdr_array[i] = SurrogateDataResp(bits, num_deriv_v);
   }
+}
+
+
+inline void SurrogateData::size_active_sdr(const SurrogateData& sd) const
+{
+  const UShortArray& key = sd.active_key();
+  if (sdRep->activeKey != key) active_key(key);
+  size_active_sdr(sd.response_data());
 }
 
 

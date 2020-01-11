@@ -832,9 +832,9 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   productType2Coeffs.clear();     prodT2CoeffsIter = productType2Coeffs.end();
   poppedProdType1Coeffs.clear();  poppedProdType2Coeffs.clear();
 
-  // Create a dummy modSurrData for the combined-now-active coeffs, for
-  // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
-  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+  // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
+  // processing (integration, VBD, etc.) for the combined-now-active coeffs
+  synthetic_surrogate_data(surrData); // overwrite data for activeKey
 
   // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
   // multifidelity_expansion()), then previous active stats are invalidated.
@@ -967,8 +967,10 @@ increment_products(const UShort2DArray& set_partition)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    UShortArray lf_key;
-    DiscrepancyCalculator::modified_lf_key(data_rep->activeKey, lf_key);
+    //UShortArray lf_key;
+    //DiscrepancyCalculator::modified_lf_key(data_rep->activeKey, lf_key);
+    UShortArray hf_key, lf_key; // *** TO DO (once Model keys are finalized)
+    DiscrepancyCalculator::extract_keys(data_rep->activeKey, hf_key, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
       product_difference_interpolant(

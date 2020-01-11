@@ -604,7 +604,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
   // collocation indices are invalidated by expansion combination since the
   // corresponding combined grids involve overlays of data that no longer
   // reflect individual evaluations (to match restoration of collocIndices,
-  // new modSurrData must be defined in {NodalInterp,Orthog}PolyApproximation)
+  // {Nodal,Hierarch,Project}Approx invoke synthetic_surrogate_data())
   assign_collocation_indices(collocKeyIter->second, uniqIndMapIter->second,
 			     collocIndIter->second);
 }
