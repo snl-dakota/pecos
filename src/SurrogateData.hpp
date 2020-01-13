@@ -1130,8 +1130,9 @@ public:
   void clear_active_data(const UShort2DArray& keys);
   /// clear all inactive data within {vars,resp}Data
   void clear_inactive_data();
-  /// clear {vars,resp}Data and restore to initial data state
-  void clear_data(bool initialize = true);
+
+  /// clear filtered{Vars,Resp}Data (shallow copy subsets of {vars,resp}Data)
+  void clear_filtered();
 
   /// clear active key within popped{Vars,Resp}Data
   void clear_active_popped();
@@ -1139,6 +1140,9 @@ public:
   void clear_active_popped(const UShort2DArray& keys);
   /// clear popped{Vars,Resp}Data and restore to initial popped state
   void clear_popped();
+
+  /// clear {vars,resp}Data and restore to initial data state
+  void clear_data(bool initialize = true);
 
   /// clear all keys for all maps and optionally restore to initial state
   void clear_all(bool initialize = true);
@@ -1525,10 +1529,16 @@ filtered_variables_data_map(bool aggregated) const
   std::map<UShortArray, SDVArray>::const_iterator cit;
 
   filt_vars_map.clear();
-  for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-    if ( aggregated &&  DiscrepancyCalculator::aggregated_key(cit->first) ||
-	!aggregated && !DiscrepancyCalculator::aggregated_key(cit->first) )
-      filt_vars_map.insert(*cit);
+  if (aggregated) {
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (DiscrepancyCalculator::aggregated_key(cit->first))
+	filt_vars_map.insert(*cit);
+  }
+  else {
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (!DiscrepancyCalculator::aggregated_key(cit->first))
+	filt_vars_map.insert(*cit);
+  }
   return filt_vars_map;
 }
 
@@ -1551,10 +1561,16 @@ filtered_response_data_map(bool aggregated) const
   std::map<UShortArray, SDRArray>::const_iterator cit;
 
   filt_resp_map.clear();
-  for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-    if ( aggregated &&  DiscrepancyCalculator::aggregated_key(cit->first) ||
-	!aggregated && !DiscrepancyCalculator::aggregated_key(cit->first) )
-      filt_resp_map.insert(*cit);
+  if (aggregated) {
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (DiscrepancyCalculator::aggregated_key(cit->first))
+	filt_resp_map.insert(*cit);
+  }
+  else {
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (!DiscrepancyCalculator::aggregated_key(cit->first))
+	filt_resp_map.insert(*cit);
+  }
   return filt_resp_map;
 }
 
@@ -2397,20 +2413,10 @@ inline void SurrogateData::clear_inactive_data()
 }
 
 
-inline void SurrogateData::clear_data(bool initialize)
+inline void SurrogateData::clear_filtered()
 {
-  sdRep->varsData.clear();
-  sdRep->respData.clear();
-  sdRep->anchorIndex.clear();
-  sdRep->failedRespData.clear();
-
-  if (initialize) // preserve activeKey and restore to initialization state
-    sdRep->update_active_iterators();
-  else {
-    sdRep->activeKey.clear();
-    sdRep->varsDataIter = sdRep->varsData.end();
-    sdRep->respDataIter = sdRep->respData.end();
-  }
+  sdRep->filteredVarsData.clear();
+  sdRep->filteredRespData.clear();
 }
 
 
@@ -2443,6 +2449,25 @@ inline void SurrogateData::clear_popped()
   sdRep->poppedVarsData.clear();
   sdRep->poppedRespData.clear();
   sdRep->popCountStack.clear();
+}
+
+
+inline void SurrogateData::clear_data(bool initialize)
+{
+  sdRep->varsData.clear();
+  sdRep->respData.clear();
+  clear_filtered();
+
+  sdRep->anchorIndex.clear();
+  sdRep->failedRespData.clear();
+
+  if (initialize) // preserve activeKey and restore to initialization state
+    sdRep->update_active_iterators();
+  else {
+    sdRep->activeKey.clear();
+    sdRep->varsDataIter = sdRep->varsData.end();
+    sdRep->respDataIter = sdRep->respData.end();
+  }
 }
 
 
