@@ -306,14 +306,14 @@ inline bool DiscrepancyCalculator::aggregated_key(const UShortArray& key)
   case 0: case 3: // no key or single model (not aggregated)
     return false; break;
   case 1: case 2:
-    PCerr << "Error: invalid key size for {group,{form,lev}} format in "
-	  << "DiscrepancyCalculator::aggregated_key()" << std::endl;
+    PCerr << "Error: invalid key size (" << len << ") for {group,{form,lev}} "
+	  << "format in DiscrepancyCalculator::aggregated_key()" << std::endl;
     abort_handler(-1);
     return false; break;
   default: {
-    if (len-1 % 2) { // expect {form,lev} pairs following group
-      PCerr << "Error: invalid key size for {group,{form,lev}} format in "
-	    << "DiscrepancyCalculator::aggregated_key()" << std::endl;
+    if ( (len-1) % 2 ) { // expect {form,lev} pairs following group
+      PCerr << "Error: invalid key size (" << len << ") for {group,{form,lev}} "
+	    << "format in DiscrepancyCalculator::aggregated_key()" << std::endl;
       abort_handler(-1);
     }
     return true;  break;

@@ -1871,6 +1871,17 @@ inline size_t SurrogateData::points() const
 }
 
 
+inline size_t SurrogateData::points(const UShortArray& key) const
+{
+  std::map<UShortArray, SDVArray>::const_iterator sdv_it
+    = sdRep->varsData.find(key);
+  std::map<UShortArray, SDRArray>::const_iterator sdr_it
+    = sdRep->respData.find(key);
+  return (sdv_it == sdRep->varsData.end() || sdr_it == sdRep->respData.end()) ?
+    0 : std::min(sdv_it->second.size(), sdr_it->second.size());
+}
+
+
 inline size_t SurrogateData::response_size() const
 {
   const SDRArray& sdr_array = sdRep->respDataIter->second;
