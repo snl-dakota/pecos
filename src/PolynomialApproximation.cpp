@@ -89,8 +89,8 @@ void PolynomialApproximation::response_data_to_surplus_data()
   // levels 1 -- L: surrData aggregated key stores hierarchical surplus between
   // level l data (approxData from Dakota::PecosApproximation) and the level
   // l-1 surrogate.
-  UShortArray hf_key, lf_key; // in surplus case, LF key is a dummy
-  DiscrepancyCalculator::extract_keys(active_key, hf_key, lf_key);
+  UShortArray hf_key; // in surplus case, LF key is not relevant
+  DiscrepancyCalculator::extract_key(active_key, hf_key, 0);
 
   surrData.variables_data(surrData.variables_data(hf_key)); // shallow copies
   const SDVArray& sdv_array = surrData.variables_data();

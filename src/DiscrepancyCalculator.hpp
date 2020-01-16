@@ -121,9 +121,14 @@ public:
   /// level indices
   static void form_key(unsigned short group, unsigned short form,
 		       unsigned short lev, UShortArray& key);
+  /// define an aggregate model key including data group and two sets of
+  /// model form and resolution level indices
+  static void form_key(unsigned short group, unsigned short form1,
+		       unsigned short lev1,  unsigned short form2,
+		       unsigned short lev2,  UShortArray& key);
   /// decrement an incoming model key to correspond to the next lower
   /// resolution or fidelity within a model sequence
-  static bool decrement_key(UShortArray& key);
+  static bool decrement_key(UShortArray& key, size_t index);
   /// test whether key is an aggregated (e.g., discrepancy) key
   static bool aggregated_key(const UShortArray& key);
   /// aggregate two model keys to indicate a data combination
@@ -133,6 +138,9 @@ public:
   /// extract the constituent keys from an aggregated key
   static void extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
 			   UShortArray& key2);
+  /// extract the constituent keys from an aggregated key
+  static void extract_key(const UShortArray& aggregate_key, UShortArray& key,
+			  size_t key_index);
 
   /*
   /// function for applying additive correction to an approximate response
@@ -226,36 +234,42 @@ compute_multiplicative(Real truth_fn, const RealVector& truth_grad,
 inline void DiscrepancyCalculator::
 form_key(unsigned short group, unsigned short form, unsigned short lev,
 	 UShortArray& key)
-{ key.resize(3); key[0] = group; key[1] = form; key[2] = lev; }
+{ key.resize(3);  key[0] = group;  key[1] = form;  key[2] = lev; }
+
+
+inline void DiscrepancyCalculator::
+form_key(unsigned short group, unsigned short form1, unsigned short lev1,
+	 unsigned short form2, unsigned short lev2,  UShortArray& key)
+{
+  key.resize(5);
+  key[0] = group;                  // data group
+  key[1] = form1;  key[2] = lev1;  // HF model form, soln level
+  key[3] = form2;  key[4] = lev2;  // LF model form, soln level
+}
+
+
+inline bool DiscrepancyCalculator::decrement_key(UShortArray& key, size_t index)
+{
+  // decrement the active index, if present, to create a key within the same
+  // group id but with the next lower resolution in the sequence
+
+  //if (key.size() != 3) { // don't allow aggregated keys
+  //  PCerr << "Error: wrong size for {group,form,lev} format in Discrepancy"
+  //	    << "Calculator::decrement_key()" << std::endl;
+  //  abort_handler(-1);    
+  //}
+  if (index >= key.size())
+    return false;
+
+  unsigned short &key_i = key[index];
+  if (key_i && key_i != USHRT_MAX)
+    { --key_i; return true; }
+  else// decrement undefined (e.g., already at coarsest resolution / lowest fid)
+    return false;
+}
 
 
 /*
-inline void DiscrepancyCalculator::
-form_key(unsigned short lev, unsigned short form, bool multilevel,
-	 UShortArray& model_key)
-{
-  if (multilevel) // model form is fixed @ HF; lev enumerates the levels
-    { model_key.resize(2); model_key[0] = form; model_key[1] = lev; }
-  else            // lev enumerates the model forms; levels are ignored
-    { model_key.resize(1); model_key[0] = lev; } // mi_key[1] = _NPOS;
-}
-
-
-inline void DiscrepancyCalculator::
-modified_lf_key(const UShortArray& hf_key, UShortArray& lf_key)
-{
-  if (hf_key.back() > 0) {
-    // decrement trailing index
-    lf_key = hf_key; --lf_key.back();
-    // append the HF key in order to tag a particular (discrepancy) pairing
-    lf_key.insert(lf_key.end(), hf_key.begin(), hf_key.end());
-  }
-  else
-    lf_key.clear();
-}
-*/
-
-
 inline bool DiscrepancyCalculator::decrement_key(UShortArray& key)
 {
   // decrement the active index, if present, to create a key within the same
@@ -282,6 +296,7 @@ inline bool DiscrepancyCalculator::decrement_key(UShortArray& key)
 
   // Old logic for {form} | {form,lev} format was simply --key.back();
 }
+*/
 
 
 inline bool DiscrepancyCalculator::aggregated_key(const UShortArray& key)
@@ -329,7 +344,7 @@ aggregate_keys(const UShortArray& key1, const UShortArray& key2,
 	  << "aggregate_keys(key1, key2)" << std::endl;
     abort_handler(-1);    
   }
-  
+
   // form aggregate of group + HF form/lev + LF form/lev
   aggregate_key.resize(1);  aggregate_key[0] = group;
   if (!empty1)
@@ -345,7 +360,7 @@ extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
 {
   if (aggregate_key.empty())
     { key1.clear(); key2.clear(); return; }
-  
+
   // extract one or two aggregated keys
   unsigned short group = aggregate_key.front(),
     len = aggregate_key.size() - 1, num_keys = len / 2;
@@ -365,6 +380,26 @@ extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
     abort_handler(-1);
     break;
   }
+}
+
+
+inline void DiscrepancyCalculator::
+extract_key(const UShortArray& aggregate_key, UShortArray& key,
+	    size_t key_index)
+{
+  if (aggregate_key.empty())
+    { key.clear(); return; }
+
+  // extract one or two aggregated keys
+  unsigned short group = aggregate_key.front(),
+    len = aggregate_key.size() - 1, num_keys = len / 2;
+  if (key_index >= num_keys)
+    { key.clear(); return; }
+
+  key.assign(1, group);
+  UShortArray::const_iterator start = aggregate_key.begin() + 1 + 2*key_index,
+    end = start + 2;
+  key.insert(key.end(), start, end);
 }
 
 } // namespace Pecos

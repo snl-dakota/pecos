@@ -967,10 +967,8 @@ increment_products(const UShort2DArray& set_partition)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    //UShortArray lf_key;
-    //DiscrepancyCalculator::modified_lf_key(data_rep->activeKey, lf_key);
-    UShortArray hf_key, lf_key; // *** TO DO (once Model keys are finalized)
-    DiscrepancyCalculator::extract_keys(data_rep->activeKey, hf_key, lf_key);
+    UShortArray lf_key;
+    DiscrepancyCalculator::extract_key(data_rep->activeKey, lf_key, 1);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
       product_difference_interpolant(
