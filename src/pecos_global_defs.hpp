@@ -171,6 +171,9 @@ enum { NO_COMBINE=0, ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 /// special values for discrepancy emulation
 enum { NO_DISCREP=0, DISTINCT_DISCREP, RECURSIVE_DISCREP };
 
+/// special values for filtering keyed SurrogateData maps
+enum { NO_FILTER = 0, RAW_DATA_FILTER, SYNTHETIC_DATA_FILTER,
+       AGGREGATED_DATA_FILTER };
 
 // ----------------
 // Standard streams

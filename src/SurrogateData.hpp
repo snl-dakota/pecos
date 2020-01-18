@@ -1004,10 +1004,10 @@ public:
 
   /// get respData
   const std::map<UShortArray, SDRArray>& response_data_map() const;
-  /// get build/return filteredRespData, pulling aggregated/nonaggregated
-  /// keys from respData
+  /// build/return filteredRespData, pulling aggregated/synthetic/raw data
+  /// sets from respData
   const std::map<UShortArray, SDRArray>&
-    filtered_response_data_map(bool aggregated = false) const;
+    filtered_response_data_map(short mode) const;
   /// set respData
   void response_data_map(const std::map<UShortArray, SDRArray>& resp_map);
 
@@ -1554,22 +1554,32 @@ response_data_map() const
 
 
 inline const std::map<UShortArray, SDRArray>& SurrogateData::
-filtered_response_data_map(bool aggregated) const
+filtered_response_data_map(short mode) const
 {
   const std::map<UShortArray, SDRArray>& resp_map = sdRep->respData;
   std::map<UShortArray, SDRArray>&  filt_resp_map = sdRep->filteredRespData;
   std::map<UShortArray, SDRArray>::const_iterator cit;
 
   filt_resp_map.clear();
-  if (aggregated) {
+  switch (mode) {
+  case AGGREGATED_DATA_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
       if (DiscrepancyCalculator::aggregated_key(cit->first))
 	filt_resp_map.insert(*cit);
-  }
-  else {
+    break;
+  case SYNTHETIC_DATA_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (!DiscrepancyCalculator::aggregated_key(cit->first))
+      if (DiscrepancyCalculator::synthetic_key(cit->first))
 	filt_resp_map.insert(*cit);
+    break;
+  case RAW_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (DiscrepancyCalculator::raw_data_key(cit->first))
+	filt_resp_map.insert(*cit);
+    break;
+  case NO_FILTER:
+    filt_resp_map = resp_map;
+    break;
   }
   return filt_resp_map;
 }

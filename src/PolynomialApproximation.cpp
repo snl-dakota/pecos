@@ -89,32 +89,34 @@ void PolynomialApproximation::response_data_to_surplus_data()
   // levels 1 -- L: surrData aggregated key stores hierarchical surplus between
   // level l data (approxData from Dakota::PecosApproximation) and the level
   // l-1 surrogate.
-  UShortArray hf_key; // in surplus case, LF key is not relevant
-  DiscrepancyCalculator::extract_key(active_key, hf_key, 0);
+  UShortArray hf_key, lf_hat_key; // LF-hat in surplus case
+  DiscrepancyCalculator::extract_keys(active_key, hf_key, lf_hat_key);
 
+  // initialize surrData[active_key]
   surrData.variables_data(surrData.variables_data(hf_key)); // shallow copies
-  const SDVArray& sdv_array = surrData.variables_data();
-
   surrData.anchor_index(surrData.anchor_index(hf_key));
   surrData.pop_count_stack(surrData.pop_count_stack(hf_key));
 
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = surrData.filtered_response_data_map(); // singleton keys only
+  const std::map<UShortArray, SDRArray>& filt_resp_map
+    = surrData.filtered_response_data_map(RAW_DATA_FILTER); // raw data only
   std::map<UShortArray, SDRArray>::const_iterator r_cit
-    = resp_data_map.find(hf_key);
-  if (r_cit == resp_data_map.end()) {
+    = filt_resp_map.find(hf_key);
+  if (r_cit == filt_resp_map.end()) {
     PCerr << "Error: key lookup failure for individual fidelity in Polynomial"
 	  << "Approximation::response_data_to_surplus_data()" << std::endl;
     abort_handler(-1);
   }
   const SDRArray& hf_sdr_array = r_cit->second;
+  //surrData.size_sdr(lf_hat_key, hf_sdr_array); // *** TO DO
+  //SDRArray& lf_hat_sdr_array = surrData.response_data(lf_hat_key);// synthetic
   surrData.size_active_sdr(hf_sdr_array);
-  SDRArray& surplus_sdr_array = surrData.response_data();
+  const SDVArray&    sdv_array = surrData.variables_data();
+  SDRArray&  surplus_sdr_array = surrData.response_data();  // raw-synth discrep
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
-  size_t i, num_pts = surrData.points();
+  size_t i, num_pts = hf_sdr_array.size();
   Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
@@ -130,9 +132,10 @@ void PolynomialApproximation::response_data_to_surplus_data()
       delta_val = orig_fn_val = orig_sdr.response_function();
       if (surplus_bits & 2)
 	copy_data(orig_sdr.response_gradient(), orig_fn_grad);
-      for (r_cit=resp_data_map.begin(), j=0; r_cit->first!=active_key;
+      for (r_cit=filt_resp_map.begin(), j=0; r_cit->first!=active_key;
 	   ++r_cit, ++j) {
 	stored_val = stored_value(c_vars, r_cit->first);
+	//prod_val *= stored_val; // *** TO DO
 	delta_val /= stored_val;
 	if (surplus_bits & 2) { // recurse using levels j and j-1
 	  const RealVector& stored_grad
@@ -146,18 +149,23 @@ void PolynomialApproximation::response_data_to_surplus_data()
 				fn_val_jm1 * stored_grad[j] );
 	  }
 	  look_ahead_cit = r_cit; ++look_ahead_cit;
-	  if (look_ahead_cit->first == active_key)
+	  if (look_ahead_cit->first == active_key) // recursion is done
 	    for (k=0; k<num_deriv_vars; ++k)
 	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
 	                    / fn_val_j;
-	  else
+	  else // recursion is continuing
 	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
 	}
       }
-      if (surplus_bits & 1)
+      if (surplus_bits & 1) {
+	//lf_hat_sdr.response_function(prod_val); // *** TO DO
+	//delta_val = orig_fn_val / prod_val;
 	surplus_sdr.response_function(delta_val);
-      if (surplus_bits & 2)
+      }
+      if (surplus_bits & 2) {
+	//lf_hat_sdr.response_gradient(prod_grad); // *** TO DO
 	surplus_sdr.response_gradient(delta_grad);
+      }
     }
     break;
   }
@@ -169,16 +177,24 @@ void PolynomialApproximation::response_data_to_surplus_data()
       short                 surplus_bits = surplus_sdr.active_bits();
       if (surplus_bits & 1) {
 	delta_val = orig_sdr.response_function();
-	for (r_cit = resp_data_map.begin(); r_cit->first != active_key; ++r_cit)
+	for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
 	  delta_val -= stored_value(c_vars, r_cit->first);
 	surplus_sdr.response_function(delta_val);
+	//for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
+	//  sum_val += stored_value(c_vars, r_cit->first);
+	//lf_hat_sdr.response_function(sum_val);
+	//surplus_sdr.response_function(orig_val - sum_val);
       }
       if (surplus_bits & 2) {
 	copy_data(orig_sdr.response_gradient(), delta_grad);
-	for (r_cit = resp_data_map.begin(); r_cit->first != active_key; ++r_cit)
+	for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
 	  delta_grad -=
 	    stored_gradient_nonbasis_variables(c_vars, r_cit->first);
 	surplus_sdr.response_gradient(delta_grad);
+	//for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
+	//  sum_grad += stored_gradient_nonbasis_variables(c_vars, r_cit->first);
+	//lf_hat_sdr.response_gradient(sum_grad);
+	//surplus_sdr.response_gradient(orig_grad - sum_grad);
       }
     }
     break;

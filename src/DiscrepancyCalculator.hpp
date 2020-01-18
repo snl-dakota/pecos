@@ -129,8 +129,6 @@ public:
   /// decrement an incoming model key to correspond to the next lower
   /// resolution or fidelity within a model sequence
   static bool decrement_key(UShortArray& key, size_t index);
-  /// test whether key is an aggregated (e.g., discrepancy) key
-  static bool aggregated_key(const UShortArray& key);
   /// aggregate two model keys to indicate a data combination
   /// (e.g., a discrepancy)
   static void aggregate_keys(const UShortArray& key1, const UShortArray& key2,
@@ -141,6 +139,14 @@ public:
   /// extract the constituent keys from an aggregated key
   static void extract_key(const UShortArray& aggregate_key, UShortArray& key,
 			  size_t key_index);
+
+  /// test whether key is an aggregated key (for discrepancy or surplus)
+  static bool aggregated_key(const UShortArray& key);
+  /// test whether key is used for synthetic data (e.g., from an interpolant
+  /// using a previous level's raw data, preceding a surplus estimation)
+  static bool synthetic_key(const UShortArray& key);
+  /// test whether key is a raw data key (response data from a single model)
+  static bool raw_data_key(const UShortArray& key);
 
   /*
   /// function for applying additive correction to an approximate response
@@ -320,6 +326,14 @@ inline bool DiscrepancyCalculator::aggregated_key(const UShortArray& key)
   }
   }
 }
+
+
+inline bool DiscrepancyCalculator::synthetic_key(const UShortArray& key)
+{ return (key.size() == 3 && key[1] == USHRT_MAX); } // model form is undefined
+
+
+inline bool DiscrepancyCalculator::raw_data_key(const UShortArray& key)
+{ return (key.size() == 3 && key[1] != USHRT_MAX); } // model form is defined
 
 
 inline void DiscrepancyCalculator::
