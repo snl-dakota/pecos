@@ -356,10 +356,12 @@ protected:
   /// update surrData to define aggregated data from raw data, when indicated
   /// by an active aggregated key
   void synchronize_surrogate_data();
-  /// compute hierarchical surpluses for the surrData active key from the
-  /// surplus difference between a (constituent) raw data key and the
-  /// previous surrogate prediction
-  void response_data_to_surplus_data();
+  /// generate synthetic data for the surrogate QoI prediction corresponding
+  /// to the level key preceding active key; for use in surplus estimation
+  /// for new level data relative to a previous level's surrogate prediction
+  void generate_synthetic_data(SurrogateData& surr_data,
+			       const UShortArray& active_key,
+			       short combine_type);
 
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,

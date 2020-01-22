@@ -1011,6 +1011,10 @@ public:
   /// set respData
   void response_data_map(const std::map<UShortArray, SDRArray>& resp_map);
 
+  /// return a particular key instance present within the
+  /// aggregated/synthetic/raw data subset (respData is used)
+  const UShortArray& filtered_key(short mode, size_t index) const;
+
   /// push sdv onto end of varsData
   void push_back(const SurrogateDataVars& sdv);
   /// push sdr onto end of respData
@@ -1588,6 +1592,55 @@ filtered_response_data_map(short mode) const
 inline void SurrogateData::
 response_data_map(const std::map<UShortArray, SDRArray>& resp_map)
 { sdRep->respData = resp_map; }
+
+
+inline const UShortArray& SurrogateData::
+filtered_key(short mode, size_t index) const
+{
+  const std::map<UShortArray, SDRArray>& resp_map = sdRep->respData;
+  std::map<UShortArray, SDRArray>::const_iterator cit;
+
+  size_t cntr = 0;
+  switch (mode) {
+  case AGGREGATED_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const UShortArray& key = cit->first;
+      if (DiscrepancyCalculator::aggregated_key(key)) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case SYNTHETIC_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const UShortArray& key = cit->first;
+      if (DiscrepancyCalculator::synthetic_key(key)) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case RAW_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const UShortArray& key = cit->first;
+      if (DiscrepancyCalculator::raw_data_key(key)) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case NO_FILTER:
+    cit = resp_map.begin();
+    std::advance(cit, index);
+    return cit->first;
+    break;
+  }
+
+  PCerr << "Error: index not reached in SurrogateData::filtered_key(mode,index)"
+	<< std::endl;
+  abort_handler(-1);
+  return resp_map.begin()->first; // dummy return for compiler
+}
 
 
 inline void SurrogateData::push_back(const SurrogateDataVars& sdv)

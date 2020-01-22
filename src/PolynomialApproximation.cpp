@@ -62,147 +62,115 @@ void PolynomialApproximation::synchronize_surrogate_data()
   }
 
   // level 0: surrData non-aggregated key stores raw data
-  short discrep_type = data_rep->expConfigOptions.discrepancyType;
+  short discrep_type = data_rep->expConfigOptions.discrepancyType,
+        combine_type = data_rep->expConfigOptions.combineType;
   if (!discrep_type || !DiscrepancyCalculator::aggregated_key(active_key))
     return;
 
   switch (discrep_type) {
   case RECURSIVE_DISCREP:
-    response_data_to_surplus_data();     break;
-  case DISTINCT_DISCREP:
-    // If an aggregated (discrepancy) key is active, compute the necessary
-    // aggregation from the latest model datasets
-    DiscrepancyCalculator::compute(surrData, active_key,
-				   data_rep->expConfigOptions.combineType);
+    // LF-hat must be generated:
+    generate_synthetic_data(surrData, active_key, combine_type);
     break;
+  //case DISTINCT_DISCREP:
+    // LF and HF are already provided in paired data groups
+    //break;
   }
+  // now compute the discrepancy between {HF,LF} or {HF,LF-hat} datasets
+  DiscrepancyCalculator::compute(surrData, active_key, combine_type);
 }
 
 
 /** When using a recursive approximation, subtract current polynomial approx
     prediction from the surrData so that we form expansion on the surplus. */
-void PolynomialApproximation::response_data_to_surplus_data()
+void PolynomialApproximation::
+generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
+			short combine_type)
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray&  active_key = data_rep->activeKey;
-
-  // levels 1 -- L: surrData aggregated key stores hierarchical surplus between
-  // level l data (approxData from Dakota::PecosApproximation) and the level
-  // l-1 surrogate.
-  UShortArray hf_key, lf_hat_key; // LF-hat in surplus case
+  // generate synthetic low-fidelity data at the high-fidelity points
+  // and store within surr_data[lf_hat_key] where lf_hat_key is the trailing
+  // portion of active_key.  This synthetic data then enables the computation
+  // and emulation of a recursive discrepancy from hf - lf_hat differences
+  // (surpluses) at the high-fidelity points
+  UShortArray hf_key, lf0_key, lf_hat_key; // LF-hat in surplus case
   DiscrepancyCalculator::extract_keys(active_key, hf_key, lf_hat_key);
+  lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0);
 
-  // initialize surrData[active_key]
-  surrData.variables_data(surrData.variables_data(hf_key)); // shallow copies
-  surrData.anchor_index(surrData.anchor_index(hf_key));
-  surrData.pop_count_stack(surrData.pop_count_stack(hf_key));
+  // initialize surr_data[lf_hat_key]
+  surr_data.active_key(lf_hat_key); // active key restored at fn end
+  surr_data.variables_data(surr_data.variables_data(hf_key)); // shallow copies
+  surr_data.anchor_index(surr_data.anchor_index(hf_key));
+  surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
 
-  const std::map<UShortArray, SDRArray>& filt_resp_map
-    = surrData.filtered_response_data_map(RAW_DATA_FILTER); // raw data only
-  std::map<UShortArray, SDRArray>::const_iterator r_cit
-    = filt_resp_map.find(hf_key);
-  if (r_cit == filt_resp_map.end()) {
-    PCerr << "Error: key lookup failure for individual fidelity in Polynomial"
-	  << "Approximation::response_data_to_surplus_data()" << std::endl;
-    abort_handler(-1);
-  }
-  const SDRArray& hf_sdr_array = r_cit->second;
-  //surrData.size_sdr(lf_hat_key, hf_sdr_array); // *** TO DO
-  //SDRArray& lf_hat_sdr_array = surrData.response_data(lf_hat_key);// synthetic
-  surrData.size_active_sdr(hf_sdr_array);
-  const SDVArray&    sdv_array = surrData.variables_data();
-  SDRArray&  surplus_sdr_array = surrData.response_data();  // raw-synth discrep
+  const SDRArray& hf_sdr_array = surr_data.response_data(hf_key);
+  surr_data.size_active_sdr(hf_sdr_array); // size lf_hat_sdr_array
+  const SDVArray&  sdv_array = surr_data.variables_data();
+  SDRArray& lf_hat_sdr_array = surr_data.response_data();
 
-  // More efficient to roll up contributions from each level expansion than
-  // to combine expansions and then eval once.  Approaches are equivalent for
-  // additive roll up.
+  // extract all discrepancy data sets (which have expansions supporting
+  // stored_{value,gradient} evaluations)
+  const std::map<UShortArray, SDRArray>& discrep_resp_map
+    = surr_data.filtered_response_data_map(AGGREGATED_DATA_FILTER);
+  std::map<UShortArray, SDRArray>::const_iterator cit;
   size_t i, num_pts = hf_sdr_array.size();
-  Real delta_val; RealVector delta_grad;
-  switch (data_rep->expConfigOptions.combineType) {
+  switch (combine_type) {
   case MULT_COMBINE: {
-    Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
-    RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
-    size_t j, k, num_deriv_vars = surrData.num_derivative_variables();
-    std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
+    Real stored_val, fn_val_j, fn_val_jm1;
+    RealVector fn_grad_j, fn_grad_jm1;
+    size_t j, k, num_deriv_vars = surr_data.num_derivative_variables();
     for (i=0; i<num_pts; ++i) {
-      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
-      const SurrogateDataResp& orig_sdr  =      hf_sdr_array[i];
-      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
-      short                 surplus_bits = surplus_sdr.active_bits();
-      delta_val = orig_fn_val = orig_sdr.response_function();
-      if (surplus_bits & 2)
-	copy_data(orig_sdr.response_gradient(), orig_fn_grad);
-      for (r_cit=filt_resp_map.begin(), j=0; r_cit->first!=active_key;
-	   ++r_cit, ++j) {
-	stored_val = stored_value(c_vars, r_cit->first);
-	//prod_val *= stored_val; // *** TO DO
-	delta_val /= stored_val;
-	if (surplus_bits & 2) { // recurse using levels j and j-1
-	  const RealVector& stored_grad
-	    = stored_gradient_nonbasis_variables(c_vars, r_cit->first);
-	  if (j == 0)
-	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
-	  else {
-	    fn_val_j = fn_val_jm1 * stored_val;
-	    for (k=0; k<num_deriv_vars; ++k)
-	      fn_grad_j[k]  = ( fn_grad_jm1[k] * stored_val +
-				fn_val_jm1 * stored_grad[j] );
-	  }
-	  look_ahead_cit = r_cit; ++look_ahead_cit;
-	  if (look_ahead_cit->first == active_key) // recursion is done
-	    for (k=0; k<num_deriv_vars; ++k)
-	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
-	                    / fn_val_j;
-	  else // recursion is continuing
-	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
+      const RealVector&       c_vars = sdv_array[i].continuous_variables();
+      SurrogateDataResp& lf_hat_sdr  = lf_hat_sdr_array[i];
+      short              lf_hat_bits = lf_hat_sdr.active_bits();
+      // start from emulation of lowest fidelity QoI (LF-hat)
+      fn_val_j = stored_value(c_vars, lf0_key); // coarsest fn
+      if (lf_hat_bits & 2)                      // coarsest grad
+	fn_grad_j = stored_gradient_nonbasis_variables(c_vars, lf0_key);
+      // augment w/ emulation of discrepancies (Delta-hat) preceding active_key
+      for (cit = discrep_resp_map.begin(), j=0;
+	   cit->first != active_key; ++cit, ++j) {
+	stored_val = stored_value(c_vars, cit->first); // Delta-hat
+	if (lf_hat_bits & 2) { // recurse using levels j and j-1
+	  const RealVector& stored_grad   // discrepancy gradient-hat
+	    = stored_gradient_nonbasis_variables(c_vars, cit->first);
+	  fn_val_jm1 = fn_val_j;  fn_grad_jm1 = fn_grad_j;
+	  for (k=0; k<num_deriv_vars; ++k) // grad corrected to level j
+	    fn_grad_j[k] = ( fn_grad_jm1[k] * stored_val +
+			     fn_val_jm1 * stored_grad[k] );
 	}
+	fn_val_j *= stored_val; // fn corrected to level j
       }
-      if (surplus_bits & 1) {
-	//lf_hat_sdr.response_function(prod_val); // *** TO DO
-	//delta_val = orig_fn_val / prod_val;
-	surplus_sdr.response_function(delta_val);
+      if (lf_hat_bits & 1)
+	lf_hat_sdr.response_function(fn_val_j);
+      if (lf_hat_bits & 2)
+	lf_hat_sdr.response_gradient(fn_grad_j);
+    }
+    break;
+  }
+  default: { //case ADD_COMBINE: (correction specification not required)
+    Real sum_val;  RealVector sum_grad;
+    for (i=0; i<num_pts; ++i) {
+      const RealVector&      c_vars  = sdv_array[i].continuous_variables();
+      SurrogateDataResp& lf_hat_sdr  = lf_hat_sdr_array[i];
+      short              lf_hat_bits = lf_hat_sdr.active_bits();
+      if (lf_hat_bits & 1) {
+	sum_val = stored_value(c_vars, lf0_key);
+	for (cit = discrep_resp_map.begin(); cit->first != active_key; ++cit)
+	  sum_val += stored_value(c_vars, cit->first);
+	lf_hat_sdr.response_function(sum_val);
       }
-      if (surplus_bits & 2) {
-	//lf_hat_sdr.response_gradient(prod_grad); // *** TO DO
-	surplus_sdr.response_gradient(delta_grad);
+      if (lf_hat_bits & 2) {
+	sum_grad = stored_gradient_nonbasis_variables(c_vars, lf0_key);
+	for (cit = discrep_resp_map.begin(); cit->first != active_key; ++cit)
+	  sum_grad += stored_gradient_nonbasis_variables(c_vars, cit->first);
+	lf_hat_sdr.response_gradient(sum_grad);
       }
     }
     break;
   }
-  default: //case ADD_COMBINE: (correction specification not required)
-    for (i=0; i<num_pts; ++i) {
-      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
-      const SurrogateDataResp& orig_sdr  =      hf_sdr_array[i];
-      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
-      short                 surplus_bits = surplus_sdr.active_bits();
-      if (surplus_bits & 1) {
-	delta_val = orig_sdr.response_function();
-	for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
-	  delta_val -= stored_value(c_vars, r_cit->first);
-	surplus_sdr.response_function(delta_val);
-	//for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
-	//  sum_val += stored_value(c_vars, r_cit->first);
-	//lf_hat_sdr.response_function(sum_val);
-	//surplus_sdr.response_function(orig_val - sum_val);
-      }
-      if (surplus_bits & 2) {
-	copy_data(orig_sdr.response_gradient(), delta_grad);
-	for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
-	  delta_grad -=
-	    stored_gradient_nonbasis_variables(c_vars, r_cit->first);
-	surplus_sdr.response_gradient(delta_grad);
-	//for (r_cit = filt_resp_map.begin(); r_cit->first != active_key; ++r_cit)
-	//  sum_grad += stored_gradient_nonbasis_variables(c_vars, r_cit->first);
-	//lf_hat_sdr.response_gradient(sum_grad);
-	//surplus_sdr.response_gradient(orig_grad - sum_grad);
-      }
-    }
-    break;
   }
 
-  // compute discrepancy faults from scratch (mostly mirrors HF failures but
-  // might possibly add new ones for multiplicative FPE)
-  surrData.data_checks();
+  surr_data.active_key(active_key); // restore
 }
 
 
