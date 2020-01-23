@@ -69,20 +69,26 @@ void PolynomialApproximation::synchronize_surrogate_data()
 
   switch (discrep_type) {
   case RECURSIVE_DISCREP:
-    // LF-hat must be generated:
+    // When using a recursive discrepancy with additive/multiplicative corr,
+    // we will subtract/divide the current polynomial approx prediction from
+    // the new surrData so that we form an expansion on the surplus.  Prior
+    // to using compute() to form the surplus, LF-hat must be generated and
+    // will be stored within surrData in a format that compute() can utilize.
     generate_synthetic_data(surrData, active_key, combine_type);
     break;
   //case DISTINCT_DISCREP:
-    // LF and HF are already provided in paired data groups
-    //break;
+    // When using a distinct discrepancy with additive/multiplicative corr,
+    // we will subtract/divide the HF,LF pairs.  In this case, the data is
+    // already provided within surrData and specific pairings are identified
+    // by data groups.
   }
   // now compute the discrepancy between {HF,LF} or {HF,LF-hat} datasets
   DiscrepancyCalculator::compute(surrData, active_key, combine_type);
 }
 
 
-/** When using a recursive approximation, subtract current polynomial approx
-    prediction from the surrData so that we form expansion on the surplus. */
+/** Compute the combined expansion prediction that corresponds to new surrData,
+    prior to forming an expansion on the difference (surplus). */
 void PolynomialApproximation::
 generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
 			short combine_type)
