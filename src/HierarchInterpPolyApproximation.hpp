@@ -411,8 +411,9 @@ private:
   /// form type 1/2 coefficients for interpolation of delta [ R_1 R_2 ] across
   /// model levels/fidelities when corresponding SurrogateData is available
   void product_difference_interpolant(
-    HierarchInterpPolyApproximation* hip_approx_2, RealVector2DArray& prod_t1c,
-    RealMatrix2DArray& prod_t2c, const UShortArray& lf_key,
+    HierarchInterpPolyApproximation* hip_approx_2,
+    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
+    const UShortArray& hf_key, const UShortArray& lf_key,
     const UShort2DArray& set_partition = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of delta [ R_1 R_2 ] across
   /// model levels/fidelities when corresponding SurrogateData is available
@@ -420,7 +421,7 @@ private:
     const SurrogateData& surr_data_2, const UShort3DArray& sm_mi,
     const UShort4DArray& colloc_key, const Sizet3DArray& colloc_index,
     RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
-    const UShortArray& lf_key,
+    const UShortArray& hf_key, const UShortArray& lf_key,
     const UShort2DArray& set_partition = UShort2DArray());
 
   /// build the active central product interpolant, with or without
@@ -1011,14 +1012,15 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 inline void HierarchInterpPolyApproximation::
 product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
-  const UShortArray& lf_key, const UShort2DArray& set_partition)
+  const UShortArray& hf_key, const UShortArray& lf_key,
+  const UShort2DArray& set_partition)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   product_difference_interpolant(surrData, hip_approx_2->surrData,
     hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
-    hsg_driver->collocation_indices(), prod_t1c, prod_t2c, lf_key,
+    hsg_driver->collocation_indices(), prod_t1c, prod_t2c, hf_key, lf_key,
     set_partition);
 }
 

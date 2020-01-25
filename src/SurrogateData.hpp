@@ -998,7 +998,7 @@ public:
   /// build/return filteredVarsData, pulling aggregated/nonaggregated
   /// keys from varsData
   const std::map<UShortArray, SDVArray>&
-    filtered_variables_data_map(bool aggregated = false) const;
+    filtered_variables_data_map(short mode) const;
   /// set varsData
   void variables_data_map(const std::map<UShortArray, SDVArray>& vars_map);
 
@@ -1526,22 +1526,32 @@ variables_data_map() const
 
 
 inline const std::map<UShortArray, SDVArray>& SurrogateData::
-filtered_variables_data_map(bool aggregated) const
+filtered_variables_data_map(short mode) const
 {
   const std::map<UShortArray, SDVArray>& vars_map = sdRep->varsData;
   std::map<UShortArray, SDVArray>&  filt_vars_map = sdRep->filteredVarsData;
   std::map<UShortArray, SDVArray>::const_iterator cit;
 
   filt_vars_map.clear();
-  if (aggregated) {
+  switch (mode) {
+  case AGGREGATED_DATA_FILTER:
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
       if (DiscrepancyCalculator::aggregated_key(cit->first))
 	filt_vars_map.insert(*cit);
-  }
-  else {
+    break;
+  case SYNTHETIC_DATA_FILTER:
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (!DiscrepancyCalculator::aggregated_key(cit->first))
+      if (DiscrepancyCalculator::synthetic_key(cit->first))
 	filt_vars_map.insert(*cit);
+    break;
+  case RAW_DATA_FILTER:
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (DiscrepancyCalculator::raw_data_key(cit->first))
+	filt_vars_map.insert(*cit);
+    break;
+  case NO_FILTER:
+    filt_vars_map = vars_map;
+    break;
   }
   return filt_vars_map;
 }

@@ -967,13 +967,13 @@ increment_products(const UShort2DArray& set_partition)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    UShortArray lf_key;
-    DiscrepancyCalculator::extract_key(data_rep->activeKey, lf_key, 1);
+    UShortArray hf_key, lf_key;
+    DiscrepancyCalculator::extract_keys(data_rep->activeKey, hf_key, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
       product_difference_interpolant(
 	(HierarchInterpPolyApproximation*)it1->first, it1->second,
-	it2->second, lf_key, set_partition);
+	it2->second, hf_key, lf_key, set_partition);
     }
   }
   else
@@ -3742,6 +3742,7 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 			       const Sizet3DArray&  colloc_index,
 			       RealVector2DArray&   prod_t1c,
 			       RealMatrix2DArray&   prod_t2c,
+			       const UShortArray&   hf_key,
 			       const UShortArray&   lf_key,
 			       const UShort2DArray& set_partition)
 {
@@ -3759,9 +3760,9 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 
   // This case is _not_ modular on SurrogateData instance:
   // it must use surrData to access lower level data
-  const SDVArray& sdv_array      = surr_data_1.variables_data();
-  const SDRArray& hf_sdr_array_1 = surr_data_1.response_data();
-  const SDRArray& hf_sdr_array_2 = surr_data_2.response_data();
+  const SDVArray& sdv_array      = surr_data_1.variables_data(hf_key);
+  const SDRArray& hf_sdr_array_1 = surr_data_1.response_data(hf_key);
+  const SDRArray& hf_sdr_array_2 = surr_data_2.response_data(hf_key);
 
   // Accommodate level 0 --> lf_key is empty
   if (lf_key.empty()) {
@@ -4344,13 +4345,13 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
 
   const std::map<UShortArray, SDVArray>& vars_data_map
-    = surrData.filtered_variables_data_map();
+    = surrData.filtered_variables_data_map(AGGREGATED_DATA_FILTER);
   std::map<UShortArray, SDVArray>::const_iterator sdv_cit
     = vars_data_map.begin();
   const std::map<UShortArray, SDRArray>& resp_data_map1
-    = surrData.filtered_response_data_map(RAW_DATA_FILTER);
+    = surrData.filtered_response_data_map(AGGREGATED_DATA_FILTER);
   const std::map<UShortArray, SDRArray>& resp_data_map2
-    = hip_approx_2->surrData.filtered_response_data_map(RAW_DATA_FILTER);
+    = hip_approx_2->surrData.filtered_response_data_map(AGGREGATED_DATA_FILTER);
   std::map<UShortArray, SDRArray>::const_iterator
     sdr1_cit = resp_data_map1.begin(), sdr2_cit = resp_data_map2.begin();
 
