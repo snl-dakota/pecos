@@ -967,14 +967,13 @@ increment_products(const UShort2DArray& set_partition)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    UShortArray hf_key, lf_key;
+    UShortArray hf_key, lf_key; // extract either HF or aggregated {HF,LF} keys
     DiscrepancyCalculator::extract_keys(data_rep->activeKey, hf_key, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
-	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
+	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
       product_difference_interpolant(
 	(HierarchInterpPolyApproximation*)it1->first, it1->second,
 	it2->second, hf_key, lf_key, set_partition);
-    }
   }
   else
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
@@ -3758,11 +3757,13 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
   // > only need to integrate terms in incr_key, but need to build up to them
   //   by evaluating all underlying contribs to the hierarchical interpolant
 
+  bool same = (surr_data_1.data_rep() == surr_data_2.data_rep());
   // This case is _not_ modular on SurrogateData instance:
   // it must use surrData to access lower level data
   const SDVArray& sdv_array      = surr_data_1.variables_data(hf_key);
   const SDRArray& hf_sdr_array_1 = surr_data_1.response_data(hf_key);
-  const SDRArray& hf_sdr_array_2 = surr_data_2.response_data(hf_key);
+  const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
+    surr_data_2.response_data(hf_key);
 
   // Accommodate level 0 --> lf_key is empty
   if (lf_key.empty()) {
@@ -3777,16 +3778,13 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
-    use_derivs = data_rep->basisConfigOptions.useDerivs,
-    same = (surr_data_1.data_rep() == surr_data_2.data_rep());
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
   Real hf_fn1, lf_fn1, hf_fn2, lf_fn2, r1r2_l;
 
   // Support original (R) data for computing increments in R^2
-  std::map<UShortArray, SDRArray>::const_iterator
-    r_cit_1 = surr_data_1.response_data_map().find(lf_key),
-    r_cit_2 = (same) ? r_cit_1 : surr_data_2.response_data_map().find(lf_key);
-  const SDRArray& lf_sdr_array_1 = r_cit_1->second;
-  const SDRArray& lf_sdr_array_2 = r_cit_2->second;
+  const SDRArray& lf_sdr_array_1 = surr_data_1.response_data(lf_key);
+  const SDRArray& lf_sdr_array_2 = (same) ? lf_sdr_array_1 :
+    surr_data_2.response_data(lf_key);
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
 
