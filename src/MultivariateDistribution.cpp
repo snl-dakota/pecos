@@ -595,7 +595,7 @@ Real MultivariateDistribution::pdf(const RealVector& pt) const
 Real MultivariateDistribution::log_pdf(const RealVector& pt) const
 {
   if (mvDistRep)
-    return mvDistRep->pdf(pt);
+    return mvDistRep->log_pdf(pt);
   else // default implementation (exponential-based distribs will override)
     return std::log(pdf(pt));
 }
