@@ -687,7 +687,8 @@ assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
   RealArray&       pts_1d =      collocPts1D[lev_index][i];
   RealArray&    t1_wts_1d = type1CollocWts1D[lev_index][i];
   BasisPolynomial& poly_i =             polynomialBasis[i];
-  bool       param_update =           basisParamUpdates[i];
+  bool       param_update = (basisParamUpdates.empty()) ? false
+                                                        : basisParamUpdates[i];
   if (param_update || pts_1d.empty())
     pts_1d    = poly_i.collocation_points(quad_order);
   if (param_update || t1_wts_1d.empty())
