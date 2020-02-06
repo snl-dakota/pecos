@@ -163,7 +163,11 @@ public:
   /// set uDist
   void u_distribution(const MultivariateDistribution& dist);
 
-  /// function to check modelRep (does this envelope contain a letter)
+  /// returns approxRep for access to derived class member functions
+  /// that are not mapped to the top Approximation level
+  ProbabilityTransformation* transform_rep() const;
+
+  /// function to check probTransRep (does this envelope contain a letter)
   bool is_null() const;
 
 protected:
@@ -248,6 +252,11 @@ u_distribution(const MultivariateDistribution& dist)
   if (probTransRep) probTransRep->uDist = dist;
   else                            uDist = dist;
 }
+
+
+inline ProbabilityTransformation* ProbabilityTransformation::
+transform_rep() const
+{ return probTransRep; }
 
 
 inline bool ProbabilityTransformation::is_null() const

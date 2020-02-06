@@ -656,7 +656,8 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
     sum += colloc_wts[i] * v1 * type1_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
-  return sum / UniformRandomVariable::std_pdf() * half_range;
+  return sum * half_range /
+    UniformRandomVariable::std_pdf(0.); // default z: constant density w/i bnds
 }
 
 

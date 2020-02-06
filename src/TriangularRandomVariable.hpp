@@ -324,8 +324,8 @@ dz_ds_factor(short u_type, Real x, Real z) const
 {
   Real pdf;
   switch (u_type) {
-  case STD_NORMAL:  pdf = NormalRandomVariable::std_pdf(z); break;
-  case STD_UNIFORM: pdf = UniformRandomVariable::std_pdf(); break;
+  case STD_NORMAL:  pdf =  NormalRandomVariable::std_pdf(z); break;
+  case STD_UNIFORM: pdf = UniformRandomVariable::std_pdf(z); break;
   //case TRIANGULAR: break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type
