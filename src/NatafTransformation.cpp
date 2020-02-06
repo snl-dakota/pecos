@@ -859,7 +859,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       //jacobian_xz(i, i) = UniformRandomVariable::std_pdf(z_var)
       //                  / x_rv_i.pdf(x_vars[i]);
 
-      // don't bother to compute z constant pdf eval:
+      // don't bother to compute z for constant pdf:
       jacobian_xz(i, i)	= UniformRandomVariable::std_pdf(0.)
 	                / x_rv_i.pdf(x_vars[i]);
     }
@@ -964,7 +964,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       //jacobian_zx(i, i) = x_rv_i.pdf(x_vars[i])
       //                  / UniformRandomVariable::std_pdf(z_var);
 
-      // don't bother to compute z for constant pdf eval:
+      // don't bother to compute z for constant pdf:
       jacobian_zx(i, i)	= x_rv_i.pdf(x_vars[i])
 	                / UniformRandomVariable::std_pdf(0.);
     }
