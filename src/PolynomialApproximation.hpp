@@ -143,9 +143,10 @@ public:
   virtual const RealVector& variance_gradient(const RealVector& x,
 					      const SizetArray& dvv) = 0;
 
-  /// return the mean of the expansion, treating all variables as random
+  /// return the mean of the combined expansion, treating all variables
+  /// as random
   virtual Real combined_mean();
-  /// return the mean of the expansion for a given parameter vector,
+  /// return the mean of the combined expansion for a given parameter vector,
   /// treating a subset of the variables as random
   virtual Real combined_mean(const RealVector& x);
   /// return the covariance between two combined response expansions,
