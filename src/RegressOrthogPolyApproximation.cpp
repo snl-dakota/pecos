@@ -1119,9 +1119,10 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
-  bool all_mode = !nrand_ind.empty();
+  bool use_tracker = (!nrand_ind.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
+  if (use_tracker && (compMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return expMomentsIter->second[0];
 
@@ -1145,7 +1146,7 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
     }
   }
 
-  if (all_mode) {
+  if (use_tracker) {
     expMomentsIter->second[0] = mean;
     compMeanIter->second |= 1;  xPrevMean[key] = x;
   }
@@ -1173,9 +1174,10 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
-  bool all_mode = !nrand_ind.empty();
+  bool use_tracker = (!nrand_ind.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( all_mode && (compMeanIter->second & 2) &&
+  if ( use_tracker && (compMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
     return momentGradsIter->second[0];
@@ -1234,8 +1236,12 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     if (random) // deriv w.r.t. des var insertion
       ++cntr;
   }
-  if (all_mode) { compMeanIter->second |=  2; xPrevMeanGrad[key] = x; }
-  else   compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  compMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
+  else compMeanIter->second &= ~2;          // deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1310,21 +1316,21 @@ covariance(PolynomialApproximation* poly_approx_2)
   bool same = (ropa_2 == this);
 
   // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !ropa_2->expansionCoeffFlag ) ) {
+  if ( !expansionCoeffFlag || ( !same && !ropa_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
   if (same) {
-    bool std_mode = data_rep->nonRandomIndices.empty();
-    if (std_mode && (compVarIter->second & 1))
+    bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+      data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+    if (use_tracker && (compVarIter->second & 1))
       return expMomentsIter->second[1];
     else {
       Real var = variance(data_rep->multi_index(), expCoeffsIter->second,
 			  sparseIndIter->second);
-      if (std_mode)
+      if (use_tracker)
 	{ expMomentsIter->second[1] = var; compVarIter->second |= 1; }
       return var;
     }
@@ -1346,24 +1352,17 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   bool same = (ropa_2 == this);
 
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !ropa_2->expansionCoeffFlag ) ) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   if (same) {
-    bool std_mode = data_rep->nonRandomIndices.empty();
-    if (std_mode && (compVarIter->second & 1))
+    bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+      data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+    if (use_tracker && (compVarIter->second & 1))
       return expMomentsIter->second[1];
     else {
       Real var = variance(data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  combinedSparseIndices);
-      if (std_mode)
+      if (use_tracker)
 	{ expMomentsIter->second[1] = var; compVarIter->second |= 1; }
       return var;
     }
@@ -1465,25 +1464,27 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  bool same = (this == ropa_2), all_mode = !data_rep->nonRandomIndices.empty();
+  bool same = (this == ropa_2), use_tracker =
+    (same && !data_rep->nonRandomIndices.empty() && // all mode
+     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
 
   // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !ropa_2->expansionCoeffFlag )) {
+  if ( !expansionCoeffFlag || ( !same && !ropa_2->expansionCoeffFlag )) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
-  if ( same && all_mode && (compVarIter->second & 1) &&
+  if ( use_tracker && (compVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
     return expMomentsIter->second[1];
 
   Real covar = covariance(x, data_rep->multi_index(), expCoeffsIter->second,
 			  sparseIndIter->second, ropa_2->expCoeffsIter->second,
 			  ropa_2->sparseIndIter->second);
-  if (same && all_mode) {
+
+  if (use_tracker) {
     expMomentsIter->second[1] = covar;
     compVarIter->second |= 1;  xPrevVar[key] = x;
   }
@@ -1501,25 +1502,20 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  bool same = (this == ropa_2), all_mode = !data_rep->nonRandomIndices.empty();
+  bool same = (this == ropa_2), use_tracker =
+    (same && !data_rep->nonRandomIndices.empty() && // same, all mode
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
 
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !ropa_2->expansionCoeffFlag )) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  if ( same && all_mode && (compVarIter->second & 1) &&
+  if ( use_tracker && (compVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
     return expMomentsIter->second[1];
 
   Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  combinedSparseIndices, ropa_2->combinedExpCoeffs,
 			  ropa_2->combinedSparseIndices);
-  if (same && all_mode) {
+
+  if (use_tracker) {
     expMomentsIter->second[1] = covar;
     compVarIter->second |= 1;  xPrevVar[key] = x;
   }
@@ -1548,8 +1544,9 @@ const RealVector& RegressOrthogPolyApproximation::variance_gradient()
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compVarIter->second & 2))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compVarIter->second & 2))
     return momentGradsIter->second[1];
 
   const RealVector& exp_coeffs      = expCoeffsIter->second;
@@ -1566,8 +1563,11 @@ const RealVector& RegressOrthogPolyApproximation::variance_gradient()
     for (j=0; j<num_deriv_v; ++j)
       var_grad[j] += term_i * exp_coeff_grads[i][j];
   }
-  if (std_mode) compVarIter->second |=  2;
-  else          compVarIter->second &= ~2;// deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) compVarIter->second |=  2; // activate bit
+  else             compVarIter->second &= ~2; // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1596,9 +1596,10 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
-  bool all_mode = !nrand_ind.empty();
+  bool use_tracker = (!nrand_ind.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( all_mode && (compVarIter->second & 2) &&
+  if ( use_tracker && (compVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
     return momentGradsIter->second[1];
@@ -1673,8 +1674,12 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     if (random) // deriv w.r.t. des var insertion
       ++cntr;
   }
-  if (all_mode) { compVarIter->second |=  2; xPrevVarGrad[key] = x; }
-  else compVarIter->second &= ~2;//deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  compVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
+  else compVarIter->second &= ~2;         // deactivate: protect mixed use
   return var_grad;
 }
 

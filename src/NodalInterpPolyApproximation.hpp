@@ -472,15 +472,17 @@ inline Real NodalInterpPolyApproximation::mean()
   //	  << "NodalInterpPolyApproximation::mean()" << std::endl;
   //  abort_handler(-1);
   //}
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compMeanIter->second & 1))
     return numMomentsIter->second[0];
 
   IntegrationDriver* driver_rep = data_rep->driverRep;
   Real mu = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second,
 			driver_rep->type1_weight_sets(),
 			driver_rep->type2_weight_sets());
-  if (std_mode)
+
+  if (use_tracker)
     { numMomentsIter->second[0] = mu; compMeanIter->second |= 1; }
   return mu;
 }
@@ -497,14 +499,16 @@ inline Real NodalInterpPolyApproximation::mean(const RealVector& x)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
+  if (use_tracker && (compMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return numMomentsIter->second[0];
 
   Real mu = mean(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
-  if (all_mode) {
+
+  if (use_tracker) {
     numMomentsIter->second[0] = mu;
     compMeanIter->second |= 1;  xPrevMean[key] = x;
   }
@@ -523,12 +527,15 @@ inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 2))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compMeanIter->second & 2))
     return momentGradsIter->second[0];
 
-  if (std_mode) compMeanIter->second |=  2;//  activate 2-bit
-  else          compMeanIter->second &= ~2;//deactivate 2-bit: protect mixed use
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) compMeanIter->second |=  2; // activate bit
+  else             compMeanIter->second &= ~2; // deactivate: protect mixed use
   return mean_gradient(expT1CoeffGradsIter->second,
 		       data_rep->driverRep->type1_weight_sets());
 }
@@ -539,10 +546,10 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  // if already computed, return previous result
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( all_mode && (compMeanIter->second & 2) &&
+  if ( use_tracker && (compMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
     switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
@@ -552,9 +559,11 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
       return momentGradsIter->second[0]; break;
     }
 
-  // compute the gradient of the mean
-  if (all_mode) { compMeanIter->second |=  2; xPrevMeanGrad[key] = x; }
-  else   compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  compMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
+  else compMeanIter->second &= ~2;          // deactivate: protect mixed use
   return mean_gradient(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
 		       expT1CoeffGradsIter->second, dvv);
 }
@@ -565,11 +574,7 @@ covariance(PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool same  = (this == nip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-
+  bool same = (this == nip_approx_2);
   // Error check for required data
   if ( !expansionCoeffFlag || ( !same && !nip_approx_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
@@ -577,6 +582,11 @@ covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker =
+    (same && data_rep->nonRandomIndices.empty() && // std mode
+     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   // TO DO:
   //IntegrationDriver* driver_rep = data_rep->driverRep;
   //if (!driver_rep->track_unique_product_weights()) {
@@ -584,8 +594,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   //	    << "NodalInterpPolyApproximation::covariance()" << std::endl;
   //  abort_handler(-1);
   //}
-
-  if (same && std_mode && (compVarIter->second & 1))
+  if (use_tracker && (compVarIter->second & 1))
     return numMomentsIter->second[1];
 
   IntegrationDriver* driver_rep = data_rep->driverRep;
@@ -596,7 +605,8 @@ covariance(PolynomialApproximation* poly_approx_2)
 		       nip_approx_2->expT2CoeffsIter->second,
 		       driver_rep->type1_weight_sets(),
 		       driver_rep->type2_weight_sets());
-  if (same && std_mode)
+
+  if (use_tracker)
     { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
   return covar;
 }
@@ -607,12 +617,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == nip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-
+  bool same = (this == nip_approx_2);
   // Error check for required data
   if ( !expansionCoeffFlag || ( !same && !nip_approx_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
@@ -620,7 +625,13 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  if ( same && all_mode && (compVarIter->second & 1) &&
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker =
+    (same && !data_rep->nonRandomIndices.empty() && // all mode
+     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const UShortArray& key = data_rep->activeKey;
+  if ( use_tracker && (compVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
     return numMomentsIter->second[1];
 
@@ -638,7 +649,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 			  expT2CoeffsIter->second,
 			  nip_approx_2->expT1CoeffsIter->second,
 			  nip_approx_2->expT2CoeffsIter->second);
-  if (same && all_mode) {
+
+  if (use_tracker) {
     numMomentsIter->second[1] = covar;
     compVarIter->second |= 1;  xPrevVar[key] = x;
   }
@@ -657,12 +669,15 @@ inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compVarIter->second & 2))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compVarIter->second & 2))
     return momentGradsIter->second[1];
 
-  if (std_mode) compVarIter->second |=  2;
-  else          compVarIter->second &= ~2;// deactivate 2-bit: protect mixed use
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) compVarIter->second |=  2; // activate bit
+  else             compVarIter->second &= ~2; // deactivate: protect mixed use
   return variance_gradient(mean(), expT1CoeffsIter->second,
 			   expT1CoeffGradsIter->second,
 			   data_rep->driverRep->type1_weight_sets());
@@ -675,9 +690,10 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   // if already computed, return previous result
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( all_mode && (compVarIter->second & 2) &&
+  if ( use_tracker && (compVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
     switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
@@ -687,8 +703,11 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
       return momentGradsIter->second[1]; break;
     }
 
-  if (all_mode) { compVarIter->second |=  2; xPrevVarGrad[key] = x; }
-  else compVarIter->second &= ~2; // deactivate 2-bit: protect mixed use
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  compVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
+  else compVarIter->second &= ~2;         // deactivate: protect mixed use
   // don't compute expansion mean/mean_grad for case where tensor
   // means/mean_grads will be used
   return (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST) ?
@@ -705,15 +724,16 @@ inline Real NodalInterpPolyApproximation::combined_mean()
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compMeanIter->second & 1))
     return numMomentsIter->second[0];
 
   IntegrationDriver* driver_rep = data_rep->driverRep;
   Real mu = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 			driver_rep->combined_type1_weight_sets(),
 			driver_rep->combined_type2_weight_sets());
-  if (std_mode)
+  if (use_tracker)
     { numMomentsIter->second[0] = mu; compMeanIter->second |= 1; }
   return mu;
 }
@@ -723,9 +743,10 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
+  if (use_tracker && (compMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return numMomentsIter->second[0];
 
@@ -733,7 +754,8 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
   //                combined coeffs and active grid data are consistent
   //                (more involved than weight sync in std mode case above)
   Real mu = mean(x, combinedExpT1Coeffs, combinedExpT2Coeffs);
-  if (all_mode) {
+
+  if (use_tracker) {
     numMomentsIter->second[0] = mu;
     compMeanIter->second |= 1;  xPrevMean[key] = x;
   }
@@ -748,10 +770,10 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
     = (NodalInterpPolyApproximation*)poly_approx_2;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool same  = (this == nip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-
-  if (same && std_mode && (compVarIter->second & 1))
+  bool use_tracker =
+    (this == nip_approx_2 && data_rep->nonRandomIndices.empty() && // same, std
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compVarIter->second & 1))
     return numMomentsIter->second[1];
 
   Real mean_1 = combined_mean(),
@@ -764,7 +786,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 		 driver_rep->combined_type1_weight_sets(),
 		 driver_rep->combined_type2_weight_sets());
 
-  if (same && std_mode)
+  if (use_tracker)
     { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
   return covar;
 }
@@ -777,11 +799,11 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     = (NodalInterpPolyApproximation*)poly_approx_2;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == nip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker =
+    (this == nip_approx_2 && !data_rep->nonRandomIndices.empty() && // same, all
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-
-  if ( same && all_mode && (compVarIter->second & 1) &&
+  if ( use_tracker && (compVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
     return numMomentsIter->second[1];
 
@@ -800,7 +822,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 		 nip_approx_2->combinedExpT1Coeffs,
 		 nip_approx_2->combinedExpT2Coeffs);
 
-  if (same && all_mode) {
+  if (use_tracker) {
     numMomentsIter->second[1] = covar;
     compVarIter->second |= 1;  xPrevVar[key] = x;
   }

@@ -1270,12 +1270,6 @@ hessian_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
 
 Real HierarchInterpPolyApproximation::mean()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 1))
-    return numMomentsIter->second[0];
-
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
@@ -1283,8 +1277,16 @@ Real HierarchInterpPolyApproximation::mean()
     abort_handler(-1);
   }
 
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compMeanIter->second & 1))
+    return numMomentsIter->second[0];
+
   Real mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
-  if (std_mode)
+
+  if (use_tracker)
     { numMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
   return mean;
 }
@@ -1293,14 +1295,6 @@ Real HierarchInterpPolyApproximation::mean()
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
-    return numMomentsIter->second[0];
-
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
@@ -1308,9 +1302,18 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const UShortArray& key = data_rep->activeKey;
+  if (use_tracker && (compMeanIter->second & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
+    return numMomentsIter->second[0];
+
   Real mean = expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
-  if (all_mode) {
+
+  if (use_tracker) {
     numMomentsIter->second[0] = mean;
     compMeanIter->second |= 1;  xPrevMean[key] = x;
   }
@@ -1322,8 +1325,9 @@ Real HierarchInterpPolyApproximation::combined_mean()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compMeanIter->second & 1))
     return numMomentsIter->second[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -1331,7 +1335,8 @@ Real HierarchInterpPolyApproximation::combined_mean()
     expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 		hsg_driver->combined_type1_hierarchical_weight_sets(),
 		hsg_driver->combined_type2_hierarchical_weight_sets());
-  if (std_mode)
+
+  if (use_tracker)
     { numMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
   return mean;
 }
@@ -1342,9 +1347,10 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
+  if (use_tracker && (compMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return numMomentsIter->second[0];
 
@@ -1352,7 +1358,8 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
   Real mean = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  hsg_driver->combined_smolyak_multi_index(),
 			  hsg_driver->combined_collocation_key());
-  if (all_mode) {
+
+  if (use_tracker) {
     numMomentsIter->second[0] = mean;
     compMeanIter->second |= 1;  xPrevMean[key] = x;
   }
@@ -1367,13 +1374,6 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
     are inserted and some are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (std_mode && (compMeanIter->second & 2))
-    return momentGradsIter->second[0];
-
   // Error check for required data
   if (!expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in Hierarch"
@@ -1381,10 +1381,21 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const UShortArray& key = data_rep->activeKey;
+  if (use_tracker && (compMeanIter->second & 2))
+    return momentGradsIter->second[0];
+
   RealVector& mean_grad = momentGradsIter->second[0];
   mean_grad = expectation_gradient(expT1CoeffGradsIter->second);
-  if (std_mode) compMeanIter->second |=  2;//  activate 2-bit
-  else          compMeanIter->second &= ~2;//deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) compMeanIter->second |=  2;// activate bit
+  else             compMeanIter->second &= ~2;// deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1405,9 +1416,10 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   // if already computed, return previous result
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  if ( all_mode && (compMeanIter->second & 2) &&
+  if ( use_tracker && (compMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
     return momentGradsIter->second[0];
@@ -1466,8 +1478,12 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 	= expectation_gradient(x, exp_t1_coeffs, exp_t2_coeffs, deriv_index);
     }
   }
-  if (all_mode) { compMeanIter->second |=  2; xPrevMeanGrad[key] = x; }
-  else compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  compMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
+  else compMeanIter->second &= ~2;          // deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1475,23 +1491,22 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 Real HierarchInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
+  // Error check for required data
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-
-  if (same && std_mode && (compVarIter->second & 1))
-    return numMomentsIter->second[1];
-
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
+  bool same = (this == hip_approx_2);
+  if ( !expansionCoeffFlag || ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compVarIter->second & 1))
+    return numMomentsIter->second[1];
 
   Real covar, mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
   if (speedOverPrecision && product_interpolants())
@@ -1506,7 +1521,7 @@ covariance(PolynomialApproximation* poly_approx_2)
     covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
   }
 
-  if (same && std_mode)
+  if (use_tracker)
     { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
   return covar;
 }
@@ -1517,23 +1532,23 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-
-  if ( same && all_mode && (compVarIter->second & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return numMomentsIter->second[1];
-
+  bool same = (this == hip_approx_2);
   // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
+  if ( !expansionCoeffFlag || ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const UShortArray& key = data_rep->activeKey;
+
+  if ( use_tracker && (compVarIter->second & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+    return numMomentsIter->second[1];
 
   Real covar, mean_1 = mean(x),
     mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
@@ -1549,7 +1564,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
   }
 
-  if (same && all_mode) {
+  if (use_tracker) {
     numMomentsIter->second[1] = covar;
     compVarIter->second |= 1;  xPrevVar[key] = x;
   }
@@ -1564,10 +1579,10 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool  same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-
-  if (same && std_mode && (compVarIter->second & 1))
+  bool same = (this == hip_approx_2), use_tracker =
+    (same && data_rep->nonRandomIndices.empty() && // same, std
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compVarIter->second & 1))
     return numMomentsIter->second[1];
 
   Real mean_1 = combined_mean(),
@@ -1594,7 +1609,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 		hsg_driver->combined_type1_hierarchical_weight_sets(),
 		hsg_driver->combined_type2_hierarchical_weight_sets());
 
-  if (same && std_mode)
+  if (use_tracker)
     { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
   return covar;
 }
@@ -1607,10 +1622,11 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool  same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
+  bool same = (this == hip_approx_2), use_tracker =
+    (same && !data_rep->nonRandomIndices.empty() && // same, all
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( same && all_mode && (compVarIter->second & 1) &&
+  if ( use_tracker && (compVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
     return numMomentsIter->second[1];
 
@@ -1637,7 +1653,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   Real covar
     = expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);
 
-  if (same && all_mode) {
+  if (use_tracker) {
     numMomentsIter->second[1] = covar;
     compVarIter->second |= 1;  xPrevVar[key] = x;
   }
@@ -1651,20 +1667,20 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (std_mode && (compVarIter->second & 2))
-    return momentGradsIter->second[1];
-
   // Error check for required data
-  if (!expansionCoeffFlag ||
-      !expansionCoeffGradFlag) {
+  if (!expansionCoeffFlag || !expansionCoeffGradFlag) {
     PCerr << "Error: insufficient expansion coefficient data in HierarchInterp"
 	  << "PolyApproximation::variance_gradient()." << std::endl;
     abort_handler(-1);
   }
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const UShortArray& key = data_rep->activeKey;
+  if (use_tracker && (compVarIter->second & 2))
+    return momentGradsIter->second[1];
 
   Real mean1 = mean(); const RealVector& mean1_grad = mean_gradient();
   RealMatrix2DArray cov_t1_coeff_grads;
@@ -1672,8 +1688,11 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 				       mean1_grad, cov_t1_coeff_grads);
   RealVector& var_grad = momentGradsIter->second[1];
   var_grad = expectation_gradient(cov_t1_coeff_grads);
-  if (std_mode) compVarIter->second |=  2;
-  else          compVarIter->second &= ~2;// deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) compVarIter->second |=  2; // activate bit
+  else             compVarIter->second &= ~2; // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1691,9 +1710,10 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // if already computed, return previous result
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( all_mode && (compVarIter->second & 2) &&
+  if ( use_tracker && (compVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
     return momentGradsIter->second[1];
@@ -1766,8 +1786,12 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
       var_grad[i] = expectation_gradient(x, cov_t1c, cov_t2c, deriv_index);
     }
   }
-  if (all_mode) { compVarIter->second |=  2; xPrevVarGrad[key] = x; }
-  else            compVarIter->second &= ~2;//deactivate 2-bit:protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  compVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
+  else compVarIter->second &= ~2;         // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1777,13 +1801,15 @@ reference_mean(const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compRefMeanIter->second & 1))
     return refMomentsIter->second[0];
 
   Real ref_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, ref_key);
-  if (std_mode)
+
+  if (use_tracker)
     { refMomentsIter->second[0] = ref_mean; compRefMeanIter->second |= 1; }
   return ref_mean;
 }
@@ -1794,15 +1820,17 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefMeanIter->second & 1) &&
+  if (use_tracker && (compRefMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefMean[key]))
     return refMomentsIter->second[0];
 
   Real ref_mean
     = expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, ref_key);
-  if (all_mode) {
+
+  if (use_tracker) {
     refMomentsIter->second[0] = ref_mean;
     compRefMeanIter->second |= 1;  xPrevRefMean[key] = x;
   }
@@ -1816,8 +1844,9 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compRefMeanIter->second & 1))
     return refMomentsIter->second[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -1826,7 +1855,7 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
 		  hsg_driver->type1_weight_sets_map(),
 		  hsg_driver->type2_weight_sets_map(), ref_key_map);
 
-  if (std_mode)
+  if (use_tracker)
     { refMomentsIter->second[0] = ref_mean; compRefMeanIter->second |= 1; }
   return ref_mean;
 }
@@ -1839,9 +1868,10 @@ reference_combined_mean(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefMeanIter->second & 1) &&
+  if (use_tracker && (compRefMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefMean[key]))
     return refMomentsIter->second[0];
 
@@ -1850,7 +1880,8 @@ reference_combined_mean(const RealVector& x,
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
 		  hsg_driver->collocation_key_map(), ref_key_map);
-  if (all_mode) {
+
+  if (use_tracker) {
     refMomentsIter->second[0] = ref_mean;
     compRefMeanIter->second |= 1;  xPrevRefMean[key] = x;
   }
@@ -1863,8 +1894,9 @@ reference_variance(const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefVarIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compRefVarIter->second & 1))
     return refMomentsIter->second[1];
 
   Real ref_var, ref_mean = reference_mean(ref_key);
@@ -1880,7 +1912,7 @@ reference_variance(const UShort2DArray& ref_key)
     ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
   }
 
-  if (std_mode)
+  if (use_tracker)
     { refMomentsIter->second[1] = ref_var; compRefVarIter->second |= 1; }
   return ref_var;
 }
@@ -1891,9 +1923,10 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefVarIter->second & 1) &&
+  if (use_tracker && (compRefVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefVar[key]))
     return refMomentsIter->second[1];
 
@@ -1910,7 +1943,7 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
     ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
   }
 
-  if (all_mode) {
+  if (use_tracker) {
     refMomentsIter->second[1] = ref_var;
     compRefVarIter->second |= 1; xPrevRefVar[key] = x;
   }
@@ -1923,8 +1956,9 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefVarIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compRefVarIter->second & 1))
     return refMomentsIter->second[1];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -1945,7 +1979,7 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 			  hsg_driver->type2_weight_sets_map(), ref_key_map);
   }
 
-  if (std_mode)
+  if (use_tracker)
     { refMomentsIter->second[1] = ref_var; compRefVarIter->second |= 1; }
   return ref_var;
 }
@@ -1957,9 +1991,10 @@ reference_combined_variance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefVarIter->second & 1) &&
+  if (use_tracker && (compRefVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefVar[key]))
     return refMomentsIter->second[1];
 
@@ -1981,7 +2016,7 @@ reference_combined_variance(const RealVector& x,
 			  hsg_driver->collocation_key_map(), ref_key_map);
   }
 
-  if (all_mode) {
+  if (use_tracker) {
     refMomentsIter->second[1] = ref_var;
     compRefVarIter->second |= 1; xPrevRefVar[key] = x;
   }
@@ -1993,16 +2028,17 @@ Real HierarchInterpPolyApproximation::delta_mean()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compDeltaMeanIter->second & 1))
     return deltaMomentsIter->second[0];
 
   UShort2DArray incr_key;
   data_rep->hsg_driver()->partition_increment_key(incr_key);
-
   Real delta_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (std_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;
   }
@@ -2015,13 +2051,15 @@ Real HierarchInterpPolyApproximation::delta_mean(const UShort2DArray& incr_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compDeltaMeanIter->second & 1))
     return deltaMomentsIter->second[0];
 
   Real delta_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (std_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;
   }
@@ -2033,18 +2071,19 @@ Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
+  if (use_tracker && (compDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
     return deltaMomentsIter->second[0];
 
   UShort2DArray incr_key;
   data_rep->hsg_driver()->partition_increment_key(incr_key);
-
   Real delta_mean =
     expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (all_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
   }
@@ -2058,15 +2097,17 @@ delta_mean(const RealVector& x, const UShort2DArray& incr_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
+  if (use_tracker && (compDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
     return deltaMomentsIter->second[0];
 
   Real delta_mean =
     expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (all_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
   }
@@ -2081,22 +2122,22 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compDeltaMeanIter->second & 1))
     return deltaMomentsIter->second[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> incr_key_map;
   hsg_driver->partition_increment_key(incr_key_map);
-
   Real delta_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
 		  hsg_driver->type2_weight_sets_map(), incr_key_map);
-  if (std_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;
   }
@@ -2113,19 +2154,20 @@ delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compDeltaMeanIter->second & 1))
     return deltaMomentsIter->second[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
 		  hsg_driver->type2_weight_sets_map(), incr_key_map);
-  if (std_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;
   }
@@ -2133,32 +2175,31 @@ delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
 }
 
 
-Real HierarchInterpPolyApproximation::
-delta_combined_mean(const RealVector& x)
+Real HierarchInterpPolyApproximation::delta_combined_mean(const RealVector& x)
 {
   // Potentially equivalent for all_vars mode as well, but use key maps
   //return delta_mean(x);
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
+  if (use_tracker && (compDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
     return deltaMomentsIter->second[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> incr_key_map;
   hsg_driver->partition_increment_key(incr_key_map);
-
   Real delta_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
 		  hsg_driver->collocation_key_map(), incr_key_map);
-  if (all_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
   }
@@ -2176,21 +2217,22 @@ delta_combined_mean(const RealVector& x,
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
+  if (use_tracker && (compDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
     return deltaMomentsIter->second[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
 		  hsg_driver->collocation_key_map(), incr_key_map);
-  if (all_mode) {
+
+  if (use_tracker) {
     deltaMomentsIter->second[0] = delta_mean;
     compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
   }
@@ -2205,8 +2247,9 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaVarIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (compDeltaVarIter->second & 1))
     return deltaMomentsIter->second[1];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -2226,7 +2269,7 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
       hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   }
 
-  if (std_mode)
+  if (use_tracker)
     { deltaMomentsIter->second[1] = delta_var; compDeltaVarIter->second |= 1; }
   return delta_var;
 }
@@ -2240,9 +2283,10 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaVarIter->second & 1) &&
+  if (use_tracker && (compDeltaVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
     return deltaMomentsIter->second[1];
 
@@ -2263,7 +2307,7 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
       hsg_driver->collocation_key(), ref_key, incr_key);
   }
   
-  if (all_mode) {
+  if (use_tracker) {
     deltaMomentsIter->second[1] = delta_var;
     compDeltaVarIter->second   |= 1;  xPrevDeltaVar[key] = x;
   }
@@ -2280,8 +2324,9 @@ delta_combined_variance(
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaVarIter->second & 1))
+  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compDeltaVarIter->second & 1))
     return deltaMomentsIter->second[1];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
@@ -2304,7 +2349,7 @@ delta_combined_variance(
       data_rep->activeKey, ref_key_map, incr_key_map);
   }
 
-  if (std_mode)
+  if (use_tracker)
     { deltaMomentsIter->second[1] = delta_var; compDeltaVarIter->second |= 1; }
   return delta_var;
 }
@@ -2319,9 +2364,10 @@ delta_combined_variance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaVarIter->second & 1) &&
+  if (use_tracker && (compDeltaVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
     return deltaMomentsIter->second[1];
 
@@ -2345,7 +2391,7 @@ delta_combined_variance(const RealVector& x,
       data_rep->activeKey, ref_key_map, incr_key_map);
   }
 
-  if (all_mode) {
+  if (use_tracker) {
     deltaMomentsIter->second[1] = delta_var;
     compDeltaVarIter->second   |= 1;  xPrevDeltaVar[key] = x;
   }
@@ -2625,32 +2671,30 @@ delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
 Real HierarchInterpPolyApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-
-  // Supports multiple grid increments in discerning nominal from delta based
-  // on isotropic/anisotropic/generalized index set increments.  In current
-  // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
-  // In the future, may need 3D keys for level/set/point.
-  bool  same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-  if (same && std_mode && (compDeltaVarIter->second & 1))
-    return deltaMomentsIter->second[1];
-
+  bool same = (this == hip_approx_2);
   // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !hip_approx_2->expansionCoeffFlag )) {
+  if ( !expansionCoeffFlag || ( !same && !hip_approx_2->expansionCoeffFlag )) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::delta_covariance()" << std::endl;
     abort_handler(-1);
   }
 
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty() && // std mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  // Supports multiple grid increments in discerning nominal from delta based
+  // on isotropic/anisotropic/generalized index set increments.  In current
+  // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
+  // In the future, may need 3D keys for level/set/point.
+  if (use_tracker && (compDeltaVarIter->second & 1))
+    return deltaMomentsIter->second[1];
+
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
-
   Real delta_covar;
   if (product_interpolants())
     delta_covar = delta_covariance(expT1CoeffsIter->second,
@@ -2673,7 +2717,7 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
       hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   }
 
-  if (same && std_mode) {
+  if (use_tracker) {
     deltaMomentsIter->second[1] = delta_covar;
     compDeltaVarIter->second |= 1;
   }
@@ -2684,18 +2728,9 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-
-  bool  same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (same && all_mode && (compDeltaVarIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
-    return deltaMomentsIter->second[1];
-
+  bool same = (this == hip_approx_2);
   // Error check for required data
   if ( !expansionCoeffFlag ||
        ( !same && !hip_approx_2->expansionCoeffFlag )) {
@@ -2704,10 +2739,18 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty() && // all mode
+    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const UShortArray& key = data_rep->activeKey;
+  if (use_tracker && (compDeltaVarIter->second & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
+    return deltaMomentsIter->second[1];
+
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
-
   Real delta_covar;
   if (product_interpolants())
     delta_covar = delta_covariance(x, expT1CoeffsIter->second,
@@ -2730,7 +2773,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
       ref_key, incr_key);
   }
 
-  if (same && all_mode) {
+  if (use_tracker) {
     deltaMomentsIter->second[1] = delta_covar;
     compDeltaVarIter->second |= 1; xPrevDeltaVar[key] = x;
   }
@@ -2741,19 +2784,19 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool  same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-  if (same && std_mode && (compDeltaVarIter->second & 1))
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool same = (this == hip_approx_2), use_tracker =
+    (same && data_rep->nonRandomIndices.empty() && // same, std
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (compDeltaVarIter->second & 1))
     return deltaMomentsIter->second[1];
   
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
-  
   // For combined statistics, we utilize the full coefficient maps
   // (expansionType{1,2}Coeffs) for the expected values using ref_key_map,
   // but only require the active coefficients (r1r2_t{1,2}_coeffs and active
@@ -2779,7 +2822,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
       ref_key_map, incr_key_map);
   }
 
-  if (same && std_mode) {
+  if (use_tracker) {
     deltaMomentsIter->second[1] = delta_covar;
     compDeltaVarIter->second |= 1;
   }
@@ -2795,18 +2838,17 @@ delta_combined_covariance(const RealVector& x,
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-
-  bool  same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
+  bool same = (this == hip_approx_2), use_tracker =
+    (same && !data_rep->nonRandomIndices.empty() && // same, all
+     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (same && all_mode && (compDeltaVarIter->second & 1) &&
+  if (use_tracker && (compDeltaVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
     return deltaMomentsIter->second[1];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
-
   Real delta_covar;
   if (product_interpolants())
     delta_covar = delta_covariance(x, expansionType1Coeffs,
@@ -2829,7 +2871,7 @@ delta_combined_covariance(const RealVector& x,
       data_rep->activeKey, ref_key_map, incr_key_map);
   }
 
-  if (same && all_mode) {
+  if (use_tracker) {
     deltaMomentsIter->second[1] = delta_covar;
     compDeltaVarIter->second |= 1; xPrevDeltaVar[key] = x;
   }
