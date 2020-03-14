@@ -36,7 +36,7 @@ void InterpPolyApproximation::allocate_arrays()
   allocate_total_sobol();
   allocate_component_sobol();
 
-  RealVector& numer_mom = numMomentsIter->second;
+  RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.empty()) {
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
     numer_mom.sizeUninitialized(num_moments);

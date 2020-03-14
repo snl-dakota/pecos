@@ -828,12 +828,11 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
   }
   */
 
-  // update numericalMoments based on data_fns
-  RealVector& numer_mom = numMomentsIter->second;
-  if (numer_mom.length() != num_moments)
-    numer_mom.sizeUninitialized(num_moments);
+  // update numerical moments (secondaryMoments) based on data_fns
+  if (secondaryMoments.length() != num_moments)
+    secondaryMoments.sizeUninitialized(num_moments);
   integrate_moments(data_fns, data_rep->driverRep->type1_weight_sets(),
-		    numer_mom);
+		    secondaryMoments);
 }
 
 

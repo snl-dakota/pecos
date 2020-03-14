@@ -1281,16 +1281,15 @@ Real HierarchInterpPolyApproximation::mean()
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  if (use_tracker && (compMeanIter->second & 1))
-    return numMomentsIter->second[0];
+  if (use_tracker && (primaryMeanIter->second & 1))
+    return primaryMomIter->second[0];
 
   Real mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
 
   if (use_tracker)
-    { numMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
+    { primaryMomIter->second[0] = mean; primaryMeanIter->second |= 1; }
   return mean;
 }
-
 
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
@@ -1307,15 +1306,15 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
   bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (use_tracker && (compMeanIter->second & 1) &&
+  if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
-    return numMomentsIter->second[0];
+    return primaryMomIter->second[0];
 
   Real mean = expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
 
   if (use_tracker) {
-    numMomentsIter->second[0] = mean;
-    compMeanIter->second |= 1;  xPrevMean[key] = x;
+    primaryMomIter->second[0] = mean;
+    primaryMeanIter->second |= 1;  xPrevMean[key] = x;
   }
   return mean;
 }
@@ -1327,8 +1326,8 @@ Real HierarchInterpPolyApproximation::combined_mean()
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  if (use_tracker && (compMeanIter->second & 1))
-    return numMomentsIter->second[0];
+  if (use_tracker && (combinedMeanBits & 1))
+    return combinedMoments[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real mean =
@@ -1337,7 +1336,7 @@ Real HierarchInterpPolyApproximation::combined_mean()
 		hsg_driver->combined_type2_hierarchical_weight_sets());
 
   if (use_tracker)
-    { numMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
+    { combinedMoments[0] = mean; combinedMeanBits |= 1; }
   return mean;
 }
 
@@ -1350,19 +1349,17 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
   bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (use_tracker && (compMeanIter->second & 1) &&
+  if (use_tracker && (combinedMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
-    return numMomentsIter->second[0];
+    return combinedMoments[0];
 
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real mean = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  hsg_driver->combined_smolyak_multi_index(),
 			  hsg_driver->combined_collocation_key());
 
-  if (use_tracker) {
-    numMomentsIter->second[0] = mean;
-    compMeanIter->second |= 1;  xPrevMean[key] = x;
-  }
+  if (use_tracker)
+    { combinedMoments[0] = mean;  combinedMeanBits |= 1;  xPrevMean[key] = x; }
   return mean;
 }
 
@@ -1386,16 +1383,16 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
   bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (use_tracker && (compMeanIter->second & 2))
-    return momentGradsIter->second[0];
+  if (use_tracker && (primaryMeanIter->second & 2))
+    return primaryMomGradsIter->second[0];
 
-  RealVector& mean_grad = momentGradsIter->second[0];
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
   mean_grad = expectation_gradient(expT1CoeffGradsIter->second);
 
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
-  if (use_tracker) compMeanIter->second |=  2;// activate bit
-  else             compMeanIter->second &= ~2;// deactivate: protect mixed use
+  if (use_tracker) primaryMeanIter->second |=  2;//activate bit
+  else             primaryMeanIter->second &= ~2;//deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1419,10 +1416,10 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( use_tracker && (compMeanIter->second & 2) &&
+  if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
-    return momentGradsIter->second[0];
+    return primaryMomGradsIter->second[0];
 
   // ---------------------------------------------------------------------
   // For xi = ran vars, sa = augmented des vars, si = inserted design vars
@@ -1437,7 +1434,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
   // ---------------------------------------------------------------------
   size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
-  RealVector& mean_grad = momentGradsIter->second[0];
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
   if (mean_grad.length() != num_deriv_vars)
     mean_grad.sizeUninitialized(num_deriv_vars);
   const RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
@@ -1482,8 +1479,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
   if (use_tracker)
-    {  compMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
-  else compMeanIter->second &= ~2;          // deactivate: protect mixed use
+    {  primaryMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
+  else primaryMeanIter->second &= ~2;          // deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1505,8 +1502,8 @@ covariance(PolynomialApproximation* poly_approx_2)
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   bool use_tracker = (same && data_rep->nonRandomIndices.empty() && // std mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  if (use_tracker && (compVarIter->second & 1))
-    return numMomentsIter->second[1];
+  if (use_tracker && (primaryVarIter->second & 1))
+    return primaryMomIter->second[1];
 
   Real covar, mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
   if (speedOverPrecision && product_interpolants())
@@ -1522,7 +1519,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   }
 
   if (use_tracker)
-    { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
+    { primaryMomIter->second[1] = covar; primaryVarIter->second |= 1; }
   return covar;
 }
 
@@ -1546,9 +1543,9 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
 
-  if ( use_tracker && (compVarIter->second & 1) &&
+  if ( use_tracker && (primaryVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return numMomentsIter->second[1];
+    return primaryMomIter->second[1];
 
   Real covar, mean_1 = mean(x),
     mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
@@ -1565,8 +1562,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   }
 
   if (use_tracker) {
-    numMomentsIter->second[1] = covar;
-    compVarIter->second |= 1;  xPrevVar[key] = x;
+    primaryMomIter->second[1] = covar;
+    primaryVarIter->second |= 1;  xPrevVar[key] = x;
   }
   return covar;
 }
@@ -1582,8 +1579,8 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   bool same = (this == hip_approx_2), use_tracker =
     (same && data_rep->nonRandomIndices.empty() && // same, std
      data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  if (use_tracker && (compVarIter->second & 1))
-    return numMomentsIter->second[1];
+  if (use_tracker && (combinedVarBits & 1))
+    return combinedMoments[1];
 
   Real mean_1 = combined_mean(),
        mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean();
@@ -1610,7 +1607,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 		hsg_driver->combined_type2_hierarchical_weight_sets());
 
   if (use_tracker)
-    { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
+    { combinedMoments[1] = covar; combinedVarBits |= 1; }
   return covar;
 }
 
@@ -1626,9 +1623,9 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     (same && !data_rep->nonRandomIndices.empty() && // same, all
      data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( use_tracker && (compVarIter->second & 1) &&
+  if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return numMomentsIter->second[1];
+    return combinedMoments[1];
 
   Real mean_1 = combined_mean(x),
        mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean(x);
@@ -1653,10 +1650,8 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   Real covar
     = expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);
 
-  if (use_tracker) {
-    numMomentsIter->second[1] = covar;
-    compVarIter->second |= 1;  xPrevVar[key] = x;
-  }
+  if (use_tracker)
+    { combinedMoments[1] = covar;  combinedVarBits |= 1;  xPrevVar[key] = x; }
   return covar;
 }
 
@@ -1679,20 +1674,20 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
   bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (use_tracker && (compVarIter->second & 2))
-    return momentGradsIter->second[1];
+  if (use_tracker && (primaryVarIter->second & 2))
+    return primaryMomGradsIter->second[1];
 
   Real mean1 = mean(); const RealVector& mean1_grad = mean_gradient();
   RealMatrix2DArray cov_t1_coeff_grads;
   central_product_gradient_interpolant(this, mean1, mean1, mean1_grad,
 				       mean1_grad, cov_t1_coeff_grads);
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   var_grad = expectation_gradient(cov_t1_coeff_grads);
 
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
-  if (use_tracker) compVarIter->second |=  2; // activate bit
-  else             compVarIter->second &= ~2; // deactivate: protect mixed use
+  if (use_tracker) primaryVarIter->second |=  2; // activate bit
+  else             primaryVarIter->second &= ~2; // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1713,10 +1708,10 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( use_tracker && (compVarIter->second & 2) &&
+  if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
-    return momentGradsIter->second[1];
+    return primaryMomGradsIter->second[1];
 
   // ---------------------------------------------------------------------
   // For xi = ran vars, sa = augmented des vars, si = inserted design vars
@@ -1749,7 +1744,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   if (augment)
     central_product_interpolant(this, mean_1, mean_1, cov_t1c, cov_t2c);
 
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   if (var_grad.length() != num_deriv_vars)
     var_grad.sizeUninitialized(num_deriv_vars);
   for (i=0; i<num_deriv_vars; ++i) {
@@ -1790,8 +1785,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
   if (use_tracker)
-    {  compVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
-  else compVarIter->second &= ~2;         // deactivate: protect mixed use
+    {  primaryVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
+  else primaryVarIter->second &= ~2;         // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -4450,7 +4445,7 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
   bool empty_c_index = colloc_index.empty(),
     use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-  RealVector& numer_mom = numMomentsIter->second;
+  RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
     numer_mom.sizeUninitialized(num_moments);
   Real& mean = numer_mom[0];
@@ -4583,7 +4578,7 @@ integrate_response_moments(size_t num_moments,
   int m_index, moment;
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-  RealVector& numer_mom = numMomentsIter->second;
+  RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
     numer_mom.sizeUninitialized(num_moments);
   Real& mean = numer_mom[0];

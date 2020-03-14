@@ -2960,7 +2960,7 @@ mean_gradient(const RealMatrix& exp_t1_coeff_grads,
 
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
-  RealVector& mean_grad = momentGradsIter->second[0];
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
   if (mean_grad.length() == num_deriv_vars) mean_grad = 0.;
   else mean_grad.size(num_deriv_vars);
   Real t1_wt_i;
@@ -3004,7 +3004,7 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
-    RealVector& mean_grad = momentGradsIter->second[0];
+    RealVector& mean_grad = primaryMomGradsIter->second[0];
     if (mean_grad.length() != num_deriv_vars)
       mean_grad.sizeUninitialized(num_deriv_vars);
     mean_grad = 0.;
@@ -3268,7 +3268,7 @@ variance_gradient(Real mean, const RealVector& exp_t1_coeffs,
 {
   size_t i, j, num_colloc_pts = t1_wts.length(),
     num_deriv_vars = exp_t1_coeff_grads.numRows();
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
   else var_grad.size(num_deriv_vars);
 
@@ -3323,7 +3323,7 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     size_t num_deriv_vars = dvv.size();
-    RealVector& var_grad = momentGradsIter->second[1];
+    RealVector& var_grad = primaryMomGradsIter->second[1];
     if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
     else var_grad.size(num_deriv_vars);
     // Smolyak recursion of anisotropic tensor products
@@ -3462,7 +3462,7 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   IntegrationDriver* driver_rep = data_rep->driverRep;
-  RealVector& numer_mom = numMomentsIter->second;
+  RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
     numer_mom.sizeUninitialized(num_moments);
 
@@ -3519,8 +3519,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	  << "promotion of combined to active." << std::endl;
     abort_handler(-1);
   }
-  RealVector& exp_mom = expMomentsIter->second;
-  if (exp_mom.length() != num_moments) exp_mom.sizeUninitialized(num_moments);
+  if (secondaryMoments.length() != num_moments)
+    secondaryMoments.sizeUninitialized(num_moments);
 
   // TO DO: evaluate moments 2/3/4 by evaluating the interpolant of R on higher
   // order grids so that the moment function (R-\mu)^k can be reinterpolated
@@ -3560,7 +3560,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
     RealVector t1_exp(num_pts);
     for (i=0; i<num_pts; ++i)
       t1_exp[i] = value(Teuchos::getCol(Teuchos::View, alt_pts, (int)i));
-    integrate_moments(t1_exp, alt_driver->type1_weight_sets(), exp_mom);
+    integrate_moments(t1_exp, alt_driver->type1_weight_sets(),secondaryMoments);
   }
   /*
   // Native quadrature on interpolant can be value-based or gradient-enhanced.
@@ -3582,7 +3582,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
       }
       integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
-			driver_rep->type2_weight_sets(), exp_mom);
+			driver_rep->type2_weight_sets(), secondaryMoments);
     }
     else { // value-based native quadrature
       for (i=0; i<num_pts; ++i) {
@@ -3591,7 +3591,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	t1_exp[i] = value(c_vars); // *** requires colloc_indices! ***
       }
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
-			exp_mom);
+			secondaryMoments);
     }
   }
   */
@@ -3607,18 +3607,18 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 	Teuchos::setCol(sdr_array[i].response_gradient(), (int)i, t2_exp);
       }
       integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
-			driver_rep->type2_weight_sets(), exp_mom);
+			driver_rep->type2_weight_sets(), secondaryMoments);
     }
     else { // value-based native quadrature
       for (i=0; i<num_pts; ++i)
 	t1_exp[i] = sdr_array[i].response_function();
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
-			exp_mom);
+			secondaryMoments);
     }
   }
 #ifdef DEBUG
   PCout << "Expansion moments type 1 coefficients:\n" << t1_exp
-	<< "Expansion moments:\n" << exp_mom;
+	<< "Expansion moments:\n" << secondaryMoments;
 #endif // DEBUG
 }
 

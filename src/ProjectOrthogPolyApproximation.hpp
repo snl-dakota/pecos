@@ -116,8 +116,8 @@ private:
   /// expansions and updating all Smolyak coefficients
   void append_tensor_expansions(size_t start_index);
 
-  /// update numericalMoments using numerical integration applied
-  /// directly to surrData
+  /// update numerical moments (secondaryMoments) using numerical integration
+  /// applied directly to surrData
   void integrate_response_moments(size_t num_moments);//, bool combined_stats);
 
   //
@@ -178,18 +178,12 @@ compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
 
-  RealVector& exp_mom = expMomentsIter->second;
-  if (exp_mom.length() != 2) exp_mom.resize(2);
-  if (combined_stats)
-    { combined_mean(); combined_variance(); } // for combinedExpCoeffs
-  else {
-    mean(); variance(); // updates first two expansionMoments
-    //standardize_moments(exp_mom);
-  }
+  // expansion moments to order 2:
+  PolynomialApproximation::compute_moments(full_stats, combined_stats);
 
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   // if full stats, augment analytic expansion moments with numerical moments
   // (from quadrature applied to the SurrogateData)
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (full_stats &&
       // > currently supported by TPQ, SSG, Cubature (Sampling also possible)
       data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) { //&&
@@ -208,24 +202,24 @@ compute_moments(bool full_stats, bool combined_stats)
     }
     integrate_response_moments(4);//, combined_stats); // TO DO
   }
-  else
-    numMomentsIter->second.resize(0);
+  else if (!secondaryMoments.empty())
+    secondaryMoments.resize(0);
 }
 
 
-/* OrthogPolyApproximation::compute_moments(const RealVector&) is used for now
+/* PolynomialApproximation::compute_moments(const RealVector&) is used for now
 
 inline void ProjectOrthogPolyApproximation::
 compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode currently supports two expansion moments
 
-  RealVector& exp_mom = expMomentsIter->second;
+  RealVector& exp_mom = primaryMomentsIter->second;
   if (exp_mom.length() != 2) exp_mom.resize(2);
   if (combined_stats)
     { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
   else {
-    mean(x); variance(x); // updates first two expansionMoments
+    mean(x); variance(x); // updates first two expansion moments
     //standardize_moments(exp_mom);
   }
 
@@ -242,8 +236,8 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
     }
     integrate_response_moments(2, x);//, combined_stats); // TO DO
   }
-  else
-    numMomentsIter->second.resize(0);
+  else if (!secondaryMoments.empty())
+    secondaryMoments.resize(0);
 }
 */
 

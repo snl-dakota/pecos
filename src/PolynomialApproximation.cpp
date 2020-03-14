@@ -181,6 +181,47 @@ generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
 
 
 void PolynomialApproximation::
+compute_moments(bool full_stats, bool combined_stats)
+{
+  // default for standard variables mode (2 moments for both full and
+  // intermediate stats) is specialized by {Interp,ProjectOrthog}PolyApprox
+
+  if (combined_stats) {
+    if (combinedMoments.length() != 2) combinedMoments.resize(2);
+    combined_mean(); combined_variance();
+  }
+  else {
+    RealVector& mom1 = primaryMomIter->second;
+    if (mom1.length() != 2)            mom1.sizeUninitialized(2);
+    mean();          variance();
+    //standardize_moments(mom1);
+
+    //if (!secondaryMoments.empty()) secondaryMoments.resize(0);
+  }
+}
+
+
+void PolynomialApproximation::
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
+{
+  // default for all variables mode (2 moments) is specialized by ...
+
+  if (combined_stats) {
+    if (combinedMoments.length() != 2) combinedMoments.resize(2);
+    combined_mean(x); combined_variance(x);
+  }
+  else {
+    RealVector& mom1 = primaryMomIter->second;
+    if (mom1.length() != 2)            mom1.sizeUninitialized(2);
+    mean(x);          variance(x);
+    //standardize_moments(mom1);
+
+    //if (!secondaryMoments.empty()) secondaryMoments.resize(0);
+  }
+}
+
+
+void PolynomialApproximation::
 integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
 		  RealVector& moments)
 {
@@ -356,6 +397,10 @@ initialize_covariance(PolynomialApproximation* poly_approx_2)
 
 
 void PolynomialApproximation::clear_covariance_pointers()
+{ } // default is no-op
+
+
+void PolynomialApproximation::update_reference()
 { } // default is no-op
 
 

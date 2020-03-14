@@ -158,7 +158,7 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 
     //size_expansion(); // defer until sparse recovery
 
-    RealVector& exp_mom = expMomentsIter->second;
+    RealVector& exp_mom = primaryMomIter->second;
     if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
   }
   else // pre-allocate total-order expansion
@@ -1122,9 +1122,9 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
   bool use_tracker = (!nrand_ind.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if (use_tracker && (compMeanIter->second & 1) &&
+  if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
-    return expMomentsIter->second[0];
+    return primaryMomIter->second[0];
 
   const UShort2DArray& mi = data_rep->multi_index();
   const SizetSet& sparse_ind = sparseIndIter->second;
@@ -1147,8 +1147,8 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
   }
 
   if (use_tracker) {
-    expMomentsIter->second[0] = mean;
-    compMeanIter->second |= 1;  xPrevMean[key] = x;
+    primaryMomIter->second[0] = mean;
+    primaryMeanIter->second |= 1;  xPrevMean[key] = x;
   }
   return mean;
 }
@@ -1177,14 +1177,14 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   bool use_tracker = (!nrand_ind.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( use_tracker && (compMeanIter->second & 2) &&
+  if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
-    return momentGradsIter->second[0];
+    return primaryMomGradsIter->second[0];
 
   size_t i, j, deriv_index, num_deriv_v = dvv.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  RealVector& mean_grad = momentGradsIter->second[0];
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
   if (mean_grad.length() != num_deriv_v)
     mean_grad.sizeUninitialized(num_deriv_v);
   const UShort2DArray& mi = data_rep->multi_index();
@@ -1240,8 +1240,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
   if (use_tracker)
-    {  compMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
-  else compMeanIter->second &= ~2;          // deactivate: protect mixed use
+    {  primaryMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
+  else primaryMeanIter->second &= ~2;          // deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1325,13 +1325,13 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (same) {
     bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
       data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-    if (use_tracker && (compVarIter->second & 1))
-      return expMomentsIter->second[1];
+    if (use_tracker && (primaryVarIter->second & 1))
+      return primaryMomIter->second[1];
     else {
       Real var = variance(data_rep->multi_index(), expCoeffsIter->second,
 			  sparseIndIter->second);
       if (use_tracker)
-	{ expMomentsIter->second[1] = var; compVarIter->second |= 1; }
+	{ primaryMomIter->second[1] = var; primaryVarIter->second |= 1; }
       return var;
     }
   }
@@ -1357,13 +1357,13 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   if (same) {
     bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
       data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-    if (use_tracker && (compVarIter->second & 1))
-      return expMomentsIter->second[1];
+    if (use_tracker && (combinedVarBits & 1))
+      return combinedMoments[1];
     else {
       Real var = variance(data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  combinedSparseIndices);
       if (use_tracker)
-	{ expMomentsIter->second[1] = var; compVarIter->second |= 1; }
+	{ combinedMoments[1] = var; combinedVarBits |= 1; }
       return var;
     }
   }
@@ -1476,17 +1476,17 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  if ( use_tracker && (compVarIter->second & 1) &&
+  if ( use_tracker && (primaryVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return expMomentsIter->second[1];
+    return primaryMomIter->second[1];
 
   Real covar = covariance(x, data_rep->multi_index(), expCoeffsIter->second,
 			  sparseIndIter->second, ropa_2->expCoeffsIter->second,
 			  ropa_2->sparseIndIter->second);
 
   if (use_tracker) {
-    expMomentsIter->second[1] = covar;
-    compVarIter->second |= 1;  xPrevVar[key] = x;
+    primaryMomIter->second[1] = covar;
+    primaryVarIter->second |= 1;  xPrevVar[key] = x;
   }
   return covar;
 }
@@ -1507,18 +1507,16 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
      data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
 
-  if ( use_tracker && (compVarIter->second & 1) &&
+  if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return expMomentsIter->second[1];
+    return combinedMoments[1];
 
   Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  combinedSparseIndices, ropa_2->combinedExpCoeffs,
 			  ropa_2->combinedSparseIndices);
 
-  if (use_tracker) {
-    expMomentsIter->second[1] = covar;
-    compVarIter->second |= 1;  xPrevVar[key] = x;
-  }
+  if (use_tracker)
+    { combinedMoments[1] = covar; combinedVarBits |= 1; xPrevVar[key] = x; }
   return covar;
 }
 
@@ -1546,13 +1544,13 @@ const RealVector& RegressOrthogPolyApproximation::variance_gradient()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  if (use_tracker && (compVarIter->second & 2))
-    return momentGradsIter->second[1];
+  if (use_tracker && (primaryVarIter->second & 2))
+    return primaryMomGradsIter->second[1];
 
   const RealVector& exp_coeffs      = expCoeffsIter->second;
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
   size_t i, j, num_deriv_v = exp_coeff_grads.numRows();
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   if (var_grad.length() != num_deriv_v)
     var_grad.sizeUninitialized(num_deriv_v);
   var_grad = 0.;
@@ -1566,8 +1564,8 @@ const RealVector& RegressOrthogPolyApproximation::variance_gradient()
 
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
-  if (use_tracker) compVarIter->second |=  2; // activate bit
-  else             compVarIter->second &= ~2; // deactivate: protect mixed use
+  if (use_tracker) primaryVarIter->second |=  2;// activate bit
+  else             primaryVarIter->second &= ~2;// deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1599,14 +1597,14 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   bool use_tracker = (!nrand_ind.empty() && // all mode
     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
-  if ( use_tracker && (compVarIter->second & 2) &&
+  if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
-    return momentGradsIter->second[1];
+    return primaryMomGradsIter->second[1];
 
   size_t i, j, k, deriv_index, num_deriv_v = dvv.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   if (var_grad.length() != num_deriv_v)
     var_grad.sizeUninitialized(num_deriv_v);
   var_grad = 0.;
@@ -1678,8 +1676,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // In the case of returning a grad reference, we unconditionally update shared
   // moment storage, but protect its reuse through bit tracker deactivation
   if (use_tracker)
-    {  compVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
-  else compVarIter->second &= ~2;         // deactivate: protect mixed use
+    {  primaryVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
+  else primaryVarIter->second &= ~2;         // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -3200,7 +3198,7 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   // allocate_arrays() except for redundant size_expansion())
   allocate_total_sobol();
   allocate_component_sobol();
-  RealVector& exp_mom = expMomentsIter->second;
+  RealVector& exp_mom = primaryMomIter->second;
   if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
 }
 

@@ -86,6 +86,8 @@ protected:
   void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
+  //void update_reference();
+
   void integrate_response_moments(size_t num_moments, bool combined_stats);
   void integrate_expansion_moments(size_t num_moments, bool combined_stats);
 
@@ -876,7 +878,7 @@ inline void HierarchInterpPolyApproximation::clear_delta_computed_bits()
 
 
 inline void HierarchInterpPolyApproximation::clear_current_computed_bits()
-{ compMeanIter->second = compVarIter->second = 0; }
+{ primaryMeanIter->second = primaryVarIter->second = 0; }
 
 
 inline void HierarchInterpPolyApproximation::clear_computed_bits()
@@ -890,18 +892,18 @@ inline void HierarchInterpPolyApproximation::clear_computed_bits()
 inline void HierarchInterpPolyApproximation::increment_reference_to_current()
 {
   // update reference bits
-  short computed_mean = compMeanIter->second,
-        computed_var  =  compVarIter->second;
+  short computed_mean = primaryMeanIter->second,
+        computed_var  = primaryVarIter->second;
   compRefMeanIter->second = computed_mean;
   compRefVarIter->second  = computed_var;
 
   // update reference data
   if ( (computed_mean & 1) || (computed_var & 1) )
-    refMomentsIter->second = numMomentsIter->second;
+    refMomentsIter->second = primaryMomIter->second;
   if ( (computed_mean & 2) || (computed_var & 2) ) {
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    momentRefGradients[data_rep->activeKey] = momentGradsIter->second;
+    momentRefGradients[data_rep->activeKey] = primaryMomGradsIter->second;
   }
 
   clear_current_computed_bits(); clear_delta_computed_bits();
@@ -913,20 +915,38 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
   // update current bits
   short comp_ref_mean = compRefMeanIter->second,
         comp_ref_var  = compRefVarIter->second;
-  compMeanIter->second = comp_ref_mean;
-  compVarIter->second  = comp_ref_var;
+  primaryMeanIter->second = comp_ref_mean;
+  primaryVarIter->second  = comp_ref_var;
 
   // update current data
   if ( (comp_ref_mean & 1) || (comp_ref_var & 1) )
-    numMomentsIter->second = refMomentsIter->second;
+    primaryMomIter->second = refMomentsIter->second;
   if ( (comp_ref_mean & 2) || (comp_ref_var & 2) ) {
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    momentGradsIter->second = momentRefGradients[data_rep->activeKey];
+    primaryMomGradsIter->second = momentRefGradients[data_rep->activeKey];
   }
 
   clear_delta_computed_bits(); // clear delta bits, but retain reference
 }
+
+
+/*
+inline void HierarchInterpPolyApproximation::update_reference()
+{
+  // For ACTIVE_EXPANSION_STATS, increment_reference_to_current() (called from
+  // {increment,push}_coefficients()) and decrement_current_to_reference()
+  // (called from pop_coefficients()) can manage the preservation of previous
+  // moment computations.  In the case of a selection of an arbitrary candidate
+  // (e.g., from another model key) in an outer loop context, we instead clear
+  // the tracker bits for the affected stats for the current model key.
+
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    { clear_reference_computed_bits(); clear_current_computed_bits(); }
+}
+*/
 
 
 inline void HierarchInterpPolyApproximation::
@@ -971,7 +991,7 @@ inline void HierarchInterpPolyApproximation::
 integrate_expansion_moments(size_t num_moments, bool combined_stats)
 {
   // for now: nested interpolation is exact
-  expMomentsIter->second = numMomentsIter->second;
+  secondaryMoments = primaryMomIter->second;
 
   // a couple different ways to go with this in the future:
   // (1) evaluate hierarchical value(lev) - value(lev-1) with HSGDriver wts

@@ -125,6 +125,9 @@ protected:
   const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
     const UShortArray& key);
 
+  const RealVector& expansion_moments() const;
+  const RealVector& numerical_integration_moments() const;
+
   Real mean();
   Real mean(const RealVector& x);
   Real covariance(PolynomialApproximation* poly_approx_2);
@@ -141,12 +144,6 @@ protected:
   Real combined_covariance(PolynomialApproximation* poly_approx_2);
   Real combined_covariance(const RealVector& x,
 			   PolynomialApproximation* poly_approx_2);
-
-  /// compute expansion moments to order 2
-  void compute_moments(bool full_stats = true, bool combined_stats = false);
-  /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x, bool full_stats = true,
-		       bool combined_stats = false);
 
   //
   //- Heading: Member functions
@@ -312,37 +309,13 @@ update_active_iterators(const UShortArray& key)
 }
 
 
-inline void OrthogPolyApproximation::
-compute_moments(bool full_stats, bool combined_stats)
-{
-  // standard variables mode supports two expansion moments by default
-  // (specialized by ProjectOrthogPolyApprox)
-
-  RealVector& exp_mom = expMomentsIter->second;
-  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
-  if (combined_stats)
-    { combined_mean(); combined_variance(); } // for combinedExpCoeffs
-  else {
-    mean(); variance(); // updates first two expansionMoments
-    //standardize_moments(exp_mom);
-  }
-}
+inline const RealVector& OrthogPolyApproximation::expansion_moments() const
+{ return primaryMomIter->second; }
 
 
-inline void OrthogPolyApproximation::
-compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
-{
-  // all variables mode currently two expansion moments by default
-
-  RealVector& exp_mom = expMomentsIter->second;
-  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
-  if (combined_stats)
-    { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
-  else {
-    mean(x); variance(x); // updates first two expansionMoments
-    //standardize_moments(exp_mom);
-  }
-}
+inline const RealVector& OrthogPolyApproximation::
+numerical_integration_moments() const
+{ return secondaryMoments; }
 
 
 /** default implementation if no sparsity (overridden in
@@ -512,7 +485,7 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   // allocate_arrays() except for redundant size_expansion())
   allocate_total_sobol();
   allocate_component_sobol();
-  RealVector& exp_mom = expMomentsIter->second;
+  RealVector& exp_mom = primaryMomIter->second;
   if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
 }
 
