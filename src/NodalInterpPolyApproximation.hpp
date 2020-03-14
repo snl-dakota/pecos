@@ -747,7 +747,7 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedMeanBits & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
+      data_rep->match_nonrandom_vars(x, xPrevCombMean))
     return combinedMoments[0];
 
   // *** Important: active key must be set at maximal grid so that
@@ -756,7 +756,7 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
   Real mu = mean(x, combinedExpT1Coeffs, combinedExpT2Coeffs);
 
   if (use_tracker)
-    { combinedMoments[0] = mu;  combinedMeanBits |= 1;  xPrevMean[key] = x; }
+    { combinedMoments[0] = mu;  combinedMeanBits |= 1;  xPrevCombMean = x; }
   return mu;
 }
 
@@ -802,7 +802,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
      data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (combinedVarBits & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+       data_rep->match_nonrandom_vars(x, xPrevCombVar) )
     return combinedMoments[1];
 
   // *** Important: active key must be set at maximal grid so that
@@ -821,7 +821,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 		 nip_approx_2->combinedExpT2Coeffs);
 
   if (use_tracker)
-    { combinedMoments[1] = covar;  combinedVarBits |= 1;  xPrevVar[key] = x; }
+    { combinedMoments[1] = covar;  combinedVarBits |= 1;  xPrevCombVar = x; }
   return covar;
 }
 

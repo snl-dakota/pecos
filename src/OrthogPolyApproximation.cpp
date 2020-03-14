@@ -841,7 +841,7 @@ Real OrthogPolyApproximation::combined_mean(const RealVector& x)
     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedMeanBits & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
+      data_rep->match_nonrandom_vars(x, xPrevCombMean))
     return combinedMoments[0];
 
   Real mean = combinedExpCoeffs[0];
@@ -854,7 +854,7 @@ Real OrthogPolyApproximation::combined_mean(const RealVector& x)
 	data_rep->multivariate_polynomial(x, comb_mi[i], nrand_ind);
 
   if (use_tracker)
-    { combinedMoments[0] = mean;  combinedMeanBits |= 1;  xPrevMean[key] = x; }
+    { combinedMoments[0] = mean;  combinedMeanBits |= 1;  xPrevCombMean = x; }
   return mean;
 }
 
@@ -892,14 +892,14 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   const UShortArray& key = data_rep->activeKey;
 
   if ( use_tracker && (combinedVarBits & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+       data_rep->match_nonrandom_vars(x, xPrevCombVar) )
     return combinedMoments[1];
 
   Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
 			  opa_2->combinedExpCoeffs);
 
   if (use_tracker)
-    { combinedMoments[1] = covar;  combinedVarBits |= 1;  xPrevVar[key] = x; }
+    { combinedMoments[1] = covar;  combinedVarBits |= 1;  xPrevCombVar = x; }
   return covar;
 }
 

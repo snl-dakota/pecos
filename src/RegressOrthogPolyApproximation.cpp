@@ -1508,7 +1508,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   const UShortArray& key = data_rep->activeKey;
 
   if ( use_tracker && (combinedVarBits & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+       data_rep->match_nonrandom_vars(x, xPrevCombVar) )
     return combinedMoments[1];
 
   Real covar = covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
@@ -1516,7 +1516,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 			  ropa_2->combinedSparseIndices);
 
   if (use_tracker)
-    { combinedMoments[1] = covar; combinedVarBits |= 1; xPrevVar[key] = x; }
+    { combinedMoments[1] = covar; combinedVarBits |= 1; xPrevCombVar = x; }
   return covar;
 }
 

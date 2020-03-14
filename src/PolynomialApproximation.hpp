@@ -422,11 +422,6 @@ protected:
   std::map<UShortArray, RealVector> primaryMoments;
   /// iterator to active entry in primaryMoments
   std::map<UShortArray, RealVector>::iterator primaryMomIter;
-  /// gradient of mean/variance/etc. for the primary moments (expansion
-  /// for OrthogPoly, numerical for InterpPoly) 
-  std::map<UShortArray, RealVectorArray> primaryMomentGrads;
-  /// iterator to active entry in primaryMomentGrads
-  std::map<UShortArray, RealVectorArray>::iterator primaryMomGradsIter;
   /// track computation of mean and mean gradient to avoid unnecessary
   /// recomputation
   std::map<UShortArray, short> primaryMeanBits;
@@ -437,6 +432,24 @@ protected:
   std::map<UShortArray, short> primaryVarBits;
   /// iterator to active entry in primaryVarBits
   std::map<UShortArray, short>::iterator primaryVarIter;
+  /// track previous evaluation point for all_variables mean to avoid
+  /// unnecessary recomputation
+  std::map<UShortArray, RealVector> xPrevMean;
+  /// track previous evaluation point for all_variables variance to
+  /// avoid unnecessary recomputation
+  std::map<UShortArray, RealVector> xPrevVar;
+
+  /// gradient of mean/variance/etc. for the primary moments (expansion
+  /// for OrthogPoly, numerical for InterpPoly) 
+  std::map<UShortArray, RealVectorArray> primaryMomentGrads;
+  /// iterator to active entry in primaryMomentGrads
+  std::map<UShortArray, RealVectorArray>::iterator primaryMomGradsIter;
+  /// track previous evaluation point for all_variables mean gradient
+  /// to avoid unnecessary recomputation
+  std::map<UShortArray, RealVector> xPrevMeanGrad;
+  /// track previous evaluation point for all_variables variance
+  /// gradient to avoid unnecessary recomputation
+  std::map<UShortArray, RealVector> xPrevVarGrad;
 
   /// alternate non-active moments (numerical for OrthogPolyApproximation or
   /// expansion for InterpPolyApproximation).  These are computed in final
@@ -451,19 +464,12 @@ protected:
   /// track computation of combined variance and combined variance
   /// gradient to avoid unnecessary recomputation
   short combinedVarBits;
-
-  /// track previous evaluation point for all_variables mean to avoid
+  /// track previous evaluation point for all_variables combined mean to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevMean;
-  /// track previous evaluation point for all_variables mean gradient
-  /// to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevMeanGrad;
-  /// track previous evaluation point for all_variables variance to
+  RealVector xPrevCombMean;
+  /// track previous evaluation point for all_variables combined variance to
   /// avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevVar;
-  /// track previous evaluation point for all_variables variance
-  /// gradient to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevVarGrad;
+  RealVector xPrevCombVar;
 
   /// global sensitivities as given by Sobol'
   RealVector sobolIndices;
@@ -481,7 +487,8 @@ private:
 inline PolynomialApproximation::
 PolynomialApproximation(const SharedBasisApproxData& shared_data):
   BasisApproximation(BaseConstructor(), shared_data), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), primaryMomIter(primaryMoments.end())
+  expansionCoeffGradFlag(false), primaryMomIter(primaryMoments.end()),
+  combinedMeanBits(0), combinedVarBits(0)
 { }
 
 
@@ -537,7 +544,13 @@ inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
 
 
 inline void PolynomialApproximation::clear_computed_bits()
-{ primaryMeanIter->second = primaryVarIter->second = 0; }
+{
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    { combinedMeanBits        = combinedVarBits        = 0; }
+  else
+    { primaryMeanIter->second = primaryVarIter->second = 0; }
+}
 
 
 inline const RealVector& PolynomialApproximation::moments() const

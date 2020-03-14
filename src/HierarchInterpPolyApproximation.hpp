@@ -645,50 +645,80 @@ private:
   /// subtractive cancellation (E[R_i R_j] - Mean_i Mean_j)
   bool speedOverPrecision;
 
+  /// storage for reference mean and variance
+  std::map<UShortArray, RealVector> primaryRefMoments;
+  /// iterator to active entry in primaryRefMoments
+  std::map<UShortArray, RealVector>::iterator primaryRefMomIter;
   /// bookkeeping to track computation of reference mean to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> computedRefMean;
-  /// iterator to active entry in computedRefMean
-  std::map<UShortArray, short>::iterator compRefMeanIter;
-  /// bookkeeping to track computation of mean increment to avoid
-  /// unnecessary recomputation
-  std::map<UShortArray, short> computedDeltaMean;
-  /// iterator to active entry in computedDeltaMean
-  std::map<UShortArray, short>::iterator compDeltaMeanIter;
+  std::map<UShortArray, short> primaryRefMean;
+  /// iterator to active entry in primaryRefMean
+  std::map<UShortArray, short>::iterator primaryRefMeanIter;
   /// bookkeeping to track computation of reference variance to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> computedRefVariance;
-  /// iterator to active entry in computedRefVariance
-  std::map<UShortArray, short>::iterator compRefVarIter;
-  /// bookkeeping to track computation of variance increment to avoid
-  /// unnecessary recomputation
-  std::map<UShortArray, short> computedDeltaVariance;
-  /// iterator to active entry in computedDeltaVariance
-  std::map<UShortArray, short>::iterator compDeltaVarIter;
-
+  std::map<UShortArray, short> primaryRefVariance;
+  /// iterator to active entry in primaryRefVariance
+  std::map<UShortArray, short>::iterator primaryRefVarIter;
   /// track previous evaluation point for all_variables reference mean
   /// to avoid unnecessary recomputation
   std::map<UShortArray, RealVector> xPrevRefMean;
-  /// track previous evaluation point for all_variables mean increment
-  /// to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevDeltaMean;
   /// track previous evaluation point for all_variables reference
   /// variance to avoid unnecessary recomputation
   std::map<UShortArray, RealVector> xPrevRefVar;
+
+  /// storage for reference moment gradients (mean, variance)
+  std::map<UShortArray, RealVectorArray> momentRefGradients;
+
+  /// storage for mean and variance increments
+  std::map<UShortArray, RealVector> primaryDeltaMoments;
+  /// iterator to active entry in primaryDeltaMoments
+  std::map<UShortArray, RealVector>::iterator primaryDeltaMomIter;
+  /// bookkeeping to track computation of mean increment to avoid
+  /// unnecessary recomputation
+  std::map<UShortArray, short> primaryDeltaMean;
+  /// iterator to active entry in primaryDeltaMean
+  std::map<UShortArray, short>::iterator primaryDeltaMeanIter;
+  /// bookkeeping to track computation of variance increment to avoid
+  /// unnecessary recomputation
+  std::map<UShortArray, short> primaryDeltaVariance;
+  /// iterator to active entry in primaryDeltaVariance
+  std::map<UShortArray, short>::iterator primaryDeltaVarIter;
+  /// track previous evaluation point for all_variables mean increment
+  /// to avoid unnecessary recomputation
+  std::map<UShortArray, RealVector> xPrevDeltaMean;
   /// track previous evaluation point for all_variables variance
   /// increment to avoid unnecessary recomputation
   std::map<UShortArray, RealVector> xPrevDeltaVar;
 
-  /// storage for reference mean and variance
-  std::map<UShortArray, RealVector> referenceMoments;
-  /// iterator to active entry in referenceMoments
-  std::map<UShortArray, RealVector>::iterator refMomentsIter;
-  /// storage for mean and variance increments
-  std::map<UShortArray, RealVector> deltaMoments;
-  /// iterator to active entry in deltaMoments
-  std::map<UShortArray, RealVector>::iterator deltaMomentsIter;
-  /// storage for reference moment gradients (mean, variance)
-  std::map<UShortArray, RealVectorArray> momentRefGradients;
+  /// moments resulting from expansion roll-up across model index keys
+  RealVector combinedRefMoments;
+  /// track computation of combined mean and combined mean gradient to
+  /// avoid unnecessary recomputation
+  short combinedRefMeanBits;
+  /// track computation of combined variance and combined variance
+  /// gradient to avoid unnecessary recomputation
+  short combinedRefVarBits;
+  /// track previous evaluation point for all_variables combined reference mean
+  /// to avoid unnecessary recomputation
+  RealVector xPrevCombRefMean;
+  /// track previous evaluation point for all_variables combined reference
+  /// variance to avoid unnecessary recomputation
+  RealVector xPrevCombRefVar;
+
+  /// moments resulting from expansion roll-up across model index keys
+  RealVector combinedDeltaMoments;
+  /// track computation of combined mean and combined mean gradient to
+  /// avoid unnecessary recomputation
+  short combinedDeltaMeanBits;
+  /// track computation of combined variance and combined variance
+  /// gradient to avoid unnecessary recomputation
+  short combinedDeltaVarBits;
+  /// track previous evaluation point for all_variables combined delta mean
+  /// to avoid unnecessary recomputation
+  RealVector xPrevCombDeltaMean;
+  /// track previous evaluation point for all_variables combined delta
+  /// variance to avoid unnecessary recomputation
+  RealVector xPrevCombDeltaVar;
 
   /// the type1 coefficients of the expansion for interpolating values
   std::map<UShortArray, RealVector2DArray> expansionType1Coeffs;
@@ -757,7 +787,9 @@ HierarchInterpPolyApproximation(const SharedBasisApproxData& shared_data):
   InterpPolyApproximation(shared_data),
   expT1CoeffsIter(expansionType1Coeffs.end()),
   prodT1CoeffsIter(productType1Coeffs.end()),
-  prodT2CoeffsIter(productType2Coeffs.end()), speedOverPrecision(false)
+  prodT2CoeffsIter(productType2Coeffs.end()), combinedRefMeanBits(0),
+  combinedRefVarBits(0), combinedDeltaMeanBits(0), combinedDeltaVarBits(0),
+  speedOverPrecision(false)
 { }
 
 
@@ -808,36 +840,36 @@ update_active_iterators(const UShortArray& key)
     }
   }
 
-  compRefMeanIter = computedRefMean.find(key);
-  if (compRefMeanIter == computedRefMean.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
-    compRefMeanIter = computedRefMean.insert(us_pair).first;
+  primaryRefMomIter = primaryRefMoments.find(key);
+  if (primaryRefMomIter == primaryRefMoments.end()) {
+    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    primaryRefMomIter = primaryRefMoments.insert(rv_pair).first;
   }
-  compDeltaMeanIter = computedDeltaMean.find(key);
-  if (compDeltaMeanIter == computedDeltaMean.end()) {
+  primaryRefMeanIter = primaryRefMean.find(key);
+  if (primaryRefMeanIter == primaryRefMean.end()) {
     std::pair<UShortArray, short> us_pair(key, 0);
-    compDeltaMeanIter = computedDeltaMean.insert(us_pair).first;
+    primaryRefMeanIter = primaryRefMean.insert(us_pair).first;
   }
-  compRefVarIter = computedRefVariance.find(key);
-  if (compRefVarIter == computedRefVariance.end()) {
+  primaryRefVarIter = primaryRefVariance.find(key);
+  if (primaryRefVarIter == primaryRefVariance.end()) {
     std::pair<UShortArray, short> us_pair(key, 0);
-    compRefVarIter = computedRefVariance.insert(us_pair).first;
-  }
-  compDeltaVarIter = computedDeltaVariance.find(key);
-  if (compDeltaVarIter == computedDeltaVariance.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
-    compDeltaVarIter = computedDeltaVariance.insert(us_pair).first;
+    primaryRefVarIter = primaryRefVariance.insert(us_pair).first;
   }
 
-  refMomentsIter = referenceMoments.find(key);
-  if (refMomentsIter == referenceMoments.end()) {
+  primaryDeltaMomIter = primaryDeltaMoments.find(key);
+  if (primaryDeltaMomIter == primaryDeltaMoments.end()) {
     std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
-    refMomentsIter = referenceMoments.insert(rv_pair).first;
+    primaryDeltaMomIter = primaryDeltaMoments.insert(rv_pair).first;
   }
-  deltaMomentsIter = deltaMoments.find(key);
-  if (deltaMomentsIter == deltaMoments.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
-    deltaMomentsIter = deltaMoments.insert(rv_pair).first;
+  primaryDeltaMeanIter = primaryDeltaMean.find(key);
+  if (primaryDeltaMeanIter == primaryDeltaMean.end()) {
+    std::pair<UShortArray, short> us_pair(key, 0);
+    primaryDeltaMeanIter = primaryDeltaMean.insert(us_pair).first;
+  }
+  primaryDeltaVarIter = primaryDeltaVariance.find(key);
+  if (primaryDeltaVarIter == primaryDeltaVariance.end()) {
+    std::pair<UShortArray, short> us_pair(key, 0);
+    primaryDeltaVarIter = primaryDeltaVariance.insert(us_pair).first;
   }
 
   InterpPolyApproximation::update_active_iterators(key);
@@ -870,15 +902,29 @@ inline void HierarchInterpPolyApproximation::clear_covariance_pointers()
 
 
 inline void HierarchInterpPolyApproximation::clear_reference_computed_bits()
-{ compRefMeanIter->second = compRefVarIter->second = 0; }// clear reference bits
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    { combinedRefMeanBits        = combinedRefVarBits        = 0; }
+  else
+    { primaryRefMeanIter->second = primaryRefVarIter->second = 0; }
+}
 
 
 inline void HierarchInterpPolyApproximation::clear_delta_computed_bits()
-{ compDeltaMeanIter->second = compDeltaVarIter->second = 0; }// clear delta bits
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    { combinedDeltaMeanBits        = combinedDeltaVarBits        = 0; }
+  else
+    { primaryDeltaMeanIter->second = primaryDeltaVarIter->second = 0; }
+}
 
 
 inline void HierarchInterpPolyApproximation::clear_current_computed_bits()
-{ primaryMeanIter->second = primaryVarIter->second = 0; }
+{ PolynomialApproximation::clear_computed_bits(); }
 
 
 inline void HierarchInterpPolyApproximation::clear_computed_bits()
@@ -894,12 +940,12 @@ inline void HierarchInterpPolyApproximation::increment_reference_to_current()
   // update reference bits
   short computed_mean = primaryMeanIter->second,
         computed_var  = primaryVarIter->second;
-  compRefMeanIter->second = computed_mean;
-  compRefVarIter->second  = computed_var;
+  primaryRefMeanIter->second = computed_mean;
+  primaryRefVarIter->second  = computed_var;
 
   // update reference data
   if ( (computed_mean & 1) || (computed_var & 1) )
-    refMomentsIter->second = primaryMomIter->second;
+    primaryRefMomIter->second = primaryMomIter->second;
   if ( (computed_mean & 2) || (computed_var & 2) ) {
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -913,14 +959,14 @@ inline void HierarchInterpPolyApproximation::increment_reference_to_current()
 inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
 {
   // update current bits
-  short comp_ref_mean = compRefMeanIter->second,
-        comp_ref_var  = compRefVarIter->second;
+  short comp_ref_mean = primaryRefMeanIter->second,
+        comp_ref_var  = primaryRefVarIter->second;
   primaryMeanIter->second = comp_ref_mean;
   primaryVarIter->second  = comp_ref_var;
 
   // update current data
   if ( (comp_ref_mean & 1) || (comp_ref_var & 1) )
-    primaryMomIter->second = refMomentsIter->second;
+    primaryMomIter->second = primaryRefMomIter->second;
   if ( (comp_ref_mean & 2) || (comp_ref_var & 2) ) {
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
