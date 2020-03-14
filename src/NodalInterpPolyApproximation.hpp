@@ -472,8 +472,8 @@ inline Real NodalInterpPolyApproximation::mean()
   //	  << "NodalInterpPolyApproximation::mean()" << std::endl;
   //  abort_handler(-1);
   //}
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryMeanIter->second & 1))
     return primaryMomIter->second[0];
 
@@ -499,8 +499,8 @@ inline Real NodalInterpPolyApproximation::mean(const RealVector& x)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
@@ -527,8 +527,8 @@ inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryMeanIter->second & 2))
     return primaryMomGradsIter->second[0];
 
@@ -546,8 +546,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
@@ -584,9 +584,8 @@ covariance(PolynomialApproximation* poly_approx_2)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker =
-    (same && data_rep->nonRandomIndices.empty() && // std mode
-     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   // TO DO:
   //IntegrationDriver* driver_rep = data_rep->driverRep;
   //if (!driver_rep->track_unique_product_weights()) {
@@ -627,9 +626,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker =
-    (same && !data_rep->nonRandomIndices.empty() && // all mode
-     data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
@@ -669,8 +667,8 @@ inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryVarIter->second & 2))
     return primaryMomGradsIter->second[1];
 
@@ -690,8 +688,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   // if already computed, return previous result
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
@@ -724,8 +722,8 @@ inline Real NodalInterpPolyApproximation::combined_mean()
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedMeanBits & 1))
     return combinedMoments[0];
 
@@ -743,8 +741,8 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombMean))
@@ -768,9 +766,9 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
     = (NodalInterpPolyApproximation*)poly_approx_2;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker =
-    (this == nip_approx_2 && data_rep->nonRandomIndices.empty() && // same, std
-     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker
+    = (this == nip_approx_2 && data_rep->nonRandomIndices.empty()); // same, std
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedVarBits & 1))
     return combinedMoments[1];
 
@@ -797,9 +795,9 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     = (NodalInterpPolyApproximation*)poly_approx_2;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker =
-    (this == nip_approx_2 && !data_rep->nonRandomIndices.empty() && // same, all
-     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker
+    = (this == nip_approx_2 && !data_rep->nonRandomIndices.empty());// same, all
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevCombVar) )

@@ -1279,8 +1279,8 @@ Real HierarchInterpPolyApproximation::mean()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryMeanIter->second & 1))
     return primaryMomIter->second[0];
 
@@ -1303,8 +1303,8 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
@@ -1324,8 +1324,8 @@ Real HierarchInterpPolyApproximation::combined_mean()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedMeanBits & 1))
     return combinedMoments[0];
 
@@ -1346,8 +1346,8 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombMean))
@@ -1380,8 +1380,8 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 2))
     return primaryMomGradsIter->second[0];
@@ -1413,8 +1413,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   // if already computed, return previous result
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
@@ -1500,8 +1500,8 @@ covariance(PolynomialApproximation* poly_approx_2)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (same && data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryVarIter->second & 1))
     return primaryMomIter->second[1];
 
@@ -1539,8 +1539,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (same && !data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
 
   if ( use_tracker && (primaryVarIter->second & 1) &&
@@ -1576,9 +1576,9 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2), use_tracker =
-    (same && data_rep->nonRandomIndices.empty() && // same, std
-     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && data_rep->nonRandomIndices.empty()); // same, std
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedVarBits & 1))
     return combinedMoments[1];
 
@@ -1619,9 +1619,9 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2), use_tracker =
-    (same && !data_rep->nonRandomIndices.empty() && // same, all
-     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && !data_rep->nonRandomIndices.empty()); // same, all
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevCombVar) )
@@ -1671,8 +1671,8 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryVarIter->second & 2))
     return primaryMomGradsIter->second[1];
@@ -1705,8 +1705,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // if already computed, return previous result
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
@@ -1796,8 +1796,8 @@ reference_mean(const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryRefMeanIter->second & 1))
     return primaryRefMomIter->second[0];
 
@@ -1817,8 +1817,8 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryRefMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefMean[key]))
@@ -1841,8 +1841,8 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedRefMeanBits & 1))
     return combinedRefMoments[0];
 
@@ -1865,8 +1865,8 @@ reference_combined_mean(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedRefMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombRefMean))
@@ -1891,8 +1891,8 @@ reference_variance(const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryRefVarIter->second & 1))
     return primaryRefMomIter->second[1];
 
@@ -1920,8 +1920,8 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryRefVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefVar[key]))
@@ -1953,8 +1953,8 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedRefVarBits & 1))
     return combinedRefMoments[1];
 
@@ -1988,8 +1988,8 @@ reference_combined_variance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedRefVarBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombRefVar))
@@ -2025,8 +2025,8 @@ Real HierarchInterpPolyApproximation::delta_mean()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryDeltaMeanIter->second & 1))
     return primaryDeltaMomIter->second[0];
 
@@ -2048,8 +2048,8 @@ Real HierarchInterpPolyApproximation::delta_mean(const UShort2DArray& incr_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryDeltaMeanIter->second & 1))
     return primaryDeltaMomIter->second[0];
 
@@ -2068,8 +2068,8 @@ Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
@@ -2094,8 +2094,8 @@ delta_mean(const RealVector& x, const UShort2DArray& incr_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
@@ -2119,8 +2119,8 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedDeltaMeanBits & 1))
     return combinedDeltaMoments[0];
 
@@ -2151,8 +2151,8 @@ delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedDeltaMeanBits & 1))
     return combinedDeltaMoments[0];
 
@@ -2179,8 +2179,8 @@ Real HierarchInterpPolyApproximation::delta_combined_mean(const RealVector& x)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedDeltaMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombDeltaMean))
@@ -2214,8 +2214,8 @@ delta_combined_mean(const RealVector& x,
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedDeltaMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombDeltaMean))
@@ -2244,8 +2244,8 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryDeltaVarIter->second & 1))
     return primaryDeltaMomIter->second[1];
 
@@ -2282,8 +2282,8 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryDeltaVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
@@ -2323,8 +2323,8 @@ delta_combined_variance(
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedDeltaVarBits & 1))
     return combinedDeltaMoments[1];
 
@@ -2363,8 +2363,8 @@ delta_combined_variance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (!data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedDeltaVarBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombDeltaVar))
@@ -2682,8 +2682,8 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (same && data_rep->nonRandomIndices.empty() && // std mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   // Supports multiple grid increments in discerning nominal from delta based
   // on isotropic/anisotropic/generalized index set increments.  In current
   // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
@@ -2740,8 +2740,8 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool use_tracker = (same && !data_rep->nonRandomIndices.empty() && // all mode
-    data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (primaryDeltaVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
@@ -2787,9 +2787,9 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
     (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2), use_tracker =
-    (same && data_rep->nonRandomIndices.empty() && // same, std
-     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && data_rep->nonRandomIndices.empty()); // same, std
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedDeltaVarBits & 1))
     return combinedDeltaMoments[1];
   
@@ -2837,9 +2837,9 @@ delta_combined_covariance(const RealVector& x,
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool same = (this == hip_approx_2), use_tracker =
-    (same && !data_rep->nonRandomIndices.empty() && // same, all
-     data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && !data_rep->nonRandomIndices.empty()); // same, all
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
   if (use_tracker && (combinedDeltaVarBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombDeltaVar))
