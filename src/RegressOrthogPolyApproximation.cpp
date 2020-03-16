@@ -423,6 +423,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     break;
   }
   }
+
+  if (combinedMoments.length() != 2) combinedMoments.sizeUninitialized(2);
 }
 
 

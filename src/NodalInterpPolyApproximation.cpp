@@ -334,6 +334,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
     write_data(PCout, combinedExpT1CoeffGrads, false, true, true);
   }
 #endif // DEBUG
+
+  if (combinedMoments.length() != 2) combinedMoments.sizeUninitialized(2);  
 }
 
 

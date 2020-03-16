@@ -76,9 +76,9 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 
   if (ec_options.refineControl) {
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
-    if (primaryRefMomIter->second.empty())
+    if (primaryRefMomIter->second.length() != num_moments)
       primaryRefMomIter->second.sizeUninitialized(num_moments);
-    if (primaryDeltaMomIter->second.empty())
+    if (primaryDeltaMomIter->second.length() != num_moments)
       primaryDeltaMomIter->second.sizeUninitialized(num_moments);
   }
 }
@@ -802,6 +802,13 @@ void HierarchInterpPolyApproximation::combine_coefficients()
       }
     }
   }
+
+  if (combinedMoments.length() != 2)
+    combinedMoments.sizeUninitialized(2);
+  if (combinedRefMoments.length() != 2)
+    combinedRefMoments.sizeUninitialized(2);
+  if (combinedDeltaMoments.length() != 2)
+    combinedDeltaMoments.sizeUninitialized(2);
 }
 
 

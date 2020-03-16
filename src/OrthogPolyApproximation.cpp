@@ -164,6 +164,8 @@ void OrthogPolyApproximation::combine_coefficients()
     print_coefficients(PCout, data_rep->combinedMultiIndex, combinedExpCoeffs,
 		       false);
   }
+
+  if (combinedMoments.length() != 2) combinedMoments.sizeUninitialized(2);
 }
 
 
