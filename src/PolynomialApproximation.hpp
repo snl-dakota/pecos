@@ -353,6 +353,7 @@ protected:
   SurrogateData& surrogate_data();
 
   void compute_coefficients();
+  void combined_to_active(bool clear_combined = true);
 
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
@@ -392,6 +393,11 @@ protected:
   void allocate_component_sobol();
   /// size total Sobol arrays
   void allocate_total_sobol();
+
+  /// zero out bit trackers for active moments
+  void clear_active_bits();
+  /// zero out bit trackers for combined moments
+  void clear_combined_bits();
 
   //
   //- Heading: Data
@@ -543,13 +549,21 @@ inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
 { surrData = data; }
 
 
+inline void PolynomialApproximation::clear_active_bits()
+{ primaryMeanIter->second = primaryVarIter->second = 0; }
+
+
+inline void PolynomialApproximation::clear_combined_bits()
+{ combinedMeanBits        = combinedVarBits        = 0; }
+
+
 inline void PolynomialApproximation::clear_computed_bits()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { combinedMeanBits        = combinedVarBits        = 0; }
-  else
-    { primaryMeanIter->second = primaryVarIter->second = 0; }
+  //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    clear_combined_bits();
+  //else
+    clear_active_bits();
 }
 
 

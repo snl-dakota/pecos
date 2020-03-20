@@ -603,11 +603,11 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
   /* Prior to activeKey tracking for computed bits and cached moments:
   bool updated = update_active_iterators(data_rep->activeKey);
   if (updated) clear_computed_bits();
-  else         clear_current_computed_bits(); //clear_delta_computed_bits();
+  else         clear_current_bits(); //clear_delta_bits();
   */
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(data_rep->activeKey);
-  clear_current_computed_bits(); //clear_delta_computed_bits();
+  clear_current_bits(); //clear_delta_bits();
 
   promote_all_popped_coefficients();
 }
@@ -698,10 +698,6 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
-
-  // Note: computed bits are also cleared when refineStatsType is changed
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    clear_computed_bits(); // increment: clear_current_computed_bits() ?
 
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -809,6 +805,9 @@ void HierarchInterpPolyApproximation::combine_coefficients()
     combinedRefMoments.sizeUninitialized(2);
   if (combinedDeltaMoments.length() != 2)
     combinedDeltaMoments.sizeUninitialized(2);
+
+  clear_combined_bits();                                        // base
+  clear_reference_combined_bits(); clear_delta_combined_bits(); // derived
 }
 
 
@@ -843,21 +842,40 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   // processing (integration, VBD, etc.) for the combined-now-active coeffs
   synthetic_surrogate_data(surrData); // overwrite data for activeKey
 
-  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
-  // multifidelity_expansion()), then previous active stats are invalidated.
-  // But if outgoing stats type is combined, then can avoid recomputation
-  // and carry over current moment stats from combined to active. 
-  // Note: due to this carry-over optimization, updating of stats type from
-  //       COMBINED to ACTIVE must follow this function
-  // Note: reference and delta are less important to reuse in the context of
-  //       final active processing, so clear these tracker bits for simplicity
-  //       (even though they could be preserved as well with sufficient care).
+  // migrate reference moments (for completeness)
+  primaryRefMeanIter->second = combinedRefMeanBits;
+  primaryRefVarIter->second  = combinedRefVarBits;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { clear_reference_computed_bits(); clear_delta_computed_bits(); }
-  else // previous active coeffs overwritten -> all moments invalidated
-    clear_computed_bits();
+  bool all_vars = !data_rep->nonRandomIndices.empty();
+  const UShortArray& key = data_rep->activeKey;
+  if (all_vars) {
+    xPrevRefMean[key] = xPrevCombRefMean;
+    xPrevRefVar[key]  = xPrevCombRefVar;
+  }
+  if (clear_combined) {
+    primaryRefMomIter->second.swap(combinedRefMoments);
+    combinedRefMoments.resize(0);
+    clear_reference_combined_bits();
+  }
+  else
+    primaryRefMomIter->second = combinedRefMoments; // deep copy
+  // migrate delta moments (for completeness)
+  primaryDeltaMeanIter->second = combinedDeltaMeanBits;
+  primaryDeltaVarIter->second  = combinedDeltaVarBits;
+  if (all_vars) {
+    xPrevDeltaMean[key] = xPrevCombDeltaMean;
+    xPrevDeltaVar[key]  = xPrevCombDeltaVar;
+  }
+  if (clear_combined) {
+    primaryDeltaMomIter->second.swap(combinedMoments);
+    combinedDeltaMoments.resize(0);
+    clear_delta_combined_bits();
+  }
+  else
+    primaryDeltaMomIter->second = combinedDeltaMoments; // deep copy
+  // migrate current moments
+  PolynomialApproximation::combined_to_active(clear_combined);
 }
 
 

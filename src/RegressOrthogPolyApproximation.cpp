@@ -308,10 +308,6 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
 
-  // Note: computed bits are also cleared when refineStatsType is changed
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    clear_computed_bits();
-
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   // support mixed case using simple approach of populating the missing
@@ -425,6 +421,7 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   }
 
   if (combinedMoments.length() != 2) combinedMoments.sizeUninitialized(2);
+  clear_combined_bits();
 }
 
 

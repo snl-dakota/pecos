@@ -199,10 +199,6 @@ void NodalInterpPolyApproximation::combine_coefficients()
   // iterators are used below to avoid additional key lookups in stored_*()
   update_active_iterators(data_rep->activeKey);
 
-  // Note: computed bits are also cleared when refineStatsType is changed
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    clear_computed_bits();
-  
   short combine_type = data_rep->expConfigOptions.combineType;
   std::map<UShortArray, RealVector>::iterator ec1_it;
   std::map<UShortArray, RealMatrix>::iterator ec2_it
@@ -336,6 +332,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
 #endif // DEBUG
 
   if (combinedMoments.length() != 2) combinedMoments.sizeUninitialized(2);  
+  clear_combined_bits();
 }
 
 
@@ -375,21 +372,11 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
       expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep copy
   }
 
-  // resize sobolIndices to sync with resize of sobolIndexMap
-  allocate_component_sobol();
-
   // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
   // processing (integration, VBD, etc.) for the combined-now-active coeffs
   synthetic_surrogate_data(surrData); // overwrite data for activeKey
 
-  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
-  // multifidelity_expansion()), then previous active stats are invalidated.
-  // But if outgoing stats type is combined, then can avoid recomputation
-  // and carry over current moment stats from combined to active. 
-  // Note: due to this carry-over optimization, updating of stats type from
-  //       COMBINED to ACTIVE must follow this function
-  if (data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS)
-    clear_computed_bits();
+  PolynomialApproximation::combined_to_active(clear_combined);
 }
 
 

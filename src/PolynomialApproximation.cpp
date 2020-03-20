@@ -180,6 +180,29 @@ generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
 }
 
 
+void PolynomialApproximation::combined_to_active(bool clear_combined)
+{
+  allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+
+  // migrate moments
+  primaryMeanIter->second = combinedMeanBits;
+  primaryVarIter->second  = combinedVarBits;
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (!data_rep->nonRandomIndices.empty()) {
+    const UShortArray& key = data_rep->activeKey;
+    xPrevMean[key] = xPrevCombMean;
+    xPrevVar[key]  = xPrevCombVar;
+  }
+  if (clear_combined) {
+    primaryMomIter->second.swap(combinedMoments);
+    combinedMoments.resize(0);
+    clear_combined_bits();
+  }
+  else
+    primaryMomIter->second = combinedMoments; // deep copy
+}
+
+
 void PolynomialApproximation::
 compute_moments(bool full_stats, bool combined_stats)
 {

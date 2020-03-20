@@ -176,11 +176,19 @@ private:
   void synthetic_surrogate_data(SurrogateData& surr_data);
 
   /// reset computedRef* to zero
-  void clear_reference_computed_bits();
+  void clear_reference_active_bits();
+  /// reset computedRef* to zero
+  void clear_reference_combined_bits();
+  /// reset computedRef* to zero
+  void clear_reference_bits();
   /// reset computedDelta* to zero
-  void clear_delta_computed_bits();
+  void clear_delta_active_bits();
+  /// reset computedDelta* to zero
+  void clear_delta_combined_bits();
+  /// reset computedDelta* to zero
+  void clear_delta_bits();
   /// reset all computed bit states to zero
-  void clear_current_computed_bits();
+  void clear_current_bits();
 
   /// compute the value at a point for a particular interpolation level
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
@@ -667,7 +675,7 @@ private:
   std::map<UShortArray, RealVector> xPrevRefVar;
 
   /// storage for reference moment gradients (mean, variance)
-  std::map<UShortArray, RealVectorArray> momentRefGradients;
+  std::map<UShortArray, RealVectorArray> primaryRefMomGrads;
 
   /// storage for mean and variance increments
   std::map<UShortArray, RealVector> primaryDeltaMoments;
@@ -901,79 +909,105 @@ inline void HierarchInterpPolyApproximation::clear_covariance_pointers()
 { covariancePointers.clear(); }
 
 
-inline void HierarchInterpPolyApproximation::clear_reference_computed_bits()
+inline void HierarchInterpPolyApproximation::clear_reference_active_bits()
+{ primaryRefMeanIter->second = primaryRefVarIter->second = 0; }
+
+
+inline void HierarchInterpPolyApproximation::clear_reference_combined_bits()
+{ combinedRefMeanBits        = combinedRefVarBits        = 0; }
+
+
+inline void HierarchInterpPolyApproximation::clear_reference_bits()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { combinedRefMeanBits        = combinedRefVarBits        = 0; }
-  else
-    { primaryRefMeanIter->second = primaryRefVarIter->second = 0; }
+  //SharedHierarchInterpPolyApproxData* data_rep
+  //  = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    clear_reference_combined_bits();
+  //else
+    clear_reference_active_bits();
 }
 
 
-inline void HierarchInterpPolyApproximation::clear_delta_computed_bits()
+inline void HierarchInterpPolyApproximation::clear_delta_active_bits()
+{ primaryDeltaMeanIter->second = primaryDeltaVarIter->second = 0; }
+
+
+inline void HierarchInterpPolyApproximation::clear_delta_combined_bits()
+{ combinedDeltaMeanBits        = combinedDeltaVarBits        = 0; }
+
+
+inline void HierarchInterpPolyApproximation::clear_delta_bits()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { combinedDeltaMeanBits        = combinedDeltaVarBits        = 0; }
-  else
-    { primaryDeltaMeanIter->second = primaryDeltaVarIter->second = 0; }
+  //SharedHierarchInterpPolyApproxData* data_rep
+  //  = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  //if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
+    clear_delta_combined_bits();
+  //else
+    clear_delta_active_bits();
 }
 
 
-inline void HierarchInterpPolyApproximation::clear_current_computed_bits()
+inline void HierarchInterpPolyApproximation::clear_current_bits()
 { PolynomialApproximation::clear_computed_bits(); }
 
 
+/** This is the only virtual fn redefinition.  For other cases, we overlay
+    base and derived operations rather than redefining the base. */
 inline void HierarchInterpPolyApproximation::clear_computed_bits()
 {
-  clear_reference_computed_bits();
-  clear_delta_computed_bits();
-  clear_current_computed_bits();
+  clear_reference_bits();
+  clear_delta_bits();
+  clear_current_bits();
 }
 
 
 inline void HierarchInterpPolyApproximation::increment_reference_to_current()
 {
   // update reference bits
-  short computed_mean = primaryMeanIter->second,
-        computed_var  = primaryVarIter->second;
-  primaryRefMeanIter->second = computed_mean;
-  primaryRefVarIter->second  = computed_var;
+  short active_mean = primaryMeanIter->second,
+        active_var  = primaryVarIter->second;
+  primaryRefMeanIter->second = active_mean;
+  primaryRefVarIter->second  = active_var;
+  combinedRefMeanBits        = combinedMeanBits;
+  combinedRefVarBits         = combinedVarBits;
 
   // update reference data
-  if ( (computed_mean & 1) || (computed_var & 1) )
+  if ( (active_mean & 1) || (active_var & 1) )
     primaryRefMomIter->second = primaryMomIter->second;
-  if ( (computed_mean & 2) || (computed_var & 2) ) {
+  if ( (active_mean & 2) || (active_var & 2) ) {
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    momentRefGradients[data_rep->activeKey] = primaryMomGradsIter->second;
+    primaryRefMomGrads[data_rep->activeKey] = primaryMomGradsIter->second;
   }
+  if ( (combinedMeanBits & 1) || (combinedVarBits & 1) )
+    combinedRefMoments = combinedMoments;
 
-  clear_current_computed_bits(); clear_delta_computed_bits();
+  clear_current_bits(); clear_delta_bits();
 }
 
 
 inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
 {
   // update current bits
-  short comp_ref_mean = primaryRefMeanIter->second,
-        comp_ref_var  = primaryRefVarIter->second;
-  primaryMeanIter->second = comp_ref_mean;
-  primaryVarIter->second  = comp_ref_var;
+  short active_ref_mean = primaryRefMeanIter->second,
+        active_ref_var  = primaryRefVarIter->second;
+  primaryMeanIter->second = active_ref_mean;
+  primaryVarIter->second  = active_ref_var;
+  combinedMeanBits        = combinedRefMeanBits;
+  combinedVarBits         = combinedRefVarBits;
 
   // update current data
-  if ( (comp_ref_mean & 1) || (comp_ref_var & 1) )
+  if ( (active_ref_mean & 1) || (active_ref_var & 1) )
     primaryMomIter->second = primaryRefMomIter->second;
-  if ( (comp_ref_mean & 2) || (comp_ref_var & 2) ) {
+  if ( (active_ref_mean & 2) || (active_ref_var & 2) ) {
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    primaryMomGradsIter->second = momentRefGradients[data_rep->activeKey];
+    primaryMomGradsIter->second = primaryRefMomGrads[data_rep->activeKey];
   }
+  if ( (combinedRefMeanBits & 1) || (combinedRefVarBits & 1) )
+    combinedMoments = combinedRefMoments;
 
-  clear_delta_computed_bits(); // clear delta bits, but retain reference
+  clear_delta_bits(); // clear delta bits, but retain reference
 }
 
 
@@ -990,7 +1024,7 @@ inline void HierarchInterpPolyApproximation::update_reference()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { clear_reference_computed_bits(); clear_current_computed_bits(); }
+    { clear_reference_bits(); clear_current_bits(); }
 }
 */
 

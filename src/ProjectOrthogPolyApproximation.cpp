@@ -290,7 +290,7 @@ void ProjectOrthogPolyApproximation::pop_coefficients(bool save_data)
   expCoeffGradsIter->second = prevExpCoeffGrads;
   // don't update Sobol' array sizes for decrement, push, or finalize
 
-  clear_computed_bits();
+  clear_computed_bits(); // previous moments are not stored
 }
 
 

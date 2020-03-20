@@ -73,10 +73,6 @@ void OrthogPolyApproximation::combine_coefficients()
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
 
-  // Note: computed bits are also cleared when refineStatsType is changed
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    clear_computed_bits();
-
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   std::map<UShortArray, RealVector>::iterator ec_it;
@@ -166,6 +162,7 @@ void OrthogPolyApproximation::combine_coefficients()
   }
 
   if (combinedMoments.length() != 2) combinedMoments.sizeUninitialized(2);
+  clear_combined_bits();
 }
 
 
@@ -193,16 +190,7 @@ void OrthogPolyApproximation::combined_to_active(bool clear_combined)
       expCoeffGradsIter->second = combinedExpCoeffGrads;     // deep copy
   }
 
-  allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
-
-  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
-  // multifidelity_expansion()), then previous active stats are invalidated.
-  // But if outgoing stats type is combined, then can avoid recomputation
-  // and carry over current moment stats from combined to active. 
-  // Note: this reuse optimization introduces an order dependency --> updating
-  //       stats type from COMBINED to ACTIVE must occur after this function
-  if (data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS)
-    clear_computed_bits();
+  PolynomialApproximation::combined_to_active(clear_combined);
 }
 
 
