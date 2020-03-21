@@ -60,9 +60,6 @@ public:
   /// clear bits indicating previously computed moment data
   virtual void clear_computed_bits();
 
-  /// update reference results after refinement candidate selection
-  virtual void update_reference();
-
   /// Computes sensitivity indices according to VBD specification
   virtual void compute_component_sobol() = 0;
   /// Computes total sensitivity indices according to VBD specification

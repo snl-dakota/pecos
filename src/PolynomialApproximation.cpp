@@ -423,10 +423,6 @@ void PolynomialApproximation::clear_covariance_pointers()
 { } // default is no-op
 
 
-void PolynomialApproximation::update_reference()
-{ } // default is no-op
-
-
 void PolynomialApproximation::initialize_products()
 { } // default is no-op
 

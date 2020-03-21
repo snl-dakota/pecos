@@ -86,8 +86,6 @@ protected:
   void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
-  //void update_reference();
-
   void integrate_response_moments(size_t num_moments, bool combined_stats);
   void integrate_expansion_moments(size_t num_moments, bool combined_stats);
 
@@ -1009,24 +1007,6 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
 
   clear_delta_bits(); // clear delta bits, but retain reference
 }
-
-
-/*
-inline void HierarchInterpPolyApproximation::update_reference()
-{
-  // For ACTIVE_EXPANSION_STATS, increment_reference_to_current() (called from
-  // {increment,push}_coefficients()) and decrement_current_to_reference()
-  // (called from pop_coefficients()) can manage the preservation of previous
-  // moment computations.  In the case of a selection of an arbitrary candidate
-  // (e.g., from another model key) in an outer loop context, we instead clear
-  // the tracker bits for the affected stats for the current model key.
-
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { clear_reference_bits(); clear_current_bits(); }
-}
-*/
 
 
 inline void HierarchInterpPolyApproximation::
