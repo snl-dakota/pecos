@@ -215,11 +215,11 @@ compute_moments(bool full_stats, bool combined_stats)
   }
   else {
     RealVector& mom1 = primaryMomIter->second;
-    if (mom1.length() != 2)            mom1.sizeUninitialized(2);
-    mean();          variance();
+    if (mom1.length() != 2) mom1.sizeUninitialized(2);
+    mean(); variance();
     //standardize_moments(mom1);
 
-    //if (!secondaryMoments.empty()) secondaryMoments.resize(0);
+    if (!full_stats && !secondaryMoments.empty()) secondaryMoments.resize(0);
   }
 }
 
@@ -239,7 +239,7 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
     mean(x);          variance(x);
     //standardize_moments(mom1);
 
-    //if (!secondaryMoments.empty()) secondaryMoments.resize(0);
+    if (!full_stats && !secondaryMoments.empty()) secondaryMoments.resize(0);
   }
 }
 

@@ -178,21 +178,13 @@ compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
 
-  // expansion moments to order 2:
+  // primary or combined moments to order 2:
   PolynomialApproximation::compute_moments(full_stats, combined_stats);
 
   // if full stats, augment analytic expansion moments with numerical moments
   // (from quadrature applied to the SurrogateData)
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  if (full_stats &&
-      // > currently supported by TPQ, SSG, Cubature (Sampling also possible)
-      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) { //&&
-      // > combined expansions do not admit a unified set of collocation data
-      //   and backfilling direct response data with interpolated surrogate
-      //   values violates some of the intent (Other considerations: adds post-
-      //   processing expense, but adds support for higher order moments)
-    //!data_rep->expConfigOptions.combineType)
-
+  if (full_stats) {
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     if (combined_stats) {
       // current uses follow combined_to_active(), so don't need this for now
       PCerr << "Error: combined mode unavailable for final stats.  Project"
@@ -200,10 +192,14 @@ compute_moments(bool full_stats, bool combined_stats)
 	    << "requires promotion of combined to active." << std::endl;
       abort_handler(-1);
     }
-    integrate_response_moments(4);//, combined_stats); // TO DO
+    else if (data_rep->expConfigOptions.expCoeffsSolnApproach == SAMPLING) {
+      // numerical moments by sampling seem to be of limited additional utility
+      if (!secondaryMoments.empty())
+	secondaryMoments.resize(0);
+    }
+    else // currently supported by TPQ, SSG, Cubature
+      integrate_response_moments(4);//, combined_stats);
   }
-  else if (!secondaryMoments.empty())
-    secondaryMoments.resize(0);
 }
 
 
@@ -214,30 +210,26 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode currently supports two expansion moments
 
-  RealVector& exp_mom = primaryMomentsIter->second;
-  if (exp_mom.length() != 2) exp_mom.resize(2);
-  if (combined_stats)
-    { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
-  else {
-    mean(x); variance(x); // updates first two expansion moments
-    //standardize_moments(exp_mom);
-  }
+  // primary or combined moments to order 2:
+  PolynomialApproximation::compute_moments(x, full_stats, combined_stats);
 
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  if (full_stats &&
-      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) {
-
-    // current uses follow combined_to_active(), so don't need this for now
+  if (full_stats) {
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     if (combined_stats) {
-      PCerr << "Error: combined_stats unavailable.  ProjectOrthogPoly"
-            << "Approximation::compute_moments()\n       currently "
+      // current uses follow combined_to_active(), so don't need this for now
+      PCerr << "Error: combined mode unavailable for final stats.  Project"
+            << "OrthogPolyApproximation::compute_moments()\n       currently "
             << "requires promotion of combined to active." << std::endl;
       abort_handler(-1);
     }
-    integrate_response_moments(2, x);//, combined_stats); // TO DO
+    else if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) {
+      // numerical moments by sampling seem to be of limited additional utility
+      if (!secondaryMoments.empty())
+	secondaryMoments.resize(0);
+    }
+    else // currently supported by TPQ, SSG, Cubature
+      integrate_response_moments(2, x);//, combined_stats);
   }
-  else if (!secondaryMoments.empty())
-    secondaryMoments.resize(0);
 }
 */
 
