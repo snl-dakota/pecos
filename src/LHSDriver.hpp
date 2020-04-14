@@ -194,7 +194,7 @@ inline LHSDriver::LHSDriver():
 
 inline LHSDriver::LHSDriver(const String& sample_type,
 			    short sample_ranks_mode, bool reports) :
-  allowSeedAdvance(1)
+  randomSeed(0), allowSeedAdvance(1)
 {
   abort_if_no_lhs();
   initialize(sample_type, sample_ranks_mode, reports);
