@@ -113,19 +113,29 @@ public:
 
   bool global_bounds() const;
 
+  /// check incoming vec for length equal to number of active random variables
+  template <typename OrdinalType, typename ScalarType>
+  void check_active_length(
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& vec,
+    const BitArray& mask) const;
+
   /// set real lower bounds for variable ranges
-  void lower_bounds(const RealVector& l_bnds,const BitArray& mask = BitArray());
+  void lower_bounds(const RealVector& l_bnds,
+		    const BitArray& mask = BitArray());
   /// set integer lower bounds for variable ranges
-  void lower_bounds(const IntVector& l_bnds, const BitArray& mask = BitArray());
+  void lower_bounds(const IntVector& l_bnds,
+		    const BitArray& mask = BitArray());
   /// set real lower bound for a variable range
   void lower_bound(Real l_bnd, size_t rv_index);
   /// set int lower bound for a variable range
   void lower_bound(int  l_bnd, size_t rv_index);
 
   /// set real upper bounds for variable ranges
-  void upper_bounds(const RealVector& u_bnds,const BitArray& mask = BitArray());
+  void upper_bounds(const RealVector& u_bnds,
+		    const BitArray& mask = BitArray());
   /// set int  upper bounds for variable ranges
-  void upper_bounds(const IntVector& u_bnds, const BitArray& mask = BitArray());
+  void upper_bounds(const IntVector& u_bnds,
+		    const BitArray& mask = BitArray());
   /// set real upper bound for a variable range
   void upper_bound(Real u_bnd, size_t rv_index);
   /// set int  upper bound for a variable range
@@ -771,9 +781,25 @@ inline bool MarginalsCorrDistribution::global_bounds() const
 { return globalBndsFlag; }
 
 
+template <typename OrdinalType, typename ScalarType> 
+void MarginalsCorrDistribution::check_active_length(
+  const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& vec,
+  const BitArray& mask) const
+{
+  size_t vec_len = vec.length(),
+      expect_len = (mask.empty()) ? randomVars.size() : mask.count();
+  if (vec_len != expect_len) {
+    PCerr << "Error: bad active vector length (" << vec_len << "); "
+	  << expect_len << "expected." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 inline void MarginalsCorrDistribution::
 lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 {
+  check_active_length(l_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -790,6 +816,7 @@ lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 inline void MarginalsCorrDistribution::
 lower_bounds(const IntVector& l_bnds, const BitArray& mask)
 {
+  check_active_length(l_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -830,6 +857,7 @@ inline void MarginalsCorrDistribution::lower_bound(int l_bnd, size_t rv_index)
 inline void MarginalsCorrDistribution::
 upper_bounds(const RealVector& u_bnds, const BitArray& mask)
 {
+  check_active_length(u_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -846,6 +874,7 @@ upper_bounds(const RealVector& u_bnds, const BitArray& mask)
 inline void MarginalsCorrDistribution::
 upper_bounds(const IntVector& u_bnds, const BitArray& mask)
 {
+  check_active_length(u_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -913,46 +942,52 @@ log_pdf_hessian(Real val, size_t rv_index) const
 
 inline Real MarginalsCorrDistribution::pdf(const RealVector& pt) const
 {
-  // TO DO: add support for evaluation of correlated MVN density
+  // correlated density handled via upstream transform to standardized space
   if (correlationFlag) {
     PCerr << "Error: MarginalsCorrDistribution::pdf() currently uses a "
 	  << "product of marginal densities\n       and can only be used for "
 	  << "independent random variables." << std::endl;
     abort_handler(-1);
   }
+
+  check_active_length(pt, activeVars);
   size_t v, num_v = randomVars.size();
   Real density = 1.;
   if (activeVars.empty())
     for (v=0; v<num_v; ++v)
       density *= pdf(pt[v], v);
-  else
+  else {
+    size_t av_cntr = 0;
     for (v=0; v<num_v; ++v)
       if (activeVars[v])
-	density *= pdf(pt[v], v);
-
+	density *= pdf(pt[av_cntr++], v);
+  }
   return density;
 }
 
 
 inline Real MarginalsCorrDistribution::log_pdf(const RealVector& pt) const
 {
-  // TO DO: add support for evaluation of correlated MVN density
+  // correlated density handled via upstream transform to standardized space
   if (correlationFlag) {
     PCerr << "Error: MarginalsCorrDistribution::log_pdf() currently uses a "
 	  << "sum of log marginal densities\n       and can only be used for "
 	  << "independent random variables." << std::endl;
     abort_handler(-1);
   }
+
+  check_active_length(pt, activeVars);
   size_t v, num_v = randomVars.size();
   Real log_density = 0.;
   if (activeVars.empty())
     for (v=0; v<num_v; ++v)
       log_density += log_pdf(pt[v], v);
-  else
+  else {
+    size_t av_cntr = 0;
     for (v=0; v<num_v; ++v)
       if (activeVars[v])
-	log_density += log_pdf(pt[v], v);
-
+	log_density += log_pdf(pt[av_cntr++], v);
+  }
   return log_density;
 }
 
