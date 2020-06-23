@@ -109,7 +109,7 @@ protected:
 
 inline NegBinomialRandomVariable::NegBinomialRandomVariable():
   RandomVariable(BaseConstructor()), probPerTrial(1.), numTrials(1),
-  negBinomialDist(NULL)
+  negBinomialDist(new negative_binomial_dist((Real)numTrials, probPerTrial))
 { ranVarType = NEGATIVE_BINOMIAL; }
 
 

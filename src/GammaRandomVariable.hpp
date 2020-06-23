@@ -124,13 +124,14 @@ protected:
 
 
 inline GammaRandomVariable::GammaRandomVariable():
-  ExponentialRandomVariable(), alphaShape(1.), gammaDist(NULL)
+  ExponentialRandomVariable(), alphaShape(1.),
+  gammaDist(new gamma_dist(alphaShape, betaScale))
 { ranVarType = STD_GAMMA; }
 
 
 inline GammaRandomVariable::GammaRandomVariable(Real alpha, Real beta):
   ExponentialRandomVariable(beta), alphaShape(alpha),
-  gammaDist(new gamma_dist(alphaShape, betaScale))
+  gammaDist(new gamma_dist(alpha, beta))
 { ranVarType = (beta == 1.) ? STD_GAMMA : GAMMA; }
 // std distribution defined by scale param, while shape param may vary
 

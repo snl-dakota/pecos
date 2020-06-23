@@ -114,7 +114,8 @@ protected:
 
 inline GumbelRandomVariable::GumbelRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(0.),
-  expLimits(std::log(DBL_MAX),std::log(DBL_MIN))//, gumbelDist(NULL)
+  expLimits(std::log(DBL_MAX),std::log(DBL_MIN))
+  //gumbelDist(new extreme_value_dist(betaStat, 1./alphaStat)) // locn, scale
 { ranVarType = GUMBEL; }
 
 

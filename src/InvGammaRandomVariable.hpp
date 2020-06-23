@@ -124,13 +124,14 @@ protected:
 
 
 inline InvGammaRandomVariable::InvGammaRandomVariable():
-  ExponentialRandomVariable(), alphaShape(3.), invGammaDist(NULL)
+  ExponentialRandomVariable(), alphaShape(3.),
+  invGammaDist(new inv_gamma_dist(alphaShape, betaScale))
 { ranVarType = INV_GAMMA; }
 
 
 inline InvGammaRandomVariable::InvGammaRandomVariable(Real alpha, Real beta):
   ExponentialRandomVariable(beta), alphaShape(alpha),
-  invGammaDist(new inv_gamma_dist(alphaShape, betaScale))
+  invGammaDist(new inv_gamma_dist(alpha, beta))
 { ranVarType = INV_GAMMA; }
 
 

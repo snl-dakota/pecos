@@ -113,8 +113,9 @@ protected:
 
 
 inline HypergeometricRandomVariable::HypergeometricRandomVariable():
-  RandomVariable(BaseConstructor()), numTotalPop(1), numSelectPop(1),
-  numDrawn(1), hypergeomDist(NULL)
+  RandomVariable(BaseConstructor()),
+  numTotalPop(1), numSelectPop(1), numDrawn(1),
+  hypergeomDist(new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop))
 { ranVarType = HYPERGEOMETRIC; }
 
 
@@ -123,7 +124,7 @@ HypergeometricRandomVariable(unsigned int num_total_pop,
 			     unsigned int num_sel_pop, unsigned int num_drawn):
   RandomVariable(BaseConstructor()), numTotalPop(num_total_pop),
   numSelectPop(num_sel_pop), numDrawn(num_drawn),
-  hypergeomDist(new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop))
+  hypergeomDist(new hypergeometric_dist(num_drawn, num_sel_pop, num_total_pop))
 { ranVarType = HYPERGEOMETRIC; }
 
 

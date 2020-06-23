@@ -99,7 +99,8 @@ protected:
 
 
 inline PoissonRandomVariable::PoissonRandomVariable():
-  RandomVariable(BaseConstructor()), poissonLambda(1.), poissonDist(NULL)
+  RandomVariable(BaseConstructor()), poissonLambda(1.),
+  poissonDist(new poisson_dist(poissonLambda))
 { ranVarType = POISSON; }
 
 

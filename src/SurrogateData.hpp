@@ -2075,8 +2075,8 @@ inline void SurrogateData::data_checks() const
     failed_response_data(failed_resp);
 #ifdef DEBUG
     PCout << "failedRespData:\n";
-    for (SizetShortMap::iterator it=failed_resp_map.begin();
-	 it!=failed_resp_map.end(); ++it)
+    for (SizetShortMap::iterator it=failed_resp.begin();
+	 it!=failed_resp.end(); ++it)
       PCout << "index: " << std::setw(6) << it->first
 	    << " data: " << it->second << '\n';
 #endif // DEBUG

@@ -106,7 +106,8 @@ protected:
 
 
 inline TriangularRandomVariable::TriangularRandomVariable():
-  UniformRandomVariable(), triangularMode(0), triangDist(NULL)
+  UniformRandomVariable(), triangularMode(0.),
+  triangDist(new triangular_dist(lowerBnd, triangularMode, upperBnd))
 { ranVarType = TRIANGULAR; }
 
 

@@ -91,10 +91,10 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
         pull_type = pull_mvd_rep->random_variable_type(pull_index);
   switch (push_type) {
 
-    // push RV are fully standardized: no updates to perform
-  case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:           break;
+  // push RV are fully standardized: no updates to perform
+  case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:  break;
 
-    // push RV have standardized scale params; copy shape params
+  // push RV have standardized scale params; copy shape params
   case STD_BETA: {
     Real alpha;  pull_rv.pull_parameter(BE_ALPHA, alpha);
     Real beta;   pull_rv.pull_parameter(BE_BETA,  beta);
@@ -108,13 +108,13 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
     break;
   }
 
-    // push RV are non-standard, pull all non-standard data from rv_in
+  // push RV are non-standard, pull all non-standard data from rv_in
   default:
     switch (pull_type) {
-      // pull RV are fully standardized: no data to pull
-    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:         break;
+    // pull RV are fully standardized: no data to pull
+    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:  break;
 
-      // pull RV have standardized scale params; pull shape params
+    // pull RV have standardized scale params; pull shape params
     case STD_BETA: {
       Real alpha;  pull_rv.pull_parameter(BE_ALPHA, alpha);
       Real beta;   pull_rv.pull_parameter(BE_BETA,  beta);
@@ -128,9 +128,9 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
       break;
     }
 
-      // pull and push RV are non-standardized; copy all params
+    // pull and push RV are non-standardized; copy all params
     default:
-      push_rv.copy_parameters(pull_rv);                                break;
+      push_rv.copy_parameters(pull_rv);                         break;
     }
     break;
   }

@@ -116,7 +116,7 @@ protected:
 
 inline WeibullRandomVariable::WeibullRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(1.),
-  weibullDist(NULL)
+  weibullDist(new weibull_dist(alphaStat, betaStat))
 { ranVarType = WEIBULL; }
 
 

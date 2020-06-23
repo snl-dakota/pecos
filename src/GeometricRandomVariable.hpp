@@ -101,7 +101,8 @@ protected:
 
 
 inline GeometricRandomVariable::GeometricRandomVariable():
-  RandomVariable(BaseConstructor()), probPerTrial(1.), geometricDist(NULL)
+  RandomVariable(BaseConstructor()), probPerTrial(1.),
+  geometricDist(new geometric_dist(probPerTrial))
 { ranVarType = GEOMETRIC; }
 
 

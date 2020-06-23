@@ -105,7 +105,7 @@ protected:
 
 inline BinomialRandomVariable::BinomialRandomVariable():
   RandomVariable(BaseConstructor()), probPerTrial(1.), numTrials(1), 
-  binomialDist(NULL)
+  binomialDist(new binomial_dist((Real)numTrials, probPerTrial))
 { ranVarType = BINOMIAL; }
 
 
