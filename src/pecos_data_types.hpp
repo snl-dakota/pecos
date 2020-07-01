@@ -213,11 +213,23 @@ inline size_t find_index(const PecosContainerType& c,
 
 
 template <typename ScalarType>
+inline ScalarType find_min(const std::vector<ScalarType>& vec)
+{
+  size_t i, len = vec.size();
+  ScalarType min = (len) ? vec[0] : std::numeric_limits<ScalarType>::max();
+  for (i=1; i<len; ++i)
+    if (vec[i] < min)
+      min = vec[i];
+  return min;
+}
+
+
+template <typename ScalarType>
 inline ScalarType find_max(const std::vector<ScalarType>& vec)
 {
   size_t i, len = vec.size();
-  ScalarType max = std::numeric_limits<ScalarType>::min();
-  for (i=0; i<len; ++i)
+  ScalarType max = (len) ? vec[0] : std::numeric_limits<ScalarType>::min();
+  for (i=1; i<len; ++i)
     if (vec[i] > max)
       max = vec[i];
   return max;
