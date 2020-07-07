@@ -28,8 +28,8 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   // expansion formulation has been defined in Shared*OrthogPolyApproxData::
@@ -67,8 +67,8 @@ void OrthogPolyApproximation::combine_coefficients()
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
 
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
@@ -168,8 +168,8 @@ void OrthogPolyApproximation::combine_coefficients()
 
 void OrthogPolyApproximation::combined_to_active(bool clear_combined)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   // Note: swap() is conditionally available for Real{Vector,Matrix}
@@ -231,8 +231,8 @@ multiply_expansion(const UShort2DArray& multi_index_a,
 		   const UShort2DArray& multi_index_c,
 		   RealVector& exp_coeffs_c, RealMatrix& exp_grads_c)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
 
   size_t i, j, k, v, num_v = sharedDataRep->numVars,
     num_a = multi_index_a.size(), num_b = multi_index_b.size(),
@@ -319,8 +319,8 @@ basis_value(const RealVector& x, std::vector<BasisPolynomial>& polynomial_basis,
 void OrthogPolyApproximation::
 basis_matrix(const RealMatrix& x, RealMatrix &basis_values)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   basis_matrix(x, data_rep->polynomialBasis, data_rep->multi_index(),
 	       basis_values);
 }
@@ -359,8 +359,8 @@ value(const RealVector& x, const UShort2DArray& mi,
 	  << "OrthogPolyApproximation::value()" << std::endl;
     abort_handler(-1);
   }
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   Real approx_val = 0.;
   for (i=0; i<num_terms; ++i)
     approx_val += exp_coeffs[i] * data_rep->multivariate_polynomial(x, mi[i]);
@@ -385,8 +385,8 @@ gradient_basis_variables(const RealVector& x, const UShort2DArray& mi,
   if (approxGradient.length() != num_v) approxGradient.size(num_v); // init to 0
   else                                  approxGradient = 0.;
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   // sum expansion to get response gradient prediction
   for (i=0; i<num_terms; ++i) {
     const RealVector& term_i_grad
@@ -403,8 +403,8 @@ const RealVector& OrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 			 const UShort2DArray& mi, const RealVector& exp_coeffs)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   size_t i, j, num_v = dvv.size(), num_terms = mi.size();
   if (!expansionCoeffFlag || !num_terms || exp_coeffs.length() != num_terms) {
     PCerr << "Error: expansion coefficients not available in OrthogPoly"
@@ -443,8 +443,8 @@ gradient_nonbasis_variables(const RealVector& x, const UShort2DArray& mi,
   else                                  approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   for (i=0; i<num_terms; ++i) {
     Real term_i = data_rep->multivariate_polynomial(x, mi[i]);
     const Real* exp_grad_i = exp_coeff_grads[i];
@@ -470,8 +470,8 @@ hessian_basis_variables(const RealVector& x, const UShort2DArray& mi,
   else                                  approxHessian = 0.;
 
   // sum expansion to get response hessian prediction
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   for (i=0; i<num_terms; ++i) {
     const RealSymMatrix& term_i_hess
       = data_rep->multivariate_polynomial_hessian_matrix(x, mi[i]);
@@ -502,8 +502,8 @@ Real OrthogPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = (data_rep->nonRandomIndices.empty()); // std mode
   //&& data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryMeanIter->second & 1))
@@ -529,8 +529,8 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -580,8 +580,8 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
@@ -612,8 +612,8 @@ const RealVector& OrthogPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -691,8 +691,8 @@ Real OrthogPolyApproximation::
 covariance(const UShort2DArray& mi, const RealVector& exp_coeffs,
 	   const RealVector& exp_coeffs_2)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   size_t i, num_exp_terms = mi.size();
   Real covar = 0.;
   for (i=1; i<num_exp_terms; ++i)
@@ -704,8 +704,8 @@ covariance(const UShort2DArray& mi, const RealVector& exp_coeffs,
 Real OrthogPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool same = (opa_2 == this),
     use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
@@ -734,8 +734,8 @@ Real OrthogPolyApproximation::
 covariance(const RealVector& x, const UShort2DArray& mi,
 	   const RealVector& exp_coeffs, const RealVector& exp_coeffs_2)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const SizetList&  rand_ind = data_rep->randomIndices;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   size_t i1, i2, num_mi = mi.size();
@@ -770,8 +770,8 @@ covariance(const RealVector& x, const UShort2DArray& mi,
 Real OrthogPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool same = (this == opa_2),
     use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
@@ -804,8 +804,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     mean of the expansion is simply the first chaos coefficient. */
 Real OrthogPolyApproximation::combined_mean()
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedMeanBits & 1))
@@ -824,8 +824,8 @@ Real OrthogPolyApproximation::combined_mean()
     expectation over this subset. */
 Real OrthogPolyApproximation::combined_mean(const RealVector& x)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
@@ -852,8 +852,8 @@ Real OrthogPolyApproximation::combined_mean(const RealVector& x)
 Real OrthogPolyApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool use_tracker =
     (opa_2 == this && data_rep->nonRandomIndices.empty()); // same, std mode
@@ -873,8 +873,8 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 Real OrthogPolyApproximation::
 combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
   bool use_tracker =
     (opa_2 == this && !data_rep->nonRandomIndices.empty()); // same, all mode
@@ -910,8 +910,8 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
@@ -959,8 +959,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   }
 
   // if already computed, return previous result
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -1066,8 +1066,8 @@ void OrthogPolyApproximation::compute_component_sobol()
   // compute and sum the variance contributions for each expansion term.  For
   // all_vars mode, this approach picks up the total expansion variance, which
   // is the desired reference pt for type-agnostic global sensitivity analysis.
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray&           mi = data_rep->multi_index();
   const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
   const RealVector&      exp_coeffs = expCoeffsIter->second;
@@ -1104,8 +1104,8 @@ void OrthogPolyApproximation::compute_total_sobol()
 {
   totalSobolIndices = 0.;
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   size_t k, num_v = sharedDataRep->numVars;
   const UShort2DArray&      mi = data_rep->multi_index();
   const RealVector& exp_coeffs = expCoeffsIter->second;
@@ -1152,8 +1152,8 @@ void OrthogPolyApproximation::compute_total_sobol()
 
 const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs = expCoeffsIter->second;
   size_t i, j, num_exp_terms = mi.size(),
@@ -1266,8 +1266,8 @@ print_coefficients(std::ostream& s, const UShort2DArray& mi,
 		   const RealVector& exp_coeffs, bool normalized)
 {
   // terms and term identifiers
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   char tag[10];
   for (i=0; i<num_exp_terms; ++i) {
@@ -1290,8 +1290,8 @@ void OrthogPolyApproximation::
 coefficient_labels(std::vector<std::string>& coeff_labels) const
 {
   // terms and term identifiers
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   coeff_labels.reserve(num_exp_terms);

@@ -163,8 +163,8 @@ combined_to_active(bool clear_combined)
   // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
   // processing (numerical moments on combined grid) for the combined-now-active
   // coeffs.  Note: exclude CUBATURE and SAMPLING, which lack combined grids.
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     synthetic_surrogate_data(surrData); // overwrite data for activeKey
@@ -184,7 +184,8 @@ compute_moments(bool full_stats, bool combined_stats)
   // if full stats, augment analytic expansion moments with numerical moments
   // (from quadrature applied to the SurrogateData)
   if (full_stats) {
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
     if (combined_stats) {
       // current uses follow combined_to_active(), so don't need this for now
       PCerr << "Error: combined mode unavailable for final stats.  Project"
@@ -214,7 +215,8 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
   PolynomialApproximation::compute_moments(x, full_stats, combined_stats);
 
   if (full_stats) {
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
     if (combined_stats) {
       // current uses follow combined_to_active(), so don't need this for now
       PCerr << "Error: combined mode unavailable for final stats.  Project"

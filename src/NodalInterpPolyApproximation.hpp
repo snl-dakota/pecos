@@ -412,7 +412,8 @@ approximation_coefficients(bool normalized) const
     PCerr << "Warning: normalized coefficients not supported in "
 	  << "InterpPolyApproximation export." << std::endl;
 
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
@@ -432,8 +433,8 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
     PCerr << "Warning: normalized coefficients not supported in "
 	  << "NodalInterpPolyApproximation import." << std::endl;
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in NodalInterp"
 	  << "PolyApproximation for type2 coefficients." << std::endl;
@@ -464,8 +465,8 @@ inline Real NodalInterpPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   //IntegrationDriver* driver_rep = data_rep->driverRep;
   //if (!driver_rep->track_unique_product_weights()) {
   //  PCerr << "Error: unique product weights required in "
@@ -497,8 +498,8 @@ inline Real NodalInterpPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
@@ -525,8 +526,8 @@ inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryMeanIter->second & 2))
@@ -544,8 +545,8 @@ inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
 inline const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
@@ -582,8 +583,8 @@ covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   // TO DO:
@@ -624,8 +625,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
@@ -665,8 +666,8 @@ inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryVarIter->second & 2))
@@ -685,8 +686,8 @@ inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
 inline const RealVector& NodalInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   // if already computed, return previous result
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -720,8 +721,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 
 inline Real NodalInterpPolyApproximation::combined_mean()
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   if (use_tracker && (combinedMeanBits & 1))
@@ -739,8 +740,8 @@ inline Real NodalInterpPolyApproximation::combined_mean()
 
 inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
   const UShortArray& key = data_rep->activeKey;
@@ -764,8 +765,8 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker
     = (this == nip_approx_2 && data_rep->nonRandomIndices.empty()); // same, std
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
@@ -793,8 +794,8 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker
     = (this == nip_approx_2 && !data_rep->nonRandomIndices.empty());// same, all
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);

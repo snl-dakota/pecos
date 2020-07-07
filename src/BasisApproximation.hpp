@@ -140,7 +140,7 @@ protected:
   //
 
   /// contains the approximation data that is shared among the response set
-  SharedBasisApproxData* sharedDataRep;
+  std::shared_ptr<SharedBasisApproxData> sharedDataRep;
 
 private:
 

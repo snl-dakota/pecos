@@ -53,7 +53,8 @@ void PolynomialApproximation::compute_coefficients()
 
 void PolynomialApproximation::synchronize_surrogate_data()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   const UShortArray& active_key = data_rep->activeKey;
   if (active_key != surrData.active_key()) {
     PCerr << "Error: active key mismatch in PolynomialApproximation::"
@@ -187,7 +188,8 @@ void PolynomialApproximation::combined_to_active(bool clear_combined)
   // migrate moments
   primaryMeanIter->second = combinedMeanBits;
   primaryVarIter->second  = combinedVarBits;
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   if (!data_rep->nonRandomIndices.empty()) {
     const UShortArray& key = data_rep->activeKey;
     xPrevMean[key] = xPrevCombMean;
@@ -397,7 +399,8 @@ standardize_moments(const RealVector& central_moments, RealVector& std_moments)
 
 void PolynomialApproximation::allocate_component_sobol()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   size_t sobol_len = data_rep->sobolIndexMap.size();
   if (sobolIndices.length() != sobol_len)
     sobolIndices.sizeUninitialized(sobol_len);
@@ -407,7 +410,8 @@ void PolynomialApproximation::allocate_component_sobol()
 void PolynomialApproximation::allocate_total_sobol()
 {
   // number of total indices independent of number of component indices
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   if (totalSobolIndices.empty() && expansionCoeffFlag &&
       data_rep->expConfigOptions.vbdFlag)
     totalSobolIndices.sizeUninitialized(sharedDataRep->numVars);

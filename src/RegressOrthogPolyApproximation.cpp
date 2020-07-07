@@ -52,8 +52,8 @@ int RegressOrthogPolyApproximation::min_coefficients() const
     LAPACK, based on anchor point and derivative data availability. */
 void RegressOrthogPolyApproximation::select_solver(bool cv_active)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   bool fn_constrained_lls
     = (data_rep->basisConfigOptions.useDerivs && faultInfo.constr_eqns &&
        faultInfo.constr_eqns < data_rep->expansion_terms()); // candidate exp
@@ -145,8 +145,8 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
 void RegressOrthogPolyApproximation::allocate_arrays()
 {
   if (sparseSoln) {
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
     update_active_iterators(data_rep->activeKey);
     allocate_total_sobol(); // no dependencies
 
@@ -172,8 +172,8 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
   // check data set for gradients/constraints/faults to determine settings
   surrData.data_checks();
@@ -205,8 +205,8 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
 void RegressOrthogPolyApproximation::increment_coefficients()
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey); // redundant but needed for
                                                 // prevExp prior to compute
 
@@ -221,8 +221,8 @@ void RegressOrthogPolyApproximation::increment_coefficients()
 
 void RegressOrthogPolyApproximation::pop_coefficients(bool save_data)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShortArray& key = data_rep->activeKey;
 
   // likely overkill, but multilevel roll up after increment modifies and
@@ -250,8 +250,8 @@ void RegressOrthogPolyApproximation::pop_coefficients(bool save_data)
 
 void RegressOrthogPolyApproximation::push_coefficients()
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShortArray& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
@@ -303,8 +303,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   if (!sparse)
     { OrthogPolyApproximation::combine_coefficients(); return; }
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
 
@@ -440,8 +440,8 @@ void RegressOrthogPolyApproximation::combined_to_active(bool clear_combined)
     //   For now, regenerate sparseSobolIndexMap after roll ups are complete. 
     // Note 2: SharedOrthogPolyApproxData::combined_to_active() has promoted
     //   combinedMultiIndex to active and updated sobolIndexMap.
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
     update_sparse_sobol(combinedSparseIndices, data_rep->multi_index(),
 			data_rep->sobolIndexMap);
     if (clear_combined)
@@ -468,8 +468,8 @@ void RegressOrthogPolyApproximation::run_regression()
   // This will violate the first assumption discussed above and effect cross
   // validation. For this reason no modification is made as yet.
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
   // Perform cross validation loop over degrees here.
   // Current cross validation will not work for equality 
@@ -507,8 +507,8 @@ void RegressOrthogPolyApproximation::run_regression()
 
 void RegressOrthogPolyApproximation::adapt_regression()
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   UShort2DArray& mi = data_rep->multi_index();
   Real rel_delta_star, abs_conv_tol = DBL_EPSILON, // for now
     rel_conv_tol = data_rep->expConfigOptions.convergenceTol;
@@ -585,8 +585,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
 
 Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   LightweightSparseGridDriver* lsg_driver = &data_rep->lsgDriver;
   const UShortArray& key = data_rep->activeKey;
 
@@ -681,8 +681,8 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
 Real RegressOrthogPolyApproximation::select_best_basis_expansion()
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
   // restrict adaptedMultiIndex and then advance this frontier.  Notes:
   // > candidateBasisExp is an array of sets that store multi-index increments;
@@ -855,8 +855,8 @@ multiply_expansion(const UShort2DArray& multi_index_a,
   // sparsity in exp_{coeffs,grads}_c determined *after* all multi_index_c
   // projection terms have been computed
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   size_t i, j, k, v, si, sj, num_v = sharedDataRep->numVars,
     num_deriv_v = exp_grads_a.numRows(), num_c = multi_index_c.size();
 
@@ -965,8 +965,8 @@ value(const RealVector& x, const UShort2DArray& mi,
 
   Real approx_val = 0.;
   size_t i; StSCIter cit;
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit)
     approx_val += exp_coeffs[i]
       * data_rep->multivariate_polynomial(x, mi[*cit]);
@@ -991,8 +991,8 @@ gradient_basis_variables(const RealVector& x, const UShort2DArray& mi,
   else                                  approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[*cit]);
@@ -1021,8 +1021,8 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
   else                                  approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[*cit], dvv);
@@ -1051,8 +1051,8 @@ gradient_nonbasis_variables(const RealVector& x, const UShort2DArray& mi,
   else                                  approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit) {
     Real term_i = data_rep->multivariate_polynomial(x, mi[*cit]);
     const Real* exp_coeff_grad_i = exp_coeff_grads[i];
@@ -1080,8 +1080,8 @@ hessian_basis_variables(const RealVector& x, const UShort2DArray& mi,
   else                                  approxHessian = 0.;
 
   // sum expansion to get response hessian prediction
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit) {
     const RealSymMatrix& term_i_hess
       = data_rep->multivariate_polynomial_hessian_matrix(x, mi[*cit]);
@@ -1116,8 +1116,8 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -1171,8 +1171,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     return OrthogPolyApproximation::mean_gradient(x, dvv);
 
   // if already computed, return previous result
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -1250,8 +1250,8 @@ Real RegressOrthogPolyApproximation::
 variance(const UShort2DArray& mi, const RealVector& exp_coeffs,
 	 const SizetSet& sparse_ind)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   size_t i; StSCIter cit;
   Real var = 0.;
   for (i=1, cit=++sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit)
@@ -1265,8 +1265,8 @@ covariance(const UShort2DArray& mi,    const RealVector& exp_coeffs,
 	   const SizetSet& sparse_ind, const RealVector& exp_coeffs_2,
 	   const SizetSet& sparse_ind_2)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   size_t i1, i2, si1, si2; StSCIter cit1, cit2;
   Real covar = 0.;
   if (sparse_ind.empty()) // mixed: one set is sparse
@@ -1311,8 +1311,8 @@ covariance(PolynomialApproximation* poly_approx_2)
 	 ropa_2->sparseIndIter->second.empty()) )
     return OrthogPolyApproximation::covariance(poly_approx_2);
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   bool same = (ropa_2 == this);
 
   // Error check for required data
@@ -1352,8 +1352,8 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   bool same = (ropa_2 == this);
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   if (same) {
     bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
     // && data_rep->expConfigOptions.refineStatsType==COMBINED_EXPANSION_STATS);
@@ -1379,8 +1379,8 @@ covariance(const RealVector& x, const UShort2DArray& mi,
 	   const RealVector& exp_coeffs,   const SizetSet& sparse_ind,
 	   const RealVector& exp_coeffs_2, const SizetSet& sparse_ind_2)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const SizetList&  rand_ind = data_rep->randomIndices;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
 
@@ -1462,8 +1462,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 	 ropa_2->sparseIndIter->second.empty()) )
     return OrthogPolyApproximation::covariance(x, poly_approx_2);
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   bool same = (this == ropa_2),
     use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -1500,8 +1500,8 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   if (combinedSparseIndices.empty() && ropa_2->combinedSparseIndices.empty())
     return OrthogPolyApproximation::covariance(x, poly_approx_2);
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   bool same = (this == ropa_2),
     use_tracker = (same && !data_rep->nonRandomIndices.empty());//same, all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
@@ -1540,8 +1540,8 @@ const RealVector& RegressOrthogPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
   if (use_tracker && (primaryVarIter->second & 2))
@@ -1591,8 +1591,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   }
 
   // if already computed, return previous result
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
@@ -1700,8 +1700,8 @@ void RegressOrthogPolyApproximation::set_fault_info()
   // distinguished from usage of derivative data with respect to non-expansion
   // variables (the expansionCoeffGradFlag case).
   bool config_err = false;
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   if (data_rep->basisConfigOptions.useDerivs) {
     if (!(data_order & 2)) {
       PCerr << "Error: useDerivs configuration option lacks data support in "
@@ -1780,8 +1780,8 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
   bool add_val, add_grad;
   const SDVArray& sdv_array = surrData.variables_data();
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   if (expansionCoeffFlag) {
     // matrix/vector sizing
     num_rows_A = (data_rep->basisConfigOptions.useDerivs) ?
@@ -1846,8 +1846,8 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
   if (expansionCoeffFlag) {
     
     // matrix/vector sizing
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
     num_rows_B = (data_rep->basisConfigOptions.useDerivs) ?
       num_data_pts_fn + num_data_pts_grad * num_v : num_data_pts_fn;
     num_coeff_rhs = 1;
@@ -1923,8 +1923,8 @@ augment_linear_system( const RealVectorArray& samples, RealMatrix &A,
     num_cols_A = multi_index.size(); // candidate expansion size
   bool add_val, add_grad;
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   if (expansionCoeffFlag) {
     // matrix/vector sizing
     num_rows_A += (data_rep->basisConfigOptions.useDerivs) ?
@@ -1982,8 +1982,8 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   int num_data_pts_fn = surrData.points();
 
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShortArray& approx_order = data_rep->expansion_order();
   int num_rhs = B.numCols(), num_dims( approx_order.size() );
 
@@ -2079,8 +2079,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   int num_data_pts_fn = surrData.points();
 
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShortArray& approx_order = data_rep->expansion_order();
   int num_rhs = B.numCols(), num_dims( approx_order.size() );
   // Do cross validation for varing polynomial orders up to 
@@ -2221,8 +2221,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 void RegressOrthogPolyApproximation::
 compressed_sensing( RealMatrix &A, RealMatrix &B )
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
   CSOpts.standardizeInputs = false;// false essential when using derivatives
 
@@ -2299,8 +2299,8 @@ least_interpolation( RealMatrix &pts, RealMatrix &vals )
   }
 #endif
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   SizetSet& sparse_ind = sparseIndIter->second;
   // if no sim faults on subsequent QoI and previous QoI interp size matches,
   // then reuse previous factorization.  Detecting non-null fault sets that are
@@ -2402,8 +2402,8 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
   UShort2DArray internal_basis_indices;
 
   // Current degree is k_counter, and we iterate on this
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   while ( lu_row < num_pts )
     {
       UShort2DArray new_indices;
@@ -2589,8 +2589,8 @@ get_least_polynomial_coefficients( RealVector &v, IntVector &k,
 void RegressOrthogPolyApproximation::
 update_sparse(Real* dense_coeffs, size_t num_dense_terms)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   SizetSet& sparse_ind = sparseIndIter->second;
 
   // just one pass through to define sparse_indices
@@ -2654,8 +2654,8 @@ update_sparse_sobol(const SizetSet& sparse_indices,
 		    const BitArrayULongMap& shared_sobol_map)
 {
   // define the Sobol' indices based on the sparse multiIndex
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   if ( !data_rep->expConfigOptions.vbdFlag ||
         data_rep->expConfigOptions.vbdOrderLimit == 1 )
     return;
@@ -2741,8 +2741,8 @@ frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
     num_mi = multi_index.size(), new_si;
   UShort2DArray pareto_mi;
   SizetSet::const_iterator si_it;
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   for (i=0, si_it=sparse_indices.begin(); i<num_exp_terms; ++i, ++si_it)
     update_pareto_set(multi_index[*si_it], pareto_mi);
   size_t num_pareto_mi = pareto_mi.size();
@@ -2792,8 +2792,8 @@ void RegressOrthogPolyApproximation::
 advance_multi_index(const UShort2DArray& multi_index,
 		    UShortArraySetArray& mi_advancements)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
   // create a set of advancements from this reference frontier
   size_t i, num_mi,
@@ -2820,8 +2820,8 @@ advance_multi_index_front(const UShort2DArray& multi_index,
   update_pareto_frontier(multi_index, mi_frontier);
 
   // create a set of advancements from this reference frontier
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   size_t i, num_mi,
     num_advance = data_rep->regressConfigOptions.numAdvancements;
   mi_advancements.resize(num_advance);
@@ -2910,8 +2910,8 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   // Setup a grid based search
   bool is_under_determined = M < N;
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
   // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
   // LS
@@ -2963,8 +2963,8 @@ void RegressOrthogPolyApproximation::compute_component_sobol()
   // compute and sum the variance contributions for each expansion term.  For
   // all_vars mode, this approach picks up the total expansion variance, which
   // is the desired reference pt for type-agnostic global sensitivity analysis.
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   RealVector& exp_coeffs = expCoeffsIter->second;
   const SizetSet& sparse_ind = sparseIndIter->second;
@@ -3007,8 +3007,8 @@ void RegressOrthogPolyApproximation::compute_total_sobol()
   if (sparseIndIter == sparseIndices.end() || sparseIndIter->second.empty())
     { OrthogPolyApproximation::compute_total_sobol(); return; }
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   size_t j, num_v = sharedDataRep->numVars;
   const UShort2DArray& mi = data_rep->multi_index();
   const SizetSet& sparse_ind = sparseIndIter->second;
@@ -3074,8 +3074,8 @@ const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
     decayRates.sizeUninitialized(num_v);
 
   // define max_orders for each var for sizing LLS matrices/vectors
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   const SizetSet& sparse_ind = sparseIndIter->second;
   RealVector& exp_coeffs = expCoeffsIter->second;
@@ -3150,8 +3150,8 @@ approximation_coefficients(bool normalized) const
 
   // synchronize the expansion coeffs with the length of the shared multi-index
   // approx_coeffs is an inflation of expansionCoeffs
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs = expCoeffsIter->second;
   const SizetSet& sparse_ind = sparseIndIter->second;
@@ -3177,8 +3177,8 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 
   // won't happen with current import use cases
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   // synchronize the expansion coeffs with the shared multi-index length
@@ -3213,8 +3213,8 @@ print_coefficients(std::ostream& s, bool normalized)
   StSCIter cit; char tag[10];
 
   // terms and term identifiers
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs = expCoeffsIter->second;
   const SizetSet& sparse_ind = sparseIndIter->second;
@@ -3247,8 +3247,8 @@ coefficient_labels(std::vector<std::string>& coeff_labels) const
   coeff_labels.reserve(sparse_ind.size());
 
   // terms and term identifiers
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   for (StSCIter cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++cit) {
     const UShortArray& mi_i = mi[*cit];

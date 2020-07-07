@@ -447,8 +447,8 @@ update_active_iterators(const UShortArray& key)
 
 inline void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A )
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   build_linear_system( A, data_rep->multi_index() );
 }
 
@@ -456,8 +456,8 @@ inline void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A )
 inline void RegressOrthogPolyApproximation::
 build_linear_system( RealMatrix &A, RealMatrix &B )
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   build_linear_system( A, B, data_rep->multi_index() );
 }
 
@@ -465,16 +465,16 @@ build_linear_system( RealMatrix &A, RealMatrix &B )
 inline void RegressOrthogPolyApproximation::
 build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points )
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   build_linear_system( A, B, points, data_rep->multi_index() );
 }
 
 
 inline Real RegressOrthogPolyApproximation::value(const RealVector& x)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
@@ -486,8 +486,8 @@ inline Real RegressOrthogPolyApproximation::value(const RealVector& x)
 inline Real RegressOrthogPolyApproximation::
 stored_value(const RealVector& x, const UShortArray& key)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_value(x, key) :
@@ -498,8 +498,8 @@ stored_value(const RealVector& x, const UShortArray& key)
 inline const RealVector& RegressOrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
@@ -512,8 +512,8 @@ gradient_basis_variables(const RealVector& x)
 inline const RealVector& RegressOrthogPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_basis_variables(x, key) :
@@ -525,8 +525,8 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 inline const RealVector& RegressOrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
@@ -540,8 +540,8 @@ inline const RealVector& RegressOrthogPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 				const UShortArray& key)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_basis_variables(x, dvv, key) :
@@ -553,8 +553,8 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 inline const RealVector& RegressOrthogPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
@@ -567,8 +567,8 @@ gradient_nonbasis_variables(const RealVector& x)
 inline const RealVector& RegressOrthogPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_nonbasis_variables(x, key) :
@@ -580,8 +580,8 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 inline const RealSymMatrix& RegressOrthogPolyApproximation::
 hessian_basis_variables(const RealVector& x)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
@@ -594,8 +594,8 @@ hessian_basis_variables(const RealVector& x)
 inline const RealSymMatrix& RegressOrthogPolyApproximation::
 stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_hessian_basis_variables(x, key) :
@@ -620,8 +620,8 @@ sparse_sobol_index_map() const
 
 inline size_t RegressOrthogPolyApproximation::expansion_terms() const
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   std::map<UShortArray, SizetSet>::const_iterator sp_cit
     = sparseIndices.find(data_rep->activeKey);
   return (sp_cit == sparseIndices.end() || sp_cit->second.empty()) ?

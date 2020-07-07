@@ -827,8 +827,8 @@ update_active_iterators(const UShortArray& key)
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   if (data_rep->expConfigOptions.refineControl) {
     prodT1CoeffsIter = productType1Coeffs.find(key);
     if (prodT1CoeffsIter == productType1Coeffs.end()) {
@@ -973,8 +973,8 @@ inline void HierarchInterpPolyApproximation::increment_reference_to_current()
   if ( (active_mean & 1) || (active_var & 1) )
     primaryRefMomIter->second = primaryMomIter->second;
   if ( (active_mean & 2) || (active_var & 2) ) {
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
     primaryRefMomGrads[data_rep->activeKey] = primaryMomGradsIter->second;
   }
   if ( (combinedMeanBits & 1) || (combinedVarBits & 1) )
@@ -998,8 +998,8 @@ inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
   if ( (active_ref_mean & 1) || (active_ref_var & 1) )
     primaryMomIter->second = primaryRefMomIter->second;
   if ( (active_ref_mean & 2) || (active_ref_var & 2) ) {
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
     primaryMomGradsIter->second = primaryRefMomGrads[data_rep->activeKey];
   }
   if ( (combinedRefMeanBits & 1) || (combinedRefVarBits & 1) )
@@ -1014,8 +1014,8 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
 {
   // standard variables mode supports four moments using the collocation rules
   // as integration rules
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   // Support combined_stats for completeness
@@ -1067,8 +1067,8 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 		    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
 		    const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) { // invalidated by combination
@@ -1095,8 +1095,8 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   const UShortArray& hf_key, const UShortArray& lf_key,
   const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   product_difference_interpolant(surrData, hip_approx_2->surrData,
     hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
@@ -1112,8 +1112,8 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 			    RealMatrix2DArray& cov_t2_coeffs,
 			    const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) {// invalidated by combination
@@ -1141,8 +1141,8 @@ central_product_gradient_interpolant(
   const RealVector& mean1_grad, const RealVector& mean2_grad,
   RealMatrix2DArray& cov_t1c_grads, const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) {// invalidated by combination
@@ -1200,8 +1200,8 @@ combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 
 inline Real HierarchInterpPolyApproximation::delta_std_deviation()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   UShort2DArray ref_key, incr_key;
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
@@ -1212,8 +1212,8 @@ inline Real HierarchInterpPolyApproximation::delta_std_deviation()
 inline Real HierarchInterpPolyApproximation::
 delta_std_deviation(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   UShort2DArray ref_key, incr_key;
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
@@ -1224,8 +1224,8 @@ delta_std_deviation(const RealVector& x)
 inline Real HierarchInterpPolyApproximation::
 delta_combined_std_deviation()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
@@ -1238,8 +1238,8 @@ delta_combined_std_deviation()
 inline Real HierarchInterpPolyApproximation::
 delta_combined_std_deviation(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
@@ -1252,8 +1252,8 @@ delta_combined_std_deviation(const RealVector& x)
 inline Real HierarchInterpPolyApproximation::
 delta_beta(bool cdf_flag, Real z_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   UShort2DArray ref_key, incr_key;
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
@@ -1264,8 +1264,8 @@ delta_beta(bool cdf_flag, Real z_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   UShort2DArray ref_key, incr_key;
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
@@ -1276,8 +1276,8 @@ delta_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_combined_beta(bool cdf_flag, Real z_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
@@ -1290,8 +1290,8 @@ delta_combined_beta(bool cdf_flag, Real z_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
@@ -1304,8 +1304,8 @@ delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_z(bool cdf_flag, Real beta_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   UShort2DArray ref_key, incr_key;
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
@@ -1316,8 +1316,8 @@ delta_z(bool cdf_flag, Real beta_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   UShort2DArray ref_key, incr_key;
   data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
@@ -1328,8 +1328,8 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_combined_z(bool cdf_flag, Real beta_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
@@ -1342,8 +1342,8 @@ delta_combined_z(bool cdf_flag, Real beta_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
@@ -1359,8 +1359,8 @@ expectation(const RealVector2DArray& t1_coeffs,
 	    const UShort2DArray& set_partition)
 {
   // This version defaults to active type1/2 wts from HierarchSparseGridDriver
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation(t1_coeffs, t2_coeffs,
 		     hsg_driver->type1_hierarchical_weight_sets(),
@@ -1375,8 +1375,8 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 	    const UShort2DArray& set_partition)
 {
   // This version defaults to active sm_mi/key from HierarchSparseGridDriver
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation(x, t1_coeffs, t2_coeffs, hsg_driver->smolyak_multi_index(),
 		     hsg_driver->collocation_key(), set_partition);
@@ -1387,8 +1387,8 @@ inline const RealVector& HierarchInterpPolyApproximation::
 expectation_gradient(const RealMatrix2DArray& t1_coeff_grads)
 {
   // This version defaults to active type1 wts from HierarchSparseGridDriver
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   return expectation_gradient(t1_coeff_grads,
     data_rep->hsg_driver()->type1_hierarchical_weight_sets());
 }
@@ -1399,8 +1399,8 @@ expectation_gradient(const RealVector& x,
 		     const RealMatrix2DArray& t1_coeff_grads, size_t t1cg_index)
 {
   // This version defaults to active sm_mi/key from HierarchSparseGridDriver
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation_gradient(x, t1_coeff_grads,
 			      hsg_driver->smolyak_multi_index(),
@@ -1413,8 +1413,8 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
 		     const RealMatrix2DArray& t2_coeffs, size_t deriv_index)
 {
   // This version defaults to active sm_mi/key from HierarchSparseGridDriver
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation_gradient(x, t1_coeffs, t2_coeffs,
 			      hsg_driver->smolyak_multi_index(),
@@ -1424,8 +1424,8 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
 
 inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1437,8 +1437,8 @@ inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
 inline const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1451,8 +1451,8 @@ gradient_basis_variables(const RealVector& x)
 inline const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1465,8 +1465,8 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 inline const RealVector& HierarchInterpPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1478,8 +1478,8 @@ gradient_nonbasis_variables(const RealVector& x)
 inline const RealSymMatrix& HierarchInterpPolyApproximation::
 hessian_basis_variables(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1491,8 +1491,8 @@ hessian_basis_variables(const RealVector& x)
 inline Real HierarchInterpPolyApproximation::
 stored_value(const RealVector& x, const UShortArray& key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1504,8 +1504,8 @@ stored_value(const RealVector& x, const UShortArray& key)
 inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1519,8 +1519,8 @@ inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 				const UShortArray& key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1533,8 +1533,8 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
@@ -1546,8 +1546,8 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 inline const RealSymMatrix& HierarchInterpPolyApproximation::
 stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;

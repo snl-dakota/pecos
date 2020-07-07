@@ -194,9 +194,10 @@ int main(int argc, char* argv[])
   BasisConfigOptions bcopt;
   UShortArray aord(mOrd,nvar);
   SharedBasisApproxData shared_data;                          // Envelope
-  SharedProjectOrthogPolyApproxData* shared_poly_data = new   // Letter
-    SharedProjectOrthogPolyApproxData(BTYPE,aord,nvar,expcfgopt,bcopt);
-  shared_data.assign_rep(shared_poly_data, false); // don't increment ref count
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> shared_poly_data =
+    std::make_shared<SharedProjectOrthogPolyApproxData>
+    (BTYPE,aord,nvar,expcfgopt,bcopt);  // Letter
+  shared_data.assign_rep(shared_poly_data); // don't increment ref count
   shared_poly_data->integration_driver_rep(csg_driver);
   shared_poly_data->polynomial_basis(poly_basis);
 

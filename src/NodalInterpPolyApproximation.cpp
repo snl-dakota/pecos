@@ -35,8 +35,8 @@ void NodalInterpPolyApproximation::allocate_arrays()
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     if (exp_t1_coeffs.length() != num_colloc_pts)
       exp_t1_coeffs.sizeUninitialized(num_colloc_pts);
-    SharedNodalInterpPolyApproxData* data_rep
-      = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
     if (data_rep->basisConfigOptions.useDerivs) {
       // find existing or create new
       RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -75,8 +75,8 @@ void NodalInterpPolyApproximation::compute_coefficients()
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
-    SharedNodalInterpPolyApproxData* data_rep
-      = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
     bool derivs = data_rep->basisConfigOptions.useDerivs;
     for (i=0; i<num_colloc_pts; ++i) {
       exp_t1_coeffs[i] = sdr_array[i].response_function();
@@ -103,7 +103,8 @@ void NodalInterpPolyApproximation::compute_coefficients()
 
 void NodalInterpPolyApproximation::pop_coefficients(bool save_data)
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   size_t new_colloc_pts = surrData.points();
@@ -128,7 +129,8 @@ void NodalInterpPolyApproximation::pop_coefficients(bool save_data)
 
 void NodalInterpPolyApproximation::update_expansion_coefficients()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
@@ -192,8 +194,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
 
   // Coefficient combination is not dependent on active state, but active
   // iterators are used below to avoid additional key lookups in stored_*()
@@ -343,8 +345,8 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
   //   are now assimilated within each new active expansion
   // > swap() is conditionally available for Real{Vector,Matrix}
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   if (expansionCoeffFlag) {
     if (clear_combined) {
       expT1CoeffsIter->second.swap(combinedExpT1Coeffs); // shallow ptr swap
@@ -386,8 +388,8 @@ synthetic_surrogate_data(SurrogateData& surr_data)
   // Update the active key of surr_data with synthetic data based on the
   // active grid from csg_driver
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
 
   // CombinedSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
@@ -432,8 +434,8 @@ tensor_product_mean(const RealVector& x, const RealVector& exp_t1_coeffs,
 {
   size_t i, j, num_colloc_pts = colloc_key.size(),
     num_v = sharedDataRep->numVars;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
 
   if (data_rep->barycentricFlag) {
@@ -622,8 +624,8 @@ tensor_product_mean_gradient(const RealVector& x,
   size_t p, d, v, c_index, deriv_index, insert_cntr = 0, 
     num_deriv_vars = dvv.size(), num_colloc_pts = colloc_key.size(),
     num_v = sharedDataRep->numVars;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   if (tpMomentGrads.size() != 2) tpMomentGrads.resize(2);
   RealVector& tp_mean_grad = tpMomentGrads[0];
@@ -994,8 +996,8 @@ tensor_product_covariance(const RealVector& x, Real mean_1, Real mean_2,
 			  const UShort2DArray& colloc_key,
 			  const SizetArray& colloc_index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   //bool same = (this == nip_approx_2);
   Real t1_coeff_1_mm1, t1_coeff_2_mm2;
@@ -1414,8 +1416,8 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
 {
   size_t d, insert_cntr, deriv_index, num_deriv_vars = dvv.size(),
     num_v = sharedDataRep->numVars;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   if (tpMomentGrads.size() != 2) tpMomentGrads.resize(2);
   RealVector& tp_var_grad = tpMomentGrads[1];
@@ -2248,8 +2250,8 @@ product_of_interpolants(const RealVector& x, Real mean_1, Real mean_2,
 			const UShort2DArray& colloc_key,
 			const SizetArray& colloc_index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   size_t i, j, c_index_i, c_index_j, num_colloc_pts = colloc_key.size(),
     num_v = sharedDataRep->numVars;
   Real tp_covar = 0., t1_wt_Ls_prod_i, t1_coeff_1_mm1, t1_coeff_2_mm2;
@@ -2318,8 +2320,8 @@ product_of_interpolants(const RealVector& x, Real mean_1, Real mean_2,
 	<< colloc_key_1 << "colloc_key_2 =\n" << colloc_key_2 << std::endl;
 #endif // DEBUG
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   if (data_rep->momentInterpType != PRODUCT_OF_INTERPOLANTS_FULL) {
     PCerr << "Error: mixed tensor product covariance only required for full "
 	  << "products of interpolants. " << std::endl;
@@ -2374,8 +2376,8 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
       const RealMatrix& exp_t2_coeffs)
 {
   // sum expansion to get response prediction
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2410,8 +2412,8 @@ stored_value(const RealVector& x, const UShortArray& key)
   }
 
   // sum expansion to get response prediction
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2441,8 +2443,8 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
       const RealMatrix& exp_t2_coeffs, const UShortArray& lev_index,
       const UShort2DArray& colloc_key)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> default indexing
   return data_rep->
     tensor_product_value(x, exp_t1_coeffs, exp_t2_coeffs, lev_index,
@@ -2457,8 +2459,8 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
       const IntArray& sm_coeffs, const UShort3DArray& colloc_key,
       const Sizet2DArray& colloc_index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   size_t i, num_smolyak_indices = sm_coeffs.size();
   Real approx_val = 0.;
   for (i=0; i<num_smolyak_indices; ++i)
@@ -2478,8 +2480,8 @@ value(const RealVector& x, const RealVectorArray& t1_coeffs,
       const SizetList& subset_indices)
 {
   // Smolyak recursion of anisotropic tensor products
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<CombinedSparseGridDriver> csg_driver =
     std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
   const UShort2DArray&      sm_mi      = csg_driver->smolyak_multi_index();
@@ -2502,8 +2504,8 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
   // this could define a default_dvv and call gradient_basis_variables(x, dvv),
   // but we want this fn to be as fast as possible
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2531,8 +2533,8 @@ const RealVector& NodalInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 			 const RealMatrix& exp_t2_coeffs, const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2569,8 +2571,8 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2610,8 +2612,8 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2643,8 +2645,8 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 			 const UShortArray& lev_index,
 			 const UShort2DArray& colloc_key)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> default indexing
   return data_rep->
     tensor_product_gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
@@ -2658,8 +2660,8 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 			 const UShortArray& lev_index,
 			 const UShort2DArray& colloc_key, const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> default indexing
   return data_rep->
     tensor_product_gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
@@ -2675,8 +2677,8 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 			 const UShort3DArray& colloc_key,
 			 const Sizet2DArray& colloc_index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   size_t num_v = data_rep->numVars;
   if (approxGradient.length() != num_v)
     approxGradient.sizeUninitialized(num_v);
@@ -2706,8 +2708,8 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 			 const Sizet2DArray& colloc_index,
 			 const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   size_t num_deriv_vars = dvv.size();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
@@ -2740,8 +2742,8 @@ gradient_basis_variables(const RealVector& x, const RealVectorArray& t1_coeffs,
   // this could define a default_dvv and call gradient_basis_variables(x, dvv),
   // but we want this fn to be as fast as possible
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   size_t num_v = sharedDataRep->numVars;
   if (approxGradient.length() != num_v)
     approxGradient.sizeUninitialized(num_v);
@@ -2771,8 +2773,8 @@ const RealVector& NodalInterpPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x,
 			    const RealMatrix& exp_t1_coeff_grads)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2807,8 +2809,8 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -2838,8 +2840,8 @@ gradient_nonbasis_variables(const RealVector& x,
 			    const UShortArray& lev_index,
 			    const UShort2DArray& colloc_key)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<TensorProductDriver> tpq_driver =
     std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
   SizetArray colloc_index; // empty -> default indexing
@@ -2863,8 +2865,8 @@ gradient_nonbasis_variables(const RealVector& x,
   approxGradient = 0.;
   // Smolyak recursion of anisotropic tensor products
   size_t i, j, num_smolyak_indices = sm_coeffs.size();
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   for (i=0; i<num_smolyak_indices; ++i) {
     int coeff_i = sm_coeffs[i];
     if (coeff_i) {
@@ -2912,8 +2914,8 @@ Real NodalInterpPolyApproximation::
 mean(const RealVector& x, const RealVector& exp_t1_coeffs, 
      const RealMatrix& exp_t2_coeffs)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   Real mean;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
@@ -2990,8 +2992,8 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
 	      const RealMatrix& exp_t2_coeffs,
 	      const RealMatrix& exp_t1_coeff_grads, const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -3045,7 +3047,8 @@ covariance(Real mean_1, Real mean_2,    const RealVector& exp_t1c_1,
 	   const RealMatrix& exp_t2c_2, const RealVector& t1_wts,
 	   const RealMatrix& t2_wts)
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   // compute mean_1,mean_2 first, then compute covariance as
   // wt_prod*(coeff1-mean_1)*(coeff2-mean_2) in order to avoid precision
   // loss from computing covariance as <R_i R_j> - \mu_i \mu_j
@@ -3109,8 +3112,8 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
 	   const RealVector& exp_t1c_2, const RealMatrix& exp_t2c_2)
 {
   Real covar;
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -3296,8 +3299,8 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
 		  const RealMatrix& exp_t2_coeffs,
 		  const RealMatrix& exp_t1_coeff_grads, const SizetArray& dvv)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
@@ -3406,8 +3409,8 @@ Real NodalInterpPolyApproximation::
 expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs,
 	    const RealVector& t1_wts,    const RealMatrix& t2_wts)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   //std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
 
   Real integral = 0.;
@@ -3434,8 +3437,8 @@ expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs,
 void NodalInterpPolyApproximation::
 reinterpolated_level(const UShortArray& lev_index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   driver_rep->reinterpolated_tensor_grid(lev_index, data_rep->nonRandomIndices);
   data_rep->
@@ -3461,8 +3464,8 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
     abort_handler(-1);
   }
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
@@ -3529,8 +3532,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   // exactly.  Generate higher order rules using driverRep and perform
   // integration here for access to value() and gradient().
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   std::shared_ptr<IntegrationDriver> alt_driver =
     data_rep->expMomentIntDriver.driver_rep();
   bool alt_grid = (alt_driver != NULL);
@@ -3638,8 +3641,8 @@ compute_partial_variance(const BitArray& set_value)
 {
   // Perform inner integral over complementary set u' to form new weighted
   // coefficients h; then perform outer integral of h^2 over set u
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   const BitArrayULongMap& sobol_index_map = data_rep->sobolIndexMap;
 
   unsigned long pv_index;
@@ -3703,8 +3706,8 @@ member_integral(const BitArray& member_bits, Real mean)
 {
   // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   size_t i, j, num_member_coeffs, num_v = sharedDataRep->numVars;
   SizetList member_indices;
   for (j=0; j<num_v; ++j)
@@ -3863,8 +3866,8 @@ member_coefficients_weights(const BitArray& member_bits,
 			    UShort2DArray& member_colloc_key,
 			    SizetArray& member_colloc_index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   // get number of expansion coeffs in member-variable-only expansion and
   // precompute indexing factors, since they only depend on j
   size_t i, j, num_v = sharedDataRep->numVars,
