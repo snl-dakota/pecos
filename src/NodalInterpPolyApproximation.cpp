@@ -203,8 +203,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
   std::map<UShortArray, RealVector>::iterator ec1_it;
   std::map<UShortArray, RealMatrix>::iterator ec2_it
     = expansionType2Coeffs.begin(), eg1_it = expansionType1CoeffGrads.begin();
-  CombinedSparseGridDriver* csg_driver
-    = (CombinedSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+    std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
   const RealMatrix& comb_var_sets = csg_driver->combined_variable_sets();
   size_t p, v, num_pts = comb_var_sets.numCols(),
     num_v   = comb_var_sets.numRows(), num_t2v = ec2_it->second.numRows(),
@@ -434,7 +434,7 @@ tensor_product_mean(const RealVector& x, const RealVector& exp_t1_coeffs,
     num_v = sharedDataRep->numVars;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
 
   if (data_rep->barycentricFlag) {
 
@@ -624,7 +624,7 @@ tensor_product_mean_gradient(const RealVector& x,
     num_v = sharedDataRep->numVars;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   if (tpMomentGrads.size() != 2) tpMomentGrads.resize(2);
   RealVector& tp_mean_grad = tpMomentGrads[0];
   if (tp_mean_grad.length() != num_deriv_vars)
@@ -996,7 +996,7 @@ tensor_product_covariance(const RealVector& x, Real mean_1, Real mean_2,
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   //bool same = (this == nip_approx_2);
   Real t1_coeff_1_mm1, t1_coeff_2_mm2;
   size_t i, c_index_i, num_colloc_pts = colloc_key.size(),
@@ -1416,7 +1416,7 @@ tensor_product_variance_gradient(const RealVector& x, Real mean,
     num_v = sharedDataRep->numVars;
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   if (tpMomentGrads.size() != 2) tpMomentGrads.resize(2);
   RealVector& tp_var_grad = tpMomentGrads[1];
   if (tp_var_grad.length() != num_deriv_vars)
@@ -2378,15 +2378,16 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return value(x, exp_t1_coeffs, exp_t2_coeffs, tpq_driver->level_index(),
 		 tpq_driver->collocation_key());
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return value(x, exp_t1_coeffs, exp_t2_coeffs,
 		 csg_driver->smolyak_multi_index(),
 		 csg_driver->smolyak_coefficients(),
@@ -2413,7 +2414,8 @@ stored_value(const RealVector& x, const UShortArray& key)
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return value(x, expansionType1Coeffs[key], expansionType2Coeffs[key],
 		 tpq_driver->level_index(key),
 		 tpq_driver->collocation_key(key));
@@ -2421,8 +2423,8 @@ stored_value(const RealVector& x, const UShortArray& key)
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return value(x, expansionType1Coeffs[key], expansionType2Coeffs[key],
 		 csg_driver->smolyak_multi_index(key),
 		 csg_driver->smolyak_coefficients(key),
@@ -2478,8 +2480,8 @@ value(const RealVector& x, const RealVectorArray& t1_coeffs,
   // Smolyak recursion of anisotropic tensor products
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  CombinedSparseGridDriver* csg_driver
-    = (CombinedSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+    std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
   const UShort2DArray&      sm_mi      = csg_driver->smolyak_multi_index();
   const IntArray&           sm_coeffs  = csg_driver->smolyak_coefficients();
   size_t i, num_smolyak_indices = sm_coeffs.size(); SizetArray colloc_index;
@@ -2504,15 +2506,16 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
 				    tpq_driver->level_index(),
 				    tpq_driver->collocation_key());
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
 				    csg_driver->smolyak_multi_index(),
 				    csg_driver->smolyak_coefficients(),
@@ -2532,15 +2535,16 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
 				    tpq_driver->level_index(),
 				    tpq_driver->collocation_key(), dvv);
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
 				    csg_driver->smolyak_multi_index(),
 				    csg_driver->smolyak_coefficients(),
@@ -2569,7 +2573,8 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return gradient_basis_variables(x, expansionType1Coeffs[key],
 				    expansionType2Coeffs[key],
 				    tpq_driver->level_index(key),
@@ -2577,8 +2582,8 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return gradient_basis_variables(x, expansionType1Coeffs[key],
 				    expansionType2Coeffs[key],
 				    csg_driver->smolyak_multi_index(key),
@@ -2609,7 +2614,8 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return gradient_basis_variables(x, expansionType1Coeffs[key],
 				    expansionType2Coeffs[key],
 				    tpq_driver->level_index(key),
@@ -2617,8 +2623,8 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return gradient_basis_variables(x, expansionType1Coeffs[key],
 				    expansionType2Coeffs[key],
 				    csg_driver->smolyak_multi_index(key),
@@ -2741,8 +2747,8 @@ gradient_basis_variables(const RealVector& x, const RealVectorArray& t1_coeffs,
     approxGradient.sizeUninitialized(num_v);
   approxGradient = 0.;
   // Smolyak recursion of anisotropic tensor products
-  CombinedSparseGridDriver* csg_driver
-    = (CombinedSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+    std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
   const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
   const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
   size_t i, j, num_smolyak_indices = sm_coeffs.size(); SizetArray colloc_index;
@@ -2769,15 +2775,16 @@ gradient_nonbasis_variables(const RealVector& x,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return gradient_nonbasis_variables(x, exp_t1_coeff_grads,
 				       tpq_driver->level_index(),
 				       tpq_driver->collocation_key());
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+	std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return gradient_nonbasis_variables(x, exp_t1_coeff_grads,
 				       csg_driver->smolyak_multi_index(),
 				       csg_driver->smolyak_coefficients(),
@@ -2804,15 +2811,16 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     return gradient_nonbasis_variables(x, expansionType1CoeffGrads[key],
 				       tpq_driver->level_index(key),
 				       tpq_driver->collocation_key(key));
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     return gradient_nonbasis_variables(x, expansionType1CoeffGrads[key],
 				       csg_driver->smolyak_multi_index(key),
 				       csg_driver->smolyak_coefficients(key),
@@ -2832,7 +2840,8 @@ gradient_nonbasis_variables(const RealVector& x,
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+  std::shared_ptr<TensorProductDriver> tpq_driver =
+    std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
   SizetArray colloc_index; // empty -> default indexing
   return data_rep->
     tensor_product_gradient_nonbasis_variables(x, exp_t1_coeff_grads, lev_index,
@@ -2908,7 +2917,8 @@ mean(const RealVector& x, const RealVector& exp_t1_coeffs,
   Real mean;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver = 
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     SizetArray colloc_index; // empty -> default indexing
     mean = tensor_product_mean(x, exp_t1_coeffs, exp_t2_coeffs,
 			       tpq_driver->level_index(),
@@ -2916,8 +2926,8 @@ mean(const RealVector& x, const RealVector& exp_t1_coeffs,
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
     const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
     const UShort3DArray& colloc_key   = csg_driver->collocation_key();
@@ -2984,7 +2994,8 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     SizetArray colloc_index; // empty -> default indexing
     return tensor_product_mean_gradient(x, exp_t1_coeffs, exp_t2_coeffs,
       exp_t1_coeff_grads, tpq_driver->level_index(),
@@ -2998,8 +3009,8 @@ mean_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
       mean_grad.sizeUninitialized(num_deriv_vars);
     mean_grad = 0.;
     // Smolyak recursion of anisotropic tensor products
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
     const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
     const UShort3DArray& colloc_key   = csg_driver->collocation_key();
@@ -3102,7 +3113,8 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     SizetArray colloc_index; // empty -> default indexing
 
     switch (data_rep->momentInterpType) {
@@ -3131,8 +3143,8 @@ covariance(const RealVector& x, Real mean_1, Real mean_2,
   // since the non-integrated interpolation polynomial portions are not constant
   // and are coupled with the weight combination.
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
     const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
     const UShort3DArray& colloc_key   = csg_driver->collocation_key();
@@ -3288,7 +3300,8 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     SizetArray colloc_index; // empty -> default indexing
     switch (data_rep->momentInterpType) {
     case REINTERPOLATION_OF_PRODUCTS: {
@@ -3316,8 +3329,8 @@ variance_gradient(const RealVector& x, Real mean, const RealVector& mean_grad,
     if  (var_grad.length() == num_deriv_vars) var_grad = 0.;
     else var_grad.size(num_deriv_vars);
     // Smolyak recursion of anisotropic tensor products
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
     const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
     const UShort3DArray& colloc_key   = csg_driver->collocation_key();
@@ -3395,7 +3408,7 @@ expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs,
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  //IntegrationDriver* driver_rep = data_rep->driverRep;
+  //std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
 
   Real integral = 0.;
   size_t i, num_colloc_pts = t1_coeffs.length();
@@ -3423,7 +3436,7 @@ reinterpolated_level(const UShortArray& lev_index)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   driver_rep->reinterpolated_tensor_grid(lev_index, data_rep->nonRandomIndices);
   data_rep->
     update_tensor_interpolation_basis(driver_rep->reinterpolated_level_index(),
@@ -3450,7 +3463,7 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
     numer_mom.sizeUninitialized(num_moments);
@@ -3527,15 +3540,16 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   if (alt_grid) {
     // synchronize the level/order between alternate and original driver
     if (data_rep->expConfigOptions.expCoeffsSolnApproach == QUADRATURE) {
-      TensorProductDriver* tp_driver
-	= (TensorProductDriver*)data_rep->driverRep;
+      std::shared_ptr<TensorProductDriver> tp_driver
+	= std::static_pointer_cast<TensorProductDriver>(data_rep->driverRep);
       TensorProductDriver* tp_alt_driver = (TensorProductDriver*)alt_driver;
       // match #quad pts: new precision >= old precision
       // Note: Dakota uses quad scalar + dim_pref, Pecos uses aniso quad vector
       tp_alt_driver->quadrature_order(tp_driver->quadrature_order());
     }
     else {
-      SparseGridDriver*     sg_driver = (SparseGridDriver*)data_rep->driverRep;
+      std::shared_ptr<SparseGridDriver> sg_driver =
+	std::static_pointer_cast<SparseGridDriver>(data_rep->driverRep);
       SparseGridDriver* sg_alt_driver = (SparseGridDriver*)alt_driver;
       // level is matched for now; ignores nonlinear/linear growth mismatch
       sg_alt_driver->level(sg_driver->level());
@@ -3558,7 +3572,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   // collocation rules/orders used to form the interpolant).
   else if (csg_driver->track_collocation_details() &&
 	   csg_driver->collocation_indices().empty()) {// invalidated by combine
-    IntegrationDriver* driver_rep = data_rep->driverRep;
+    std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
     const RealMatrix&  var_sets = driver_rep->variable_sets();
     size_t i, num_pts = var_sets.numCols(), num_v = var_sets.numRows();
     RealVector t1_exp(num_pts);
@@ -3585,7 +3599,7 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   }
   */
   else { // use surrData: original single-level or synthetic combined
-    IntegrationDriver* driver_rep = data_rep->driverRep;
+    std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
     const SDRArray& sdr_array = surrData.response_data();
     size_t i, num_pts = sdr_array.size();
     RealVector t1_exp(num_pts);
@@ -3697,7 +3711,8 @@ member_integral(const BitArray& member_bits, Real mean)
   Real integral = 0.;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(data_rep->driver());
     const RealMatrix&      var_sets = tpq_driver->variable_sets();
     const UShortArray&    lev_index = tpq_driver->level_index();
     SizetArray colloc_index; // empty -> default indexing
@@ -3737,8 +3752,8 @@ member_integral(const BitArray& member_bits, Real mean)
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const RealMatrix&       var_sets = csg_driver->variable_sets();
     const IntArray&        sm_coeffs = csg_driver->smolyak_coefficients();
     const UShort2DArray&    sm_index = csg_driver->smolyak_multi_index();

@@ -429,7 +429,7 @@ public:
   const BitArrayULongMap& sobol_index_map() const;
 
   /// set driverRep
-  void integration_driver_rep(IntegrationDriver* driver_rep);
+  void integration_driver_rep(std::shared_ptr<IntegrationDriver> driver_rep);
 
   /// set randomVarsKey
   void random_variables_key(const BitArray& random_vars_key);
@@ -503,7 +503,7 @@ protected:
   //
 
   /// pointer to integration driver instance
-  IntegrationDriver* driverRep;
+  std::shared_ptr<IntegrationDriver> driverRep;
 
   /// an encapsulation of expansion configuration options
   ExpansionConfigOptions expConfigOptions;
@@ -549,14 +549,14 @@ private:
 
 
 inline SharedPolyApproxData::SharedPolyApproxData():
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
 inline SharedPolyApproxData::
 SharedPolyApproxData(short basis_type, size_t num_vars):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -565,7 +565,7 @@ SharedPolyApproxData(short basis_type, size_t num_vars,
 		     const ExpansionConfigOptions& ec_options,
 		     const BasisConfigOptions& bc_options):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL), expConfigOptions(ec_options), basisConfigOptions(bc_options),
+  expConfigOptions(ec_options), basisConfigOptions(bc_options),
   ssgLevelPrev(USHRT_MAX)
 { }
 
@@ -671,7 +671,7 @@ inline const BitArrayULongMap& SharedPolyApproxData::sobol_index_map() const
 
 
 inline void SharedPolyApproxData::
-integration_driver_rep(IntegrationDriver* driver_rep)
+integration_driver_rep(std::shared_ptr<IntegrationDriver> driver_rep)
 { driverRep = driver_rep; }
 
 
@@ -758,7 +758,8 @@ inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     size_t p_index = sg_driver->push_index(key); // retrieve value (no lookup)
     return (p_index == _NPOS) ?
       sg_driver->push_trial_index(key) : // not pre-computed -> perform lookup
@@ -777,7 +778,8 @@ inline size_t SharedPolyApproxData::push_index()
 
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     size_t p_index = sg_driver->push_index(); // retrieve pushIndex (no lookup)
     return (p_index == _NPOS) ?
       sg_driver->push_trial_index() : // not pre-computed -> perform lookup
@@ -794,7 +796,8 @@ inline size_t SharedPolyApproxData::restore_index(const UShortArray& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     // Option 1: default to be overridden by SharedHierarchPAD:
     //return sg_driver->push_index(key);
     // Option 2: add/use virtual sg_driver->restore_index(key) [more consistent with finalize_index()]
@@ -816,7 +819,8 @@ finalize_index(size_t i, const UShortArray& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     return sg_driver->finalize_index(i, key);  break;
 
     /*

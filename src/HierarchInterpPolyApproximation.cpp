@@ -106,7 +106,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
@@ -193,7 +193,7 @@ void HierarchInterpPolyApproximation::increment_coefficients()
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   /* Prior to activeKey tracking for computed bits and cached moments:
   bool updated = update_active_iterators(data_rep->activeKey);
@@ -277,7 +277,7 @@ increment_coefficients(const UShortArray& index_set)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray& colloc_key = hsg_driver->collocation_key();
   size_t index, num_trial_pts = colloc_key[lev][set].size(),
@@ -336,7 +336,7 @@ void HierarchInterpPolyApproximation::pop_coefficients(bool save_data)
   update_active_iterators(key);
   decrement_current_to_reference();
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   RealVector2DArray& exp_t1c  = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2c  = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
@@ -534,7 +534,7 @@ void HierarchInterpPolyApproximation::push_coefficients()
     //   is defined upstream in shared data) --> would have to retrieve from
     //   poppedLevMultiIndex somehow (too late?)
 
-    //HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+    //std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
     //const UShortArray& tr_set = hsg_driver->trial_set();
     //size_t lev = l1_norm(tr_set);
     size_t tr_lev = data_rep->hsg_driver()->trial_level(),
@@ -694,7 +694,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
@@ -887,7 +887,7 @@ synthetic_surrogate_data(SurrogateData& surr_data)
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   // HierarchSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
@@ -1354,7 +1354,7 @@ Real HierarchInterpPolyApproximation::combined_mean()
   if (use_tracker && (combinedMeanBits & 1))
     return combinedMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real mean =
     expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 		hsg_driver->combined_type1_hierarchical_weight_sets(),
@@ -1378,7 +1378,7 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
       data_rep->match_nonrandom_vars(x, xPrevCombMean))
     return combinedMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real mean = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  hsg_driver->combined_smolyak_multi_index(),
 			  hsg_driver->combined_collocation_key());
@@ -1616,7 +1616,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   //       immediately after switch from active to combined stats to provide
   //       reference prior to greedy adaptation.
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   central_product_interpolant(hsg_driver->combined_hierarchical_variable_sets(),
 			      hsg_driver->combined_smolyak_multi_index(),
 			      hsg_driver->combined_collocation_key(),
@@ -1661,7 +1661,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   //       immediately after switch from active to combined stats to provide
   //       reference prior to greedy adaptation.
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& comb_sm_mi = hsg_driver->combined_smolyak_multi_index();
   const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
   central_product_interpolant(hsg_driver->combined_hierarchical_variable_sets(),
@@ -1871,7 +1871,7 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
   if (use_tracker && (combinedRefMeanBits & 1))
     return combinedRefMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
@@ -1897,7 +1897,7 @@ reference_combined_mean(const RealVector& x,
       data_rep->match_nonrandom_vars(x, xPrevCombRefMean))
     return combinedRefMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
@@ -1983,7 +1983,7 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
   if (use_tracker && (combinedRefVarBits & 1))
     return combinedRefMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(ref_key_map);
   if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
@@ -2020,7 +2020,7 @@ reference_combined_variance(const RealVector& x,
       data_rep->match_nonrandom_vars(x, xPrevCombRefVar))
     return combinedRefMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(x, ref_key_map);
   if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
@@ -2151,7 +2151,7 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> incr_key_map;
   hsg_driver->partition_increment_key(incr_key_map);
   Real delta_mean
@@ -2183,7 +2183,7 @@ delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
@@ -2213,7 +2213,7 @@ Real HierarchInterpPolyApproximation::delta_combined_mean(const RealVector& x)
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> incr_key_map;
   hsg_driver->partition_increment_key(incr_key_map);
   Real delta_mean
@@ -2248,7 +2248,7 @@ delta_combined_mean(const RealVector& x,
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
@@ -2274,7 +2274,7 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
   if (use_tracker && (primaryDeltaVarIter->second & 1))
     return primaryDeltaMomIter->second[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(expT1CoeffsIter->second,
@@ -2314,7 +2314,7 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
     return primaryDeltaMomIter->second[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(x, expT1CoeffsIter->second,
@@ -2353,7 +2353,7 @@ delta_combined_variance(
   if (use_tracker && (combinedDeltaVarBits & 1))
     return combinedDeltaMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
@@ -2395,7 +2395,7 @@ delta_combined_variance(const RealVector& x,
       data_rep->match_nonrandom_vars(x, xPrevCombDeltaVar))
     return combinedDeltaMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
@@ -2716,7 +2716,7 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
   if (use_tracker && (primaryDeltaVarIter->second & 1))
     return primaryDeltaMomIter->second[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
   Real delta_covar;
@@ -2772,7 +2772,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
     return primaryDeltaMomIter->second[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
   Real delta_covar;
@@ -2818,7 +2818,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   if (use_tracker && (combinedDeltaVarBits & 1))
     return combinedDeltaMoments[1];
   
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
   // For combined statistics, we utilize the full coefficient maps
@@ -2870,7 +2870,7 @@ delta_combined_covariance(const RealVector& x,
       data_rep->match_nonrandom_vars(x, xPrevCombDeltaVar))
     return combinedDeltaMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
   Real delta_covar;
@@ -3212,7 +3212,7 @@ expectation(const RealVector2DArray& t1_coeffs,
   Real integral = 0.;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const RealVector2DArray& t1_wts
     = hsg_driver->type1_hierarchical_weight_sets();
   size_t lev, set, pt, num_lev = t1_coeffs.size(), num_sets,
@@ -4398,7 +4398,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit1, t1c_cit2;
   std::map<UShortArray, RealMatrix2DArray>::const_iterator
@@ -4849,7 +4849,7 @@ member_coefficients_weights(const BitArray& member_bits,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();

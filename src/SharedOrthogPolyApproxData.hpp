@@ -157,10 +157,10 @@ protected:
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(
-    CombinedSparseGridDriver* csg_driver, const UShortArray& levels,
+    CombinedSparseGridDriver& csg_driver, const UShortArray& levels,
     UShortArray& exp_order);//, short growth_rate = UNRESTRICTED_GROWTH);
   /// convert quadrature orders to integrand orders using rigorous mappings
-  void quadrature_order_to_integrand_order(IntegrationDriver* int_driver,
+  void quadrature_order_to_integrand_order(IntegrationDriver& int_driver,
 					   const UShortArray& quad_order,
 					   UShortArray& int_order);
   /// convert integrand orders to expansion orders using rigorous mappings
@@ -169,7 +169,7 @@ protected:
 
   /// helper function for incrementing that is modular on sparse grid driver
   /// and multi-index
-  void increment_trial_set(CombinedSparseGridDriver* csg_driver,
+  void increment_trial_set(CombinedSparseGridDriver& csg_driver,
 			   UShort2DArray& aggregated_mi);
   /// helper function for decrementing that is modular on trial set
   /// and multi-index
@@ -577,8 +577,8 @@ coefficients_norms_flag(bool flag, std::vector<BasisPolynomial>& poly_basis)
   for (i=0; i<num_basis; ++i) {
     BasisPolynomial& poly_basis_i = poly_basis[i];
     if (poly_basis_i.basis_type() == NUM_GEN_ORTHOG)
-      ((NumericGenOrthogPolynomial*)poly_basis_i.polynomial_rep())
-	->coefficients_norms_flag(flag);
+      std::static_pointer_cast<NumericGenOrthogPolynomial>
+	(poly_basis_i.polynomial_rep())->coefficients_norms_flag(flag);
   }
 }
 

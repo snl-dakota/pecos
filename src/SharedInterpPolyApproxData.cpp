@@ -147,7 +147,8 @@ void SharedInterpPolyApproxData::allocate_data()
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(driverRep);
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
 
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
@@ -160,7 +161,8 @@ void SharedInterpPolyApproxData::allocate_data()
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
   case HIERARCHICAL_SPARSE_GRID: {
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> ssg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
 
@@ -186,7 +188,8 @@ void SharedInterpPolyApproxData::increment_data()
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     const UShortArray& trial_set = sg_driver->trial_set();
     unsigned short max_set_index = 0;
     for (size_t i=0; i<numVars; ++i)
@@ -199,7 +202,8 @@ void SharedInterpPolyApproxData::increment_data()
   default: // uniform/anisotropic refinement
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
-      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      std::shared_ptr<TensorProductDriver> tpq_driver =
+	std::static_pointer_cast<TensorProductDriver>(driverRep);
       update_tensor_interpolation_basis(tpq_driver->level_index());
       allocate_component_sobol();
       // For subsequent allocate_data():
@@ -211,8 +215,8 @@ void SharedInterpPolyApproxData::increment_data()
       // As for allocate_arrays(), increments are performed in coarser steps
       // than may be strictly necessary: all increments are filled in for all
       // vars for a step in level (ignoring anisotropy or generalized indices).
-      IncrementalSparseGridDriver* isg_driver
-	= (IncrementalSparseGridDriver*)driverRep;
+      std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+	std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
       const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
       size_t i, v, num_sm_mi = sm_mi.size(),
 	start_index = isg_driver->smolyak_coefficients_reference().size();
@@ -229,8 +233,8 @@ void SharedInterpPolyApproxData::increment_data()
       break;
     }
     case HIERARCHICAL_SPARSE_GRID: {
-      HierarchSparseGridDriver* hsg_driver
-	= (HierarchSparseGridDriver*)driverRep;
+      std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+	std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
       const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
       const UShortArray& incr_sets = hsg_driver->increment_sets();
       size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets, v;
@@ -291,7 +295,8 @@ bool SharedInterpPolyApproxData::push_available()
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     return sg_driver->push_trial_available();
     break;
   }

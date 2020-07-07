@@ -118,11 +118,11 @@ public:
   //
 
   /// assign letter or replace existing letter with a new one
-  void assign_rep(BasisApproximation* approx_rep, bool ref_count_incr);
+  void assign_rep(std::shared_ptr<BasisApproximation> approx_rep);
 
   /// returns approxRep for access to derived class member functions
   /// that are not mapped to the top Approximation level
-  BasisApproximation* approx_rep() const;
+  std::shared_ptr<BasisApproximation> approx_rep() const;
 
 protected:
 
@@ -150,7 +150,7 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// basisApproxRep to the appropriate derived type.
-  BasisApproximation*
+  std::shared_ptr<BasisApproximation>
     get_basis_approx(const SharedBasisApproxData& shared_data);
 
   //
@@ -158,13 +158,11 @@ private:
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  BasisApproximation* basisApproxRep;
-  /// number of objects sharing basisApproxRep
-  int referenceCount;
+  std::shared_ptr<BasisApproximation> basisApproxRep;
 };
 
 
-inline BasisApproximation* BasisApproximation::approx_rep() const
+inline std::shared_ptr<BasisApproximation> BasisApproximation::approx_rep() const
 { return basisApproxRep; }
 
 } // namespace Pecos

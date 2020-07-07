@@ -165,23 +165,27 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
       // CONTINUOUS RANGE vars are always mapped to STD_UNIFORM
       // DISCRETE RANGE, SET
       case DISCRETE_RANGE:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_range_distribution(
 	    mvd_rep->pull_parameter<int>(i, DR_LWR_BND),
 	    mvd_rep->pull_parameter<int>(i, DR_UPR_BND));
 	break;
       case DISCRETE_SET_INT:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_set_distribution(
 	    mvd_rep->pull_parameter<IntSet>(i, DSI_VALUES));
 	break;
       case DISCRETE_SET_STRING:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_set_distribution(
 	    mvd_rep->pull_parameter<StringSet>(i, DSS_VALUES));
 	break;
       case DISCRETE_SET_REAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_set_distribution(
 	    mvd_rep->pull_parameter<RealSet>(i, DSR_VALUES));
 	break;
@@ -199,19 +203,22 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
           mvd_rep->pull_parameter<Real>(i, GA_ALPHA));
 	break;
       case BOUNDED_NORMAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  bounded_normal_distribution(mvd_rep->pull_parameter<Real>(i, N_MEAN),
 	    mvd_rep->pull_parameter<Real>(i, N_STD_DEV),
 	    mvd_rep->pull_parameter<Real>(i, N_LWR_BND),
 	    mvd_rep->pull_parameter<Real>(i, N_UPR_BND));
 	break;
       case LOGNORMAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  lognormal_distribution(mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
 	    mvd_rep->pull_parameter<Real>(i, LN_ZETA));
 	break;
       case BOUNDED_LOGNORMAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  bounded_lognormal_distribution(
 	    mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
 	    mvd_rep->pull_parameter<Real>(i, LN_ZETA),
@@ -219,33 +226,39 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	    mvd_rep->pull_parameter<Real>(i, LN_UPR_BND));
 	break;
       case LOGUNIFORM:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  loguniform_distribution(mvd_rep->pull_parameter<Real>(i, LU_LWR_BND),
 	    mvd_rep->pull_parameter<Real>(i, LU_UPR_BND));
 	break;
       case TRIANGULAR:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  triangular_distribution(mvd_rep->pull_parameter<Real>(i, T_LWR_BND),
 	    mvd_rep->pull_parameter<Real>(i, T_MODE),
 	    mvd_rep->pull_parameter<Real>(i, T_UPR_BND));
 	break;
       case GUMBEL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  gumbel_distribution(mvd_rep->pull_parameter<Real>(i, GU_ALPHA),
 	    mvd_rep->pull_parameter<Real>(i, GU_BETA));
 	break;
       case FRECHET:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  frechet_distribution(mvd_rep->pull_parameter<Real>(i, F_ALPHA),
 	    mvd_rep->pull_parameter<Real>(i, F_BETA));
 	break;
       case WEIBULL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  weibull_distribution(mvd_rep->pull_parameter<Real>(i, W_ALPHA),
 	    mvd_rep->pull_parameter<Real>(i, W_BETA));
 	break;
       case HISTOGRAM_BIN:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_bin_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, H_BIN_PAIRS));
 	break;
@@ -282,23 +295,27 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	  mvd_rep->pull_parameter<unsigned int>(i, HGE_DRAWN));
 	break;
       case HISTOGRAM_PT_INT:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<IntRealMap>(i, H_PT_INT_PAIRS));
 	break;
       case HISTOGRAM_PT_STRING:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<StringRealMap>(i,H_PT_STR_PAIRS));
 	break;
       case HISTOGRAM_PT_REAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, H_PT_REAL_PAIRS));
 	break;
       // CONTINUOUS EPISTEMIC
       case CONTINUOUS_INTERVAL_UNCERTAIN:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  continuous_interval_distribution(
 	    mvd_rep->pull_parameter<RealRealPairRealMap>(i, CIU_BPA));
 	//((IntervalRandomVariable<Real>*)u_rv[i].random_variable_rep())->
@@ -306,24 +323,28 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	break;
       // DISCRETE EPISTEMIC
       case DISCRETE_INTERVAL_UNCERTAIN:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_interval_distribution(
 	    mvd_rep->pull_parameter<IntIntPairRealMap>(i, DIU_BPA));
 	//((IntervalRandomVariable<int>*)u_rv[i].random_variable_rep())->
 	//  activate_vpp();
 	break;
       case DISCRETE_UNCERTAIN_SET_INT:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_map_distribution(
 	    mvd_rep->pull_parameter<IntRealMap>(i, DUSI_VALUES_PROBS));
 	break;
       case DISCRETE_UNCERTAIN_SET_STRING:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_map_distribution(
 	    mvd_rep->pull_parameter<StringRealMap>(i, DUSS_VALUES_PROBS));
 	break;
       case DISCRETE_UNCERTAIN_SET_REAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_map_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, DUSR_VALUES_PROBS));
 	break;

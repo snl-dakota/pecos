@@ -240,7 +240,7 @@ multiply_expansion(const UShort2DArray& multi_index_a,
 
   // precompute 1D basis triple products required
   unsigned short max_a, max_b, max_c; UShortMultiSet max_abc;
-  OrthogonalPolynomial* poly_rep_v;
+  std::shared_ptr<OrthogonalPolynomial> poly_rep_v;
   for (v=0; v<num_v; ++v) {
     max_a = max_b = max_c = 0; max_abc.clear();
     // could track max_abc within combine_coefficients() and pass in, but would
@@ -257,8 +257,8 @@ multiply_expansion(const UShort2DArray& multi_index_a,
       if (multi_index_c[i][v] > max_c)
 	max_c = multi_index_c[i][v];
     max_abc.insert(max_a); max_abc.insert(max_b); max_abc.insert(max_c); 
-    poly_rep_v
-      = (OrthogonalPolynomial*)(data_rep->polynomialBasis[v].polynomial_rep());
+    poly_rep_v = std::static_pointer_cast<OrthogonalPolynomial>
+      (data_rep->polynomialBasis[v].polynomial_rep());
     poly_rep_v->precompute_triple_products(max_abc);
   }
 
@@ -274,7 +274,7 @@ multiply_expansion(const UShort2DArray& multi_index_a,
       for (j=0; j<num_b; ++j) {
 	trip_prod = 1.;
 	for (v=0; v<num_v; ++v) {
-	  poly_rep_v = (OrthogonalPolynomial*)
+	  poly_rep_v = std::static_pointer_cast<OrthogonalPolynomial>
 	    (data_rep->polynomialBasis[v].polynomial_rep());
 	  non_zero = poly_rep_v->triple_product(multi_index_a[i][v],
 	    multi_index_b[j][v], multi_index_c[k][v], trip_prod_v);

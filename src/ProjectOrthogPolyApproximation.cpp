@@ -42,8 +42,8 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case INCREMENTAL_SPARSE_GRID:
     //if (data_rep->expConfigOptions.refineControl) {
-      IncrementalSparseGridDriver* isg_driver
-	= (IncrementalSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(data_rep->driver());
       size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
       const UShortArray& key = data_rep->activeKey;
       tpExpansionCoeffs[key].resize(num_smolyak_indices);
@@ -62,7 +62,7 @@ void ProjectOrthogPolyApproximation::integration_checks()
     abort_handler(-1);
   }
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  IntegrationDriver*  driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
 
   if (!driver_rep) {
     PCerr << "Error: pointer to integration driver required in "
@@ -112,8 +112,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     // multiple tensor expansion integrations
     if (expansionCoeffFlag)     exp_coeffs      = 0.;
     if (expansionCoeffGradFlag) exp_coeff_grads = 0.;
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
     const UShortArray&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
@@ -419,8 +419,8 @@ append_tensor_expansions(size_t start_tp_index)
   // rather than building from scratch
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  IncrementalSparseGridDriver* isg_driver
-    = (IncrementalSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+    std::static_pointer_cast<IncrementalSparseGridDriver>(data_rep->driver());
   const IntArray&     sm_coeffs = isg_driver->smolyak_coefficients();
   const IntArray& sm_coeffs_ref = isg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
@@ -475,8 +475,8 @@ integration_data(size_t tp_index, SDVArray& tp_data_vars,
   // type1CollocWts1D
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  CombinedSparseGridDriver* csg_driver
-    = (CombinedSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+    std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
   const UShortArray&    sm_index = csg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = csg_driver->collocation_indices()[tp_index];

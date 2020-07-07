@@ -225,7 +225,7 @@ public:
 
   /// returns polyRep for access to derived class member functions
   /// that are not mapped to the top BasisPolynomial level
-  BasisPolynomial* polynomial_rep() const;
+  std::shared_ptr<BasisPolynomial> polynomial_rep() const;
   /// function to check polyRep (does this handle contain a body)
   bool is_null() const;
 
@@ -266,16 +266,14 @@ private:
 
   /// Used by the envelope constructor to initialize polyRep to the
   /// appropriate derived type.
-  BasisPolynomial* get_polynomial(short poly_type, short rule);
+  std::shared_ptr<BasisPolynomial> get_polynomial(short poly_type, short rule);
 
   //
   //- Heading: Data
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  BasisPolynomial* polyRep;
-  /// number of objects sharing polyRep
-  int referenceCount;
+  std::shared_ptr<BasisPolynomial> polyRep;
 };
 
 
@@ -287,7 +285,7 @@ inline short BasisPolynomial::basis_type() const
 //{ return (polyRep) ? polyRep->parametricUpdate : parametricUpdate; }
 
 
-inline BasisPolynomial* BasisPolynomial::polynomial_rep() const
+inline std::shared_ptr<BasisPolynomial> BasisPolynomial::polynomial_rep() const
 { return polyRep; }
 
 

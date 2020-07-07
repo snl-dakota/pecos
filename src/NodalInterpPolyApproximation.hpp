@@ -477,7 +477,7 @@ inline Real NodalInterpPolyApproximation::mean()
   if (use_tracker && (primaryMeanIter->second & 1))
     return primaryMomIter->second[0];
 
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   Real mu = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second,
 			driver_rep->type1_weight_sets(),
 			driver_rep->type2_weight_sets());
@@ -596,7 +596,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (use_tracker && (primaryVarIter->second & 1))
     return primaryMomIter->second[1];
 
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   Real mean_1 = mean(), mean_2 = (same) ? mean_1 : nip_approx_2->mean(),
     covar = covariance(mean_1, mean_2, expT1CoeffsIter->second,
 		       expT2CoeffsIter->second,
@@ -727,7 +727,7 @@ inline Real NodalInterpPolyApproximation::combined_mean()
   if (use_tracker && (combinedMeanBits & 1))
     return combinedMoments[0];
 
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   Real mu = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 			driver_rep->combined_type1_weight_sets(),
 			driver_rep->combined_type2_weight_sets());
@@ -774,7 +774,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   Real mean_1 = combined_mean(),
        mean_2 = (this == nip_approx_2) ? mean_1 : nip_approx_2->combined_mean();
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
   Real covar
     = covariance(mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
 		 nip_approx_2->combinedExpT1Coeffs,

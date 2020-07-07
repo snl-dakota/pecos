@@ -1016,7 +1016,7 @@ integrate_response_moments(size_t num_moments, bool combined_stats)
   // as integration rules
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   // Support combined_stats for completeness
   // > use of combined_to_active() prior to full_stats computation makes
@@ -1069,7 +1069,7 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) { // invalidated by combination
     bool same = (this == hip_approx_2);    
@@ -1097,7 +1097,7 @@ product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   product_difference_interpolant(surrData, hip_approx_2->surrData,
     hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
     hsg_driver->collocation_indices(), prod_t1c, prod_t2c, hf_key, lf_key,
@@ -1114,7 +1114,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) {// invalidated by combination
     bool same = (this == hip_approx_2);
@@ -1143,7 +1143,7 @@ central_product_gradient_interpolant(
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   if (hsg_driver->track_collocation_indices() &&
       hsg_driver->collocation_indices().empty()) {// invalidated by combination
     bool same = (this == hip_approx_2);
@@ -1361,7 +1361,7 @@ expectation(const RealVector2DArray& t1_coeffs,
   // This version defaults to active type1/2 wts from HierarchSparseGridDriver
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation(t1_coeffs, t2_coeffs,
 		     hsg_driver->type1_hierarchical_weight_sets(),
 		     hsg_driver->type2_hierarchical_weight_sets(),
@@ -1377,7 +1377,7 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
   // This version defaults to active sm_mi/key from HierarchSparseGridDriver
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation(x, t1_coeffs, t2_coeffs, hsg_driver->smolyak_multi_index(),
 		     hsg_driver->collocation_key(), set_partition);
 }
@@ -1401,7 +1401,7 @@ expectation_gradient(const RealVector& x,
   // This version defaults to active sm_mi/key from HierarchSparseGridDriver
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation_gradient(x, t1_coeff_grads,
 			      hsg_driver->smolyak_multi_index(),
 			      hsg_driver->collocation_key(), t1cg_index);
@@ -1415,7 +1415,7 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
   // This version defaults to active sm_mi/key from HierarchSparseGridDriver
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   return expectation_gradient(x, t1_coeffs, t2_coeffs,
 			      hsg_driver->smolyak_multi_index(),
 			      hsg_driver->collocation_key(), deriv_index);
@@ -1426,7 +1426,7 @@ inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return value(x, sm_mi, hsg_driver->collocation_key(), expT1CoeffsIter->second,
@@ -1439,7 +1439,7 @@ gradient_basis_variables(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -1453,7 +1453,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -1467,7 +1467,7 @@ gradient_nonbasis_variables(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -1480,7 +1480,7 @@ hessian_basis_variables(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return hessian_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -1493,7 +1493,7 @@ stored_value(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
   return value(x, sm_mi, hsg_driver->collocation_key(key),
@@ -1506,7 +1506,7 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(key),
@@ -1521,7 +1521,7 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(key),
@@ -1535,7 +1535,7 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(key),
@@ -1548,7 +1548,7 @@ stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
   return hessian_basis_variables(x, sm_mi, hsg_driver->collocation_key(key),

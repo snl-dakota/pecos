@@ -156,10 +156,11 @@ int main(int argc, char* argv[])
   // use IntegrationDriver() and then assign letter.
   IntegrationDriver int_driver; // empty envelope
   // assign letter using assign_rep()
-  IncrementalSparseGridDriver* csg_driver
-    = new IncrementalSparseGridDriver(strtlev, dimension_pref, growth_rate,
-				   refine_cntl);
-  int_driver.assign_rep(csg_driver, false); // don't increment ref count
+  std::shared_ptr<IncrementalSparseGridDriver> csg_driver =
+    std::make_shared<IncrementalSparseGridDriver>
+    (strtlev, dimension_pref, growth_rate, refine_cntl);
+  // BMA TODO: This won't compile, but need a checkpoint
+  int_driver.assign_rep(csg_driver);
 
   if (verb > 2)
     PCout << "Instantiating basis...\n";
@@ -203,8 +204,8 @@ int main(int argc, char* argv[])
   // Instantiate Project poly approx
   std::vector<BasisApproximation> poly_approx(nQoI); // array of envelopes
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].assign_rep(new 
-      ProjectOrthogPolyApproximation(shared_data), false); // assign letter
+    poly_approx[iQoI].assign_rep
+      (std::make_shared<ProjectOrthogPolyApproximation>(shared_data));
 
   if (verb > 2)
     PCout << "  - done\n";
@@ -277,8 +278,8 @@ int main(int argc, char* argv[])
     /* Compute base variance */
     RealVector respVariance(nQoI,0.0);  
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-      PolynomialApproximation* poly_approx_rep =
-	(PolynomialApproximation *) poly_approx[iQoI].approx_rep();
+      auto poly_approx_rep = std::static_pointer_cast<PolynomialApproximation>
+	(poly_approx[iQoI].approx_rep());
       respVariance[iQoI] = poly_approx_rep->variance() ;
     }
     Real deltaVar = 0.0;
@@ -376,8 +377,8 @@ int main(int argc, char* argv[])
       /* Compute (normalized) change in variance */
       RealVector respVarianceNew(nQoI,0.0);  
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	PolynomialApproximation* poly_approx_rep =
-	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
+	auto poly_approx_rep = std::static_pointer_cast<PolynomialApproximation>
+	  (poly_approx[iQoI].approx_rep());
 	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
       }
       if (verb > 1) {
