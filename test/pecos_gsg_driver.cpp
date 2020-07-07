@@ -159,7 +159,6 @@ int main(int argc, char* argv[])
   std::shared_ptr<IncrementalSparseGridDriver> csg_driver =
     std::make_shared<IncrementalSparseGridDriver>
     (strtlev, dimension_pref, growth_rate, refine_cntl);
-  // BMA TODO: This won't compile, but need a checkpoint
   int_driver.assign_rep(csg_driver);
 
   if (verb > 2)

@@ -3531,7 +3531,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver *alt_driver = data_rep->expMomentIntDriver.driver_rep();
+  std::shared_ptr<IntegrationDriver> alt_driver =
+    data_rep->expMomentIntDriver.driver_rep();
   bool alt_grid = (alt_driver != NULL);
 
   // Alternate quadrature on interpolant is strictly value-based.  A shared
@@ -3540,9 +3541,10 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
   if (alt_grid) {
     // synchronize the level/order between alternate and original driver
     if (data_rep->expConfigOptions.expCoeffsSolnApproach == QUADRATURE) {
-      std::shared_ptr<TensorProductDriver> tp_driver
-	= std::static_pointer_cast<TensorProductDriver>(data_rep->driverRep);
-      TensorProductDriver* tp_alt_driver = (TensorProductDriver*)alt_driver;
+      std::shared_ptr<TensorProductDriver> tp_driver =
+	std::static_pointer_cast<TensorProductDriver>(data_rep->driverRep);
+      std::shared_ptr<TensorProductDriver> tp_alt_driver =
+	std::static_pointer_cast<TensorProductDriver>(alt_driver);
       // match #quad pts: new precision >= old precision
       // Note: Dakota uses quad scalar + dim_pref, Pecos uses aniso quad vector
       tp_alt_driver->quadrature_order(tp_driver->quadrature_order());
@@ -3550,7 +3552,8 @@ integrate_expansion_moments(size_t num_moments, bool combined_stats)
     else {
       std::shared_ptr<SparseGridDriver> sg_driver =
 	std::static_pointer_cast<SparseGridDriver>(data_rep->driverRep);
-      SparseGridDriver* sg_alt_driver = (SparseGridDriver*)alt_driver;
+      std::shared_ptr<SparseGridDriver> sg_alt_driver =
+	std::static_pointer_cast<SparseGridDriver>(alt_driver);
       // level is matched for now; ignores nonlinear/linear growth mismatch
       sg_alt_driver->level(sg_driver->level());
       sg_alt_driver->anisotropic_weights(sg_driver->anisotropic_weights());

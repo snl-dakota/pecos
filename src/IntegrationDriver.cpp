@@ -37,11 +37,9 @@ UShortArray IntegrationDriver::precGenzKeister;
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_driver() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~IntegrationDriver). */
+    letter IS the representation, its rep pointer is set to NULL. */
 IntegrationDriver::IntegrationDriver(BaseConstructor):
-  driverMode(DEFAULT_MODE), computeType2Weights(false),
-  activeReinterpIndex(0), driverRep(NULL), referenceCount(1)
+  driverMode(DEFAULT_MODE), computeType2Weights(false), activeReinterpIndex(0)
 {
   // As noted in VPISparseGrid sandia_rules.cpp, there is a sequence of five
   // nested rules, where the 5th rule has several options (35, 37, 41, or 43
@@ -82,39 +80,21 @@ IntegrationDriver::IntegrationDriver(BaseConstructor):
     precGenzKeister[0] =  1; precGenzKeister[1] =  5; precGenzKeister[2] = 15;
     precGenzKeister[3] = 29; precGenzKeister[4] = 51; precGenzKeister[5] = 67;
   }
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "IntegrationDriver::IntegrationDriver(BaseConstructor) called to "
-        << "build base class for letter." << std::endl;
-#endif
 }
 
 
-/** The default constructor: driverRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-IntegrationDriver::IntegrationDriver(): driverRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "IntegrationDriver::IntegrationDriver() called to build empty "
-        << "envelope." << std::endl;
-#endif
-}
+/** The default constructor: driverRep is NULL in this case. */
+IntegrationDriver::IntegrationDriver()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor only needs to extract enough data to properly
     execute get_driver, since IntegrationDriver(BaseConstructor)
     builds the actual base class data for the derived basis functions. */
 IntegrationDriver::IntegrationDriver(short driver_type):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "IntegrationDriver::IntegrationDriver(short) called to "
-        << "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  driverRep = get_driver(driver_type);
+  driverRep(get_driver(driver_type))
+{
   if ( !driverRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -122,128 +102,51 @@ IntegrationDriver::IntegrationDriver(short driver_type):
 
 /** Used only by the envelope constructor to initialize driverRep to the 
     appropriate derived type. */
-IntegrationDriver* IntegrationDriver::get_driver(short driver_type)
+std::shared_ptr<IntegrationDriver>
+IntegrationDriver::get_driver(short driver_type)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_driver(short)." << std::endl;
-#endif
-
   switch (driver_type) {
-  case QUADRATURE:              return new TensorProductDriver();         break;
-  case CUBATURE:                return new CubatureDriver();              break;
-  case LIGHTWEIGHT_SPARSE_GRID: return new LightweightSparseGridDriver(); break;
-  case COMBINED_SPARSE_GRID:    return new CombinedSparseGridDriver();    break;
-  case INCREMENTAL_SPARSE_GRID: return new IncrementalSparseGridDriver(); break;
-  case HIERARCHICAL_SPARSE_GRID: return new HierarchSparseGridDriver();   break;
+  case QUADRATURE:
+    return std::make_shared<TensorProductDriver>();         break;
+  case CUBATURE:
+    return std::make_shared<CubatureDriver>();              break;
+  case LIGHTWEIGHT_SPARSE_GRID:
+    return std::make_shared<LightweightSparseGridDriver>(); break;
+  case COMBINED_SPARSE_GRID:
+    return std::make_shared<CombinedSparseGridDriver>();    break;
+  case INCREMENTAL_SPARSE_GRID:
+    return std::make_shared<IncrementalSparseGridDriver>(); break;
+  case HIERARCHICAL_SPARSE_GRID:
+    return std::make_shared<HierarchSparseGridDriver>();    break;
   default:
     PCerr << "Error: IntegrationDriver type " << driver_type
 	  << " not available." << std::endl;
-    return NULL;                                           break;
+    return std::shared_ptr<IntegrationDriver>();            break;
   }
 }
 
 
-/** Copy constructor manages sharing of driverRep and incrementing
-    of referenceCount. */
-IntegrationDriver::IntegrationDriver(const IntegrationDriver& driver)
-{
-  // Increment new (no old to decrement)
-  driverRep = driver.driverRep;
-  if (driverRep) // Check for an assignment of NULL
-    driverRep->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "IntegrationDriver::IntegrationDriver(IntegrationDriver&)"
-	<< std::endl;
-  if (driverRep)
-    PCout << "driverRep referenceCount = " << driverRep->referenceCount
-	  << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of driverRep. */
+IntegrationDriver::IntegrationDriver(const IntegrationDriver& driver):
+  driverRep(driver.driverRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old driverRep,
-    assigns new driverRep, and increments referenceCount for new
-    driverRep. */
 IntegrationDriver IntegrationDriver::operator=(const IntegrationDriver& driver)
 {
-  if (driverRep != driver.driverRep) { // std case: old != new
-    // Decrement old
-    if (driverRep) // Check for null pointer
-      if (--driverRep->referenceCount == 0) 
-	delete driverRep;
-    // Assign and increment new
-    driverRep = driver.driverRep;
-    if (driverRep) // Check for an assignment of NULL
-      driverRep->referenceCount++;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "IntegrationDriver::operator=(IntegrationDriver&)" << std::endl;
-  if (driverRep)
-    PCout << "driverRep referenceCount = " << driverRep->referenceCount
-	  << std::endl;
-#endif
-
+  driverRep = driver.driverRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes driverRep
-    when referenceCount reaches zero. */
 IntegrationDriver::~IntegrationDriver()
-{ 
-  // Check for NULL pointer 
-  if (driverRep) {
-    --driverRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "driverRep referenceCount decremented to "
-	  << driverRep->referenceCount << std::endl;
-#endif
-    if (driverRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting driverRep" << std::endl;
-#endif
-      delete driverRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 void IntegrationDriver::
-assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr)
+assign_rep(std::shared_ptr<IntegrationDriver> driver_rep)
 { 
-  if (driverRep == driver_rep) {
-    // if ref_count_incr = true (rep from another envelope), do nothing as
-    // referenceCount should already be correct (see also operator= logic).
-    // if ref_count_incr = false (rep from on the fly), then this is an error.
-    if (!ref_count_incr) {
-      PCerr << "Error: duplicated driver_rep pointer assignment without "
-	    << "reference count increment in IntegrationDriver::assign_rep()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-  }
-  else { // normal case: old != new
-    // Decrement old
-    if (driverRep) // Check for NULL
-      if ( --driverRep->referenceCount == 0 ) 
-	delete driverRep;
-    // Assign new
-    driverRep = driver_rep;
-    // Increment new
-    if (driverRep && ref_count_incr) // Check for NULL & honor ref_count_incr
-      driverRep->referenceCount++;
-  }
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "IntegrationDriver::assign_rep(IntegrationDriver*)" << std::endl;
-  if (driverRep)
-    PCout << "driverRep referenceCount = " << driverRep->referenceCount
-	  << std::endl;
-#endif
+  driverRep = driver_rep;
 }
 
 

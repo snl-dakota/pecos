@@ -111,8 +111,9 @@ void SharedNodalInterpPolyApproxData::allocate_data()
     if (driver_type == COMBINED_SPARSE_GRID) {
       std::shared_ptr<CombinedSparseGridDriver> driver =
 	std::static_pointer_cast<CombinedSparseGridDriver>(driverRep);
-      CombinedSparseGridDriver* alt_driver
-	= (CombinedSparseGridDriver*)expMomentIntDriver.driver_rep();
+      std::shared_ptr<CombinedSparseGridDriver> alt_driver =
+	std::static_pointer_cast<CombinedSparseGridDriver>
+	(expMomentIntDriver.driver_rep());
       alt_driver->growth_rate(driver->growth_rate());
       //alt_driver->refinement_control(driver->refinement_control());
       alt_driver->track_collocation_details(false);

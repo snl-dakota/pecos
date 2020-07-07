@@ -127,7 +127,7 @@ public:
   //
 
   /// assign letter or replace existing letter with a new one
-  void assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr);
+  void assign_rep(std::shared_ptr<IntegrationDriver> driver_rep);
 
   /// compute variable sets for a tensor-product grid
   void compute_tensor_grid(const UShortArray& quad_order,
@@ -186,7 +186,7 @@ public:
 
   /// returns driverRep for access to derived class member functions
   /// that are not mapped to the base level
-  IntegrationDriver* driver_rep() const;
+  std::shared_ptr<IntegrationDriver> driver_rep() const;
 
 protected:
 
@@ -279,16 +279,14 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// driverRep to the appropriate derived type.
-  IntegrationDriver* get_driver(short driver_type);
+  std::shared_ptr<IntegrationDriver> get_driver(short driver_type);
 
   //
   //- Heading: Data members
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  IntegrationDriver* driverRep;
-  /// number of objects sharing driverRep
-  int referenceCount;
+  std::shared_ptr<IntegrationDriver> driverRep;
 };
 
 
@@ -402,7 +400,7 @@ inline const UShortArray& IntegrationDriver::genz_keister_precision() const
 { return (driverRep) ? driverRep->precGenzKeister : precGenzKeister; }
 
 
-inline IntegrationDriver* IntegrationDriver::driver_rep() const
+inline std::shared_ptr<IntegrationDriver> IntegrationDriver::driver_rep() const
 { return driverRep; }
 
 } // namespace Pecos
