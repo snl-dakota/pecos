@@ -177,6 +177,15 @@ compute(const SDRArray& hf_sdr_array, const SDRArray& lf_sdr_array,
 			       lf_sdr.response_function(),
 			       lf_sdr.response_gradient(), delta_grad);
       }
+      if (delta_bits & 4) {
+	RealSymMatrix delta_hess(delta_sdr.response_hessian_view());
+	compute_multiplicative(hf_sdr.response_function(),
+			       hf_sdr.response_gradient(),
+			       hf_sdr.response_hessian(),
+			       lf_sdr.response_function(),
+			       lf_sdr.response_gradient(),
+			       lf_sdr.response_hessian(), delta_hess);
+      }
     }
     break;
   default: //case ADD_COMBINE: (correction specification not required)
@@ -192,6 +201,11 @@ compute(const SDRArray& hf_sdr_array, const SDRArray& lf_sdr_array,
 	RealVector delta_grad(delta_sdr.response_gradient_view());
 	compute_additive(hf_sdr.response_gradient(), lf_sdr.response_gradient(),
 			 delta_grad);
+      }
+      if (delta_bits & 4) {
+	RealSymMatrix delta_hess(delta_sdr.response_hessian_view());
+	compute_additive(hf_sdr.response_hessian(), lf_sdr.response_hessian(),
+			 delta_hess);
       }
     }
     break;

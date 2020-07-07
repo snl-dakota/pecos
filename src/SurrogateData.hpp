@@ -2062,25 +2062,23 @@ response_check(const SurrogateDataResp& sdr, short& failed_data) const
 
 inline void SurrogateData::data_checks() const
 {
-  SizetShortMap failed_resp;
-  const SDRArray& resp_data = sdRep->respDataIter->second;
-  size_t i, num_resp = resp_data.size(); short failed_data;
+  const SDRArray&  resp_data = sdRep->respDataIter->second;
+  SizetShortMap& failed_resp = sdRep->failedRespData[sdRep->activeKey];
+  failed_resp.clear();
+  size_t i, num_resp = resp_data.size();  short failed_data;
   for (i=0; i<num_resp; ++i) {
     response_check(resp_data[i], failed_data);
     if (failed_data)
-      failed_resp[i] = failed_data;
+      failed_resp[i] = failed_data; // include in map
   }
 
-  if (!failed_resp.empty()) {
-    failed_response_data(failed_resp);
 #ifdef DEBUG
-    PCout << "failedRespData:\n";
-    for (SizetShortMap::iterator it=failed_resp.begin();
-	 it!=failed_resp.end(); ++it)
-      PCout << "index: " << std::setw(6) << it->first
-	    << " data: " << it->second << '\n';
+  PCout << "failedRespData:\n";
+  for (SizetShortMap::iterator it=failed_resp.begin();
+       it!=failed_resp.end(); ++it)
+    PCout << "index: " << std::setw(6) << it->first
+	  << " data: " << it->second << '\n';
 #endif // DEBUG
-  }
 }
 
 
