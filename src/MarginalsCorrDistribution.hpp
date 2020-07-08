@@ -56,11 +56,14 @@ public:
   /// set ranVarTypes[i]
   void random_variable_type(short rv_type, size_t i);
 
+  // BMA TODO: Review why these don't follow typical letter/envelope
+  // pattern. Left them for now...
+
   /// pull non-standardized distribution parameters from pull_mvd
   void pull_distribution_parameters(const MultivariateDistribution& pull_mvd);
   /// pull non-standardized distribution parameters from pull_mvd_rep
-  void pull_distribution_parameters(
-    const MultivariateDistribution* pull_mvd_rep);
+  void pull_distribution_parameters
+  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep);
 
   /// pull non-standardized distribution parameters from pull_mvd, aligning
   /// variables based on label lookups
@@ -68,9 +71,9 @@ public:
     const StringArray& pull_labels, const StringArray& push_labels);
   /// pull non-standardized distribution parameters from pull_mvd_rep, aligning
   /// variables based on label lookups
-  void pull_distribution_parameters(
-    const MultivariateDistribution* pull_mvd_rep,
-    const StringArray& pull_labels, const StringArray& push_labels);
+  void pull_distribution_parameters
+  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+   const StringArray& pull_labels, const StringArray& push_labels);
 
   /// pull non-standardized distribution parameters for a particular
   /// random variable from pull_mvd
@@ -78,9 +81,9 @@ public:
 				    size_t pull_index, size_t push_index);
   /// pull non-standardized distribution parameters for a particular
   /// random variable from pull_mvd_rep
-  void pull_distribution_parameters(
-    const MultivariateDistribution* pull_mvd_rep,
-    size_t pull_index, size_t push_index);
+  void pull_distribution_parameters
+  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+   size_t pull_index, size_t push_index);
 
   /// return activeVars
   const BitArray& active_variables() const;
@@ -261,7 +264,7 @@ protected:
   Real log_pdf_hessian(Real val, size_t rv_index) const;
 
   /// copy marginals + correlation data between representations
-  void copy_rep(MultivariateDistribution* mvd_rep);
+  void copy_rep(std::shared_ptr<MultivariateDistribution> mvd_rep);
 
   //
   //- Heading: Data
@@ -412,7 +415,8 @@ correlation_matrix(const RealSymMatrix& corr)
 
 /** For consistent random variable ordering. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep)
+pull_distribution_parameters
+(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep)
 {
   size_t v, num_rv = ranVarTypes.size();
   for (v=0; v<num_rv; ++v)
@@ -428,9 +432,9 @@ pull_distribution_parameters(const MultivariateDistribution& pull_mvd)
 /** For potentially inconsistent random variable ordering that requires
     a lookup. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
-			     const StringArray& pull_labels,
-			     const StringArray& push_labels)
+pull_distribution_parameters
+(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+ const StringArray& pull_labels, const StringArray& push_labels)
 {
   size_t v, num_rv = ranVarTypes.size();
   for (v=0; v<num_rv; ++v) {

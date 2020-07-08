@@ -82,8 +82,9 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
 
 /** For general random variable ordering (e.g., NestedModel mappings). */
 void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
-			     size_t pull_index, size_t push_index)
+pull_distribution_parameters
+(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+ size_t pull_index, size_t push_index)
 {
   RandomVariable&       push_rv = randomVars[push_index];
   const RandomVariable& pull_rv = pull_mvd_rep->random_variable(pull_index);
@@ -137,12 +138,14 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
 }
 
 
-void MarginalsCorrDistribution::copy_rep(MultivariateDistribution* source_rep)
+void MarginalsCorrDistribution::
+copy_rep(std::shared_ptr<MultivariateDistribution> source_rep)
 {
   // copy base class data
   MultivariateDistribution::copy_rep(source_rep);
   // specialization for marginals + corr
-  MarginalsCorrDistribution* mcd_rep = (MarginalsCorrDistribution*)source_rep;
+  std::shared_ptr<MarginalsCorrDistribution> mcd_rep =
+    std::static_pointer_cast<MarginalsCorrDistribution>(source_rep);
   initialize_types(mcd_rep->ranVarTypes, mcd_rep->activeVars);
   initialize_correlations(mcd_rep->corrMatrix, mcd_rep->activeCorr);
   pull_distribution_parameters(source_rep);

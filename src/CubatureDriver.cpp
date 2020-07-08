@@ -79,8 +79,9 @@ initialize_grid_parameters(const MultivariateDistribution& mv_dist)
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
   short rv_type0 = mv_dist.random_variable_type(0);
-  MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
+  std::shared_ptr<MarginalsCorrDistribution> mvd_rep =
+    std::static_pointer_cast<MarginalsCorrDistribution>
+    (mv_dist.multivar_dist_rep());
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag =

@@ -157,8 +157,9 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
   bool no_mask = active_vars.empty();
   size_t i, av_cntr, num_v = u_types.size();
     //num_av = (no_mask) ? num_v : active_vars.count();
-  MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
+  std::shared_ptr<MarginalsCorrDistribution> mvd_rep =
+    std::static_pointer_cast<MarginalsCorrDistribution>
+    (u_dist.multivar_dist_rep());
   for (i=0, av_cntr=0; i<num_v; ++i)
     if (no_mask || active_vars[i]) {
       switch (u_types[i]) {
