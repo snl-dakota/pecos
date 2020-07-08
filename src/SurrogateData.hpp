@@ -31,6 +31,10 @@ class SurrogateDataVarsRep
   /// the handle class can access attributes of the body class directly
   friend class SurrogateDataVars;
 
+public:
+  /// destructor
+  ~SurrogateDataVarsRep();
+
 private:
 
   //
@@ -49,8 +53,6 @@ private:
   /// alternate lightweight constructor (data sizing only)
   SurrogateDataVarsRep(size_t num_c_vars);
 
-  /// destructor
-  ~SurrogateDataVarsRep();
 
   //
   //- Heading: Private data members
@@ -59,14 +61,12 @@ private:
   RealVector continuousVars;   ///< continuous variables
   IntVector  discreteIntVars;  ///< discrete integer variables
   RealVector discreteRealVars; ///< discrete real variables
-
-  int referenceCount;        ///< number of handle objects sharing sdvRep
 };
 
 
 inline SurrogateDataVarsRep::
 SurrogateDataVarsRep(const RealVector& c_vars, const IntVector& di_vars,
-		     const RealVector& dr_vars, short mode): referenceCount(1)
+		     const RealVector& dr_vars, short mode)
 {
   // Note: provided a way to query DataAccess mode for c_vars, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
@@ -95,8 +95,7 @@ SurrogateDataVarsRep(const RealVector& c_vars, const IntVector& di_vars,
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars):
-  referenceCount(1)
+SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars)
 {
   continuousVars.sizeUninitialized(num_c_vars);
   discreteIntVars.sizeUninitialized(num_di_vars);
@@ -105,7 +104,7 @@ SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars):
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(const RealVector& c_vars, short mode): referenceCount(1)
+SurrogateDataVarsRep(const RealVector& c_vars, short mode)
 {
   // Note: provided a way to query DataAccess mode for c_vars, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
@@ -124,7 +123,7 @@ SurrogateDataVarsRep(const RealVector& c_vars, short mode): referenceCount(1)
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(size_t num_c_vars): referenceCount(1)
+SurrogateDataVarsRep(size_t num_c_vars)
 { continuousVars.sizeUninitialized(num_c_vars); }
 
 
@@ -228,13 +227,16 @@ private:
   //
  
   /// pointer to the body (handle-body idiom)
-  SurrogateDataVarsRep* sdvRep;
+  std::shared_ptr<SurrogateDataVarsRep> sdvRep;
 };
 
 
-inline SurrogateDataVars::SurrogateDataVars(): sdvRep(NULL)
+inline SurrogateDataVars::SurrogateDataVars()
 { }
 
+
+// BMA NOTE: The following don't use make_shared<SurrogateDataVarsRep>()
+// due to private ctors
 
 inline SurrogateDataVars::
 SurrogateDataVars(const RealVector& c_vars, const IntVector& di_vars,
@@ -260,40 +262,19 @@ inline SurrogateDataVars::SurrogateDataVars(size_t num_c_vars):
 { }
 
 
-inline SurrogateDataVars::SurrogateDataVars(const SurrogateDataVars& sdv)
-{
-  // Increment new (no old to decrement)
-  sdvRep = sdv.sdvRep;
-  if (sdvRep) // Check for an assignment of NULL
-    ++sdvRep->referenceCount;
-}
+inline SurrogateDataVars::SurrogateDataVars(const SurrogateDataVars& sdv):
+  sdvRep(sdv.sdvRep)  
+{ }
 
 
 inline SurrogateDataVars::~SurrogateDataVars()
-{
-  if (sdvRep) { // Check for NULL
-    --sdvRep->referenceCount; // decrement
-    if (sdvRep->referenceCount == 0)
-      delete sdvRep;
-  }
-}
+{ }
 
 
 inline SurrogateDataVars& SurrogateDataVars::
 operator=(const SurrogateDataVars& sdv)
 {
-  if (sdvRep != sdv.sdvRep) { // prevent re-assignment of same rep
-    // Decrement old
-    if (sdvRep) // Check for NULL
-      if ( --sdvRep->referenceCount == 0 ) 
-	delete sdvRep;
-    // Increment new
-    sdvRep = sdv.sdvRep;
-    if (sdvRep) // Check for an assignment of NULL
-      ++sdvRep->referenceCount;
-  }
-  // else if assigning same rep, then leave referenceCount as is
-
+  sdvRep = sdv.sdvRep;
   return *this;
 }
 
@@ -308,7 +289,7 @@ operator=(const SurrogateDataVars& sdv)
 
 
 inline void SurrogateDataVars::create_rep(size_t num_vars)
-{ sdvRep = new SurrogateDataVarsRep(num_vars); }
+{ sdvRep.reset(new SurrogateDataVarsRep(num_vars)); }
 
 
 /// deep copy of SurrogateDataVars instance
@@ -435,6 +416,10 @@ class SurrogateDataRespRep
   /// the handle class can access attributes of the body class directly
   friend class SurrogateDataResp;
 
+public:
+  /// destructor
+  ~SurrogateDataRespRep();
+
 private:
 
   //
@@ -448,8 +433,6 @@ private:
   SurrogateDataRespRep(Real fn_val);
   /// alternate constructor (data sizing only)
   SurrogateDataRespRep(short bits, size_t num_vars);
-  /// destructor
-  ~SurrogateDataRespRep();
 
   //
   //- Heading: Private data members
@@ -459,7 +442,6 @@ private:
   Real            responseFn; ///< truth response function value
   RealVector    responseGrad; ///< truth response function gradient
   RealSymMatrix responseHess; ///< truth response function Hessian
-  int         referenceCount; ///< number of handle objects sharing sdrRep
 };
 
 
@@ -467,7 +449,7 @@ inline SurrogateDataRespRep::
 SurrogateDataRespRep(Real fn_val, const RealVector& fn_grad,
 		     const RealSymMatrix& fn_hess, short bits, short mode):
   responseFn(fn_val), // always deep copy for scalars
-  activeBits(bits), referenceCount(1)
+  activeBits(bits)
 {
   // Note: provided a way to query incoming grad/hess DataAccess modes,
   // could make greater use of operator= for {DEEP,SHALLOW}_COPY modes
@@ -491,13 +473,13 @@ SurrogateDataRespRep(Real fn_val, const RealVector& fn_grad,
 
 inline SurrogateDataRespRep::SurrogateDataRespRep(Real fn_val):
   responseFn(fn_val), // always deep copy for scalars
-  activeBits(1), referenceCount(1)
+  activeBits(1)
 { }
 
 
 inline SurrogateDataRespRep::
 SurrogateDataRespRep(short bits, size_t num_vars):
-  activeBits(bits), referenceCount(1)
+  activeBits(bits)
 {
   if (bits & 2)
     responseGrad.sizeUninitialized(num_vars);
@@ -603,13 +585,15 @@ private:
   //
  
   /// pointer to the body (handle-body idiom)
-  SurrogateDataRespRep* sdrRep;
+  std::shared_ptr<SurrogateDataRespRep> sdrRep;
 };
 
 
-inline SurrogateDataResp::SurrogateDataResp(): sdrRep(NULL)
+inline SurrogateDataResp::SurrogateDataResp()
 { }
 
+// BMA NOTE: The following don't use make_shared<SurrogateDataRespRep>()
+// due to private ctors
 
 inline SurrogateDataResp::
 SurrogateDataResp(Real fn_val, const RealVector& fn_grad,
@@ -629,40 +613,19 @@ SurrogateDataResp(short bits, size_t num_vars):
 { }
 
 
-inline SurrogateDataResp::SurrogateDataResp(const SurrogateDataResp& sdr)
-{
-  // Increment new (no old to decrement)
-  sdrRep = sdr.sdrRep;
-  if (sdrRep) // Check for an assignment of NULL
-    ++sdrRep->referenceCount;
-}
+inline SurrogateDataResp::SurrogateDataResp(const SurrogateDataResp& sdr):
+  sdrRep(sdr.sdrRep)
+{ }
 
 
 inline SurrogateDataResp::~SurrogateDataResp()
-{
-  if (sdrRep) { // Check for NULL
-    --sdrRep->referenceCount; // decrement
-    if (sdrRep->referenceCount == 0)
-      delete sdrRep;
-  }
-}
+{ }
 
 
 inline SurrogateDataResp& SurrogateDataResp::
 operator=(const SurrogateDataResp& sdr)
 {
-  if (sdrRep != sdr.sdrRep) { // prevent re-assignment of same rep
-    // Decrement old
-    if (sdrRep) // Check for NULL
-      if ( --sdrRep->referenceCount == 0 ) 
-	delete sdrRep;
-    // Increment new
-    sdrRep = sdr.sdrRep;
-    if (sdrRep) // Check for an assignment of NULL
-      ++sdrRep->referenceCount;
-  }
-  // else if assigning same rep, then leave referenceCount as is
-
+  sdrRep = sdr.sdrRep;
   return *this;
 }
 
@@ -676,7 +639,7 @@ operator=(const SurrogateDataResp& sdr)
 
 
 inline void SurrogateDataResp::create_rep(short bits, size_t num_vars)
-{ sdrRep = new SurrogateDataRespRep(bits, num_vars); }
+{ sdrRep.reset(new SurrogateDataRespRep(bits, num_vars)); }
 
 
 /// deep copy of SurrogateDataResp instance
@@ -821,6 +784,7 @@ class SurrogateDataRep
   friend class SurrogateData;
 
 public:
+  ~SurrogateDataRep(); ///< destructor
 
 private:
 
@@ -829,7 +793,6 @@ private:
   //
 
   SurrogateDataRep();  ///< constructor
-  ~SurrogateDataRep(); ///< destructor
 
   //
   //- Heading: Member functions
@@ -879,13 +842,10 @@ private:
   /// map from failed respData indices to failed data bits; defined
   /// in sample_checks() and used for fault tolerance
   std::map<UShortArray, SizetShortMap> failedRespData;
-
-  /// number of handle objects sharing sdRep
-  int referenceCount;
 };
 
 
-inline SurrogateDataRep::SurrogateDataRep(): referenceCount(1)
+inline SurrogateDataRep::SurrogateDataRep()
 { }
 
 
@@ -1156,7 +1116,7 @@ public:
   void clear_all_active(const UShort2DArray& keys);
 
   /// return sdRep
-  SurrogateDataRep* data_rep() const;
+  std::shared_ptr<SurrogateDataRep> data_rep() const;
 
   /// function to check sdRep (does this handle contain a body)
   bool is_null() const;
@@ -1218,13 +1178,16 @@ private:
   //
  
   /// pointer to the body (handle-body idiom)
-  SurrogateDataRep* sdRep;
+  std::shared_ptr<SurrogateDataRep> sdRep;
 };
 
 
-inline SurrogateData::SurrogateData(): sdRep(NULL)
+inline SurrogateData::SurrogateData()
 { }
 
+
+// BMA NOTE: The following don't use make_shared<SurrogateDataRep>()
+// due to private ctors
 
 inline SurrogateData::SurrogateData(bool handle):
   sdRep(new SurrogateDataRep())
@@ -1236,39 +1199,18 @@ inline SurrogateData::SurrogateData(const UShortArray& key):
 { active_key(key); }
 
 
-inline SurrogateData::SurrogateData(const SurrogateData& sd)
-{
-  // Increment new (no old to decrement)
-  sdRep = sd.sdRep;
-  if (sdRep) // Check for an assignment of NULL
-    ++sdRep->referenceCount;
-}
+inline SurrogateData::SurrogateData(const SurrogateData& sd):
+  sdRep(sd.sdRep)
+{ }
 
 
 inline SurrogateData::~SurrogateData()
-{
-  if (sdRep) { // Check for NULL
-    --sdRep->referenceCount; // decrement
-    if (sdRep->referenceCount == 0)
-      delete sdRep;
-  }
-}
+{ }
 
 
 inline SurrogateData& SurrogateData::operator=(const SurrogateData& sd)
 {
-  if (sdRep != sd.sdRep) { // prevent re-assignment of same rep
-    // Decrement old
-    if (sdRep) // Check for NULL
-      if ( --sdRep->referenceCount == 0 ) 
-	delete sdRep;
-    // Increment new
-    sdRep = sd.sdRep;
-    if (sdRep) // Check for an assignment of NULL
-      ++sdRep->referenceCount;
-  }
-  // else if assigning same rep, then leave referenceCount as is
-
+  sdRep = sd.sdRep;
   return *this;
 }
 
@@ -2565,7 +2507,7 @@ inline void SurrogateData::clear_all_active(const UShort2DArray& keys)
 { clear_active_data(keys); clear_active_popped(keys); }
 
 
-inline SurrogateDataRep* SurrogateData::data_rep() const
+inline std::shared_ptr<SurrogateDataRep> SurrogateData::data_rep() const
 { return sdRep; }
 
 
