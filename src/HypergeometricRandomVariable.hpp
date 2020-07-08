@@ -108,7 +108,7 @@ protected:
   unsigned int numDrawn;
 
   /// pointer to the Boost hypergeometric_distribution instance
-  hypergeometric_dist* hypergeomDist;
+  std::unique_ptr<hypergeometric_dist> hypergeomDist;
 };
 
 
@@ -129,7 +129,7 @@ HypergeometricRandomVariable(unsigned int num_total_pop,
 
 
 inline HypergeometricRandomVariable::~HypergeometricRandomVariable()
-{ if (hypergeomDist) delete hypergeomDist; }
+{ }
 
 
 inline Real HypergeometricRandomVariable::cdf(Real x) const
@@ -226,19 +226,19 @@ inline RealRealPair HypergeometricRandomVariable::distribution_bounds() const
 
 inline void HypergeometricRandomVariable::update_boost()
 {
-  if (hypergeomDist) delete hypergeomDist;
-  hypergeomDist = new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop);
+  hypergeomDist.reset
+    (new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop));
 }
 
 
 inline void HypergeometricRandomVariable::update_boost_conditionally()
 {
   // old is now invalid
-  if (hypergeomDist) { delete hypergeomDist; hypergeomDist = NULL; }
+  if (hypergeomDist) hypergeomDist.reset();
   // new may not be valid as of yet
   if (numDrawn <= numTotalPop && numSelectPop <= numTotalPop)
-    hypergeomDist
-      = new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop);
+    hypergeomDist.reset
+      (new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop));
   // else wait for pending param updates
 }
 

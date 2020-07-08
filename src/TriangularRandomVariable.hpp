@@ -100,8 +100,8 @@ protected:
   /// mode of triangular random variable
   Real triangularMode;
 
-  /// pointer to the Boost gamma_distribution instance
-  triangular_dist* triangDist;
+  /// pointer to the Boost trainagulardistribution instance
+  std::unique_ptr<triangular_dist> triangDist;
 };
 
 
@@ -119,7 +119,7 @@ TriangularRandomVariable(Real lwr, Real mode, Real upr):
 
 
 inline TriangularRandomVariable::~TriangularRandomVariable()
-{ if (triangDist) delete triangDist; }
+{ }
 
 
 inline Real TriangularRandomVariable::pdf(Real x, Real lwr, Real mode, Real upr)
@@ -342,18 +342,17 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void TriangularRandomVariable::update_boost()
 {
-  if (triangDist) delete triangDist;
-  triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+  triangDist.reset(new triangular_dist(lowerBnd, triangularMode, upperBnd));
 }
 
 
 inline void TriangularRandomVariable::update_boost_conditionally()
 {
   // old is now invalid
-  if (triangDist) { delete triangDist; triangDist = NULL; }
+  if (triangDist) triangDist.reset();
   // new may not be valid as of yet
   if (lowerBnd <= triangularMode && triangularMode <= upperBnd)
-    triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+    triangDist.reset(new triangular_dist(lowerBnd, triangularMode, upperBnd));
   // else wait for pending param updates
 }
 

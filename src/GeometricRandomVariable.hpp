@@ -96,7 +96,7 @@ protected:
   Real probPerTrial;
 
   /// pointer to the Boost geometric_distribution instance
-  geometric_dist* geometricDist;
+  std::unique_ptr<geometric_dist> geometricDist;
 };
 
 
@@ -114,7 +114,7 @@ GeometricRandomVariable(Real prob_per_trial):
 
 
 inline GeometricRandomVariable::~GeometricRandomVariable()
-{ if (geometricDist) delete geometricDist; }
+{ }
 
 
 inline Real GeometricRandomVariable::cdf(Real x) const
@@ -196,8 +196,7 @@ inline RealRealPair GeometricRandomVariable::distribution_bounds() const
 
 inline void GeometricRandomVariable::update_boost()
 {
-  if (geometricDist) delete geometricDist;
-  geometricDist = new geometric_dist(probPerTrial);
+  geometricDist.reset(new geometric_dist(probPerTrial));
 }
 
 

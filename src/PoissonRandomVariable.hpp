@@ -94,7 +94,7 @@ protected:
   Real poissonLambda;
 
   /// pointer to the Boost poisson_distribution instance
-  poisson_dist* poissonDist;
+  std::unique_ptr<poisson_dist> poissonDist;
 };
 
 
@@ -111,7 +111,7 @@ inline PoissonRandomVariable::PoissonRandomVariable(Real lambda):
 
 
 inline PoissonRandomVariable::~PoissonRandomVariable()
-{ if (poissonDist) delete poissonDist; }
+{ }
 
 
 inline Real PoissonRandomVariable::cdf(Real x) const
@@ -193,8 +193,7 @@ inline RealRealPair PoissonRandomVariable::distribution_bounds() const
 
 inline void PoissonRandomVariable::update_boost()
 {
-  if (poissonDist) delete poissonDist;
-  poissonDist = new poisson_dist(poissonLambda);
+  poissonDist.reset(new poisson_dist(poissonLambda));
 }
 
 

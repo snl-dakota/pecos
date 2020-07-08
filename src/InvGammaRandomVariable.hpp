@@ -119,7 +119,7 @@ protected:
   Real alphaShape;
 
   /// pointer to the Boost inv_gamma_dist instance
-  inv_gamma_dist* invGammaDist;
+  std::unique_ptr<inv_gamma_dist> invGammaDist;
 };
 
 
@@ -136,7 +136,7 @@ inline InvGammaRandomVariable::InvGammaRandomVariable(Real alpha, Real beta):
 
 
 inline InvGammaRandomVariable::~InvGammaRandomVariable()
-{ if (invGammaDist) delete invGammaDist; }
+{ }
 
 
 inline Real InvGammaRandomVariable::cdf(Real x) const
@@ -361,8 +361,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void InvGammaRandomVariable::update_boost()
 {
-  if (invGammaDist) delete invGammaDist;
-  invGammaDist = new inv_gamma_dist(alphaShape, betaScale);
+  invGammaDist.reset(new inv_gamma_dist(alphaShape, betaScale));
 }
 
 

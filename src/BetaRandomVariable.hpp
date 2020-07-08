@@ -122,7 +122,7 @@ protected:
   Real betaStat;
 
   /// pointer to the Boost beta_distribution instance
-  beta_dist* betaDist;
+  std::unique_ptr<beta_dist> betaDist;
 };
 
 
@@ -141,7 +141,7 @@ BetaRandomVariable(Real alpha, Real beta, Real lwr, Real upr):
 
 
 inline BetaRandomVariable::~BetaRandomVariable()
-{ if (betaDist) delete betaDist; }
+{ }
 
 
 inline Real BetaRandomVariable::cdf(Real x) const
@@ -522,8 +522,7 @@ inline Real BetaRandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void BetaRandomVariable::update_boost()
 {
-  if (betaDist) delete betaDist;
-  betaDist = new beta_dist(alphaStat, betaStat);
+  betaDist.reset(new beta_dist(alphaStat, betaStat));
 }
 
 
