@@ -8,7 +8,6 @@
 
 #include "LHSDriver.hpp"
 #include "BoostRNG_Monostate.hpp"
-#include <boost/lexical_cast.hpp>
 #include "RangeVariable.hpp"
 #include "SetVariable.hpp"
 #include "DiscreteSetRandomVariable.hpp"

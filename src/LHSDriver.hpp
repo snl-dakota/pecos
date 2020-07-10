@@ -390,7 +390,7 @@ generate_uniform_index_samples(const IntVector& index_l_bnds,
     will see as character*16 values which are NOT null-terminated. */
 inline void LHSDriver::f77name16(const char* name, size_t index, String& label)
 {
-  label = name + boost::lexical_cast<String>(index+1);
+  label = name + std::to_string(index+1);
   label.resize(16, ' '); // NOTE: no NULL terminator
 }
 
