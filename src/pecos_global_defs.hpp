@@ -141,6 +141,8 @@ enum { NO_GROWTH_OVERRIDE=0, RESTRICTED, UNRESTRICTED };
 /// options for ExpansionConfigOptions::refineType (inactive)
 enum { NO_REFINEMENT=0, P_REFINEMENT, H_REFINEMENT };
 /// options for ExpansionConfigOptions::refineControl
+// Note: C3 augments UNIFORM_CONTROL with a c3AdvancementType;
+//       could consider a similar breakout for DIMENSION_ADAPTIVE_CONTROL
 enum { NO_CONTROL=0, UNIFORM_CONTROL, LOCAL_ADAPTIVE_CONTROL,
        DIMENSION_ADAPTIVE_CONTROL_SOBOL, DIMENSION_ADAPTIVE_CONTROL_DECAY,
        DIMENSION_ADAPTIVE_CONTROL_GENERALIZED };
