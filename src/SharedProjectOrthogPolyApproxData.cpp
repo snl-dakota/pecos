@@ -33,7 +33,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
       std::static_pointer_cast<TensorProductDriver>(driverRep);
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    const UShortArray& quad_order = tpq_driver->quadrature_order();
     // Note: unlike ssg_level, quad_order includes anisotropic weighting
     bool update_exp_form
       = (expConfigOptions.refineControl || quad_order != quadOrderPrev ||

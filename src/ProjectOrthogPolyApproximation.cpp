@@ -44,10 +44,10 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
     //if (data_rep->expConfigOptions.refineControl) {
     std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
       std::static_pointer_cast<IncrementalSparseGridDriver>(data_rep->driver());
-      size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
-      const UShortArray& key = data_rep->activeKey;
-      tpExpansionCoeffs[key].resize(num_smolyak_indices);
-      tpExpansionCoeffGrads[key].resize(num_smolyak_indices);
+    size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
+    const UShortArray& key = data_rep->activeKey;
+    tpExpansionCoeffs[key].resize(num_smolyak_indices);
+    tpExpansionCoeffGrads[key].resize(num_smolyak_indices);
     //}
     break;
   }
