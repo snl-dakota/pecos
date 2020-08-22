@@ -80,9 +80,9 @@ public:
   /// set ith entry in quadOrder
   void quadrature_order(unsigned short order, size_t i);
   /// return quadOrder
-  const UShortArray& quadrature_order() const;
+  const UShortArray& quadrature_order();
   /// return ith entry in quadOrder
-  unsigned short quadrature_order(size_t i) const;
+  unsigned short quadrature_order(size_t i);
 
   /// determine the lowest quadrature order that provides integrand
   /// exactness at least as great as the specified goal, while
@@ -351,12 +351,12 @@ quadrature_order(unsigned short order, size_t i)
 { quadOrder[i] = order;  order_to_level(i); }
 
 
-inline const UShortArray& TensorProductDriver::quadrature_order() const
-{ return quadOrder; }
+inline const UShortArray& TensorProductDriver::quadrature_order()
+{ level_to_order();  return quadOrder; }
 
 
-inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
-{ return quadOrder[i]; }
+inline unsigned short TensorProductDriver::quadrature_order(size_t i)
+{ level_to_order(i); return quadOrder[i]; }
 
 
 inline void TensorProductDriver::
