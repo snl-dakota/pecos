@@ -118,9 +118,9 @@ public:
   /// return combinedVarSets for TensorProduct/CombinedSparseGrid
   virtual const RealMatrix& combined_variable_sets() const;
   /// return combinedT1WeightSets for TensorProduct/CombinedSparseGrid
-  virtual const RealVector& combined_type1_weight_sets();
+  virtual const RealVector& combined_type1_weight_sets() const;
   /// return combinedT2WeightSets for TensorProduct/CombinedSparseGrid
-  virtual const RealMatrix& combined_type2_weight_sets();
+  virtual const RealMatrix& combined_type2_weight_sets() const;
 
   //
   //- Heading: Member functions
