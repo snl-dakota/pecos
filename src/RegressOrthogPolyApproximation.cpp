@@ -1348,7 +1348,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   RegressOrthogPolyApproximation* ropa_2
     = (RegressOrthogPolyApproximation*)poly_approx_2;
   if (combinedSparseIndices.empty() && ropa_2->combinedSparseIndices.empty())
-    return OrthogPolyApproximation::covariance(poly_approx_2);
+    return OrthogPolyApproximation::combined_covariance(poly_approx_2);
 
   bool same = (ropa_2 == this);
 
@@ -1498,7 +1498,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   RegressOrthogPolyApproximation* ropa_2
     = (RegressOrthogPolyApproximation*)poly_approx_2;
   if (combinedSparseIndices.empty() && ropa_2->combinedSparseIndices.empty())
-    return OrthogPolyApproximation::covariance(x, poly_approx_2);
+    return OrthogPolyApproximation::combined_covariance(x, poly_approx_2);
 
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
