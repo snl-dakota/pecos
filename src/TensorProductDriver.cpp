@@ -152,7 +152,7 @@ enforce_constraints(const UShortArray& ref_quad_order)
     // update quadOrder / levelIndex
     if (nested_order == USHRT_MAX) { // required order not available
       PCerr << "Error: order goal could not be attained in TensorProductDriver"
-	    << "::nested_quadrature_order()" << std::endl;
+	    << "::enforce_constraints()" << std::endl;
       abort_handler(-1);
     }
     else

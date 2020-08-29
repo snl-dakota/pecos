@@ -35,9 +35,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       std::static_pointer_cast<TensorProductDriver>(driverRep);
     const UShortArray& quad_order = tpq_driver->quadrature_order();
     // Note: unlike ssg_level, quad_order includes anisotropic weighting
-    bool update_exp_form
-      = (expConfigOptions.refineControl || quad_order != quadOrderPrev ||
-	 activeKey  != prevActiveKey);
+    bool update_exp_form = (expConfigOptions.refineControl ||
+      quad_order != quadOrderPrev || activeKey != prevActiveKey);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
