@@ -381,7 +381,7 @@ const RealMatrix& IntegrationDriver::combined_variable_sets() const
 }
 
 
-const RealVector& IntegrationDriver::combined_type1_weight_sets()
+const RealVector& IntegrationDriver::combined_type1_weight_sets() const
 {
   if (!driverRep) {
     //return type1_weight_sets(maximal_grid()); // overlays now preferred
@@ -390,11 +390,10 @@ const RealVector& IntegrationDriver::combined_type1_weight_sets()
     abort_handler(-1);
   }
   return driverRep->combined_type1_weight_sets();
-
 }
 
 
-const RealMatrix& IntegrationDriver::combined_type2_weight_sets()
+const RealMatrix& IntegrationDriver::combined_type2_weight_sets() const
 {
   if (!driverRep) {
     //return type2_weight_sets(maximal_grid()); // overlays now preferred

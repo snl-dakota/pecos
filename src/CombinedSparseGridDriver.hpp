@@ -75,8 +75,8 @@ public:
   const RealMatrix& type2_weight_sets(const UShortArray& key) const;
 
   const RealMatrix& combined_variable_sets() const;
-  const RealVector& combined_type1_weight_sets();
-  const RealMatrix& combined_type2_weight_sets();
+  const RealVector& combined_type1_weight_sets() const;
+  const RealMatrix& combined_type2_weight_sets() const;
 
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
@@ -715,11 +715,13 @@ combined_variable_sets() const
 { return combinedVarSets; }
 
 
-inline const RealVector& CombinedSparseGridDriver::combined_type1_weight_sets()
+inline const RealVector& CombinedSparseGridDriver::
+combined_type1_weight_sets() const
 { return combinedT1WeightSets; }//return type1_weight_sets(maximalKey);
 
 
-inline const RealMatrix& CombinedSparseGridDriver::combined_type2_weight_sets()
+inline const RealMatrix& CombinedSparseGridDriver::
+combined_type2_weight_sets() const
 { return combinedT2WeightSets; }//return type2_weight_sets(maximalKey);
 
 

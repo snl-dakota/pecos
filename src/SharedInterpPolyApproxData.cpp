@@ -149,7 +149,7 @@ void SharedInterpPolyApproxData::allocate_data()
   case QUADRATURE: {
     std::shared_ptr<TensorProductDriver> tpq_driver =
       std::static_pointer_cast<TensorProductDriver>(driverRep);
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    const UShortArray& quad_order = tpq_driver->quadrature_order();
 
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
     if (quad_order != quadOrderPrev) { // any change in order

@@ -131,6 +131,36 @@ void TensorProductDriver::combined_to_active(bool clear_combined)
 }
 
 
+void TensorProductDriver::
+enforce_constraints(const UShortArray& ref_quad_order)
+{
+  // enforce constraints: ref_quad_order -> quadOrder
+  size_t i, len = ref_quad_order.size();
+  if (quadOrder.size()            != len)            quadOrder.resize(len);
+  if (levelIndIter->second.size() != len) levelIndIter->second.resize(len);
+  unsigned short nested_order;
+  for (i=0; i<len; ++i) {
+    // synchronize on number of points: Lagrange poly order = #pts - 1
+    if (driverMode == INTERPOLATION_MODE)
+      quadrature_goal_to_nested_quadrature_order(i, ref_quad_order[i],
+						 nested_order);
+    else // {INTEGRATION,DEFAULT}_MODE: ref_quad_order is non-nested so use
+         // non-nested Gauss integrand goal = 2m-1
+      integrand_goal_to_nested_quadrature_order(i, 2 * ref_quad_order[i] - 1,
+						nested_order);
+
+    // update quadOrder / levelIndex
+    if (nested_order == USHRT_MAX) { // required order not available
+      PCerr << "Error: order goal could not be attained in TensorProductDriver"
+	    << "::enforce_constraints()" << std::endl;
+      abort_handler(-1);
+    }
+    else
+      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+  }
+}
+
+
 /** This function selects the smallest nested rule order that meets the
     integrand precision of a corresponding Gauss rule.  It is similar to
     the moderate exponential growth option in sparse grids. */

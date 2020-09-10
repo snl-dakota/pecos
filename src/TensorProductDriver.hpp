@@ -80,9 +80,16 @@ public:
   /// set ith entry in quadOrder
   void quadrature_order(unsigned short order, size_t i);
   /// return quadOrder
-  const UShortArray& quadrature_order() const;
+  const UShortArray& quadrature_order();
   /// return ith entry in quadOrder
-  unsigned short quadrature_order(size_t i) const;
+  unsigned short quadrature_order(size_t i);
+
+  /// update quadOrder and levelIndex from ref_quad_order while
+  /// satisfying nested rule constraints
+  void reference_quadrature_order(const UShortArray& ref_quad_order,
+				  bool constraints);
+  /// return active entry in refQuadOrder
+  const UShortArray& reference_quadrature_order();
 
   /// determine the lowest quadrature order that provides integrand
   /// exactness at least as great as the specified goal, while
@@ -93,9 +100,6 @@ public:
   /// points as the specified goal, while satisfying any nestedness constraints
   void quadrature_goal_to_nested_quadrature_order(size_t i,
     unsigned short quad_goal, unsigned short& nested_quad_order);
-  /// update quadOrder and levelIndex from ref_quad_order while
-  /// satisfying nested rule constraints
-  void nested_quadrature_order(const UShortArray& ref_quad_order);
 
   /// return levelIndex[activeKey]
   const UShortArray& level_index() const;
@@ -132,6 +136,10 @@ private:
   /// update {levelInd,collocKey}Iter based on activeKey
   void update_active_iterators();
 
+  /// map from ref_quad_order to quadOrder and levelIndex, enforcing any
+  /// (nested) constraints
+  void enforce_constraints(const UShortArray& ref_quad_order);
+
   /// update lev_index from q_ord
   void order_to_level(const UShortArray& q_ord,	UShortArray& lev_index);
   /// update levelIndex from quadOrder
@@ -156,6 +164,10 @@ private:
 
   /// the isotropic/anisotropic quadrature order
   UShortArray quadOrder;
+
+  /// reference quadrature order: provides a reference for generating a
+  /// quadOrder that satisfies applicable constraints (e.g., nestedness, etc.)
+  std::map<UShortArray, UShortArray> refQuadOrder;
 
   /// quadrature order offset by one for use as 0-based indices
   std::map<UShortArray, UShortArray> levelIndex;
@@ -351,38 +363,31 @@ quadrature_order(unsigned short order, size_t i)
 { quadOrder[i] = order;  order_to_level(i); }
 
 
-inline const UShortArray& TensorProductDriver::quadrature_order() const
-{ return quadOrder; }
+inline const UShortArray& TensorProductDriver::quadrature_order()
+{ level_to_order();  return quadOrder; }
 
 
-inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
-{ return quadOrder[i]; }
+inline unsigned short TensorProductDriver::quadrature_order(size_t i)
+{ level_to_order(i); return quadOrder[i]; }
+
+
+inline const UShortArray& TensorProductDriver::reference_quadrature_order()
+{
+  std::map<UShortArray, UShortArray>::const_iterator cit
+    = refQuadOrder.find(activeKey);
+  return (cit == refQuadOrder.end()) ? quadrature_order() : cit->second;
+}
 
 
 inline void TensorProductDriver::
-nested_quadrature_order(const UShortArray& ref_quad_order)
+reference_quadrature_order(const UShortArray& ref_quad_order, bool constraints)
 {
-  size_t i, len = ref_quad_order.size();
-  if (quadOrder.size()            != len)            quadOrder.resize(len);
-  if (levelIndIter->second.size() != len) levelIndIter->second.resize(len);
-  unsigned short nested_order;
-  for (i=0; i<len; ++i) {
-    // synchronize on number of points: Lagrange poly order = #pts - 1
-    if (driverMode == INTERPOLATION_MODE)
-      quadrature_goal_to_nested_quadrature_order(i, ref_quad_order[i],
-						 nested_order);
-    else // {INTEGRATION,DEFAULT}_MODE: synchronize on integrand prec 2m-1
-      integrand_goal_to_nested_quadrature_order(i, 2 * ref_quad_order[i] - 1,
-						nested_order);
-    // update quadOrder / levelIndex
-    if (nested_order == USHRT_MAX) { // required order not available
-      PCerr << "Error: order goal could not be attained in TensorProductDriver"
-	    << "::nested_quadrature_order()" << std::endl;
-      abort_handler(-1);
-    }
-    else
-      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+  if (constraints) {
+    refQuadOrder[activeKey] = ref_quad_order; // cache reference
+    enforce_constraints(ref_quad_order); // map ref to quadOrder
   }
+  else // no constraints to enforce -> no need for refQuadOrder
+    quadrature_order(ref_quad_order);
 }
 
 
