@@ -76,15 +76,7 @@ if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
   endif()
 endif()
 
-# Mandate a system or user-provided Boost
-if(Boost_DIR)
-  include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-else()
-  find_package(Boost 1.58 REQUIRED)
-  if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-  endif()
-endif(Boost_DIR)
+find_package(Boost 1.58 REQUIRED)
 
 if (NOT BUILD_IN_TRILINOS)
 
