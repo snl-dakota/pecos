@@ -6,7 +6,7 @@
 #  For more information, see the README file in the top Pecos directory.
 #  _______________________________________________________________________
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.12)
 
 set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
@@ -244,7 +244,6 @@ endif()
 # distutils setup.py. Must add this subdirectory after all other core
 # libraries. TODO: check for required dependencies.
 if(PECOS_ENABLE_PYTHONAPI)
-  find_package(PythonInterp REQUIRED)
   add_subdirectory(python)
 endif()
 
