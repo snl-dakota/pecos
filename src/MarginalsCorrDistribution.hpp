@@ -87,8 +87,12 @@ public:
 
   /// return activeVars
   const BitArray& active_variables() const;
+  /// set activeVars
+  void active_variables(const BitArray& );
   /// return activeCorr
   const BitArray& active_correlations() const;
+  /// set activeCorr
+  void active_correlations(const BitArray& );
 
   /// return corrMatrix
   const RealSymMatrix& correlation_matrix() const;
@@ -167,9 +171,11 @@ public:
   /// set ranVarTypes and initialize randomVars
   void initialize_types(const ShortArray& rv_types,
 			const BitArray& active_vars = BitArray());
-  /// initializes corrMatrix and correlationFlag
+  /// assigns corrMatrix and activeCorr; invokes initialize_correlations()
   void initialize_correlations(const RealSymMatrix& corr,
 			       const BitArray& active_corr = BitArray());
+  /// initializes correlationFlag and performs sanity checks
+  void initialize_correlations();
 
   /// update a scalar distribution parameter within randomVars[v]
   template <typename ValueType>
@@ -395,8 +401,18 @@ inline const BitArray& MarginalsCorrDistribution::active_variables() const
 { return activeVars; }
 
 
+inline void MarginalsCorrDistribution::
+active_variables(const BitArray& active_vars)
+{ activeVars = active_vars; }
+
+
 inline const BitArray& MarginalsCorrDistribution::active_correlations() const
 { return activeCorr; }
+
+
+inline void MarginalsCorrDistribution::
+active_correlations(const BitArray& active_corr)
+{ activeCorr = active_corr; }
 
 
 inline const RealSymMatrix& MarginalsCorrDistribution::
@@ -406,7 +422,7 @@ correlation_matrix() const
 
 inline void MarginalsCorrDistribution::
 correlation_matrix(const RealSymMatrix& corr)
-{ initialize_correlations(corr); } // Note: default active_corr = BitArray()
+{ corrMatrix = corr; }
 
 
 //inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const

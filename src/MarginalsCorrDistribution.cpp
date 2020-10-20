@@ -40,8 +40,14 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
   corrMatrix = corr;
   activeCorr = active_corr; // active RV subset for correlation matrix
 
+  initialize_correlations();
+}
+
+
+void MarginalsCorrDistribution::initialize_correlations()
+{
   correlationFlag = false;
-  size_t num_corr = corr.numRows();
+  size_t num_corr = corrMatrix.numRows();
   if (num_corr == 0) return;
 
   size_t num_rv = randomVars.size();
@@ -68,7 +74,7 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
     if (no_mask || activeCorr[i]) {
       for (j=0, cntr_j=0; j<i; ++j) {
 	if (no_mask || activeCorr[j]) {
-	  if (std::abs(corr(cntr_i, cntr_j)) > SMALL_NUMBER)
+	  if (std::abs(corrMatrix(cntr_i, cntr_j)) > SMALL_NUMBER)
 	    correlationFlag = true;
 	  ++cntr_j;
 	}
