@@ -133,10 +133,19 @@ public:
   /// (e.g., a discrepancy)
   static void aggregate_keys(const UShortArray& key1, const UShortArray& key2,
 			     UShortArray& aggregate_key);
-  /// extract the constituent keys from an aggregated key
+  /// aggregate first_key and remaining_keys to indicate a data combination
+  /// (e.g., a model ensemble)
+  static void aggregate_keys(const UShortArray& first_key,
+			     const UShort2DArray& remaining_keys,
+			     UShortArray& aggregate_key);
+  /// extract two constituent keys from an aggregated key
   static void extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
 			   UShortArray& key2);
-  /// extract the constituent keys from an aggregated key
+  /// extract one or more constituent keys from an aggregated key
+  static void extract_keys(const UShortArray& aggregate_key,
+			   UShortArray&   first_key,
+			   UShort2DArray& remaining_keys);
+  /// extract a particular constituent key from an aggregated key
   static void extract_key(const UShortArray& aggregate_key, UShortArray& key,
 			  size_t key_index);
 
@@ -369,6 +378,50 @@ aggregate_keys(const UShortArray& key1, const UShortArray& key2,
 
 
 inline void DiscrepancyCalculator::
+aggregate_keys(const UShortArray& first_key,
+	       const UShort2DArray& remaining_keys, UShortArray& aggregate_key)
+{
+  // extract and verify consistency in group number
+  unsigned short group = USHRT_MAX;
+  bool empty1 = first_key.empty();
+  size_t i, num_rem_k = remaining_keys.size();
+  if (!empty1) {
+    group = first_key.front();
+    for (i=0; i<num_rem_k; ++i)
+      if (group != remaining_keys[i].front()) {
+	PCerr << "Error: mismatch in group ids in DiscrepancyCalculator::"
+	      << "aggregate_keys()" << std::endl;
+	abort_handler(-1);
+      }
+  }
+  else if (num_rem_k) {
+    group = remaining_keys[0].front();
+    for (i=1; i<num_rem_k; ++i)
+      if (group != remaining_keys[i].front()) {
+	PCerr << "Error: mismatch in group ids in DiscrepancyCalculator::"
+	      << "aggregate_keys()" << std::endl;
+	abort_handler(-1);
+      }
+  }
+  else {
+    PCerr << "Error: neither key set defined in DiscrepancyCalculator::"
+	  << "aggregate_keys(first_key, remaining_keys)" << std::endl;
+    abort_handler(-1);
+  }
+
+  // form aggregate of group + HF form/lev + LF form/lev
+  aggregate_key.resize(1);  aggregate_key[0] = group;
+  if (!empty1)
+    aggregate_key.insert(aggregate_key.end(), first_key.begin()+1,
+			 first_key.end());
+  for (i=0; i<num_rem_k; ++i) {
+    const UShortArray& r_key = remaining_keys[i];
+    aggregate_key.insert(aggregate_key.end(), r_key.begin()+1, r_key.end());
+  }
+}
+
+
+inline void DiscrepancyCalculator::
 extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
 	     UShortArray& key2)
 {
@@ -393,6 +446,36 @@ extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
 	  << "extract_keys()" << std::endl;
     abort_handler(-1);
     break;
+  }
+}
+
+
+inline void DiscrepancyCalculator::
+extract_keys(const UShortArray& aggregate_key, UShortArray& first_key,
+	     UShort2DArray& remaining_keys)
+{
+  if (aggregate_key.empty())
+    { first_key.clear(); remaining_keys.clear(); return; }
+
+  // extract one or more aggregated keys
+  unsigned short group = aggregate_key.front(),
+    len = aggregate_key.size() - 1, num_keys = len / 2;
+  switch (num_keys) {
+  case 0: case 1:
+    first_key = aggregate_key;  remaining_keys.clear();  break;
+  default: {
+    UShortArray::const_iterator start = aggregate_key.begin() + 1,
+      end = start + 2;
+    first_key.assign(1, group);  first_key.insert(first_key.end(), start, end);
+    size_t k, num_rem_keys = num_keys - 1;
+    remaining_keys.resize(num_rem_keys);
+    for (k=0; k<num_rem_keys; ++k) {
+      start += 2;  end +=2;
+      UShortArray& key_k = remaining_keys[k];
+      key_k.assign(1, group);  key_k.insert(key_k.end(), start, end);
+    }
+    break;
+  }
   }
 }
 
