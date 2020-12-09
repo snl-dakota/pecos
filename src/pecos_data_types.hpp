@@ -98,6 +98,7 @@ typedef std::vector<UShort4DArray>     UShort5DArray;
 typedef std::deque<UShortArray>        UShortArrayDeque;
 typedef std::deque<UShort2DArray>      UShort2DArrayDeque;
 typedef std::vector<UShortArrayDeque>  UShortArrayDequeArray;
+typedef std::deque<IntArray>           IntArrayDeque;
 typedef std::vector<size_t>            SizetArray;
 typedef std::vector<SizetArray>        Sizet2DArray;
 typedef std::vector<Sizet2DArray>      Sizet3DArray;

@@ -784,6 +784,7 @@ class SurrogateDataRep
   friend class SurrogateData;
 
 public:
+
   ~SurrogateDataRep(); ///< destructor
 
 private:
@@ -819,12 +820,22 @@ private:
   /// filtered database of response data sets, a subset drawn from respData
   std::map<UShortArray, SDRArray> filteredRespData;
 
+  /// optional data identifiers, one per entry in {vars,Resp}Data, allowing
+  /// individual data point interactions (e.g., replace(id))
+  /** use an un-ordered container (with slow look-ups) since push/pop
+      could modify original (sequential) order */
+  std::map<UShortArray, IntArray> dataIdentifiers;
+  /// iterator to active entry within dataIdentifiers
+  std::map<UShortArray, IntArray>::iterator dataIdsIter;
+
   /// sets of popped variables data sets, with lookup by model/level index.
   /// Each popped set is an SDVArray extracted from varsData.
   std::map<UShortArray, SDVArrayDeque> poppedVarsData;
   /// sets of popped response data sets, with lookup by model/level index.
   /// Each popped set is an SDRArray extracted from respData.
   std::map<UShortArray, SDRArrayDeque> poppedRespData;
+  /// sets of popped data identifiers, with lookup by active key
+  std::map<UShortArray, IntArrayDeque> poppedDataIds;
   /// a stack managing the number of points previously appended that
   /// can be removed by calls to pop()
   std::map<UShortArray, SizetArray> popCountStack;
@@ -864,6 +875,11 @@ inline void SurrogateDataRep::update_active_iterators()
   if (respDataIter == respData.end()) {
     std::pair<UShortArray, SDRArray> sdr_pair(activeKey, SDRArray());
     respDataIter = respData.insert(sdr_pair).first;
+  }
+  dataIdsIter = dataIdentifiers.find(activeKey);
+  if (dataIdsIter == dataIdentifiers.end()) {
+    std::pair<UShortArray, IntArray> ia_pair(activeKey, IntArray());
+    dataIdsIter = dataIdentifiers.insert(ia_pair).first;
   }
 }
 
@@ -953,6 +969,11 @@ public:
   /// get respData[activeKey]
   SDRArray& response_data();
 
+  /// set dataIdentifiers
+  void data_ids(const IntArray& ids);
+  /// get dataIdentifiers
+  const IntArray& data_ids() const;
+
   /// get varsData
   const std::map<UShortArray, SDVArray>& variables_data_map() const;
   /// build/return filteredVarsData, pulling aggregated/nonaggregated
@@ -998,6 +1019,15 @@ public:
   /// return previously popped data sets (identified by index) to the
   /// ends of keyed entries in {vars,resp}Data
   void push(const UShort2DArray& keys, size_t index, bool erase_popped = true);
+
+  /// replace the SurrogateDataVars instance identified by data_id
+  void replace(const SurrogateDataVars& sdv, int data_id);
+  /// replace the SurrogateDataResp instance identified by data_id
+  void replace(const SurrogateDataResp& sdr, int data_id);
+  /// replace the SurrogateDataVars and SurrogateDataResp instances
+  /// identified by data_id
+  void replace(const SurrogateDataVars& sdv,
+	       const SurrogateDataResp& sdr, int data_id);
 
   /// append count to popCountStack[activeKey]
   void pop_count(size_t count) const;
@@ -1167,10 +1197,10 @@ private:
   const std::map<UShortArray, SDRArrayDeque>& popped_response_map() const;
 
   /// helper function for an individual key
-  void pop(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref,
+  void pop(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
 	   const UShortArray& key, bool save_data);
   /// helper function for an individual key
-  void push(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref,
+  void push(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
 	    const UShortArray& key, size_t index, bool erase_popped);
 
   //
@@ -1697,17 +1727,17 @@ history_target(size_t target, const UShort2DArray& keys)
 
 
 inline void SurrogateData::
-pop(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
-    bool save_data)
+pop(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
+    const UShortArray& key, bool save_data)
 {
-  size_t num_ref_pts = std::min(sdv_array_ref.size(), sdr_array_ref.size());
+  size_t num_pts = std::min(sdv_array.size(), sdr_array.size());
 
   // harden logic for case of an empty SurrogateData (e.g.,
   // distinct discrepancy at level 0)
   std::map<UShortArray, SizetArray>::iterator it
     = sdRep->popCountStack.find(key);
   if (it == sdRep->popCountStack.end()) {
-    if (num_ref_pts == 0)
+    if (num_pts == 0)
       return; // assume inactive SurrogateData -> ignore pop request
     else {
       PCerr << "\nError: active count stack not found in SurrogateData::pop() "
@@ -1722,35 +1752,49 @@ pop(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
 	  << key << std::flush;
     abort_handler(-1);
   }
-  size_t num_pop_pts = pop_count_stack.back();
+  size_t num_pop_pts = pop_count_stack.back(), new_size;
   if (num_pop_pts) {
-    if (num_ref_pts < num_pop_pts) {
+    if (num_pts < num_pop_pts) {
       PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
-	    << num_ref_pts << ") in SurrogateData::pop(size_t) for key:\n"
+	    << num_pts << ") in SurrogateData::pop(size_t) for key:\n"
 	    << key << std::flush;
       abort_handler(-1);
     }
-    SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
-    SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
     if (save_data) {
+      SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
+      SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
       // append empty arrays and then update them in place
       popped_sdv_arrays.push_back(SDVArray());
       popped_sdr_arrays.push_back(SDRArray());
       SDVArray& last_popped_sdv_array = popped_sdv_arrays.back();
       SDRArray& last_popped_sdr_array = popped_sdr_arrays.back();
-      SDVArray::iterator v_end = sdv_array_ref.end();
-      SDRArray::iterator r_end = sdr_array_ref.end();
+      SDVArray::iterator v_end = sdv_array.end();
+      SDRArray::iterator r_end = sdr_array.end();
       last_popped_sdv_array.insert(last_popped_sdv_array.begin(),
 				   v_end - num_pop_pts, v_end);
       last_popped_sdr_array.insert(last_popped_sdr_array.begin(),
 				   r_end - num_pop_pts, r_end);
     }
-    size_t new_size = num_ref_pts - num_pop_pts;
-    sdv_array_ref.resize(new_size); sdr_array_ref.resize(new_size);
+    new_size = num_pts - num_pop_pts;
+    sdv_array.resize(new_size); sdr_array.resize(new_size);
 
     // TO DO: prune failedRespData[key] or leave in map ?
     data_checks(); // from scratch for now...
   }
+
+  if (!data_ids.empty()) {
+    if (save_data) {
+      IntArrayDeque& popped_ids = sdRep->poppedDataIds[key];
+      // append empty arrays and then update them in place
+      popped_ids.push_back(IntArray());
+      IntArray& last_popped_int_array = popped_ids.back();
+      IntArray::iterator r_end = data_ids.end();
+      last_popped_int_array.insert(last_popped_int_array.begin(),
+				   r_end - num_pop_pts, r_end);
+    }
+    data_ids.resize(new_size);
+  }
+
   pop_count_stack.pop_back();
 }
 
@@ -1758,7 +1802,7 @@ pop(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
 inline void SurrogateData::pop(bool save_data)
 {
   pop(sdRep->varsDataIter->second, sdRep->respDataIter->second,
-      sdRep->activeKey, save_data);
+      sdRep->dataIdsIter->second,  sdRep->activeKey, save_data);
 }
 
 
@@ -1767,20 +1811,21 @@ inline void SurrogateData::pop(const UShort2DArray& keys, bool save_data)
   size_t k, num_k = keys.size();
   for (k=0; k<num_k; ++k) {
     const UShortArray& key_k = keys[k];
-    pop(sdRep->varsData[key_k], sdRep->respData[key_k], key_k, save_data);
+    pop(sdRep->varsData[key_k], sdRep->respData[key_k],
+	sdRep->dataIdentifiers[key_k], key_k, save_data);
   }
 }
 
 
 inline void SurrogateData::
-push(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
-     size_t index, bool erase_popped)
+push(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
+     const UShortArray& key, size_t index, bool erase_popped)
 {
   std::map<UShortArray, SDVArrayDeque>::iterator pvd_it
     = sdRep->poppedVarsData.find(key);
   std::map<UShortArray, SDRArrayDeque>::iterator prd_it
     = sdRep->poppedRespData.find(key);
-  size_t num_popped
+  size_t num_pts, num_popped
     = (pvd_it != sdRep->poppedVarsData.end() &&
        prd_it != sdRep->poppedRespData.end()) ?
     std::min(pvd_it->second.size(), prd_it->second.size()) : 0;
@@ -1790,19 +1835,26 @@ push(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
   if (num_popped > index) {
     SDVArrayDeque& popped_sdv_arrays = pvd_it->second;
     SDRArrayDeque& popped_sdr_arrays = prd_it->second;
-    SDVArrayDeque::iterator vit = popped_sdv_arrays.begin();
-    SDRArrayDeque::iterator rit = popped_sdr_arrays.begin();
-    std::advance(vit, index); std::advance(rit, index);
-    size_t num_pts = std::min(vit->size(), rit->size());
+    SDVArrayDeque::iterator vit = popped_sdv_arrays.begin() + index;
+    SDRArrayDeque::iterator rit = popped_sdr_arrays.begin() + index;
+    num_pts = std::min(vit->size(), rit->size());
 
-    sdv_array_ref.insert(sdv_array_ref.end(), vit->begin(), vit->end());
-    sdr_array_ref.insert(sdr_array_ref.end(), rit->begin(), rit->end());
+    sdv_array.insert(sdv_array.end(), vit->begin(), vit->end());
+    sdr_array.insert(sdr_array.end(), rit->begin(), rit->end());
 
     // TO DO: update failedRespData[activeKey] ?
     data_checks(); // from scratch for now...
 
     if (erase_popped)
       { popped_sdv_arrays.erase(vit); popped_sdr_arrays.erase(rit); }
+
+    if (!data_ids.empty()) {
+      IntArrayDeque& popped_ids = sdRep->poppedDataIds[key];
+      IntArrayDeque::iterator iit = popped_ids.begin() + index;
+      data_ids.insert(data_ids.end(), iit->begin(), iit->end());
+      if (erase_popped)
+	popped_ids.erase(iit);
+    }
 
     sdRep->popCountStack[key].push_back(num_pts);
   }
@@ -1818,7 +1870,7 @@ push(SDVArray& sdv_array_ref, SDRArray& sdr_array_ref, const UShortArray& key,
 inline void SurrogateData::push(size_t index, bool erase_popped)
 {
   push(sdRep->varsDataIter->second, sdRep->respDataIter->second,
-       sdRep->activeKey, index, erase_popped);
+       sdRep->dataIdsIter->second,  sdRep->activeKey, index, erase_popped);
 }
 
 
@@ -1828,8 +1880,58 @@ push(const UShort2DArray& keys, size_t index, bool erase_popped)
   size_t k, num_k = keys.size();
   for (k=0; k<num_k; ++k) {
     const UShortArray& key_k = keys[k];
-    push(sdRep->varsData[key_k], sdRep->respData[key_k], key_k,
-	 index, erase_popped);
+    push(sdRep->varsData[key_k], sdRep->respData[key_k],
+	 sdRep->dataIdentifiers[key_k], key_k, index, erase_popped);
+  }
+}
+
+
+inline void SurrogateData::
+replace(const SurrogateDataVars& sdv, int id)
+{
+  std::map<UShortArray, IntArray>::iterator it
+    = sdRep->dataIdentifiers.find(sdRep->activeKey);
+  size_t index = (it == sdRep->dataIdentifiers.end()) ? _NPOS :
+    find_index(it->second, id);
+  if (index == _NPOS) {
+    PCerr << "Error: id lookup failure in SurrogateData::replace()."<<std::endl;
+    abort_handler(-1);
+  }
+  else
+    sdRep->varsDataIter->second[index] = sdv;
+}
+
+
+inline void SurrogateData::
+replace(const SurrogateDataResp& sdr, int id)
+{
+  std::map<UShortArray, IntArray>::iterator it
+    = sdRep->dataIdentifiers.find(sdRep->activeKey);
+  size_t index = (it == sdRep->dataIdentifiers.end()) ? _NPOS :
+    find_index(it->second, id);
+  if (index == _NPOS) {
+    PCerr << "Error: id lookup failure in SurrogateData::replace()."<<std::endl;
+    abort_handler(-1);
+  }
+  else
+    sdRep->respDataIter->second[index] = sdr;
+}
+
+
+inline void SurrogateData::
+replace(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr, int id)
+{
+  std::map<UShortArray, IntArray>::iterator it
+    = sdRep->dataIdentifiers.find(sdRep->activeKey);
+  size_t index = (it == sdRep->dataIdentifiers.end()) ? _NPOS :
+    find_index(it->second, id);
+  if (index == _NPOS) {
+    PCerr << "Error: id lookup failure in SurrogateData::replace()."<<std::endl;
+    abort_handler(-1);
+  }
+  else {
+    sdRep->varsDataIter->second[index] = sdv;
+    sdRep->respDataIter->second[index] = sdr;
   }
 }
 
