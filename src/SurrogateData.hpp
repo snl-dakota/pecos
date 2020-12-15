@@ -1002,6 +1002,8 @@ public:
   void push_back(const SurrogateDataResp& sdr);
   /// push {sdv,sdr} onto ends of {vars,resp}Data
   void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
+  /// push eval_id onto end of dataIdentifiers
+  void push_back(int eval_id);
 
   /// remove the first entry from {vars,resp}Data, managing anchorIndex
   /// Note: inefficient for std::vector's, but needed in rare cases.
@@ -1641,6 +1643,10 @@ push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
 }
 
 
+inline void SurrogateData::push_back(int eval_id)
+{ sdRep->dataIdsIter->second.push_back(eval_id); }
+
+
 inline void SurrogateData::pop_back(size_t num_pop)
 {
   SDVArray& sdv_array = sdRep->varsDataIter->second;
@@ -1848,12 +1854,21 @@ push(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
     if (erase_popped)
       { popped_sdv_arrays.erase(vit); popped_sdr_arrays.erase(rit); }
 
-    if (!data_ids.empty()) {
-      IntArrayDeque& popped_ids = sdRep->poppedDataIds[key];
-      IntArrayDeque::iterator iit = popped_ids.begin() + index;
-      data_ids.insert(data_ids.end(), iit->begin(), iit->end());
-      if (erase_popped)
-	popped_ids.erase(iit);
+    std::map<UShortArray, IntArrayDeque>::iterator pid_it
+      = sdRep->poppedDataIds.find(key);
+    if (pid_it != sdRep->poppedDataIds.end()) { // no error if not tracking ids
+      IntArrayDeque& popped_ids = pid_it->second;
+      if (index < popped_ids.size()) {
+	IntArrayDeque::iterator iit = popped_ids.begin() + index;
+	data_ids.insert(data_ids.end(), iit->begin(), iit->end());
+	if (erase_popped)
+	  popped_ids.erase(iit);
+      }
+      else { // this is an error
+	PCerr << "Error: index out of bounds for evaluation id in "
+	      << "SurrogateData::push()" << std::endl;
+	abort_handler(-1);
+      }
     }
 
     sdRep->popCountStack[key].push_back(num_pts);
