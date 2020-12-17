@@ -1908,12 +1908,21 @@ replace(const SurrogateDataVars& sdv, int id)
     = sdRep->dataIdentifiers.find(sdRep->activeKey);
   size_t index = (it == sdRep->dataIdentifiers.end()) ? _NPOS :
     find_index(it->second, id);
+  // Note: the following logic differs from assign_variables(sdv, index):
   if (index == _NPOS) {
     PCerr << "Error: id lookup failure in SurrogateData::replace()."<<std::endl;
     abort_handler(-1);
   }
-  else
-    sdRep->varsDataIter->second[index] = sdv;
+  else {
+    SDVArray& sdv_array = sdRep->varsDataIter->second;
+    if (index >= sdv_array.size()) {
+      PCerr << "Error: index out of range in SurrogateData::replace()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+    else
+      sdv_array[index] = sdv;
+  }
 }
 
 
@@ -1924,12 +1933,21 @@ replace(const SurrogateDataResp& sdr, int id)
     = sdRep->dataIdentifiers.find(sdRep->activeKey);
   size_t index = (it == sdRep->dataIdentifiers.end()) ? _NPOS :
     find_index(it->second, id);
+  // Note: the following logic differs from assign_response(sdr, index):
   if (index == _NPOS) {
     PCerr << "Error: id lookup failure in SurrogateData::replace()."<<std::endl;
     abort_handler(-1);
   }
-  else
-    sdRep->respDataIter->second[index] = sdr;
+  else {
+    SDRArray& sdr_array = sdRep->respDataIter->second;
+    if (index >= sdr_array.size()) {
+      PCerr << "Error: index out of range in SurrogateData::replace()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+    else
+      sdr_array[index] = sdr;
+  }
 }
 
 
@@ -1940,13 +1958,23 @@ replace(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr, int id)
     = sdRep->dataIdentifiers.find(sdRep->activeKey);
   size_t index = (it == sdRep->dataIdentifiers.end()) ? _NPOS :
     find_index(it->second, id);
+  // Note: the following logic differs from assign_{variables,response}:
   if (index == _NPOS) {
     PCerr << "Error: id lookup failure in SurrogateData::replace()."<<std::endl;
     abort_handler(-1);
   }
   else {
-    sdRep->varsDataIter->second[index] = sdv;
-    sdRep->respDataIter->second[index] = sdr;
+    SDVArray& sdv_array = sdRep->varsDataIter->second;
+    SDRArray& sdr_array = sdRep->respDataIter->second;
+    if (index >= sdv_array.size() || index >= sdr_array.size()) {
+      PCerr << "Error: index out of range in SurrogateData::replace()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+    else {
+      sdv_array[index] = sdv;
+      sdr_array[index] = sdr;
+    }
   }
 }
 
