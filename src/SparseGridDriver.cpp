@@ -592,6 +592,12 @@ int SparseGridDriver::level_to_order_exp_hgk_interp(int level, int growth)
   case UNRESTRICTED_GROWTH:
     return orderGenzKeister[std::min(level, 5)]; break;
   }
+
+  PCerr << "Error: Invalid growth enum value " << growth << " in \n"
+	<< "SparseGridDriver::level_to_order_exp_hgk_interp().\n";
+  abort_handler(-1);
+
+  return 0;
 }
 
 
@@ -615,6 +621,12 @@ int SparseGridDriver::level_to_order_exp_closed_interp(int level, int growth)
   case UNRESTRICTED_GROWTH:
     return (int)std::pow(2., level) + 1; break;
   }
+
+  PCerr << "Error: Invalid growth enum value " << growth << " in \n"
+	<< "SparseGridDriver::level_to_order_exp_closed_interp().\n";
+  abort_handler(-1);
+
+  return 0;
 }
 
 
@@ -638,6 +650,12 @@ int SparseGridDriver::level_to_order_exp_open_interp(int level, int growth)
   case UNRESTRICTED_GROWTH:
     return (int)std::pow(2., level+1) - 1; break;
   }
+
+  PCerr << "Error: Invalid growth enum value " << growth << " in \n"
+	<< "SparseGridDriver::level_to_order_exp_open_interp().\n";
+  abort_handler(-1);
+
+  return 0;
 }
 
 } // namespace Pecos
