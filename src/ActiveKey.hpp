@@ -14,23 +14,25 @@
 
 namespace Pecos {
 
-/// Shared representation for ActiveKey class (body within handle-body idiom).
+/// Shared representation for ActiveKeyData class (body within
+/// handle-body idiom).
 
 /** Manages a set of model indices and a set of continuous/discrete
     hyper-parameter (resolution) controls. */
 
-class ActiveKeyRep
+class ActiveKeyDataRep
 {
   //
   //- Heading: Friends
   //
 
   /// the handle class can access attributes of the body class directly
-  friend class ActiveKey;
+  friend class ActiveKeyData;
 
 public:
+
   /// destructor
-  ~ActiveKeyRep();
+  ~ActiveKeyDataRep();
 
 private:
 
@@ -39,13 +41,13 @@ private:
   //
 
   /// default constructor (default empty key)
-  ActiveKeyRep();
+  ActiveKeyDataRep();
   /// partial constructor (legacy use case: model indices only)
-  ActiveKeyRep(const UShortArray& indices);
+  ActiveKeyDataRep(const UShortArray& indices);
   /// full constructor
-  ActiveKeyRep(const UShortArray& indices, const RealVector&   c_params,
-	       const IntVector& di_params, const SizetVector& ds_params,
-	       short mode);
+  ActiveKeyDataRep(const UShortArray& indices, const RealVector&   c_params,
+		   const IntVector& di_params, const SizetVector& ds_params,
+		   short mode);
 
   //
   //- Heading: Private data members
@@ -62,22 +64,22 @@ private:
 };
 
 
-inline ActiveKeyRep::~ActiveKeyRep()
+inline ActiveKeyDataRep::~ActiveKeyDataRep()
 { }
 
 
-inline ActiveKeyRep::ActiveKeyRep()
+inline ActiveKeyDataRep::ActiveKeyDataRep()
 { }
 
 
-inline ActiveKeyRep::ActiveKeyRep(const UShortArray& indices)
+inline ActiveKeyDataRep::ActiveKeyDataRep(const UShortArray& indices)
 { modelIndices = indices; }
 
 
-inline ActiveKeyRep::
-ActiveKeyRep(const UShortArray& indices, const RealVector&   c_params,
-	     const IntVector& di_params, const SizetVector& ds_params,
-	     short mode)
+inline ActiveKeyDataRep::
+ActiveKeyDataRep(const UShortArray& indices, const RealVector&   c_params,
+		 const IntVector& di_params, const SizetVector& ds_params,
+		 short mode)
 {
   modelIndices = indices;
 
@@ -114,7 +116,7 @@ ActiveKeyRep(const UShortArray& indices, const RealVector&   c_params,
     indices and state hyper-parameters.  A handle-body idiom is used
     to reduce data copying overhead. */
 
-class ActiveKey
+class ActiveKeyData
 {
 public:
 
@@ -123,23 +125,23 @@ public:
   //
 
   /// default constructor
-  ActiveKey();
+  ActiveKeyData();
   /// partial constructor (legacy use case: model indices only)
-  ActiveKey(const UShortArray& indices, short mode = DEFAULT_COPY);
+  ActiveKeyData(const UShortArray& indices, short mode = DEFAULT_COPY);
   /// full constructor
-  ActiveKey(const UShortArray& indices, const RealVector&   c_params,
-	    const IntVector& di_params, const SizetVector& ds_params,
-	    short mode = DEFAULT_COPY);
+  ActiveKeyData(const UShortArray& indices, const RealVector&   c_params,
+		const IntVector& di_params, const SizetVector& ds_params,
+		short mode = DEFAULT_COPY);
 
   /// copy constructor
-  ActiveKey(const ActiveKey& key);
+  ActiveKeyData(const ActiveKeyData& key);
   /// destructor
-  ~ActiveKey();
+  ~ActiveKeyData();
 
   /// assignment operator
-  ActiveKey& operator=(const ActiveKey& key);
+  ActiveKeyData& operator=(const ActiveKeyData& key);
   // equality operator
-  //bool operator==(const ActiveKey& key) const;
+  //bool operator==(const ActiveKeyData& key) const;
 
   //
   //- Heading: member functions
@@ -152,8 +154,8 @@ public:
   /// return number of discrete real parameters
   size_t dshp() const;
 
-  /// return deep copy of ActiveKey instance
-  ActiveKey copy() const;
+  /// return deep copy of ActiveKeyData instance
+  ActiveKeyData copy() const;
 
   /// set i^{th} entry within continuousHyperParams
   void continuous_parameter(Real c_param, size_t i);
@@ -185,7 +187,7 @@ public:
   /// get view of discreteSetHyperParams for updating in place
   SizetVector discrete_set_indices_view();
 
-  /// function to check keyRep (does this handle contain a body)
+  /// function to check keyDataRep (does this handle contain a body)
   bool is_null() const;
 
 private:
@@ -195,185 +197,189 @@ private:
   //
  
   /// pointer to the body (handle-body idiom)
-  std::shared_ptr<ActiveKeyRep> keyRep;
+  std::shared_ptr<ActiveKeyDataRep> keyDataRep;
 };
 
 
-inline ActiveKey::ActiveKey()
-{ } // keyRep is null
+inline ActiveKeyData::ActiveKeyData()
+{ } // keyDataRep is null
 
 
-// BMA NOTE: The following don't use make_shared<ActiveKeyRep>()
+// BMA NOTE: The following don't use make_shared<ActiveKeyDataRep>()
 // due to private ctors
 
-inline ActiveKey::ActiveKey(const UShortArray& indices):
-  keyRep(new ActiveKeyRep(indices))
+inline ActiveKeyData::ActiveKeyData(const UShortArray& indices):
+  keyDataRep(new ActiveKeyDataRep(indices))
 { }
 
 
-inline ActiveKey::
-ActiveKey(const UShortArray& indices, const RealVector&   c_params,
+inline ActiveKeyData::
+ActiveKeyData(const UShortArray& indices, const RealVector&   c_params,
 	  const IntVector& di_params, const SizetVector& ds_params, short mode):
-  keyRep(new ActiveKeyRep(indices, c_params, di_params, ds_params, mode))
+  keyDataRep(new ActiveKeyDataRep(indices, c_params, di_params, ds_params,mode))
 { }
 
 
-inline ActiveKey::ActiveKey(const ActiveKey& key):
-  keyRep(key.keyRep)  
+inline ActiveKeyData::ActiveKeyData(const ActiveKeyData& key):
+  keyDataRep(key.keyDataRep)  
 { }
 
 
-inline ActiveKey::~ActiveKey()
+inline ActiveKeyData::~ActiveKeyData()
 { }
 
 
-inline ActiveKey& ActiveKey::operator=(const ActiveKey& key)
+inline ActiveKeyData& ActiveKeyData::operator=(const ActiveKeyData& key)
 {
-  keyRep = key.keyRep;
+  keyDataRep = key.keyDataRep;
   return *this;
 }
 
 
-//inline bool ActiveKey::operator==(const ActiveKey& key) const
+//inline bool ActiveKeyData::operator==(const ActiveKeyData& key) const
 //{
-//  return (keyRep->modelIndices     == key.keyRep->modelIndices           &&
-//    keyRep->continuousHyperParams  == key.keyRep->continuousHyperParams  &&
-//    keyRep->discreteIntHyperParams == key.keyRep->discreteIntHyperParams &&
-//    keyRep->discreteSetHyperParams == key.keyRep->discreteSetHyperParams);
+//  return ( keyDataRep->modelIndices    == key.keyDataRep->modelIndices &&
+//    keyDataRep->continuousHyperParams  ==
+//      key.keyDataRep->continuousHyperParams  &&
+//    keyDataRep->discreteIntHyperParams ==
+//      key.keyDataRep->discreteIntHyperParams &&
+//    keyDataRep->discreteSetHyperParams ==
+//      key.keyDataRep->discreteSetHyperParams );
 //}
 
 
-inline size_t ActiveKey::chp() const
-{ return keyRep->continuousHyperParams.length(); }
+inline size_t ActiveKeyData::chp() const
+{ return keyDataRep->continuousHyperParams.length(); }
 
 
-inline size_t ActiveKey::dihp() const
-{ return keyRep->discreteIntHyperParams.length(); }
+inline size_t ActiveKeyData::dihp() const
+{ return keyDataRep->discreteIntHyperParams.length(); }
 
 
-inline size_t ActiveKey::dshp() const
-{ return keyRep->discreteSetHyperParams.length(); }
+inline size_t ActiveKeyData::dshp() const
+{ return keyDataRep->discreteSetHyperParams.length(); }
 
 
-/// deep copy of ActiveKey instance
-inline ActiveKey ActiveKey::copy() const
+/// deep copy of ActiveKeyData instance
+inline ActiveKeyData ActiveKeyData::copy() const
 {
-  ActiveKey key(keyRep->modelIndices,           keyRep->continuousHyperParams,
-		keyRep->discreteIntHyperParams, keyRep->discreteSetHyperParams,
-		DEEP_COPY);
-  return key;
+  ActiveKeyData data(keyDataRep->modelIndices,
+		     keyDataRep->continuousHyperParams,
+		     keyDataRep->discreteIntHyperParams,
+		     keyDataRep->discreteSetHyperParams, DEEP_COPY);
+  return data;
 }
 
 
-inline void ActiveKey::continuous_parameter(Real c_param, size_t i)
-{ keyRep->continuousHyperParams[i] = c_param; }
+inline void ActiveKeyData::continuous_parameter(Real c_param, size_t i)
+{ keyDataRep->continuousHyperParams[i] = c_param; }
 
 
-inline void ActiveKey::
+inline void ActiveKeyData::
 continuous_parameters(const RealVector& c_params, short mode)
 {
   if (mode == DEEP_COPY)         // enforce deep vector copy
-    copy_data(c_params, keyRep->continuousHyperParams);
+    copy_data(c_params, keyDataRep->continuousHyperParams);
   else if (mode == SHALLOW_COPY) // enforce shallow vector copy
-    keyRep->continuousHyperParams
+    keyDataRep->continuousHyperParams
       = RealVector(Teuchos::View, c_params.values(), c_params.length());
   else                           // default: assume existing Copy/View state
-    keyRep->continuousHyperParams = c_params;
+    keyDataRep->continuousHyperParams = c_params;
 }
 
 
-inline const RealVector& ActiveKey::continuous_parameters() const
-{ return keyRep->continuousHyperParams; }
+inline const RealVector& ActiveKeyData::continuous_parameters() const
+{ return keyDataRep->continuousHyperParams; }
 
 
-inline RealVector ActiveKey::continuous_parameters_view()
+inline RealVector ActiveKeyData::continuous_parameters_view()
 {
-  return RealVector(Teuchos::View, keyRep->continuousHyperParams.values(),
-		    keyRep->continuousHyperParams.length());
+  return RealVector(Teuchos::View, keyDataRep->continuousHyperParams.values(),
+		    keyDataRep->continuousHyperParams.length());
 }
 
 
-inline void ActiveKey::discrete_int_parameter(int di_param, size_t i)
-{ keyRep->discreteIntHyperParams[i] = di_param; }
+inline void ActiveKeyData::discrete_int_parameter(int di_param, size_t i)
+{ keyDataRep->discreteIntHyperParams[i] = di_param; }
 
 
-inline void ActiveKey::
+inline void ActiveKeyData::
 discrete_int_parameters(const IntVector& di_params, short mode)
 {
   if (mode == DEEP_COPY)         // enforce deep vector copy
-    copy_data(di_params, keyRep->discreteIntHyperParams);
+    copy_data(di_params, keyDataRep->discreteIntHyperParams);
   else if (mode == SHALLOW_COPY) // enforce shallow vector copy
-    keyRep->discreteIntHyperParams
+    keyDataRep->discreteIntHyperParams
       = IntVector(Teuchos::View, di_params.values(), di_params.length());
   else                           // default: assume existing Copy/View state
-    keyRep->discreteIntHyperParams = di_params;
+    keyDataRep->discreteIntHyperParams = di_params;
 }
 
 
-inline const IntVector& ActiveKey::discrete_int_parameters() const
-{ return keyRep->discreteIntHyperParams; }
+inline const IntVector& ActiveKeyData::discrete_int_parameters() const
+{ return keyDataRep->discreteIntHyperParams; }
 
 
-inline IntVector ActiveKey::discrete_int_parameters_view()
+inline IntVector ActiveKeyData::discrete_int_parameters_view()
 {
-  return IntVector(Teuchos::View, keyRep->discreteIntHyperParams.values(),
-		   keyRep->discreteIntHyperParams.length());
+  return IntVector(Teuchos::View, keyDataRep->discreteIntHyperParams.values(),
+		   keyDataRep->discreteIntHyperParams.length());
 }
 
 
-inline void ActiveKey::discrete_set_index(size_t ds_index, size_t i)
-{ keyRep->discreteSetHyperParams[i] = ds_index; }
+inline void ActiveKeyData::discrete_set_index(size_t ds_index, size_t i)
+{ keyDataRep->discreteSetHyperParams[i] = ds_index; }
 
 
-inline void ActiveKey::
+inline void ActiveKeyData::
 discrete_set_indices(const SizetVector& ds_indices, short mode)
 {
   if (mode == DEEP_COPY)         // enforce deep vector copy
-    copy_data(ds_indices, keyRep->discreteSetHyperParams);
+    copy_data(ds_indices, keyDataRep->discreteSetHyperParams);
   else if (mode == SHALLOW_COPY) // enforce shallow vector copy
-    keyRep->discreteSetHyperParams
+    keyDataRep->discreteSetHyperParams
       = SizetVector(Teuchos::View, ds_indices.values(), ds_indices.length());
   else                           // default: assume existing Copy/View state
-    keyRep->discreteSetHyperParams = ds_indices;
+    keyDataRep->discreteSetHyperParams = ds_indices;
 }
 
 
-inline const SizetVector& ActiveKey::discrete_set_indices() const
-{ return keyRep->discreteSetHyperParams; }
+inline const SizetVector& ActiveKeyData::discrete_set_indices() const
+{ return keyDataRep->discreteSetHyperParams; }
 
 
-inline SizetVector ActiveKey::discrete_set_indices_view()
+inline SizetVector ActiveKeyData::discrete_set_indices_view()
 {
-  return SizetVector(Teuchos::View, keyRep->discreteSetHyperParams.values(),
-		    keyRep->discreteSetHyperParams.length());
+  return SizetVector(Teuchos::View, keyDataRep->discreteSetHyperParams.values(),
+		    keyDataRep->discreteSetHyperParams.length());
 }
 
 
-inline bool ActiveKey::is_null() const
-{ return (keyRep) ? false : true; }
+inline bool ActiveKeyData::is_null() const
+{ return (keyDataRep) ? false : true; }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
 
-/// Shared representation for composing a set of active keys plus a
-/// group identifier.
+/// Shared representation for composing a set of active key data
+/// instances plus a group identifier.
 
 /** For example, a model pairing for approximating a discrepancy would
     aggregate a high-fidelity plus a low-fidelity key. */
 
-class AggregateKeyRep
+class ActiveKeyRep
 {
   //
   //- Heading: Friends
   //
 
   /// the handle class can access attributes of the body class directly
-  friend class AggregateKey;
+  friend class ActiveKey;
 
 public:
 
-  ~AggregateKeyRep(); ///< destructor
+  ~ActiveKeyRep(); ///< destructor
 
 private:
 
@@ -381,9 +387,9 @@ private:
   //- Heading: Constructors and destructor
   //
 
-  AggregateKeyRep();  ///< default constructor
-  AggregateKeyRep(unsigned short id,
-		  const std::vector<ActiveKey>& keys);  ///< constructor
+  ActiveKeyRep(); ///< default constructor
+  ActiveKeyRep(unsigned short id,
+	       const std::vector<ActiveKeyData>& data); ///< constructor
 
   //
   //- Heading: Member functions
@@ -393,7 +399,7 @@ private:
   //- Heading: Private data members
   //
 
-  // Currently there are two types of key aggregations:
+  // Currently Dakota,Pecos use two types of key aggregations:
   // 1. concatenation: a single UShortArray activeKey like 40302, identifying
   //    data group 4 for a discrepancy comprised of HF model 0 + resolution 3
   //    and LF model 0 + resolution 2
@@ -404,7 +410,7 @@ private:
   //    unrolled into keys for 3 datasets: HF = 403, LF = 402, discrep = 40302.
   //
   // Key question is how to redesign this...
-  // > ActiveKeyArray --> ActiveKey2DArray ???   Hopefully not.
+  // > ActiveKeyDataArray --> ActiveKeyData2DArray ???   Hopefully not.
   // > Note: 3rd key only exists as combination of keys 1,2 and adds no new info
   //   (and it cannot be defined as a single state corresponding to an ActiveKey
   //   instance).  Therefore target the first case above with AggregateKey, and
@@ -425,34 +431,35 @@ private:
 
   unsigned short dataSetId;
 
-  std::vector<ActiveKey> activeKeys;
+  std::vector<ActiveKeyData> activeKeyDataArray;
 
-  // Don't need this since the idea is that the ActiveKey instances do not
+  // Don't need this since the idea is that the ActiveKeyData instances do not
   // reflect the complete state variables, only the subset identified as part
   // of solution control
-  //ActiveKey sharedState;
+  //ActiveKeyData sharedState;
 };
 
 
-inline AggregateKeyRep::AggregateKeyRep()
+inline ActiveKeyRep::ActiveKeyRep()
 { }
 
 
-inline AggregateKeyRep::
-AggregateKeyRep(unsigned short id, const std::vector<ActiveKey>& keys)
-{ dataSetId = id; activeKeys = keys; }
+inline ActiveKeyRep::
+ActiveKeyRep(unsigned short id, const std::vector<ActiveKeyData>& data)
+{ dataSetId = id; activeKeyDataArray = data; }
 
 
-inline AggregateKeyRep::~AggregateKeyRep()
+inline ActiveKeyRep::~ActiveKeyRep()
 { }
 
 
 
-/// Handle class for managing shared representations for AggregateKeyRep.
+/// Handle class for managing shared representations for ActiveKeyRep.
 
-/** Provides user APIs for composing a key aggregation. */
+/** Provides user APIs for composing an active key that aggregates a
+    group id and one or more key data instances. */
 
-class AggregateKey
+class ActiveKey
 {
 public:
 
@@ -460,15 +467,15 @@ public:
   //- Heading: Constructors, destructor, and operators
   //
 
-  AggregateKey();                            ///< default handle ctor (no body)
-  AggregateKey(bool handle);                 ///< minimal handle + body ctor
-  AggregateKey(unsigned short id,
-	       const std::vector<ActiveKey>& keys); ///< full constructor
-  AggregateKey(const AggregateKey& agg_key); ///< copy constructor
-  ~AggregateKey();                           ///< destructor
+  ActiveKey();                         ///< default handle ctor (no body)
+  ActiveKey(bool handle);              ///< minimal handle + body ctor
+  ActiveKey(unsigned short id,
+	    const std::vector<ActiveKeyData>& data); ///< full constructor
+  ActiveKey(const ActiveKey& key); ///< copy constructor
+  ~ActiveKey();                        ///< destructor
 
   /// assignment operator
-  AggregateKey& operator=(const AggregateKey& agg_key);
+  ActiveKey& operator=(const ActiveKey& key);
 
   //
   //- Heading: Member functions
@@ -487,38 +494,38 @@ private:
   //
  
   /// pointer to the body (handle-body idiom)
-  std::shared_ptr<AggregateKeyRep> aggKeyRep;
+  std::shared_ptr<ActiveKeyRep> keyRep;
 };
 
 
-inline AggregateKey::AggregateKey()
-{ } // aggKeyRep is null
+inline ActiveKey::ActiveKey()
+{ } // keyRep is null
 
 
-// BMA NOTE: doesn't use make_shared<AggregateKeyRep>() due to private ctors
-inline AggregateKey::AggregateKey(bool handle):
-  aggKeyRep(new AggregateKeyRep())
+// BMA NOTE: doesn't use make_shared<ActiveKeyRep>() due to private ctors
+inline ActiveKey::ActiveKey(bool handle):
+  keyRep(new ActiveKeyRep())
 { }
 
 
-inline AggregateKey::AggregateKey(unsigned short id,
-				  const std::vector<ActiveKey>& keys):
-  aggKeyRep(new AggregateKeyRep(id, keys))
+inline ActiveKey::
+ActiveKey(unsigned short id, const std::vector<ActiveKeyData>& data):
+  keyRep(new ActiveKeyRep(id, data))
 { }
 
 
-inline AggregateKey::AggregateKey(const AggregateKey& agg_key):
-  aggKeyRep(agg_key.aggKeyRep)  
+inline ActiveKey::ActiveKey(const ActiveKey& key):
+  keyRep(key.keyRep)  
 { }
 
 
-inline AggregateKey::~AggregateKey()
+inline ActiveKey::~ActiveKey()
 { }
 
 
-inline AggregateKey& AggregateKey::operator=(const AggregateKey& agg_key)
+inline ActiveKey& ActiveKey::operator=(const ActiveKey& key)
 {
-  aggKeyRep = key.aggKeyRep;
+  keyRep = key.keyRep;
   return *this;
 }
 
