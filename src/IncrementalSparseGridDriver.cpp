@@ -755,31 +755,31 @@ void IncrementalSparseGridDriver::clear_inactive()
 {
   CombinedSparseGridDriver::clear_inactive();
 
-  std::map<UShortArray, int>::iterator nu1_it = numUnique1.begin();
-  std::map<UShortArray, int>::iterator nu2_it = numUnique2.begin();
-  std::map<UShortArray, RealVector>::iterator z_it = zVec.begin();
-  std::map<UShortArray, RealVector>::iterator r1_it = r1Vec.begin();
-  std::map<UShortArray, RealVector>::iterator r2_it = r2Vec.begin();
-  std::map<UShortArray, RealMatrix>::iterator a1p_it = a1Points.begin();
-  std::map<UShortArray, RealVector>::iterator a11w_it = a1Type1Weights.begin();
-  std::map<UShortArray, RealMatrix>::iterator a12w_it = a1Type2Weights.begin();
-  std::map<UShortArray, RealMatrix>::iterator a2p_it = a2Points.begin();
-  std::map<UShortArray, RealVector>::iterator a21w_it = a2Type1Weights.begin();
-  std::map<UShortArray, RealMatrix>::iterator a22w_it = a2Type2Weights.begin();
-  std::map<UShortArray, IntArray>::iterator si1_it = sortIndex1.begin();
-  std::map<UShortArray, IntArray>::iterator si2_it = sortIndex2.begin();
-  std::map<UShortArray, IntArray>::iterator us1_it = uniqueSet1.begin();
-  std::map<UShortArray, IntArray>::iterator us2_it = uniqueSet2.begin();
-  std::map<UShortArray, IntArray>::iterator ui1_it = uniqueIndex1.begin();
-  std::map<UShortArray, IntArray>::iterator ui2_it = uniqueIndex2.begin();
-  std::map<UShortArray, BitArray>::iterator iu1_it = isUnique1.begin();
-  std::map<UShortArray, BitArray>::iterator iu2_it = isUnique2.begin();
-  std::map<UShortArray, IntArray>::iterator uim_it = uniqueIndexMapping.begin();
+  std::map<ActiveKey, int>::iterator nu1_it = numUnique1.begin();
+  std::map<ActiveKey, int>::iterator nu2_it = numUnique2.begin();
+  std::map<ActiveKey, RealVector>::iterator z_it = zVec.begin();
+  std::map<ActiveKey, RealVector>::iterator r1_it = r1Vec.begin();
+  std::map<ActiveKey, RealVector>::iterator r2_it = r2Vec.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a1p_it = a1Points.begin();
+  std::map<ActiveKey, RealVector>::iterator a11w_it = a1Type1Weights.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a12w_it = a1Type2Weights.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a2p_it = a2Points.begin();
+  std::map<ActiveKey, RealVector>::iterator a21w_it = a2Type1Weights.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a22w_it = a2Type2Weights.begin();
+  std::map<ActiveKey, IntArray>::iterator si1_it = sortIndex1.begin();
+  std::map<ActiveKey, IntArray>::iterator si2_it = sortIndex2.begin();
+  std::map<ActiveKey, IntArray>::iterator us1_it = uniqueSet1.begin();
+  std::map<ActiveKey, IntArray>::iterator us2_it = uniqueSet2.begin();
+  std::map<ActiveKey, IntArray>::iterator ui1_it = uniqueIndex1.begin();
+  std::map<ActiveKey, IntArray>::iterator ui2_it = uniqueIndex2.begin();
+  std::map<ActiveKey, BitArray>::iterator iu1_it = isUnique1.begin();
+  std::map<ActiveKey, BitArray>::iterator iu2_it = isUnique2.begin();
+  std::map<ActiveKey, IntArray>::iterator uim_it = uniqueIndexMapping.begin();
 
-  std::map<UShortArray, IntArray>::iterator scr_it = smolyakCoeffsRef.begin();
-  std::map<UShortArray, RealVector>::iterator t1r_it
+  std::map<ActiveKey, IntArray>::iterator scr_it = smolyakCoeffsRef.begin();
+  std::map<ActiveKey, RealVector>::iterator t1r_it
     = type1WeightSetsRef.begin();
-  std::map<UShortArray, RealMatrix>::iterator t2r_it
+  std::map<ActiveKey, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
 
   while (a1p_it != a1Points.end())

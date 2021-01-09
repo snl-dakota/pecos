@@ -309,11 +309,11 @@ void SparseGridDriver::increment_smolyak_multi_index(const UShortArray& set)
 
 
 bool SparseGridDriver::
-push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+push_trial_available(const ActiveKey& key, const UShortArray& tr_set)
 { return false; }
 
 
-bool SparseGridDriver::push_trial_available(const UShortArray& key)
+bool SparseGridDriver::push_trial_available(const ActiveKey& key)
 { return false; }
 
 
@@ -322,11 +322,11 @@ bool SparseGridDriver::push_trial_available()
 
 
 size_t SparseGridDriver::
-push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+push_trial_index(const ActiveKey& key, const UShortArray& tr_set)
 { return _NPOS; }
 
 
-size_t SparseGridDriver::push_trial_index(const UShortArray& key)
+size_t SparseGridDriver::push_trial_index(const ActiveKey& key)
 { return _NPOS; }
 
 
@@ -334,15 +334,15 @@ size_t SparseGridDriver::push_trial_index()
 { return _NPOS; }
 
 
-size_t SparseGridDriver::push_index(const UShortArray& key) const
+size_t SparseGridDriver::push_index(const ActiveKey& key) const
 { return _NPOS; }
 
 
-size_t SparseGridDriver::restore_index(const UShortArray& key) const
+size_t SparseGridDriver::restore_index(const ActiveKey& key) const
 { return push_index(key); } // default for identity mapping (flat to flat)
 
 
-size_t SparseGridDriver::finalize_index(size_t i, const UShortArray& key) const
+size_t SparseGridDriver::finalize_index(size_t i, const ActiveKey& key) const
 { return i; } // default is an identity mapping
 
 
@@ -419,12 +419,12 @@ void SparseGridDriver::merge_unique()
 { } // not needed for HierarchSparseGridDriver, so use no-op as default
 
 
-const UShortArray& SparseGridDriver::trial_set(const UShortArray& key) const
+const UShortArray& SparseGridDriver::trial_set(const ActiveKey& key) const
 {
   PCerr << "Error: no default implementation for SparseGridDriver::trial_set()."
 	<< std::endl;
   abort_handler(-1);
-  return key; // dummy UShortArray
+  return activeMultiIndex[key].back(); // dummy UShortArray only for compiler
 }
 
 
@@ -527,9 +527,9 @@ add_active_neighbors(const UShortArray& set, bool frontier)
 void SparseGridDriver::clear_inactive()
 {
   // These are always defined in update_active_iterators()
-  std::map<UShortArray, unsigned short>::iterator sg_it = ssgLevel.begin();
-  std::map<UShortArray, RealVector>::iterator     aw_it = anisoLevelWts.begin();
-  std::map<UShortArray, int>::iterator            cp_it = numCollocPts.begin();
+  std::map<ActiveKey, unsigned short>::iterator sg_it = ssgLevel.begin();
+  std::map<ActiveKey, RealVector>::iterator     aw_it = anisoLevelWts.begin();
+  std::map<ActiveKey, int>::iterator            cp_it = numCollocPts.begin();
   while (sg_it != ssgLevel.end())
     if (sg_it == ssgLevIter) // preserve active
       { ++sg_it; ++aw_it; ++cp_it; }
@@ -541,11 +541,11 @@ void SparseGridDriver::clear_inactive()
 
   // Generalized sparse grid sets may be active
   if (!oldMultiIndex.empty()) {
-    std::map<UShortArray, UShortArraySet>::iterator
+    std::map<ActiveKey, UShortArraySet>::iterator
       om_it = oldMultiIndex.begin(), om_act_it = oldMultiIndex.find(activeKey);
-    std::map<UShortArray, UShortArraySet>::iterator am_it
+    std::map<ActiveKey, UShortArraySet>::iterator am_it
       = activeMultiIndex.begin();
-    std::map<UShortArray, UShortArrayDeque>::iterator pt_it
+    std::map<ActiveKey, UShortArrayDeque>::iterator pt_it
       = poppedTrialSets.begin();
     while (om_it != oldMultiIndex.end())
       if (om_it == om_act_it) // preserve active
@@ -559,7 +559,7 @@ void SparseGridDriver::clear_inactive()
 
   // Anisotropic refinement bounds may be active
   if (!axisLowerBounds.empty()) {
-    std::map<UShortArray, RealVector>::iterator ab_it = axisLowerBounds.begin(),
+    std::map<ActiveKey, RealVector>::iterator ab_it = axisLowerBounds.begin(),
       ab_act_it = axisLowerBounds.find(activeKey);
     while (ab_it != axisLowerBounds.end())
       if (ab_it == ab_act_it) // preserve active

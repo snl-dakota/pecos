@@ -49,8 +49,8 @@ void OrthogPolyApproximation::allocate_arrays()
 
 void OrthogPolyApproximation::clear_inactive()
 {
-  std::map<UShortArray, RealVector>::iterator ec_it = expansionCoeffs.begin();
-  std::map<UShortArray, RealMatrix>::iterator eg_it
+  std::map<ActiveKey, RealVector>::iterator ec_it = expansionCoeffs.begin();
+  std::map<ActiveKey, RealMatrix>::iterator eg_it
     = expansionCoeffGrads.begin();
   while (ec_it != expansionCoeffs.end())
     if (ec_it == expCoeffsIter) // preserve active
@@ -75,15 +75,15 @@ void OrthogPolyApproximation::combine_coefficients()
 
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  std::map<UShortArray, RealVector>::iterator ec_it;
-  std::map<UShortArray, RealMatrix>::iterator eg_it;
+  std::map<ActiveKey, RealVector>::iterator ec_it;
+  std::map<ActiveKey, RealMatrix>::iterator eg_it;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
     // perform the multiplication of level expansions
     const UShort3DArray& combined_mi_seq = data_rep->combinedMultiIndexSeq;
     size_t cntr, num_seq = combined_mi_seq.size();
-    const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = ++mi.begin();
+    const std::map<ActiveKey, UShort2DArray>& mi = data_rep->multiIndex;
+    std::map<ActiveKey, UShort2DArray>::const_iterator mi_cit = ++mi.begin();
     ec_it = ++expansionCoeffs.begin();  eg_it = ++expansionCoeffGrads.begin();
     for (cntr=0; cntr<=num_seq; ++cntr, ++ec_it, ++eg_it, ++mi_cit) {
       const UShort2DArray& multi_index_a = (cntr) ?
@@ -149,8 +149,8 @@ void OrthogPolyApproximation::combine_coefficients()
   }
 
   if (data_rep->expConfigOptions.outputLevel >= DEBUG_OUTPUT) {
-    const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
+    const std::map<ActiveKey, UShort2DArray>& mi = data_rep->multiIndex;
+    std::map<ActiveKey, UShort2DArray>::const_iterator mi_cit = mi.begin();
     for (ec_it=expansionCoeffs.begin(); ec_it!=expansionCoeffs.end();
 	 ++ec_it, ++mi_cit) {
       PCout << "\nLevel coefficients (unnormalized):";
@@ -534,7 +534,7 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return primaryMomIter->second[0];
@@ -584,7 +584,7 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
     std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 2))
     return primaryMomGradsIter->second[0];
 
@@ -617,7 +617,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
@@ -776,7 +776,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   bool same = (this == opa_2),
     use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
     // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // Error check for required data
   if ( !expansionCoeffFlag || ( !same && !opa_2->expansionCoeffFlag )) {
@@ -829,7 +829,7 @@ Real OrthogPolyApproximation::combined_mean(const RealVector& x)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (combinedMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombMean))
     return combinedMoments[0];
@@ -879,7 +879,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   bool use_tracker =
     (opa_2 == this && !data_rep->nonRandomIndices.empty()); // same, all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevCombVar) )
@@ -914,7 +914,7 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
     std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (primaryVarIter->second & 2))
     return primaryMomGradsIter->second[1];
 
@@ -964,7 +964,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)

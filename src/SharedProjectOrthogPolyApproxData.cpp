@@ -253,9 +253,9 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
     // for decrement
     prevMultiIndex = mi;  prevApproxOrder = ao;
 
-    std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
+    std::map<ActiveKey, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
-    std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
+    std::map<ActiveKey, UShortArrayDeque >::iterator pop2_it
       = poppedApproxOrder.find(activeKey);
     if (pop1_it == poppedMultiIndex.end()  || pop1_it->second.empty() ||
 	pop2_it == poppedApproxOrder.end() || pop2_it->second.empty() ) {
@@ -308,9 +308,9 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: { // for completeness (not used)
-    std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
+    std::map<ActiveKey, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
-    std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
+    std::map<ActiveKey, UShortArrayDeque >::iterator pop2_it
       = poppedApproxOrder.find(activeKey);
     if (pop1_it == poppedMultiIndex.end() ||
 	pop2_it == poppedApproxOrder.end()) {
@@ -392,7 +392,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       // roll up approxOrders to define combinedMultiIndex
       size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge first to last
       if (num_seq) combinedMultiIndexSeq.resize(num_seq);
-      std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+      std::map<ActiveKey, UShortArray>::iterator ao_it = approxOrder.begin();
       UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
       for (cntr=0; ao_it!=approxOrder.end(); ++ao_it) {
 	const UShortArray& ao = ao_it->second;
@@ -413,9 +413,9 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       // to the definition of the product expansion
       std::shared_ptr<CombinedSparseGridDriver> csg_driver =
 	std::static_pointer_cast<CombinedSparseGridDriver>(driverRep);
-      const std::map<UShortArray, UShort2DArray>& sm_mi_map
+      const std::map<ActiveKey, UShort2DArray>& sm_mi_map
 	= csg_driver->smolyak_multi_index_map();
-      std::map<UShortArray, UShort2DArray>::const_iterator sm_it;
+      std::map<ActiveKey, UShort2DArray>::const_iterator sm_it;
 
       // Define Pareto expansion orders for first level
       sm_it = sm_mi_map.begin();

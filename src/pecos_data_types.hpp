@@ -57,6 +57,7 @@ typedef std::string String;
 // --------------------------------
 typedef Teuchos::SerialDenseVector<int, Real>                RealVector;
 typedef Teuchos::SerialDenseVector<int, int>                 IntVector;
+typedef Teuchos::SerialDenseVector<int, size_t>              SizetVector;
 typedef Teuchos::SerialDenseVector<int, std::complex<Real> > ComplexVector;
 typedef Teuchos::SerialDenseMatrix<int, Real>                RealMatrix;
 typedef Teuchos::SerialDenseMatrix<int, int>                 IntMatrix;

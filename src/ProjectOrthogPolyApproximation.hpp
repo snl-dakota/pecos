@@ -67,7 +67,7 @@ protected:
   void allocate_arrays();
 
   Real value(const RealVector& x);
-  Real stored_value(const RealVector& x, const UShortArray& key);
+  Real stored_value(const RealVector& x, const ActiveKey& key);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
   void compute_moments(bool full_stats = true, bool combined_stats = false);
@@ -132,16 +132,16 @@ private:
   RealMatrix prevExpCoeffGrads;
 
   /// the set of tensor-product contributions to expansionCoeffs
-  std::map<UShortArray, RealVectorArray> tpExpansionCoeffs;
+  std::map<ActiveKey, RealVectorArray> tpExpansionCoeffs;
   /// the set of tensor-product contributions to expansionCoeffGrads
-  std::map<UShortArray, RealMatrixArray> tpExpansionCoeffGrads;
+  std::map<ActiveKey, RealMatrixArray> tpExpansionCoeffGrads;
 
   /// popped instances of either expansionCoeffs or tpExpansionCoeffs,
   /// depending on exp soln approach, that were computed but not selected
-  std::map<UShortArray, RealVectorDeque> poppedExpCoeffs;
+  std::map<ActiveKey, RealVectorDeque> poppedExpCoeffs;
   /// popped instances of either expansionCoeffGrads or tpExpansionCoeffGrads,
   /// depending on exp soln approach, that were computed but not selected
-  std::map<UShortArray, RealMatrixDeque> poppedExpCoeffGrads;
+  std::map<ActiveKey, RealMatrixDeque> poppedExpCoeffGrads;
 };
 
 

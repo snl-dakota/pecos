@@ -45,7 +45,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
     std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
       std::static_pointer_cast<IncrementalSparseGridDriver>(data_rep->driver());
     size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
-    const UShortArray& key = data_rep->activeKey;
+    const ActiveKey& key = data_rep->activeKey;
     tpExpansionCoeffs[key].resize(num_smolyak_indices);
     tpExpansionCoeffGrads[key].resize(num_smolyak_indices);
     //}
@@ -116,7 +116,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     std::shared_ptr<CombinedSparseGridDriver> csg_driver =
       std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
-    const UShortArray&   key       = data_rep->activeKey;
+    const ActiveKey&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
     const Sizet2DArray&  tp_mi_map = data_rep->tpMultiIndexMap[key];
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
@@ -172,7 +172,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
 
   std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -243,7 +243,7 @@ void ProjectOrthogPolyApproximation::pop_coefficients(bool save_data)
 {
   std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // likely overkill, but multilevel roll up after increment modifies and
   // then restores active key
@@ -299,7 +299,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
 {
   std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -361,7 +361,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 {
   std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -429,7 +429,7 @@ append_tensor_expansions(size_t start_tp_index)
 	<< "start index " << start_tp_index << "\nsm_coeffs:\n" << sm_coeffs
 	<< "sm_coeffs_ref:\n" << sm_coeffs_ref << std::endl;
 #endif // DEBUG
-  const UShortArray&  key       = data_rep->activeKey;
+  const ActiveKey&  key       = data_rep->activeKey;
   const Sizet2DArray& tp_mi_map = data_rep->tpMultiIndexMap[key];
   RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
   RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
@@ -802,10 +802,10 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
   // > the only rigorous way to do this would be to roll up the numerical
   //   quadrature contributions at each level --> perhaps NIPA could be
   //   (improved and) leveraged for this in the future.
-  const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
+  const std::map<ActiveKey, UShort2DArray>& mi = data_rep->multiIndex;
   if (mi.size() > 1) { //if (combined_stats) {
-    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-    std::map<UShortArray, RealVector>::const_iterator ec_cit;
+    std::map<ActiveKey, UShort2DArray>::const_iterator mi_cit = mi.begin();
+    std::map<ActiveKey, RealVector>::const_iterator ec_cit;
     short combine_type = data_rep->expConfigOptions.combineType;
     const SDVArray& sdv_array = surrData.variables_data();
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
@@ -903,7 +903,7 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 
 
 Real ProjectOrthogPolyApproximation::
-stored_value(const RealVector& x, const UShortArray& key)
+stored_value(const RealVector& x, const ActiveKey& key)
 {
   // sum expansion to get response value prediction
 

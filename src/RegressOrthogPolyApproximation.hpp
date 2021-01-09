@@ -85,7 +85,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  bool update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const ActiveKey& key);
 
   int min_coefficients() const;
 
@@ -116,16 +116,16 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x, const UShortArray& key);
+  Real stored_value(const RealVector& x, const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-						    const UShortArray& key);
+						    const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
 						    const SizetArray& dvv,
-						    const UShortArray& key);
+						    const ActiveKey& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-						       const UShortArray& key);
+						       const ActiveKey& key);
   const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
-						      const UShortArray& key);
+						      const ActiveKey& key);
 
   Real mean(const RealVector& x);
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
@@ -371,9 +371,9 @@ private:
       Sorting also simplifies covariance calculations, but care must be 
       exercised to retain synchronization with expansionCoeff{s,Grads}
       ordering when merging sparse multi-indices. */
-  std::map<UShortArray, SizetSet> sparseIndices;
+  std::map<ActiveKey, SizetSet> sparseIndices;
   /// iterator pointing to active node in sparseIndices
-  std::map<UShortArray, SizetSet>::iterator sparseIndIter;
+  std::map<ActiveKey, SizetSet>::iterator sparseIndIter;
 
   /// set of sparseIndices mapping combinedExpCoeffs to combinedMultiIndex
   SizetSet combinedSparseIndices;
@@ -408,11 +408,11 @@ private:
   SizetSet prevSparseIndices;
 
   /// popped instances of expansionCoeffs (computed but not yet selected)
-  std::map<UShortArray, RealVectorDeque> poppedExpCoeffs;
+  std::map<ActiveKey, RealVectorDeque> poppedExpCoeffs;
   /// popped instances of expansionCoeffGrads (computed but not yet selected)
-  std::map<UShortArray, RealMatrixDeque> poppedExpCoeffGrads;
+  std::map<ActiveKey, RealMatrixDeque> poppedExpCoeffGrads;
   /// popped instances of sparseIndices (computed but not yet selected)
-  std::map<UShortArray, SizetSetDeque> poppedSparseInd;
+  std::map<ActiveKey, SizetSetDeque> poppedSparseInd;
 };
 
 
@@ -428,7 +428,7 @@ inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 
 
 inline bool RegressOrthogPolyApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   // Test for change
   if (sparseIndIter != sparseIndices.end() && sparseIndIter->first == key)
@@ -436,7 +436,7 @@ update_active_iterators(const UShortArray& key)
 
   sparseIndIter = sparseIndices.find(key);
   if (sparseIndIter == sparseIndices.end()) {
-    std::pair<UShortArray, SizetSet> ss_pair(key, SizetSet());
+    std::pair<ActiveKey, SizetSet> ss_pair(key.copy(), SizetSet());
     sparseIndIter = sparseIndices.insert(ss_pair).first;
   }
 
@@ -475,7 +475,7 @@ inline Real RegressOrthogPolyApproximation::value(const RealVector& x)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it
+  std::map<ActiveKey, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::value(x) :
@@ -484,11 +484,11 @@ inline Real RegressOrthogPolyApproximation::value(const RealVector& x)
 
 
 inline Real RegressOrthogPolyApproximation::
-stored_value(const RealVector& x, const UShortArray& key)
+stored_value(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
+  std::map<ActiveKey, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_value(x, key) :
     value(x, data_rep->multi_index(key), expansionCoeffs[key], sp_it->second);
@@ -500,7 +500,7 @@ gradient_basis_variables(const RealVector& x)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it
+  std::map<ActiveKey, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::gradient_basis_variables(x) :
@@ -510,11 +510,11 @@ gradient_basis_variables(const RealVector& x)
 
 
 inline const RealVector& RegressOrthogPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_basis_variables(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
+  std::map<ActiveKey, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_basis_variables(x, key) :
     gradient_basis_variables(x, data_rep->multi_index(key),
@@ -527,7 +527,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it
+  std::map<ActiveKey, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::gradient_basis_variables(x, dvv) :
@@ -538,11 +538,11 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 
 inline const RealVector& RegressOrthogPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
-				const UShortArray& key)
+				const ActiveKey& key)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
+  std::map<ActiveKey, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_basis_variables(x, dvv, key) :
     gradient_basis_variables(x, dvv, data_rep->multi_index(key),
@@ -555,7 +555,7 @@ gradient_nonbasis_variables(const RealVector& x)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it
+  std::map<ActiveKey, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::gradient_nonbasis_variables(x) :
@@ -565,11 +565,11 @@ gradient_nonbasis_variables(const RealVector& x)
 
 
 inline const RealVector& RegressOrthogPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_nonbasis_variables(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
+  std::map<ActiveKey, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_nonbasis_variables(x, key) :
     gradient_nonbasis_variables(x, data_rep->multi_index(key),
@@ -582,7 +582,7 @@ hessian_basis_variables(const RealVector& x)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it
+  std::map<ActiveKey, SizetSet>::iterator sp_it
     = sparseIndices.find(data_rep->activeKey);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::hessian_basis_variables(x) :
@@ -592,11 +592,11 @@ hessian_basis_variables(const RealVector& x)
 
 
 inline const RealSymMatrix& RegressOrthogPolyApproximation::
-stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+stored_hessian_basis_variables(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
+  std::map<ActiveKey, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_hessian_basis_variables(x, key) :
     hessian_basis_variables(x, data_rep->multi_index(key),
@@ -622,7 +622,7 @@ inline size_t RegressOrthogPolyApproximation::expansion_terms() const
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, SizetSet>::const_iterator sp_cit
+  std::map<ActiveKey, SizetSet>::const_iterator sp_cit
     = sparseIndices.find(data_rep->activeKey);
   return (sp_cit == sparseIndices.end() || sp_cit->second.empty()) ?
     OrthogPolyApproximation::expansion_terms() : sp_cit->second.size();

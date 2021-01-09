@@ -79,7 +79,7 @@ public:
 					  const SizetList& reinterp_indices);
 
   /// set key identifying active data set
-  virtual void active_key(const UShortArray& key);
+  virtual void active_key(const ActiveKey& key);
   /// remove all keyed data sets
   virtual void clear_keys();
   /// clear inactive grid settings following their usage/combination
@@ -107,13 +107,13 @@ public:
   virtual const RealMatrix& type2_weight_sets() const;
   /// return variableSets[key] for TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::variableSets is 2DArray)
-  virtual const RealMatrix& variable_sets(const UShortArray& key) const;
+  virtual const RealMatrix& variable_sets(const ActiveKey& key) const;
   /// return type1WeightSets[key] from TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::type1WeightSets is 2DArray)
-  virtual const RealVector& type1_weight_sets(const UShortArray& key) const;
+  virtual const RealVector& type1_weight_sets(const ActiveKey& key) const;
   /// return type2WeightSets[key] from TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::type2WeightSets is 2DArray)
-  virtual const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+  virtual const RealMatrix& type2_weight_sets(const ActiveKey& key) const;
 
   /// return combinedVarSets for TensorProduct/CombinedSparseGrid
   virtual const RealMatrix& combined_variable_sets() const;

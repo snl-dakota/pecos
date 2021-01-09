@@ -79,7 +79,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void active_key(const UShortArray& key);
+  void active_key(const ActiveKey& key);
   void clear_keys();
 
   void allocate_data();
@@ -159,7 +159,7 @@ protected:
   //- Heading: Member functions
   //
 
-  /// update {multiIndex,approxOrd}Iter from activeKey
+  /// initialize a pushAvail entry for activeKey
   void update_active_iterators();
 
   /// return value of type 1 interpolation polynomial using all dimensions
@@ -329,7 +329,7 @@ protected:
 
   /// flag indicating availability of pushing (restoring) a previous
   /// grid increment
-  std::map<UShortArray, bool> pushAvail;
+  std::map<ActiveKey, bool> pushAvail;
 
 private:
 
@@ -423,8 +423,11 @@ inline SharedInterpPolyApproxData::~SharedInterpPolyApproxData()
 
 inline void SharedInterpPolyApproxData::update_active_iterators()
 {
-  if (pushAvail.find(activeKey) == pushAvail.end())
-    pushAvail[activeKey] = false; // initialize
+  std::map<ActiveKey, bool>::iterator it = pushAvail.find(activeKey);
+  if (it == pushAvail.end()) {
+    std::pair<ActiveKey, bool> b_pair(activeKey.copy(), false);
+    pushAvail.insert(b_pair);
+  }
 }
 
 

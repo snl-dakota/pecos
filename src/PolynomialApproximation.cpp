@@ -16,6 +16,7 @@
 #include "SparseGridDriver.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "DiscrepancyCalculator.hpp"
+#include "ActiveKey.hpp"
 
 //#define DEBUG
 
@@ -55,7 +56,7 @@ void PolynomialApproximation::synchronize_surrogate_data()
 {
   std::shared_ptr<SharedPolyApproxData> data_rep =
     std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
-  const UShortArray& active_key = data_rep->activeKey;
+  const ActiveKey& active_key = data_rep->activeKey;
   if (active_key != surrData.active_key()) {
     PCerr << "Error: active key mismatch in PolynomialApproximation::"
 	  << "synchronize_surrogate_data()." << std::endl;
@@ -65,7 +66,7 @@ void PolynomialApproximation::synchronize_surrogate_data()
   // level 0: surrData non-aggregated key stores raw data
   short discrep_type = data_rep->expConfigOptions.discrepancyType,
         combine_type = data_rep->expConfigOptions.combineType;
-  if (!discrep_type || !DiscrepancyCalculator::aggregated_key(active_key))
+  if (!discrep_type || !ActiveKey::aggregated_key(active_key))
     return;
 
   switch (discrep_type) {
@@ -91,7 +92,7 @@ void PolynomialApproximation::synchronize_surrogate_data()
 /** Compute the combined expansion prediction that corresponds to new surrData,
     prior to forming an expansion on the difference (surplus). */
 void PolynomialApproximation::
-generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
+generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
 			short combine_type)
 {
   // generate synthetic low-fidelity data at the high-fidelity points
@@ -99,8 +100,8 @@ generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
   // portion of active_key.  This synthetic data then enables the computation
   // and emulation of a recursive discrepancy from hf - lf_hat differences
   // (surpluses) at the high-fidelity points
-  UShortArray hf_key, lf0_key, lf_hat_key; // LF-hat in surplus case
-  DiscrepancyCalculator::extract_keys(active_key, hf_key, lf_hat_key);
+  ActiveKey hf_key, lf0_key, lf_hat_key; // LF-hat in surplus case
+  ActiveKey::extract_keys(active_key, hf_key, lf_hat_key);
   lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0);
 
   // initialize surr_data[lf_hat_key]
@@ -116,9 +117,9 @@ generate_synthetic_data(SurrogateData& surr_data, const UShortArray& active_key,
 
   // extract all discrepancy data sets (which have expansions supporting
   // stored_{value,gradient} evaluations)
-  const std::map<UShortArray, SDRArray>& discrep_resp_map
+  const std::map<ActiveKey, SDRArray>& discrep_resp_map
     = surr_data.filtered_response_data_map(AGGREGATED_DATA_FILTER);
-  std::map<UShortArray, SDRArray>::const_iterator cit;
+  std::map<ActiveKey, SDRArray>::const_iterator cit;
   size_t i, num_pts = hf_sdr_array.size();
   switch (combine_type) {
   case MULT_COMBINE: {
@@ -191,7 +192,7 @@ void PolynomialApproximation::combined_to_active(bool clear_combined)
   std::shared_ptr<SharedPolyApproxData> data_rep =
     std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   if (!data_rep->nonRandomIndices.empty()) {
-    const UShortArray& key = data_rep->activeKey;
+    const ActiveKey& key = data_rep->activeKey;
     xPrevMean[key] = xPrevCombMean;
     xPrevVar[key]  = xPrevCombVar;
   }

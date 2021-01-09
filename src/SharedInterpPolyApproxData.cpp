@@ -114,7 +114,7 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 }
 
 
-void SharedInterpPolyApproxData::active_key(const UShortArray& key)
+void SharedInterpPolyApproxData::active_key(const ActiveKey& key)
 {
   if (activeKey != key) {
     activeKey = key;

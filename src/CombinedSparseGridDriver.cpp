@@ -80,13 +80,13 @@ void CombinedSparseGridDriver::clear_inactive()
 {
   SparseGridDriver::clear_inactive();
 
-  std::map<UShortArray, UShort2DArray>::iterator sm_it
+  std::map<ActiveKey, UShort2DArray>::iterator sm_it
     = smolyakMultiIndex.begin();
-  std::map<UShortArray, IntArray>::iterator  sc_it = smolyakCoeffs.begin();
-  std::map<UShortArray, UShort3DArray>::iterator ck_it = collocKey.begin();
-  std::map<UShortArray, Sizet2DArray>::iterator  ci_it = collocIndices.begin();
-  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
-  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  std::map<ActiveKey, IntArray>::iterator  sc_it = smolyakCoeffs.begin();
+  std::map<ActiveKey, UShort3DArray>::iterator ck_it = collocKey.begin();
+  std::map<ActiveKey, Sizet2DArray>::iterator  ci_it = collocIndices.begin();
+  std::map<ActiveKey, RealVector>::iterator t1_it = type1WeightSets.begin();
+  std::map<ActiveKey, RealMatrix>::iterator t2_it = type2WeightSets.begin();
 
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) { // preserve active
@@ -442,7 +442,7 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
 
 const UShortArray& CombinedSparseGridDriver::maximal_grid()
 {
-  std::map<UShortArray, RealVector>::const_iterator
+  std::map<ActiveKey, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
   size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
   for (; w_cit!=type1WeightSets.end(); ++w_cit) {
@@ -511,7 +511,7 @@ void CombinedSparseGridDriver::combine_grid()
   // and then prune terms for which these coefficients are zero.
 
   // start from first grid (often maximal)
-  std::map<UShortArray, UShort2DArray>::const_iterator sm_cit
+  std::map<ActiveKey, UShort2DArray>::const_iterator sm_cit
     = smolyakMultiIndex.begin();
   combinedSmolyakMultiIndex = sm_cit->second;  ++sm_cit;
   UShort2DArray combined_pareto;

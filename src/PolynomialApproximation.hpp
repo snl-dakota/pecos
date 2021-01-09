@@ -93,27 +93,27 @@ public:
 
   /// retrieve the response value for a stored expansion using the
   /// given parameter vector
-  virtual Real stored_value(const RealVector& x, const UShortArray& key) = 0;
+  virtual Real stored_value(const RealVector& x, const ActiveKey& key) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables included in the polynomial bases;
   /// evaluate for the given parameter vector.
   virtual const RealVector& stored_gradient_basis_variables(const RealVector& x,
-    const UShortArray& key) = 0;
+    const ActiveKey& key) = 0;
   /// retrieve the gradient for a stored expansion with respect to
   /// variables included in the polynomial basis for a given parameter
   /// vector and a given DVV subset
   virtual const RealVector& stored_gradient_basis_variables(const RealVector& x,
-    const SizetArray& dvv, const UShortArray& key) = 0;
+    const SizetArray& dvv, const ActiveKey& key) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables not included in the polynomial bases;
   /// evaluate for the given parameter vector.
   virtual const RealVector& stored_gradient_nonbasis_variables(
-    const RealVector& x, const UShortArray& key) = 0;
+    const RealVector& x, const ActiveKey& key) = 0;
   /// retrieve the Hessian for a stored expansion with respect to all
   /// variables included in the polynomial basis (e.g., probabilistic
   /// variables) for a given parameter vector
   virtual const RealSymMatrix& stored_hessian_basis_variables(
-    const RealVector& x, const UShortArray& key) = 0;
+    const RealVector& x, const ActiveKey& key) = 0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual Real mean() = 0;
@@ -362,7 +362,7 @@ protected:
   //
 
   /// update *Iter for new activeKey from sharedDataRep
-  virtual bool update_active_iterators(const UShortArray& key);
+  virtual bool update_active_iterators(const ActiveKey& key);
 
   //
   //- Heading: Member functions
@@ -375,7 +375,7 @@ protected:
   /// to the level key preceding active key; for use in surplus estimation
   /// for new level data relative to a previous level's surrogate prediction
   void generate_synthetic_data(SurrogateData& surr_data,
-			       const UShortArray& active_key,
+			       const ActiveKey& active_key,
 			       short combine_type);
 
   /// compute central moments of response using type1 numerical integration
@@ -422,37 +422,37 @@ protected:
   /// (OrthogPolyApproximation) or via numerical integration of the response
   /// (InterpPolyApproximation).  Conversions to standardized moments
   /// (std deviation, skewness, kurtosis) are performed elsewhere as needed.
-  std::map<UShortArray, RealVector> primaryMoments;
+  std::map<ActiveKey, RealVector> primaryMoments;
   /// iterator to active entry in primaryMoments
-  std::map<UShortArray, RealVector>::iterator primaryMomIter;
+  std::map<ActiveKey, RealVector>::iterator primaryMomIter;
   /// track computation of mean and mean gradient to avoid unnecessary
   /// recomputation
-  std::map<UShortArray, short> primaryMeanBits;
+  std::map<ActiveKey, short> primaryMeanBits;
   /// iterator to active entry in primaryMeanBits
-  std::map<UShortArray, short>::iterator primaryMeanIter;
+  std::map<ActiveKey, short>::iterator primaryMeanIter;
   /// track computation of variance and variance gradient to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> primaryVarBits;
+  std::map<ActiveKey, short> primaryVarBits;
   /// iterator to active entry in primaryVarBits
-  std::map<UShortArray, short>::iterator primaryVarIter;
+  std::map<ActiveKey, short>::iterator primaryVarIter;
   /// track previous evaluation point for all_variables mean to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevMean;
+  std::map<ActiveKey, RealVector> xPrevMean;
   /// track previous evaluation point for all_variables variance to
   /// avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevVar;
+  std::map<ActiveKey, RealVector> xPrevVar;
 
   /// gradient of mean/variance/etc. for the primary moments (expansion
   /// for OrthogPoly, numerical for InterpPoly) 
-  std::map<UShortArray, RealVectorArray> primaryMomentGrads;
+  std::map<ActiveKey, RealVectorArray> primaryMomentGrads;
   /// iterator to active entry in primaryMomentGrads
-  std::map<UShortArray, RealVectorArray>::iterator primaryMomGradsIter;
+  std::map<ActiveKey, RealVectorArray>::iterator primaryMomGradsIter;
   /// track previous evaluation point for all_variables mean gradient
   /// to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevMeanGrad;
+  std::map<ActiveKey, RealVector> xPrevMeanGrad;
   /// track previous evaluation point for all_variables variance
   /// gradient to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevVarGrad;
+  std::map<ActiveKey, RealVector> xPrevVarGrad;
 
   /// alternate non-active moments (numerical for OrthogPolyApproximation or
   /// expansion for InterpPolyApproximation).  These are computed in final
@@ -500,33 +500,43 @@ inline PolynomialApproximation::~PolynomialApproximation()
 
 
 inline bool PolynomialApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   if (primaryMomIter != primaryMoments.end() && primaryMomIter->first == key)
     return false;
 
-  primaryMomIter = primaryMoments.find(key);
+  primaryMomIter      = primaryMoments.find(key);
+  primaryMomGradsIter = primaryMomentGrads.find(key);
+  primaryMeanIter     = primaryMeanBits.find(key);
+  primaryVarIter      = primaryVarBits.find(key);
+
+  // share 1 deep copy of current active key
+  ActiveKey key_copy;
+  if (primaryMomIter      == primaryMoments.end()     ||
+      primaryMomGradsIter == primaryMomentGrads.end() ||
+      primaryMeanIter     == primaryMeanBits.end()    ||
+      primaryVarIter      == primaryVarBits.end())
+    key_copy = key.copy();
+
   if (primaryMomIter == primaryMoments.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    std::pair<ActiveKey, RealVector> rv_pair(key_copy, RealVector());
     primaryMomIter = primaryMoments.insert(rv_pair).first;
   }
 
   //if (expansionCoeffGradFlag) { // or all_vars for combined exp grads?
-    primaryMomGradsIter = primaryMomentGrads.find(key);
     if (primaryMomGradsIter == primaryMomentGrads.end()) {
-      std::pair<UShortArray, RealVectorArray> rva_pair(key, RealVectorArray(2));
+      std::pair<ActiveKey, RealVectorArray>
+	rva_pair(key_copy, RealVectorArray(2));
       primaryMomGradsIter = primaryMomentGrads.insert(rva_pair).first;
     }
   //}
 
-  primaryMeanIter = primaryMeanBits.find(key);
   if (primaryMeanIter == primaryMeanBits.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
+    std::pair<ActiveKey, short> us_pair(key_copy, 0);
     primaryMeanIter = primaryMeanBits.insert(us_pair).first;
   }
-  primaryVarIter = primaryVarBits.find(key);
   if (primaryVarIter == primaryVarBits.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
+    std::pair<ActiveKey, short> us_pair(key_copy, 0);
     primaryVarIter = primaryVarBits.insert(us_pair).first;
   }
 

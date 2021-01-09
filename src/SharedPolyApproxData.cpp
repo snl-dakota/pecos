@@ -361,7 +361,7 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 }
 
 
-void SharedPolyApproxData::active_key(const UShortArray& key)
+void SharedPolyApproxData::active_key(const ActiveKey& key)
 {
   activeKey = key;
   //update_active_iterators(); // make virtual if used more broadly w/i Shared*

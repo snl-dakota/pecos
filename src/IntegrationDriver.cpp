@@ -334,7 +334,7 @@ const RealMatrix& IntegrationDriver::type2_weight_sets() const
 }
 
 
-const RealMatrix& IntegrationDriver::variable_sets(const UShortArray& key) const
+const RealMatrix& IntegrationDriver::variable_sets(const ActiveKey& key) const
 {
   if (!driverRep) {
     PCerr << "Error: variable_sets(key) not available for this driver type."
@@ -346,7 +346,7 @@ const RealMatrix& IntegrationDriver::variable_sets(const UShortArray& key) const
 
 
 const RealVector& IntegrationDriver::
-type1_weight_sets(const UShortArray& key) const
+type1_weight_sets(const ActiveKey& key) const
 {
   if (!driverRep) {
     PCerr << "Error: type1_weight_sets(key) not available for this driver type."
@@ -358,7 +358,7 @@ type1_weight_sets(const UShortArray& key) const
 
 
 const RealMatrix& IntegrationDriver::
-type2_weight_sets(const UShortArray& key) const
+type2_weight_sets(const ActiveKey& key) const
 {
   if (!driverRep) {
     PCerr << "Error: type2_weight_sets(key) not available for this driver type."
@@ -405,7 +405,7 @@ const RealMatrix& IntegrationDriver::combined_type2_weight_sets() const
 }
 
 
-void IntegrationDriver::active_key(const UShortArray& key)
+void IntegrationDriver::active_key(const ActiveKey& key)
 {
   if (driverRep)
     driverRep->active_key(key);

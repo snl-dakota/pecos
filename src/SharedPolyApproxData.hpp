@@ -277,7 +277,7 @@ public:
   //
 
   /// set activeKey
-  virtual void active_key(const UShortArray& key);
+  virtual void active_key(const ActiveKey& key);
   /// remove all keys
   virtual void clear_keys();
 
@@ -335,7 +335,7 @@ public:
   //
 
   /// return activeKey
-  const UShortArray& active_key() const;
+  const ActiveKey& active_key() const;
 
   /// allocate orthogonal polynomial basis types and integration rules
   /// based on u_types and rule options
@@ -358,23 +358,23 @@ public:
 
   // returns index of the data set to be restored from within popped
   // bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  //size_t push_index(const UShortArray& key, const UShortArray& tr_set);
+  //size_t push_index(const ActiveKey& key, const UShortArray& tr_set);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  size_t push_index(const UShortArray& key);
+  size_t push_index(const ActiveKey& key);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   size_t push_index();
   /// maps from push_index (flattened or hierarchical index for internal use)
   /// to a consistent (flattened) index for external use
-  size_t restore_index(const UShortArray& key);
+  size_t restore_index(const ActiveKey& key);
   /// maps from push_index (flattened or hierarchical index for internal use)
   /// to a consistent (flattened) index for external use
   size_t restore_index();
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
   /// during finalization
-  size_t finalize_index(size_t i, const UShortArray& key);
+  size_t finalize_index(size_t i, const ActiveKey& key);
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   /// during finalization
@@ -533,7 +533,7 @@ protected:
   /// database key indicating the currently active polynomial expansion;
   /// the key is a multi-index managing multiple modeling dimensions such
   /// as model form, discretization level, etc.
-  UShortArray activeKey;
+  ActiveKey activeKey;
 
   /// mapping to manage different global sensitivity index options
   /// (e.g. univariate/main effects only vs all effects)
@@ -574,7 +574,7 @@ inline SharedPolyApproxData::~SharedPolyApproxData()
 { }
 
 
-inline const UShortArray& SharedPolyApproxData::active_key() const
+inline const ActiveKey& SharedPolyApproxData::active_key() const
 { return activeKey; }
 
 
@@ -736,7 +736,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 
 /*
 inline size_t SharedPolyApproxData::
-push_index(const UShortArray& key, const UShortArray& tr_set)
+push_index(const ActiveKey& key, const UShortArray& tr_set)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
@@ -754,7 +754,7 @@ push_index(const UShortArray& key, const UShortArray& tr_set)
 */
 
 
-inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
+inline size_t SharedPolyApproxData::push_index(const ActiveKey& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
@@ -792,7 +792,7 @@ inline size_t SharedPolyApproxData::push_index()
 }
 
 
-inline size_t SharedPolyApproxData::restore_index(const UShortArray& key)
+inline size_t SharedPolyApproxData::restore_index(const ActiveKey& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
@@ -815,7 +815,7 @@ inline size_t SharedPolyApproxData::restore_index()
 
 
 inline size_t SharedPolyApproxData::
-finalize_index(size_t i, const UShortArray& key)
+finalize_index(size_t i, const ActiveKey& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {

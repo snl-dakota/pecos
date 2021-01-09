@@ -161,7 +161,7 @@ private:
   // the active key to restore following the expansion combination process
   // (this process activates a maximal expansion to facilitate assembly of
   // combined multi-indices and coefficients)
-  //UShortArray prevActiveKey;
+  //ActiveKey prevActiveKey;
 
   /// map from random index to unique nonZerosMapArray
   SizetArray nonZerosMapIndices;

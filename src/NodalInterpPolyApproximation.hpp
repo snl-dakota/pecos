@@ -69,7 +69,7 @@ protected:
 
   void combine_coefficients();
 
-  bool update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const ActiveKey& key);
   void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
@@ -83,16 +83,16 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x, const UShortArray& key);
+  Real stored_value(const RealVector& x, const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-						    const UShortArray& key);
+						    const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
 						    const SizetArray& dvv,
-						    const UShortArray& key);
+						    const ActiveKey& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-						       const UShortArray& key);
+						       const ActiveKey& key);
   const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
-						      const UShortArray& key);
+						      const ActiveKey& key);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -317,14 +317,14 @@ private:
   //
 
   /// the type1 coefficients of the expansion for interpolating values
-  std::map<UShortArray, RealVector> expansionType1Coeffs;
+  std::map<ActiveKey, RealVector> expansionType1Coeffs;
   /// iterator pointing to active node in expansionCoeffs
-  std::map<UShortArray, RealVector>::iterator expT1CoeffsIter;
+  std::map<ActiveKey, RealVector>::iterator expT1CoeffsIter;
 
   /// the type2 coefficients of the expansion for interpolating gradients
-  std::map<UShortArray, RealMatrix> expansionType2Coeffs;
+  std::map<ActiveKey, RealMatrix> expansionType2Coeffs;
   /// iterator pointing to active node in expansionCoeffGrads
-  std::map<UShortArray, RealMatrix>::iterator expT2CoeffsIter;
+  std::map<ActiveKey, RealMatrix>::iterator expT2CoeffsIter;
 
   /// the gradients of the type1 expansion coefficients
   /** may be interpreted as either the gradients of the expansion
@@ -333,9 +333,9 @@ private:
       needed with respect to variables that do not appear in the
       expansion (e.g., with respect to design variables for an
       expansion only over the random variables). */
-  std::map<UShortArray, RealMatrix> expansionType1CoeffGrads;
+  std::map<ActiveKey, RealMatrix> expansionType1CoeffGrads;
   /// iterator pointing to active node in expansionCoeffGrads
-  std::map<UShortArray, RealMatrix>::iterator expT1CoeffGradsIter;
+  std::map<ActiveKey, RealMatrix>::iterator expT1CoeffGradsIter;
 
   /// roll up of expansion type 1 coefficients across all keys
   RealVector combinedExpT1Coeffs;
@@ -362,7 +362,7 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 
 
 inline bool NodalInterpPolyApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   // Test for change
   if (expT1CoeffsIter != expansionType1Coeffs.end() &&
@@ -370,18 +370,26 @@ update_active_iterators(const UShortArray& key)
     return false;
   
   expT1CoeffsIter = expansionType1Coeffs.find(key);
+  expT2CoeffsIter = expansionType2Coeffs.find(key);
+  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
+
+  // share 1 deep copy of current active key
+  ActiveKey key_copy;
+  if (expT1CoeffsIter     == expansionType1Coeffs.end() ||
+      expT2CoeffsIter     == expansionType2Coeffs.end() ||
+      expT1CoeffGradsIter == expansionType1CoeffGrads.end())
+    key_copy = key.copy();
+
   if (expT1CoeffsIter == expansionType1Coeffs.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    std::pair<ActiveKey, RealVector> rv_pair(key_copy, RealVector());
     expT1CoeffsIter = expansionType1Coeffs.insert(rv_pair).first;
   }
-  expT2CoeffsIter = expansionType2Coeffs.find(key);
   if (expT2CoeffsIter == expansionType2Coeffs.end()) {
-    std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
+    std::pair<ActiveKey, RealMatrix> rm_pair(key_copy, RealMatrix());
     expT2CoeffsIter = expansionType2Coeffs.insert(rm_pair).first;
   }
-  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
   if (expT1CoeffGradsIter == expansionType1CoeffGrads.end()) {
-    std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
+    std::pair<ActiveKey, RealMatrix> rm_pair(key_copy, RealMatrix());
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
 
@@ -502,7 +510,7 @@ inline Real NodalInterpPolyApproximation::mean(const RealVector& x)
     std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return primaryMomIter->second[0];
@@ -549,7 +557,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
@@ -629,7 +637,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
     return primaryMomIter->second[1];
@@ -691,7 +699,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // if already computed, return previous result
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
@@ -744,7 +752,7 @@ inline Real NodalInterpPolyApproximation::combined_mean(const RealVector& x)
     std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
   bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (combinedMeanBits & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevCombMean))
     return combinedMoments[0];
@@ -799,7 +807,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   bool use_tracker
     = (this == nip_approx_2 && !data_rep->nonRandomIndices.empty());// same, all
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevCombVar) )
     return combinedMoments[1];

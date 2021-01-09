@@ -175,7 +175,7 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
   // for decrement
   prevMultiIndex = multiIndexIter->second;
 
-  std::map<UShortArray, UShort2DArrayDeque>::iterator pop_it
+  std::map<ActiveKey, UShort2DArrayDeque>::iterator pop_it
     = poppedMultiIndex.find(activeKey);
   UShort2DArrayDeque::iterator u2a_it;
   if (pop_it == poppedMultiIndex.end() || pop_it->second.size() <= p_index) {

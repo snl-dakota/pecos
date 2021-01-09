@@ -40,7 +40,7 @@ public:
   /// constructor
   TensorProductDriver(const UShortArray& quad_order);
   /// constructor
-  TensorProductDriver(const UShortArray& quad_order, const UShortArray& key);
+  TensorProductDriver(const UShortArray& quad_order, const ActiveKey& key);
   /// destructor
   ~TensorProductDriver();
 
@@ -48,7 +48,7 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  void active_key(const UShortArray& key);
+  void active_key(const ActiveKey& key);
   void clear_keys();
   void clear_inactive();
 
@@ -64,9 +64,9 @@ public:
   const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
   const RealMatrix& type2_weight_sets() const;
-  const RealMatrix& variable_sets(const UShortArray& key) const;
-  const RealVector& type1_weight_sets(const UShortArray& key) const;
-  const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+  const RealMatrix& variable_sets(const ActiveKey& key) const;
+  const RealVector& type1_weight_sets(const ActiveKey& key) const;
+  const RealMatrix& type2_weight_sets(const ActiveKey& key) const;
   const RealMatrix& combined_variable_sets() const;
   const RealVector& combined_type1_weight_sets() const;
   const RealMatrix& combined_type2_weight_sets() const;
@@ -104,11 +104,11 @@ public:
   /// return levelIndex[activeKey]
   const UShortArray& level_index() const;
   /// return levelIndex[key]
-  const UShortArray& level_index(const UShortArray& key) const;
+  const UShortArray& level_index(const ActiveKey& key) const;
   /// return collocKey[activeKey]
   const UShort2DArray& collocation_key() const;
   /// return collocKey[key]
-  const UShort2DArray& collocation_key(const UShortArray& key) const;
+  const UShort2DArray& collocation_key(const ActiveKey& key) const;
 
   /// return combinedLevelIndex
   const UShortArray& combined_level_index() const;
@@ -167,33 +167,33 @@ private:
 
   /// reference quadrature order: provides a reference for generating a
   /// quadOrder that satisfies applicable constraints (e.g., nestedness, etc.)
-  std::map<UShortArray, UShortArray> refQuadOrder;
+  std::map<ActiveKey, UShortArray> refQuadOrder;
 
   /// quadrature order offset by one for use as 0-based indices
-  std::map<UShortArray, UShortArray> levelIndex;
+  std::map<ActiveKey, UShortArray> levelIndex;
   /// iterator to active entry within levelIndex
-  std::map<UShortArray, UShortArray>::iterator levelIndIter;
+  std::map<ActiveKey, UShortArray>::iterator levelIndIter;
 
   /// num points-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
-  std::map<UShortArray, UShort2DArray> collocKey;
+  std::map<ActiveKey, UShort2DArray> collocKey;
   /// iterator to active entry within levelIndex
-  std::map<UShortArray, UShort2DArray>::iterator collocKeyIter;
+  std::map<ActiveKey, UShort2DArray>::iterator collocKeyIter;
 
   /// the set of unique collocation points in the sparse grid
-  std::map<UShortArray, RealMatrix> variableSets;
+  std::map<ActiveKey, RealMatrix> variableSets;
   /// iterator for active entry within variableSets
-  std::map<UShortArray, RealMatrix>::iterator varSetsIter;
+  std::map<ActiveKey, RealMatrix>::iterator varSetsIter;
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the tensor grid
-  std::map<UShortArray, RealVector> type1WeightSets;
+  std::map<ActiveKey, RealVector> type1WeightSets;
   /// iterator for active entry within type1WeightSets
-  std::map<UShortArray, RealVector>::iterator t1WtIter;
+  std::map<ActiveKey, RealVector>::iterator t1WtIter;
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the tensor grid
-  std::map<UShortArray, RealMatrix> type2WeightSets;
+  std::map<ActiveKey, RealMatrix> type2WeightSets;
   /// iterator for active entry within type2WeightSets
-  std::map<UShortArray, RealMatrix>::iterator t2WtIter;
+  std::map<ActiveKey, RealMatrix>::iterator t2WtIter;
 
   /// multi-index for maximal grid that is the result of combining a set
   /// of level expansions
@@ -216,31 +216,31 @@ private:
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
   /// model form, discretization level, etc.
-  UShortArray activeKey;
+  ActiveKey activeKey;
   // store the key identified in the last call to maximal_grid()
-  //UShortArray maximalKey;
+  //ActiveKey maximalKey;
 };
 
 
 inline TensorProductDriver::TensorProductDriver():
   IntegrationDriver(BaseConstructor()), levelIndIter(levelIndex.end())
-{ update_active_iterators(); } // default activeKey is empty array
+{ TensorProductDriver::update_active_iterators(); }// default activeKey is empty
 
 
 inline TensorProductDriver::TensorProductDriver(const UShortArray& quad_order):
   IntegrationDriver(BaseConstructor()), levelIndIter(levelIndex.end())
 {
-  update_active_iterators(); // default activeKey is empty array
+  TensorProductDriver::update_active_iterators(); // default activeKey is empty
   quadrature_order(quad_order);
 }
 
 
 inline TensorProductDriver::
-TensorProductDriver(const UShortArray& quad_order, const UShortArray& key):
+TensorProductDriver(const UShortArray& quad_order, const ActiveKey& key):
   IntegrationDriver(BaseConstructor()), levelIndIter(levelIndex.end()),
-  activeKey(key)
+  activeKey(key) // shallow copy
 {
-  update_active_iterators(); // activeKey set in initializer list
+  TensorProductDriver::update_active_iterators(); // activeKey set init above
   quadrature_order(quad_order);
 }
 
@@ -249,11 +249,55 @@ inline TensorProductDriver::~TensorProductDriver()
 { }
 
 
-inline void TensorProductDriver::active_key(const UShortArray& key)
+inline void TensorProductDriver::active_key(const ActiveKey& key)
 {
   if (activeKey != key) {
-    activeKey = key;
+    activeKey = key; // shallow copy
     update_active_iterators();
+  }
+}
+
+
+inline void TensorProductDriver::update_active_iterators()
+{
+  // Test for change
+  if (levelIndIter != levelIndex.end() && levelIndIter->first == activeKey)
+    return;
+
+  levelIndIter  = levelIndex.find(activeKey);
+  collocKeyIter = collocKey.find(activeKey);
+  varSetsIter   = variableSets.find(activeKey);
+  t1WtIter      = type1WeightSets.find(activeKey);
+  t2WtIter      = type2WeightSets.find(activeKey);
+
+  // share 1 deep copy of current active key
+  ActiveKey active_copy;
+  if (levelIndIter == levelIndex.end()  || collocKeyIter == collocKey.end() ||
+      varSetsIter == variableSets.end() || t1WtIter == type1WeightSets.end() ||
+      t2WtIter == type2WeightSets.end())
+    active_copy = activeKey.copy();
+
+  if (levelIndIter == levelIndex.end()) {
+    std::pair<ActiveKey, UShortArray> ua_pair(active_copy, UShortArray());
+    levelIndIter = levelIndex.insert(ua_pair).first;
+  }
+  level_to_order(); // empty for new levelIndex
+
+  if (collocKeyIter == collocKey.end()) {
+    std::pair<ActiveKey, UShort2DArray> u2a_pair(active_copy, UShort2DArray());
+    collocKeyIter = collocKey.insert(u2a_pair).first;
+  }
+  if (varSetsIter == variableSets.end()) {
+    std::pair<ActiveKey, RealMatrix> rm_pair(active_copy, RealMatrix());
+    varSetsIter = variableSets.insert(rm_pair).first;
+  }
+  if (t1WtIter == type1WeightSets.end()) {
+    std::pair<ActiveKey, RealVector> rv_pair(active_copy, RealVector());
+    t1WtIter = type1WeightSets.insert(rv_pair).first;
+  }
+  if (t2WtIter == type2WeightSets.end()) {
+    std::pair<ActiveKey, RealMatrix> rm_pair(active_copy, RealMatrix());
+    t2WtIter = type2WeightSets.insert(rm_pair).first;
   }
 }
 
@@ -269,42 +313,6 @@ inline void TensorProductDriver::clear_keys()
 
   // this database is shared among all keys (not currently used by TPQ)
   //clear_1d_collocation_points_weights();
-}
-
-
-inline void TensorProductDriver::update_active_iterators()
-{
-  // Test for change
-  if (levelIndIter != levelIndex.end() && levelIndIter->first == activeKey)
-    return;
-
-  levelIndIter = levelIndex.find(activeKey);
-  if (levelIndIter == levelIndex.end()) {
-    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
-    levelIndIter = levelIndex.insert(ua_pair).first;
-  }
-  level_to_order(); // empty for new levelIndex
-
-  collocKeyIter = collocKey.find(activeKey);
-  if (collocKeyIter == collocKey.end()) {
-    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
-    collocKeyIter = collocKey.insert(u2a_pair).first;
-  }
-  varSetsIter = variableSets.find(activeKey);
-  if (varSetsIter == variableSets.end()) {
-    std::pair<UShortArray, RealMatrix> rm_pair(activeKey, RealMatrix());
-    varSetsIter = variableSets.insert(rm_pair).first;
-  }
-  t1WtIter = type1WeightSets.find(activeKey);
-  if (t1WtIter == type1WeightSets.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(activeKey, RealVector());
-    t1WtIter = type1WeightSets.insert(rv_pair).first;
-  }
-  t2WtIter = type2WeightSets.find(activeKey);
-  if (t2WtIter == type2WeightSets.end()) {
-    std::pair<UShortArray, RealMatrix> rm_pair(activeKey, RealMatrix());
-    t2WtIter = type2WeightSets.insert(rm_pair).first;
-  }
 }
 
 
@@ -373,7 +381,7 @@ inline unsigned short TensorProductDriver::quadrature_order(size_t i)
 
 inline const UShortArray& TensorProductDriver::reference_quadrature_order()
 {
-  std::map<UShortArray, UShortArray>::const_iterator cit
+  std::map<ActiveKey, UShortArray>::const_iterator cit
     = refQuadOrder.find(activeKey);
   return (cit == refQuadOrder.end()) ? quadrature_order() : cit->second;
 }
@@ -403,9 +411,9 @@ inline const RealMatrix& TensorProductDriver::variable_sets() const
 
 
 inline const RealMatrix& TensorProductDriver::
-variable_sets(const UShortArray& key) const
+variable_sets(const ActiveKey& key) const
 {
-  std::map<UShortArray, RealMatrix>::const_iterator cit
+  std::map<ActiveKey, RealMatrix>::const_iterator cit
     = variableSets.find(key);
   if (cit == variableSets.end()) {
     PCerr << "Error: key not found in TensorProductDriver::variable_sets()."
@@ -421,9 +429,9 @@ inline const RealVector& TensorProductDriver::type1_weight_sets() const
 
 
 inline const RealVector& TensorProductDriver::
-type1_weight_sets(const UShortArray& key) const
+type1_weight_sets(const ActiveKey& key) const
 {
-  std::map<UShortArray, RealVector>::const_iterator cit
+  std::map<ActiveKey, RealVector>::const_iterator cit
     = type1WeightSets.find(key);
   if (cit == type1WeightSets.end()) {
     PCerr << "Error: key not found in TensorProductDriver::type1_weight_sets()."
@@ -439,9 +447,9 @@ inline const RealMatrix& TensorProductDriver::type2_weight_sets() const
 
 
 inline const RealMatrix& TensorProductDriver::
-type2_weight_sets(const UShortArray& key) const
+type2_weight_sets(const ActiveKey& key) const
 {
-  std::map<UShortArray, RealMatrix>::const_iterator cit
+  std::map<ActiveKey, RealMatrix>::const_iterator cit
     = type2WeightSets.find(key);
   if (cit == type2WeightSets.end()) {
     PCerr << "Error: key not found in TensorProductDriver::type2_weight_sets()."
@@ -457,9 +465,9 @@ inline const UShortArray& TensorProductDriver::level_index() const
 
 
 inline const UShortArray& TensorProductDriver::
-level_index(const UShortArray& key) const
+level_index(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShortArray>::const_iterator cit = levelIndex.find(key);
+  std::map<ActiveKey, UShortArray>::const_iterator cit = levelIndex.find(key);
   if (cit == levelIndex.end()) {
     PCerr << "Error: key not found in TensorProductDriver::level_index()."
 	  << std::endl;
@@ -474,9 +482,9 @@ inline const UShort2DArray& TensorProductDriver::collocation_key() const
 
 
 inline const UShort2DArray& TensorProductDriver::
-collocation_key(const UShortArray& key) const
+collocation_key(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShort2DArray>::const_iterator cit
+  std::map<ActiveKey, UShort2DArray>::const_iterator cit
     = collocKey.find(key);
   if (cit == collocKey.end()) {
     PCerr << "Error: key not found in TensorProductDriver::"

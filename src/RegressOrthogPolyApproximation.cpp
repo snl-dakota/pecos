@@ -223,7 +223,7 @@ void RegressOrthogPolyApproximation::pop_coefficients(bool save_data)
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // likely overkill, but multilevel roll up after increment modifies and
   // then restores active key
@@ -252,7 +252,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
 {
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -267,11 +267,11 @@ void RegressOrthogPolyApproximation::push_coefficients()
   prevSparseIndices = sparseIndIter->second;     // copy
 
   // retrieve a previously popped state
-  std::map<UShortArray, RealVectorDeque>::iterator prv_it
+  std::map<ActiveKey, RealVectorDeque>::iterator prv_it
     = poppedExpCoeffs.find(key);
-  std::map<UShortArray, RealMatrixDeque>::iterator prm_it
+  std::map<ActiveKey, RealMatrixDeque>::iterator prm_it
     = poppedExpCoeffGrads.find(key);
-  std::map<UShortArray, SizetSetDeque>::iterator pss_it
+  std::map<ActiveKey, SizetSetDeque>::iterator pss_it
     = poppedSparseInd.find(key);
   if (prv_it != poppedExpCoeffs.end()) {
     RealVectorDeque::iterator rv_it = prv_it->second.begin() + p_index;
@@ -294,7 +294,7 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 {
   // Combine the data stored previously by store_coefficients()
   bool sparse = false;
-  std::map<UShortArray, SizetSet>::iterator sp_it;
+  std::map<ActiveKey, SizetSet>::iterator sp_it;
   if (!sparseIndices.empty())
     for (sp_it=sparseIndices.begin(); sp_it!=sparseIndices.end(); ++sp_it)
       if (!sp_it->second.empty())
@@ -314,8 +314,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   // sparse indices arrays (not optimal for performance but a lot less code),
   // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
   // following aggregation.
-  const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-  std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
+  const std::map<ActiveKey, UShort2DArray>& mi = data_rep->multiIndex;
+  std::map<ActiveKey, UShort2DArray>::const_iterator mi_cit = mi.begin();
   for (sp_it =sparseIndices.begin();
        sp_it!=sparseIndices.end() && mi_cit!=mi.end(); ++sp_it, ++mi_cit) {
     SizetSet& sparse_ind = sp_it->second;
@@ -323,8 +323,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
       inflate(sparse_ind, mi_cit->second.size());
   }
 
-  std::map<UShortArray, RealVector>::iterator ec_it;
-  std::map<UShortArray, RealMatrix>::iterator eg_it;
+  std::map<ActiveKey, RealVector>::iterator ec_it;
+  std::map<ActiveKey, RealMatrix>::iterator eg_it;
   switch (data_rep->expConfigOptions.combineType) {
   case MULT_COMBINE: {
     // perform the multiplication of level expansions
@@ -588,7 +588,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   LightweightSparseGridDriver* lsg_driver = &data_rep->lsgDriver;
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // Perform a (coarse-grained) restriction operation that updates
   // oldMultiIndex and activeMultiIndex. This requires the same heavyweight
@@ -1121,7 +1121,7 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if (use_tracker && (primaryMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevMean[key]))
     return primaryMomIter->second[0];
@@ -1176,7 +1176,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
@@ -1467,7 +1467,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   bool same = (this == ropa_2),
     use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   // Error check for required data
   if ( !expansionCoeffFlag || ( !same && !ropa_2->expansionCoeffFlag )) {
@@ -1505,7 +1505,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   bool same = (this == ropa_2),
     use_tracker = (same && !data_rep->nonRandomIndices.empty());//same, all mode
   // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
 
   if ( use_tracker && (combinedVarBits & 1) &&
        data_rep->match_nonrandom_vars(x, xPrevCombVar) )
@@ -1596,7 +1596,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   bool use_tracker = !nrand_ind.empty(); // all mode
   // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
-  const UShortArray& key = data_rep->activeKey;
+  const ActiveKey& key = data_rep->activeKey;
   if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)

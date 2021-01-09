@@ -82,7 +82,7 @@ protected:
   /// update combinedExpT{1Coeffs,2Coeffs,1CoeffGrads}
   void combine_coefficients();
 
-  bool update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const ActiveKey& key);
   void combined_to_active(bool clear_combined = true);
   void clear_inactive();
 
@@ -96,16 +96,16 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x, const UShortArray& key);
+  Real stored_value(const RealVector& x, const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-						    const UShortArray& key);
+						    const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
 						    const SizetArray& dvv,
-						    const UShortArray& key);
+						    const ActiveKey& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-						       const UShortArray& key);
+						       const ActiveKey& key);
   const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
-						      const UShortArray& key);
+						      const ActiveKey& key);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -252,11 +252,11 @@ private:
   /// compute the reference mean, excluding the current grid
   /// increment, using ref_key
   Real reference_combined_mean(
-    const std::map<UShortArray, UShort2DArray>& ref_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map);
   /// compute the reference mean, excluding the current grid
   /// increment, using ref_key
   Real reference_combined_mean(const RealVector& x,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_variance(const UShort2DArray& ref_key);
@@ -266,11 +266,11 @@ private:
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_combined_variance(
-    const std::map<UShortArray, UShort2DArray>& ref_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map);
   /// compute the reference variance, excluding the current grid
   /// increment, using ref_key
   Real reference_combined_variance(const RealVector& x,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map);
 
   /// compute the covariance increment due to the current grid increment
   /// using the active coefficients and weights
@@ -284,16 +284,16 @@ private:
   /// compute the covariance increment due to the current grid increment
   /// using all of the coefficients and weights
   Real delta_covariance(
-    const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
-    const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
-    const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
-    const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map, bool same,
+    const std::map<ActiveKey, RealVector2DArray>& r1_t1c_map,
+    const std::map<ActiveKey, RealMatrix2DArray>& r1_t2c_map,
+    const std::map<ActiveKey, RealVector2DArray>& r2_t1c_map,
+    const std::map<ActiveKey, RealMatrix2DArray>& r2_t2c_map, bool same,
     const RealVector2DArray& r1r2_t1c, const RealMatrix2DArray& r1r2_t2c,
-    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
-    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
-    const UShortArray& active_key,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, RealVector2DArray>& t1_wts_map,
+    const std::map<ActiveKey, RealMatrix2DArray>& t2_wts_map,
+    const ActiveKey& active_key,
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
   /// compute the covariance increment at x due to the current grid increment
   Real delta_covariance(const RealVector& x,
     const RealVector2DArray& r1_t1_coeffs,const RealMatrix2DArray& r1_t2_coeffs,
@@ -305,16 +305,16 @@ private:
   /// compute the covariance increment due to the current grid increment
   /// using all of the coefficients and weights
   Real delta_covariance(const RealVector& x,
-    const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
-    const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
-    const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
-    const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map, bool same,
+    const std::map<ActiveKey, RealVector2DArray>& r1_t1c_map,
+    const std::map<ActiveKey, RealMatrix2DArray>& r1_t2c_map,
+    const std::map<ActiveKey, RealVector2DArray>& r2_t1c_map,
+    const std::map<ActiveKey, RealMatrix2DArray>& r2_t2c_map, bool same,
     const RealVector2DArray& r1r2_t1c, const RealMatrix2DArray& r1r2_t2c,
-    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
-    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
-    const UShortArray& active_key,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort3DArray>& sm_mi_map,
+    const std::map<ActiveKey, UShort4DArray>& colloc_key_map,
+    const ActiveKey& active_key,
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
 
   /// compute the mean increment due to the current grid increment
   Real delta_mean(const UShort2DArray& incr_key);
@@ -322,10 +322,10 @@ private:
   Real delta_mean(const RealVector& x, const UShort2DArray& incr_key);
   /// compute the mean increment due to the current grid increment
   Real delta_combined_mean(
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
   /// compute the mean increment due to the current grid increment
   Real delta_combined_mean(const RealVector& x,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
 
   /// compute the variance increment due to the current grid increment
   Real delta_variance(const UShort2DArray& ref_key,
@@ -335,12 +335,12 @@ private:
 		      const UShort2DArray& incr_key);
   /// compute the variance increment due to the current grid increment
   Real delta_combined_variance(
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
   /// compute the variance increment due to the current grid increment
   Real delta_combined_variance(const RealVector& x,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
 
   /// compute the standard deviation increment due to the current grid increment
   Real delta_std_deviation(const UShort2DArray& ref_key,
@@ -350,12 +350,12 @@ private:
 			   const UShort2DArray& incr_key);
   /// compute the standard deviation increment due to the current grid increment
   Real delta_combined_std_deviation(
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
   /// compute the standard deviation increment due to the current grid increment
   Real delta_combined_std_deviation(const RealVector& x,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
 
   /// compute the reliability index increment due to the current grid increment
   Real delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
@@ -365,12 +365,12 @@ private:
 		  const UShort2DArray& ref_key, const UShort2DArray& incr_key);
   /// compute the reliability index increment due to the current grid increment
   Real delta_combined_beta(bool cdf_flag, Real z_bar,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
   /// compute the reliability index increment due to the current grid increment
   Real delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
 
   /// compute the response level increment due to the current grid increment
   Real delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
@@ -380,12 +380,12 @@ private:
 	       const UShort2DArray& ref_key, const UShort2DArray& incr_key);
   /// compute the response level increment due to the current grid increment
   Real delta_combined_z(bool cdf_flag, Real beta_bar,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
   /// compute the response level increment due to the current grid increment
   Real delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
-    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-    const std::map<UShortArray, UShort2DArray>& incr_key_map);
+    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    const std::map<ActiveKey, UShort2DArray>& incr_key_map);
 
   /// shared logic for handling exceptional cases
   Real beta_map(Real mu, Real var, bool cdf_flag, Real z_bar);
@@ -421,7 +421,7 @@ private:
   void product_difference_interpolant(
     HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
-    const UShortArray& hf_key, const UShortArray& lf_key,
+    const ActiveKey& hf_key, const ActiveKey& lf_key,
     const UShort2DArray& set_partition = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of delta [ R_1 R_2 ] across
   /// model levels/fidelities when corresponding SurrogateData is available
@@ -429,7 +429,7 @@ private:
     const SurrogateData& surr_data_2, const UShort3DArray& sm_mi,
     const UShort4DArray& colloc_key, const Sizet3DArray& colloc_index,
     RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
-    const UShortArray& hf_key, const UShortArray& lf_key,
+    const ActiveKey& hf_key, const ActiveKey& lf_key,
     const UShort2DArray& set_partition = UShort2DArray());
 
   /// build the active central product interpolant, with or without
@@ -442,9 +442,9 @@ private:
   /// corresponding SurrogateData
   void central_product_interpolant(
     HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
-    std::map<UShortArray, RealVector2DArray>& cov_t1c_map,
-    std::map<UShortArray, RealMatrix2DArray>& cov_t2c_map,
-    const std::map<UShortArray, UShort2DArray>& set_partition_map);
+    std::map<ActiveKey, RealVector2DArray>& cov_t1c_map,
+    std::map<ActiveKey, RealMatrix2DArray>& cov_t2c_map,
+    const std::map<ActiveKey, UShort2DArray>& set_partition_map);
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   /// using the SurrogateData and collocation indices provided
   void central_product_interpolant(const SDVArray& sdv_array,
@@ -513,23 +513,23 @@ private:
   //		   const UShort3DArray& pt_partition);
   /// compute the expected value of the interpolant given by maps of t{1,2}
   /// coefficients and weights
-  Real expectation(const std::map<UShortArray, RealVector2DArray>& t1c_map,
-		   const std::map<UShortArray, RealMatrix2DArray>& t2c_map,
-		   const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
-		   const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
-		   const std::map<UShortArray, UShort2DArray>&
+  Real expectation(const std::map<ActiveKey, RealVector2DArray>& t1c_map,
+		   const std::map<ActiveKey, RealMatrix2DArray>& t2c_map,
+		   const std::map<ActiveKey, RealVector2DArray>& t1_wts_map,
+		   const std::map<ActiveKey, RealMatrix2DArray>& t2_wts_map,
+		   const std::map<ActiveKey, UShort2DArray>&
 		     set_partition_map);
   /// compute the expected value of the interpolant given by maps of t{1,2}
   /// coefficients and weights
   Real expectation(
-    const std::map<UShortArray, std::map<PolynomialApproximation*,
+    const std::map<ActiveKey, std::map<PolynomialApproximation*,
       RealVector2DArray> >& prod_t1c_map,
-    const std::map<UShortArray, std::map<PolynomialApproximation*,
+    const std::map<ActiveKey, std::map<PolynomialApproximation*,
       RealMatrix2DArray> >& prod_t2c_map,
     PolynomialApproximation* poly_approx_2,
-    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
-    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
-    const std::map<UShortArray, UShort2DArray>& set_partition_map);
+    const std::map<ActiveKey, RealVector2DArray>& t1_wts_map,
+    const std::map<ActiveKey, RealMatrix2DArray>& t2_wts_map,
+    const std::map<ActiveKey, UShort2DArray>& set_partition_map);
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
@@ -546,24 +546,24 @@ private:
   /// coefficients using partial weights determined from Smolyak multi-index
   /// and collocation key maps
   Real expectation(const RealVector& x,
-		   const std::map<UShortArray, RealVector2DArray>& t1c_map,
-		   const std::map<UShortArray, RealMatrix2DArray>& t2c_map,
-		   const std::map<UShortArray, UShort3DArray>& sm_mi_map,
-		   const std::map<UShortArray, UShort4DArray>& colloc_key_map,
-		   const std::map<UShortArray, UShort2DArray>&
+		   const std::map<ActiveKey, RealVector2DArray>& t1c_map,
+		   const std::map<ActiveKey, RealMatrix2DArray>& t2c_map,
+		   const std::map<ActiveKey, UShort3DArray>& sm_mi_map,
+		   const std::map<ActiveKey, UShort4DArray>& colloc_key_map,
+		   const std::map<ActiveKey, UShort2DArray>&
 		     set_partition_map);
   /// compute the expected value of the interpolant given by maps of t{1,2}
   /// coefficients using partial weights determined from Smolyak multi-index
   /// and collocation key maps
   Real expectation(const RealVector& x,
-    const std::map<UShortArray, std::map<PolynomialApproximation*,
+    const std::map<ActiveKey, std::map<PolynomialApproximation*,
       RealVector2DArray> >& prod_t1c_map,
-    const std::map<UShortArray, std::map<PolynomialApproximation*,
+    const std::map<ActiveKey, std::map<PolynomialApproximation*,
       RealMatrix2DArray> >& prod_t2c_map,
     PolynomialApproximation* poly_approx_2,
-    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
-    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
-    const std::map<UShortArray, UShort2DArray>& set_partition_map);
+    const std::map<ActiveKey, UShort3DArray>& sm_mi_map,
+    const std::map<ActiveKey, UShort4DArray>& colloc_key_map,
+    const std::map<ActiveKey, UShort2DArray>& set_partition_map);
 
   /// compute the expected value of the gradient interpolant given by
   /// t1_coeff_grads using weights from the HierarchSparseGridDriver
@@ -652,49 +652,49 @@ private:
   bool speedOverPrecision;
 
   /// storage for reference mean and variance
-  std::map<UShortArray, RealVector> primaryRefMoments;
+  std::map<ActiveKey, RealVector> primaryRefMoments;
   /// iterator to active entry in primaryRefMoments
-  std::map<UShortArray, RealVector>::iterator primaryRefMomIter;
+  std::map<ActiveKey, RealVector>::iterator primaryRefMomIter;
   /// bookkeeping to track computation of reference mean to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> primaryRefMean;
+  std::map<ActiveKey, short> primaryRefMean;
   /// iterator to active entry in primaryRefMean
-  std::map<UShortArray, short>::iterator primaryRefMeanIter;
+  std::map<ActiveKey, short>::iterator primaryRefMeanIter;
   /// bookkeeping to track computation of reference variance to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> primaryRefVariance;
+  std::map<ActiveKey, short> primaryRefVariance;
   /// iterator to active entry in primaryRefVariance
-  std::map<UShortArray, short>::iterator primaryRefVarIter;
+  std::map<ActiveKey, short>::iterator primaryRefVarIter;
   /// track previous evaluation point for all_variables reference mean
   /// to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevRefMean;
+  std::map<ActiveKey, RealVector> xPrevRefMean;
   /// track previous evaluation point for all_variables reference
   /// variance to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevRefVar;
+  std::map<ActiveKey, RealVector> xPrevRefVar;
 
   /// storage for reference moment gradients (mean, variance)
-  std::map<UShortArray, RealVectorArray> primaryRefMomGrads;
+  std::map<ActiveKey, RealVectorArray> primaryRefMomGrads;
 
   /// storage for mean and variance increments
-  std::map<UShortArray, RealVector> primaryDeltaMoments;
+  std::map<ActiveKey, RealVector> primaryDeltaMoments;
   /// iterator to active entry in primaryDeltaMoments
-  std::map<UShortArray, RealVector>::iterator primaryDeltaMomIter;
+  std::map<ActiveKey, RealVector>::iterator primaryDeltaMomIter;
   /// bookkeeping to track computation of mean increment to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> primaryDeltaMean;
+  std::map<ActiveKey, short> primaryDeltaMean;
   /// iterator to active entry in primaryDeltaMean
-  std::map<UShortArray, short>::iterator primaryDeltaMeanIter;
+  std::map<ActiveKey, short>::iterator primaryDeltaMeanIter;
   /// bookkeeping to track computation of variance increment to avoid
   /// unnecessary recomputation
-  std::map<UShortArray, short> primaryDeltaVariance;
+  std::map<ActiveKey, short> primaryDeltaVariance;
   /// iterator to active entry in primaryDeltaVariance
-  std::map<UShortArray, short>::iterator primaryDeltaVarIter;
+  std::map<ActiveKey, short>::iterator primaryDeltaVarIter;
   /// track previous evaluation point for all_variables mean increment
   /// to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevDeltaMean;
+  std::map<ActiveKey, RealVector> xPrevDeltaMean;
   /// track previous evaluation point for all_variables variance
   /// increment to avoid unnecessary recomputation
-  std::map<UShortArray, RealVector> xPrevDeltaVar;
+  std::map<ActiveKey, RealVector> xPrevDeltaVar;
 
   /// moments resulting from expansion roll-up across model index keys
   RealVector combinedRefMoments;
@@ -727,14 +727,14 @@ private:
   RealVector xPrevCombDeltaVar;
 
   /// the type1 coefficients of the expansion for interpolating values
-  std::map<UShortArray, RealVector2DArray> expansionType1Coeffs;
+  std::map<ActiveKey, RealVector2DArray> expansionType1Coeffs;
   /// iterator pointing to active node in expansionType1Coeffs
-  std::map<UShortArray, RealVector2DArray>::iterator expT1CoeffsIter;
+  std::map<ActiveKey, RealVector2DArray>::iterator expT1CoeffsIter;
 
   /// the type2 coefficients of the expansion for interpolating gradients
-  std::map<UShortArray, RealMatrix2DArray> expansionType2Coeffs;
+  std::map<ActiveKey, RealMatrix2DArray> expansionType2Coeffs;
   /// iterator pointing to active node in expansionType2Coeffs
-  std::map<UShortArray, RealMatrix2DArray>::iterator expT2CoeffsIter;
+  std::map<ActiveKey, RealMatrix2DArray>::iterator expT2CoeffsIter;
 
   /// the gradients of the type1 expansion coefficients
   /** may be interpreted as either the gradients of the expansion coefficients
@@ -742,19 +742,19 @@ private:
       array is used when sensitivities of moments are needed with respect to
       variables that do not appear in the expansion (e.g., with respect to
       design variables for an expansion only over the random variables). */
-  std::map<UShortArray, RealMatrix2DArray> expansionType1CoeffGrads;
+  std::map<ActiveKey, RealMatrix2DArray> expansionType1CoeffGrads;
   /// iterator pointing to active node in expansionType1CoeffGrads
-  std::map<UShortArray, RealMatrix2DArray>::iterator expT1CoeffGradsIter;
+  std::map<ActiveKey, RealMatrix2DArray>::iterator expT1CoeffGradsIter;
 
   /// type 1 expansion coefficients popped during decrement for later
   /// restoration to expansionType1Coeffs
-  std::map<UShortArray, RealVectorDequeArray> poppedExpT1Coeffs;
+  std::map<ActiveKey, RealVectorDequeArray> poppedExpT1Coeffs;
   /// type 2 expansion coefficients popped during decrement for later
   /// restoration to expansionType2Coeffs
-  std::map<UShortArray, RealMatrixDequeArray> poppedExpT2Coeffs;
+  std::map<ActiveKey, RealMatrixDequeArray> poppedExpT2Coeffs;
   /// type 1 expansion coefficient gradients popped during decrement
   /// for later restoration to expansionType1CoeffGrads
-  std::map<UShortArray, RealMatrixDequeArray> poppedExpT1CoeffGrads;
+  std::map<ActiveKey, RealMatrixDequeArray> poppedExpT1CoeffGrads;
 
   /// roll up of expansion type 1 coefficients across all keys
   RealVector2DArray combinedExpT1Coeffs;
@@ -764,23 +764,23 @@ private:
   RealMatrix2DArray combinedExpT1CoeffGrads;
 
   /// the type1 coefficients of the expansion for interpolating values
-  std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
+  std::map<ActiveKey, std::map<PolynomialApproximation*, RealVector2DArray> >
     productType1Coeffs;
   /// iterator pointing to active node in productType1Coeffs
-  std::map<UShortArray, std::map<PolynomialApproximation*,
+  std::map<ActiveKey, std::map<PolynomialApproximation*,
     RealVector2DArray> >::iterator prodT1CoeffsIter;
   /// the type2 coefficients of the expansion for interpolating values
-  std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
+  std::map<ActiveKey, std::map<PolynomialApproximation*, RealMatrix2DArray> >
     productType2Coeffs;
   /// iterator pointing to active node in productType2Coeffs
-  std::map<UShortArray, std::map<PolynomialApproximation*,
+  std::map<ActiveKey, std::map<PolynomialApproximation*,
     RealMatrix2DArray> >::iterator prodT2CoeffsIter;
 
   /// the type1 coefficients of the expansion for interpolating values
-  std::map<UShortArray, std::map<PolynomialApproximation*,
+  std::map<ActiveKey, std::map<PolynomialApproximation*,
     RealVectorDequeArray> > poppedProdType1Coeffs;
   /// the type2 coefficients of the expansion for interpolating values
-  std::map<UShortArray, std::map<PolynomialApproximation*,
+  std::map<ActiveKey, std::map<PolynomialApproximation*,
     RealMatrixDequeArray> > poppedProdType2Coeffs;
 
   /// array of pointers to the set of QoI used in covariance calculations
@@ -804,77 +804,100 @@ inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 
 
 inline bool HierarchInterpPolyApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   // Test for change
   if (expT1CoeffsIter != expansionType1Coeffs.end() &&
       expT1CoeffsIter->first == key)
     return false;
   
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  short ref_cntl = data_rep->expConfigOptions.refineControl;
+
   expT1CoeffsIter = expansionType1Coeffs.find(key);
+  expT2CoeffsIter = expansionType2Coeffs.find(key);
+  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
+  if (ref_cntl) {
+    prodT1CoeffsIter = productType1Coeffs.find(key);
+    prodT2CoeffsIter = productType2Coeffs.find(key);
+  }
+  primaryRefMomIter    = primaryRefMoments.find(key);
+  primaryRefMeanIter   = primaryRefMean.find(key);
+  primaryRefVarIter    = primaryRefVariance.find(key);
+  primaryDeltaMomIter  = primaryDeltaMoments.find(key);
+  primaryDeltaMeanIter = primaryDeltaMean.find(key);
+  primaryDeltaVarIter  = primaryDeltaVariance.find(key);
+
+  // share 1 deep copy of current active key
+  ActiveKey key_copy;
+  if (expT1CoeffsIter      == expansionType1Coeffs.end() ||
+      expT2CoeffsIter      == expansionType2Coeffs.end() ||
+      expT1CoeffGradsIter  == expansionType1CoeffGrads.end() ||
+      ( ref_cntl && ( prodT1CoeffsIter == productType1Coeffs.end() ||
+		      prodT2CoeffsIter == productType2Coeffs.end() ) ) ||
+      primaryRefMomIter    == primaryRefMoments.end()   ||
+      primaryRefMeanIter   == primaryRefMean.end()      ||
+      primaryRefVarIter    == primaryRefVariance.end()  ||
+      primaryDeltaMomIter  == primaryDeltaMoments.end() ||
+      primaryDeltaMeanIter == primaryDeltaMean.end()    ||
+      primaryDeltaVarIter  == primaryDeltaVariance.end()))
+    key_copy = key.copy();
+
   if (expT1CoeffsIter == expansionType1Coeffs.end()) {
-    std::pair<UShortArray, RealVector2DArray> rv_pair(key, RealVector2DArray());
+    std::pair<ActiveKey, RealVector2DArray>
+      rv_pair(key_copy, RealVector2DArray());
     expT1CoeffsIter = expansionType1Coeffs.insert(rv_pair).first;
   }
-  expT2CoeffsIter = expansionType2Coeffs.find(key);
   if (expT2CoeffsIter == expansionType2Coeffs.end()) {
-    std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
+    std::pair<ActiveKey, RealMatrix2DArray>
+      rm_pair(key_copy, RealMatrix2DArray());
     expT2CoeffsIter = expansionType2Coeffs.insert(rm_pair).first;
   }
-  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
   if (expT1CoeffGradsIter == expansionType1CoeffGrads.end()) {
-    std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
+    std::pair<ActiveKey, RealMatrix2DArray>
+      rm_pair(key_copy, RealMatrix2DArray());
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
 
-  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
-    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  if (data_rep->expConfigOptions.refineControl) {
-    prodT1CoeffsIter = productType1Coeffs.find(key);
+  if (ref_cntl) {
     if (prodT1CoeffsIter == productType1Coeffs.end()) {
       std::map<PolynomialApproximation*, RealVector2DArray> empty_rvm;
-      std::pair<UShortArray, std::map<PolynomialApproximation*,
-	RealVector2DArray> > prv_pair(key, empty_rvm);
+      std::pair<ActiveKey, std::map<PolynomialApproximation*,
+	RealVector2DArray> > prv_pair(key_copy, empty_rvm);
       prodT1CoeffsIter = productType1Coeffs.insert(prv_pair).first;
     }
-    prodT2CoeffsIter = productType2Coeffs.find(key);
     if (prodT2CoeffsIter == productType2Coeffs.end()) {
       std::map<PolynomialApproximation*, RealMatrix2DArray> empty_rmm;
-      std::pair<UShortArray, std::map<PolynomialApproximation*,
-        RealMatrix2DArray> > prm_pair(key, empty_rmm);
+      std::pair<ActiveKey, std::map<PolynomialApproximation*,
+        RealMatrix2DArray> > prm_pair(key_copy, empty_rmm);
       prodT2CoeffsIter = productType2Coeffs.insert(prm_pair).first;
     }
   }
 
-  primaryRefMomIter = primaryRefMoments.find(key);
   if (primaryRefMomIter == primaryRefMoments.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    std::pair<ActiveKey, RealVector> rv_pair(key_copy, RealVector());
     primaryRefMomIter = primaryRefMoments.insert(rv_pair).first;
   }
-  primaryRefMeanIter = primaryRefMean.find(key);
   if (primaryRefMeanIter == primaryRefMean.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
+    std::pair<ActiveKey, short> us_pair(key_copy, 0);
     primaryRefMeanIter = primaryRefMean.insert(us_pair).first;
   }
-  primaryRefVarIter = primaryRefVariance.find(key);
   if (primaryRefVarIter == primaryRefVariance.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
+    std::pair<ActiveKey, short> us_pair(key_copy, 0);
     primaryRefVarIter = primaryRefVariance.insert(us_pair).first;
   }
 
-  primaryDeltaMomIter = primaryDeltaMoments.find(key);
   if (primaryDeltaMomIter == primaryDeltaMoments.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    std::pair<ActiveKey, RealVector> rv_pair(key_copy, RealVector());
     primaryDeltaMomIter = primaryDeltaMoments.insert(rv_pair).first;
   }
-  primaryDeltaMeanIter = primaryDeltaMean.find(key);
   if (primaryDeltaMeanIter == primaryDeltaMean.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
+    std::pair<ActiveKey, short> us_pair(key_copy, 0);
     primaryDeltaMeanIter = primaryDeltaMean.insert(us_pair).first;
   }
-  primaryDeltaVarIter = primaryDeltaVariance.find(key);
   if (primaryDeltaVarIter == primaryDeltaVariance.end()) {
-    std::pair<UShortArray, short> us_pair(key, 0);
+    std::pair<ActiveKey, short> us_pair(key_copy, 0);
     primaryDeltaVarIter = primaryDeltaVariance.insert(us_pair).first;
   }
 
@@ -1092,7 +1115,7 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 inline void HierarchInterpPolyApproximation::
 product_difference_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
-  const UShortArray& hf_key, const UShortArray& lf_key,
+  const ActiveKey& hf_key, const ActiveKey& lf_key,
   const UShort2DArray& set_partition)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
@@ -1226,7 +1249,7 @@ delta_combined_std_deviation()
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
   //       used for partitioning a combined expansion (see {ref,incr}_key_map)
@@ -1240,7 +1263,7 @@ delta_combined_std_deviation(const RealVector& x)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
   //       used for partitioning a combined expansion (see {ref,incr}_key_map)
@@ -1278,7 +1301,7 @@ delta_combined_beta(bool cdf_flag, Real z_bar)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
   //       used for partitioning a combined expansion (see {ref,incr}_key_map)
@@ -1292,7 +1315,7 @@ delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
   //       used for partitioning a combined expansion (see {ref,incr}_key_map)
@@ -1330,7 +1353,7 @@ delta_combined_z(bool cdf_flag, Real beta_bar)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
   //       used for partitioning a combined expansion (see {ref,incr}_key_map)
@@ -1344,7 +1367,7 @@ delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   data_rep->hsg_driver()->partition_keys(ref_key_map, incr_key_map);
   // Note: these keys are for partition of active expansion and should not be
   //       used for partitioning a combined expansion (see {ref,incr}_key_map)
@@ -1489,7 +1512,7 @@ hessian_basis_variables(const RealVector& x)
 
 
 inline Real HierarchInterpPolyApproximation::
-stored_value(const RealVector& x, const UShortArray& key)
+stored_value(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
@@ -1502,7 +1525,7 @@ stored_value(const RealVector& x, const UShortArray& key)
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_basis_variables(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
@@ -1517,7 +1540,7 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 
 inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
-				const UShortArray& key)
+				const ActiveKey& key)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
@@ -1531,7 +1554,7 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_nonbasis_variables(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
@@ -1544,7 +1567,7 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 
 
 inline const RealSymMatrix& HierarchInterpPolyApproximation::
-stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+stored_hessian_basis_variables(const RealVector& x, const ActiveKey& key)
 {
   std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);

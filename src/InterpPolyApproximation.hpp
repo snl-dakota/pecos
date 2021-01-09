@@ -55,7 +55,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  bool update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const ActiveKey& key);
 
   int min_coefficients() const;
 
@@ -130,7 +130,7 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 
 
 inline bool InterpPolyApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   surrData.active_key(key);
   PolynomialApproximation::update_active_iterators(key);

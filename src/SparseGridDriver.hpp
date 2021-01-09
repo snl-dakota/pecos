@@ -58,28 +58,28 @@ public:
   virtual void increment_smolyak_multi_index(const UShortArray& set);
 
   /// determine whether trial set is available for restoration (by push)
-  virtual bool push_trial_available(const UShortArray& key,
+  virtual bool push_trial_available(const ActiveKey& key,
 				    const UShortArray& tr_set);
   /// determine whether trial set is available for restoration (by push
-  virtual bool push_trial_available(const UShortArray& key);
+  virtual bool push_trial_available(const ActiveKey& key);
   /// determine whether trial set is available for restoration (by push
   virtual bool push_trial_available();
 
   /// determine index of trial set for restoration (by push)
-  virtual size_t push_trial_index(const UShortArray& key,
+  virtual size_t push_trial_index(const ActiveKey& key,
 				  const UShortArray& tr_set);
   /// determine index of trial set for restoration (by push)
-  virtual size_t push_trial_index(const UShortArray& key);
+  virtual size_t push_trial_index(const ActiveKey& key);
   /// determine index of trial set for restoration (by push)
   virtual size_t push_trial_index();
 
   /// return pushIndex (cached lookup result in derived Driver classes),
   /// which may be combined (flattened) or hierarchical (level-specific) index
-  virtual size_t push_index(const UShortArray& key) const;
+  virtual size_t push_index(const ActiveKey& key) const;
   /// map pushIndex to consistent (flattened) representation
-  virtual size_t restore_index(const UShortArray& key) const;
+  virtual size_t restore_index(const ActiveKey& key) const;
   /// return consistent (flattened) index
-  virtual size_t finalize_index(size_t i, const UShortArray& key) const;
+  virtual size_t finalize_index(size_t i, const ActiveKey& key) const;
 
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
@@ -110,7 +110,7 @@ public:
 
   /// return the trial index set used in increment_smolyak_multi_index()
   /// that corresponds to key
-  virtual const UShortArray& trial_set(const UShortArray& key) const;
+  virtual const UShortArray& trial_set(const ActiveKey& key) const;
   /// return the trial index set used in increment_smolyak_multi_index()
   /// that corresponds to activeKey
   virtual const UShortArray& trial_set() const;
@@ -130,7 +130,7 @@ public:
   //- Heading: virtual function redefinitions
   //
 
-  void active_key(const UShortArray& key);
+  void active_key(const ActiveKey& key);
   void clear_inactive();
   void clear_keys();
   void reset();
@@ -213,7 +213,7 @@ public:
   short refinement_control() const;
 
   /// return entry from activeMultiIndex corresponding to key
-  const UShortArraySet& active_multi_index(const UShortArray& key) const;
+  const UShortArraySet& active_multi_index(const ActiveKey& key) const;
   /// return entry from activeMultiIndex corresponding to activeKey
   const UShortArraySet& active_multi_index() const;
 
@@ -238,14 +238,14 @@ protected:
   //
 
   /// Smolyak sparse grid levels for each active key
-  std::map<UShortArray, unsigned short> ssgLevel;
+  std::map<ActiveKey, unsigned short> ssgLevel;
   /// iterator to the active Smolyak sparse grid level
-  std::map<UShortArray, unsigned short>::iterator ssgLevIter;
+  std::map<ActiveKey, unsigned short>::iterator ssgLevIter;
 
   /// weighting vector for dimension anisotropic grids
-  std::map<UShortArray, RealVector> anisoLevelWts;
+  std::map<ActiveKey, RealVector> anisoLevelWts;
   /// weighting vector for dimension anisotropic grids
-  std::map<UShortArray, RealVector>::iterator anisoWtsIter;
+  std::map<ActiveKey, RealVector>::iterator anisoWtsIter;
 
   /// enumeration for rate of exponential growth in nested rules
   short growthRate;
@@ -256,24 +256,24 @@ protected:
   short refineControl;
 
   /// the number of unique points in each grid
-  std::map<UShortArray, int> numCollocPts;
+  std::map<ActiveKey, int> numCollocPts;
   /// iterator to the number of unique points in the active grid
-  std::map<UShortArray, int>::iterator numPtsIter;
+  std::map<ActiveKey, int>::iterator numPtsIter;
 
   /// old reference index sets for generalized sparse grids.  Use std::set
   /// for efficient lookups in add_active_neighbors().
-  std::map<UShortArray, UShortArraySet> oldMultiIndex;
+  std::map<ActiveKey, UShortArraySet> oldMultiIndex;
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid.  Use std::set for ordering of candidates.
-  std::map<UShortArray, UShortArraySet> activeMultiIndex;
+  std::map<ActiveKey, UShortArraySet> activeMultiIndex;
   /// subset of active trial sets that have been evaluated but not selected.
   /// Use std::deque to retain append ordering (mirroring SurrogateData).
-  std::map<UShortArray, UShortArrayDeque> poppedTrialSets;
+  std::map<ActiveKey, UShortArrayDeque> poppedTrialSets;
 
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
   /// model form, discretization level, etc.
-  UShortArray activeKey;
+  ActiveKey activeKey;
 
 private:
 
@@ -292,37 +292,34 @@ private:
 
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
-  std::map<UShortArray, RealVector> axisLowerBounds;
+  std::map<ActiveKey, RealVector> axisLowerBounds;
   // iterator to the active set of axis lower bounds
-  //std::map<UShortArray, RealVector>::iterator axisLBndsIter;
+  //std::map<ActiveKey, RealVector>::iterator axisLBndsIter;
 };
 
 
 inline SparseGridDriver::SparseGridDriver():
-  IntegrationDriver(BaseConstructor()), growthRate(MODERATE_RESTRICTED_GROWTH),
-  //ssgLevel(0), numCollocPts(0),
+  IntegrationDriver(BaseConstructor()), numPtsIter(numCollocPts.end()),
+  growthRate(MODERATE_RESTRICTED_GROWTH), //ssgLevel(0), numCollocPts(0),
   refineControl(NO_CONTROL)//, refineType(NO_REFINEMENT)
 {
-  std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
-  ssgLevIter = ssgLevel.insert(us_pair).first;
-
-  std::pair<UShortArray, int> ui_pair(activeKey, 0);
-  numPtsIter = numCollocPts.insert(ui_pair).first;
+  // initial if-check avoids recursive redundancy
+  SparseGridDriver::update_active_iterators();
 }
 
 
 inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 		 short growth_rate, short refine_control):
-  IntegrationDriver(BaseConstructor()), growthRate(growth_rate),
-  //ssgLevel(ssg_level), numCollocPts(0),
-  refineControl(refine_control) //refineType(NO_REFINEMENT)
+  IntegrationDriver(BaseConstructor()), numPtsIter(numCollocPts.end()),
+  growthRate(growth_rate), //ssgLevel(ssg_level), numCollocPts(0),
+  refineControl(refine_control)//, refineType(NO_REFINEMENT)
 {
-  std::pair<UShortArray, unsigned short> us_pair(activeKey, ssg_level);
+  // ssgLevIter init needs to account for incoming ssg_level
+  std::pair<ActiveKey, unsigned short> us_pair(activeKey.copy(), ssg_level);
   ssgLevIter = ssgLevel.insert(us_pair).first;
-
-  std::pair<UShortArray, int> ui_pair(activeKey, 0);
-  numPtsIter = numCollocPts.insert(ui_pair).first; // count to be updated
+  // now update the rest using default assignments
+  SparseGridDriver::update_active_iterators();
 
   if (!dim_pref.empty()) {
     numVars = dim_pref.length(); // unit length option not supported
@@ -335,10 +332,10 @@ inline SparseGridDriver::~SparseGridDriver()
 { }
 
 
-inline void SparseGridDriver::active_key(const UShortArray& key)
+inline void SparseGridDriver::active_key(const ActiveKey& key)
 {
   if (activeKey != key) {
-    activeKey = key;
+    activeKey = key; // shared rep; use deep copy when needed downstream
     update_active_iterators();
   }
 }
@@ -346,29 +343,38 @@ inline void SparseGridDriver::active_key(const UShortArray& key)
 
 inline void SparseGridDriver::update_active_iterators()
 {
-  ssgLevIter = ssgLevel.find(activeKey);
+  // Test for change (use numPtsIter due to ctor with ssg_level assignment)
+  if (numPtsIter != numCollocPts.end() && numPtsIter->first == activeKey)
+    return;
+
+  ssgLevIter   = ssgLevel.find(activeKey);
+  numPtsIter   = numCollocPts.find(activeKey);
+  anisoWtsIter = anisoLevelWts.find(activeKey);
+  //axisLBndsIter = axisLowerBounds.find(activeKey);
+
+  // share 1 deep copy of current active key
+  ActiveKey active_copy;
+  if (ssgLevIter == ssgLevel.end() || numPtsIter == numCollocPts.end() ||
+      anisoWtsIter == anisoLevelWts.end())
+    active_copy = activeKey.copy();
+
   if (ssgLevIter == ssgLevel.end()) {
-    std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+    std::pair<ActiveKey, unsigned short> us_pair(active_copy, 0);
     ssgLevIter = ssgLevel.insert(us_pair).first;
   }
-  numPtsIter = numCollocPts.find(activeKey);
   if (numPtsIter == numCollocPts.end()) {
-    // assign special value for grid_size() (instead of 1 pt for ssgLev 0)
-    std::pair<UShortArray, int> ui_pair(activeKey, 0);
+    // use special value for grid_size() (instead of 1 pt for ssgLev 0)
+    std::pair<ActiveKey, int> ui_pair(active_copy, 0);
     numPtsIter = numCollocPts.insert(ui_pair).first;
   }
-  anisoWtsIter = anisoLevelWts.find(activeKey);
   if (anisoWtsIter == anisoLevelWts.end()) {
-    std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
+    std::pair<ActiveKey, RealVector> urv_pair(active_copy, RealVector());
     anisoWtsIter = anisoLevelWts.insert(urv_pair).first;
   }
-  /*
-  axisLBndsIter = axisLowerBounds.find(activeKey);
-  if (axisLBndsIter == axisLowerBounds.end()) {
-    std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
-    axisLBndsIter = axisLowerBounds.insert(urv_pair).first;
-  }
-  */
+  //if (axisLBndsIter == axisLowerBounds.end()) {
+  //  std::pair<ActiveKey, RealVector> urv_pair(active_copy, RealVector());
+  //  axisLBndsIter = axisLowerBounds.insert(urv_pair).first;
+  //}
 }
 
 
@@ -446,9 +452,9 @@ inline short SparseGridDriver::growth_rate() const
 
 
 inline const UShortArraySet& SparseGridDriver::
-active_multi_index(const UShortArray& key) const
+active_multi_index(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShortArraySet>::const_iterator cit
+  std::map<ActiveKey, UShortArraySet>::const_iterator cit
     = activeMultiIndex.find(key);
   if (cit == activeMultiIndex.end()) {
     PCerr << "Error: active key not found in SparseGridDriver::"

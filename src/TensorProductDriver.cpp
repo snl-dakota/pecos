@@ -50,10 +50,10 @@ void TensorProductDriver::precompute_rules()
 
 void TensorProductDriver::clear_inactive()
 {
-  std::map<UShortArray, UShortArray>::iterator   li_it = levelIndex.begin();
-  std::map<UShortArray, UShort2DArray>::iterator ck_it =  collocKey.begin();
-  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
-  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  std::map<ActiveKey, UShortArray>::iterator   li_it = levelIndex.begin();
+  std::map<ActiveKey, UShort2DArray>::iterator ck_it = collocKey.begin();
+  std::map<ActiveKey, RealVector>::iterator    t1_it = type1WeightSets.begin();
+  std::map<ActiveKey, RealMatrix>::iterator    t2_it = type2WeightSets.begin();
   while (li_it != levelIndex.end())
     if (li_it == levelIndIter) // preserve active
       { ++li_it, ++ck_it, ++t1_it, ++t2_it; }
@@ -66,7 +66,7 @@ void TensorProductDriver::clear_inactive()
 
 const UShortArray& TensorProductDriver::maximal_grid()
 {
-  std::map<UShortArray, RealVector>::const_iterator
+  std::map<ActiveKey, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
   size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
   for (; w_cit!=type1WeightSets.end(); ++w_cit) {
@@ -82,7 +82,7 @@ const UShortArray& TensorProductDriver::maximal_grid()
 
 void TensorProductDriver::combine_grid()
 {
-  std::map<UShortArray, UShortArray>::const_iterator
+  std::map<ActiveKey, UShortArray>::const_iterator
     li_cit = levelIndex.begin();
   combinedLevelIndex = li_cit->second; ++li_cit;
   for (; li_cit!=levelIndex.end(); ++li_cit) {

@@ -172,11 +172,11 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
 
 void NodalInterpPolyApproximation::clear_inactive()
 {
-  std::map<UShortArray, RealVector>::iterator e1c_it
+  std::map<ActiveKey, RealVector>::iterator e1c_it
     = expansionType1Coeffs.begin();
-  std::map<UShortArray, RealMatrix>::iterator e2c_it
+  std::map<ActiveKey, RealMatrix>::iterator e2c_it
     = expansionType2Coeffs.begin();
-  std::map<UShortArray, RealMatrix>::iterator e1g_it
+  std::map<ActiveKey, RealMatrix>::iterator e1g_it
     = expansionType1CoeffGrads.begin();
   while (e1c_it != expansionType1Coeffs.end())
     if (e1c_it == expT1CoeffsIter) // preserve active
@@ -202,8 +202,8 @@ void NodalInterpPolyApproximation::combine_coefficients()
   update_active_iterators(data_rep->activeKey);
 
   short combine_type = data_rep->expConfigOptions.combineType;
-  std::map<UShortArray, RealVector>::iterator ec1_it;
-  std::map<UShortArray, RealMatrix>::iterator ec2_it
+  std::map<ActiveKey, RealVector>::iterator ec1_it;
+  std::map<ActiveKey, RealMatrix>::iterator ec2_it
     = expansionType2Coeffs.begin(), eg1_it = expansionType1CoeffGrads.begin();
   std::shared_ptr<CombinedSparseGridDriver> csg_driver =
     std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
@@ -2402,7 +2402,7 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
 
 Real NodalInterpPolyApproximation::
-stored_value(const RealVector& x, const UShortArray& key)
+stored_value(const RealVector& x, const ActiveKey& key)
 {
   // Error check for required data
   if (!expansionCoeffFlag) {
@@ -2559,7 +2559,7 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 
 
 const RealVector& NodalInterpPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_basis_variables(const RealVector& x, const ActiveKey& key)
 {
   // this could define a default_dvv and call gradient_basis_variables(x, dvv),
   // but we want this fn to be as fast as possible
@@ -2600,7 +2600,7 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 
 const RealVector& NodalInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
-				const UShortArray& key)
+				const ActiveKey& key)
 {
   // this could define a default_dvv and call gradient_basis_variables(x, dvv),
   // but we want this fn to be as fast as possible
@@ -2799,7 +2799,7 @@ gradient_nonbasis_variables(const RealVector& x,
 
 
 const RealVector& NodalInterpPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_nonbasis_variables(const RealVector& x, const ActiveKey& key)
 {
   // Error check for required data
   if (!expansionCoeffGradFlag) {
@@ -2894,7 +2894,7 @@ hessian_basis_variables(const RealVector& x)
 
 
 const RealSymMatrix& NodalInterpPolyApproximation::
-stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+stored_hessian_basis_variables(const RealVector& x, const ActiveKey& key)
 {
   PCerr << "Error: NodalInterpPolyApproximation::stored_hessian_basis_"
 	<< "variables() not yet implemented." << std::endl;
