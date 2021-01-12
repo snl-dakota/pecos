@@ -669,6 +669,8 @@ public:
   ActiveKey& operator=(const ActiveKey& key);
   // equality operator
   bool operator==(const ActiveKey& key) const;
+  // inequality operator
+  bool operator!=(const ActiveKey& key) const;
   // less-than operator
   bool operator<(const ActiveKey& key) const;
 
@@ -703,6 +705,9 @@ public:
 
   /// return deep copy of ActiveKey instance
   ActiveKey copy() const;
+
+  /// function to check keyRep (does this handle contain a body)
+  bool is_null() const;
 
   /*
   /// define a model key including data group, model form, and resolution
@@ -812,6 +817,13 @@ inline bool ActiveKey::operator==(const ActiveKey& key) const
 }
 
 
+inline bool ActiveKey::operator!=(const ActiveKey& key) const
+{
+  return ( keyRep->dataSetId          != key.keyRep->dataSetId ||
+	   keyRep->activeKeyDataArray != key.keyRep->activeKeyDataArray );
+}
+
+
 inline bool ActiveKey::operator<(const ActiveKey& key) const
 {
   std::shared_ptr<ActiveKeyRep> kr = key.keyRep;
@@ -895,10 +907,13 @@ inline void ActiveKey::clear_data()
 /// deep copy of ActiveKey instance
 inline ActiveKey ActiveKey::copy() const
 {
-  ActiveKey key(keyDataRep->dataSetId,
-		keyDataRep->activeKeyDataArray, DEEP_COPY);
+  ActiveKey key(keyRep->dataSetId, keyRep->activeKeyDataArray, DEEP_COPY);
   return key;
 }
+
+
+inline bool ActiveKey::is_null() const
+{ return (keyRep) ? false : true; }
 
 
 ////////////////////////////////////////////////////////////////////////////////

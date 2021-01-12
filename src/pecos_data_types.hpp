@@ -353,6 +353,23 @@ inline void push_range_to_back(ContainerT1& array1, OrdinalType p1_index,
 
 
 /// equality operator for SizetArray and SizetMultiArrayConstView
+template <typename OrdinalType, typename ScalarType>
+bool operator<(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v1,
+	       const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v2)
+{
+  // Modeled after std::lexicographical_compare()
+  OrdinalType i, len1 = v1.length(), len2 = v2.length();
+  for (i=0; (i < len1) && (i < len2); ++i) {
+    if      (v1[i] < v2[i]) return true;
+    else if (v2[i] < v1[i]) return false;
+  }
+  // have reached one or both ends with equality up to this point
+  // --> v1 is less-than iff it is shorter
+  return (i == len1) && (i != len2);
+}
+
+
+/// equality operator for SizetArray and SizetMultiArrayConstView
 inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 {
   // Check for equality in array lengths
