@@ -24,6 +24,7 @@ static const char rcsId[]="@(#) $Id: CombinedSparseGridDriver.C,v 1.57 2004/06/2
 
 //#define DEBUG
 
+
 namespace Pecos {
 
 /// initialize static member pointer to active driver instance
@@ -440,7 +441,7 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
 }
 
 
-const UShortArray& CombinedSparseGridDriver::maximal_grid()
+const ActiveKey& CombinedSparseGridDriver::maximal_grid()
 {
   std::map<ActiveKey, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;

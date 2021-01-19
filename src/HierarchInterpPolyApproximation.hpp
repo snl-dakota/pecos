@@ -841,7 +841,7 @@ update_active_iterators(const ActiveKey& key)
       primaryRefVarIter    == primaryRefVariance.end()  ||
       primaryDeltaMomIter  == primaryDeltaMoments.end() ||
       primaryDeltaMeanIter == primaryDeltaMean.end()    ||
-      primaryDeltaVarIter  == primaryDeltaVariance.end()))
+      primaryDeltaVarIter  == primaryDeltaVariance.end())
     key_copy = key.copy();
 
   if (expT1CoeffsIter == expansionType1Coeffs.end()) {

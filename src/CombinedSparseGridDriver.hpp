@@ -26,6 +26,8 @@ typedef void ( *CollocFnPtr ) ( int order, int index, double* data );
 /// GWPointer2 prototype required by Pecos/packages/VPISparseGrid
 typedef int ( *LevGrwOrdFnPtr ) ( int level, int growth );
 
+class ActiveKey;
+
 
 /// Derived integration driver class that generates N-dimensional
 /// Smolyak sparse grids for numerical evaluation of expectation
@@ -87,7 +89,7 @@ public:
   void clear_inactive();
   void clear_keys();
 
-  const UShortArray& maximal_grid();
+  const ActiveKey& maximal_grid();
 
   void print_smolyak_multi_index() const;
 

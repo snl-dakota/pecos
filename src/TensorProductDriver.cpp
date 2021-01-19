@@ -64,7 +64,7 @@ void TensorProductDriver::clear_inactive()
 }
 
 
-const UShortArray& TensorProductDriver::maximal_grid()
+const ActiveKey& TensorProductDriver::maximal_grid()
 {
   std::map<ActiveKey, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;

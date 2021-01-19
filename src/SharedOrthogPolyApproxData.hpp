@@ -151,7 +151,7 @@ protected:
   void update_active_iterators();
 
   /// detect whether current expansion settings are the most refined
-  const UShortArray& maximal_expansion();
+  const ActiveKey& maximal_expansion();
   // swap current shared data with a stored data set, as identified by index
   //void swap_shared_data(size_t index);
 
@@ -298,7 +298,7 @@ protected:
   UShort2DArray prevMultiIndex;
   /// previous value of activeKey; used for detecting when an
   /// expansion update is needed in allocate_arrays()
-  UShortArray prevActiveKey;
+  ActiveKey prevActiveKey;
 
   /// number of exp terms-by-number of vars array for identifying the orders
   /// of the one-dimensional orthogonal polynomials contributing to each
@@ -388,12 +388,12 @@ inline void SharedOrthogPolyApproxData::update_active_iterators()
   if (approxOrdIter != approxOrder.end() && approxOrdIter->first == activeKey)
     return;
 
-  approxOrdIter = approxOrder.find(activeKey);
-  multiIndexIter = multiIndex.find(activeKey);
+  approxOrdIter  = approxOrder.find(activeKey);
+  multiIndexIter =  multiIndex.find(activeKey);
 
   // share 1 deep copy of current active key
   ActiveKey active_copy;
-  if (approxOrdIter == approxOrder.end()) || multiIndexIter == multiIndex.end())
+  if (approxOrdIter == approxOrder.end() || multiIndexIter == multiIndex.end())
     active_copy = activeKey.copy();
 
   if (approxOrdIter == approxOrder.end()) {

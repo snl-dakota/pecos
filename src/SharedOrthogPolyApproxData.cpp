@@ -48,7 +48,7 @@ void SharedOrthogPolyApproxData::allocate_data()
     allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
     prevApproxOrder = approx_order;
-    prevActiveKey   = activeKey;
+    prevActiveKey   = activeKey.copy();
   }
 
   // output (candidate) expansion form
@@ -319,7 +319,7 @@ update_component_sobol(const UShort2DArray& multi_index)
 }
 
 
-const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
+const ActiveKey& SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:

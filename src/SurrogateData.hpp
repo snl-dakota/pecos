@@ -995,7 +995,7 @@ public:
 
   /// get respData
   const std::map<ActiveKey, SDRArray>& response_data_map() const;
-  /// build/return filteredRespData, pulling aggregated/synthetic/raw data
+  /// build/return filteredRespData, pulling aggregated/reduced/raw data
   /// sets from respData
   const std::map<ActiveKey, SDRArray>&
     filtered_response_data_map(short mode) const;
@@ -1003,7 +1003,7 @@ public:
   void response_data_map(const std::map<ActiveKey, SDRArray>& resp_map);
 
   /// return a particular key instance present within the
-  /// aggregated/synthetic/raw data subset (respData is used)
+  /// aggregated/reduced/raw data subset (respData is used)
   const ActiveKey& filtered_key(short mode, size_t index) const;
 
   /// push sdv onto end of varsData
@@ -1024,13 +1024,13 @@ public:
   /// remove num_pop_pts entries from ends of active entry in {vars,resp}Data
   void pop(bool save_data = true);
   /// remove num_pop_pts entries from ends of keyed entries in {vars,resp}Data
-  void pop(const UShort2DArray& keys, bool save_data);
+  void pop(const ActiveKey& key, bool save_data);
   /// return a previously popped data set (identified by index) to the
   /// ends of active entry in {vars,resp}Data
   void push(size_t index, bool erase_popped = true);
   /// return previously popped data sets (identified by index) to the
   /// ends of keyed entries in {vars,resp}Data
-  void push(const UShort2DArray& keys, size_t index, bool erase_popped = true);
+  void push(const ActiveKey& key, size_t index, bool erase_popped = true);
 
   /// replace the SurrogateDataVars instance identified by data_id
   void replace(const SurrogateDataVars& sdv, int data_id);
@@ -1059,7 +1059,7 @@ public:
 
   /// pop records from front of {vars,resp}Data to achieve target length,
   /// for each key in passed set
-  void history_target(size_t target, const UShort2DArray& keys);
+  void history_target(size_t target, const ActiveKey& key);
 
   /// query presence of anchor indexed within {vars,resp}Data
   bool anchor() const;
@@ -1079,8 +1079,6 @@ public:
   void clear_anchor_index();
   /// erase anchorIndex[key]
   void clear_anchor_index(const ActiveKey& key);
-  /// erase anchorIndex for each key within passed set
-  void clear_anchor_index(const UShort2DArray& keys);
 
   /// return size of active key within {vars,resp}Data
   size_t points() const;
@@ -1133,7 +1131,7 @@ public:
   /// clear active key within {vars,resp}Data
   void clear_active_data();
   /// clear a set of keys within {vars,resp}Data
-  void clear_active_data(const UShort2DArray& keys);
+  void clear_active_data(const ActiveKey& key);
   /// clear all inactive data within {vars,resp}Data
   void clear_inactive_data();
 
@@ -1143,7 +1141,7 @@ public:
   /// clear active key within popped{Vars,Resp}Data
   void clear_active_popped();
   /// clear a set of keys within popped{Vars,Resp}Data
-  void clear_active_popped(const UShort2DArray& keys);
+  void clear_active_popped(const ActiveKey& key);
   /// clear popped{Vars,Resp}Data and restore to initial popped state
   void clear_popped();
 
@@ -1155,7 +1153,7 @@ public:
   /// invokes both clear_active_data() and clear_active_popped()
   void clear_all_active();
   /// invokes both clear_active_data(keys) and clear_active_popped(keys)
-  void clear_all_active(const UShort2DArray& keys);
+  void clear_all_active(const ActiveKey& key);
 
   /// return sdRep
   std::shared_ptr<SurrogateDataRep> data_rep() const;
@@ -1214,6 +1212,10 @@ private:
   /// helper function for an individual key
   void push(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
 	    const ActiveKey& key, size_t index, bool erase_popped);
+
+  /// lower level helper for data associated with a particular ActiveKey
+  void history_target(size_t target, SDVArray& sdv_array, SDRArray& sdr_array,
+		      std::map<ActiveKey, size_t>::iterator anchor_it);
 
   //
   //- Heading: Private data members
@@ -1285,20 +1287,6 @@ data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
 }
 
 
-inline void SurrogateData::anchor_index(size_t index) const
-{
-  std::map<ActiveKey, size_t>& anchor_index = sdRep->anchorIndex;
-  const ActiveKey& key = sdRep->activeKey;
-  std::map<ActiveKey, size_t>::iterator anchor_it = anchor_index.find(key);
-  if (anchor_it == anchor_index.end()) { // conditionally insert new record
-    if (index != _NPOS)
-      anchor_index[key] = index;
-  }
-  else // update existing record
-    anchor_it->second = index;
-}
-
-
 inline void SurrogateData::
 anchor_index(size_t index, const ActiveKey& key) const
 {
@@ -1313,12 +1301,16 @@ anchor_index(size_t index, const ActiveKey& key) const
 }
 
 
-inline size_t SurrogateData::anchor_index() const
-{ return retrieve_anchor_index(false); }
+inline void SurrogateData::anchor_index(size_t index) const
+{ anchor_index(index, sdRep->activeKey); }
 
 
 inline size_t SurrogateData::anchor_index(const ActiveKey& key) const
 { return retrieve_anchor_index(key, false); }
+
+
+inline size_t SurrogateData::anchor_index() const
+{ return anchor_index(sdRep->activeKey); }
 
 
 inline const std::map<ActiveKey, size_t>& SurrogateData::
@@ -1331,20 +1323,22 @@ anchor_index_map(const std::map<ActiveKey, size_t>& ai_map) const
 { sdRep->anchorIndex = ai_map; }
 
 
-inline void SurrogateData::clear_anchor_index()
-{ sdRep->anchorIndex.erase(sdRep->activeKey); }
-
-
 inline void SurrogateData::clear_anchor_index(const ActiveKey& key)
-{ sdRep->anchorIndex.erase(key); }
-
-
-inline void SurrogateData::clear_anchor_index(const UShort2DArray& keys)
 {
-  size_t k, num_k = keys.size();
-  for (k=0; k<num_k; ++k)
-    sdRep->anchorIndex.erase(keys[k]);
+  bool agg_key = key.aggregated();
+  if (!agg_key || key.reduction()) // process original key
+    sdRep->anchorIndex.erase(key);
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k)
+      sdRep->anchorIndex.erase(embedded_keys[k]);
+  }
 }
+
+
+inline void SurrogateData::clear_anchor_index()
+{ clear_anchor_index(sdRep->activeKey); }
 
 
 inline size_t SurrogateData::assign_anchor_index()
@@ -1379,24 +1373,6 @@ inline size_t SurrogateData::assign_anchor_index()
 }
 
 
-inline size_t SurrogateData::retrieve_anchor_index(bool hard_fail) const
-{
-  std::map<ActiveKey, size_t>& anchor_index = sdRep->anchorIndex;
-  std::map<ActiveKey, size_t>::iterator anchor_it
-    = anchor_index.find(sdRep->activeKey);
-  if (anchor_it == anchor_index.end() || anchor_it->second == _NPOS) {
-    if (hard_fail) {
-      PCerr << "Error: lookup failure in SurrogateData::retrieve_anchor_index"
-	    << "()." << std::endl;
-      abort_handler(-1);
-    }
-    return _NPOS;
-  }
-  else
-    return anchor_it->second;
-}
-
-
 inline size_t SurrogateData::
 retrieve_anchor_index(const ActiveKey& key, bool hard_fail) const
 {
@@ -1413,6 +1389,10 @@ retrieve_anchor_index(const ActiveKey& key, bool hard_fail) const
   else
     return anchor_it->second;
 }
+
+
+inline size_t SurrogateData::retrieve_anchor_index(bool hard_fail) const
+{ retrieve_anchor_index(sdRep->activeKey, hard_fail); }
 
 
 inline void SurrogateData::
@@ -1518,19 +1498,29 @@ filtered_variables_data_map(short mode) const
 
   filt_vars_map.clear();
   switch (mode) {
-  case AGGREGATED_DATA_FILTER:
-    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (ActiveKey::aggregated_key(cit->first))
-	filt_vars_map.insert(*cit);
-    break;
-  case SYNTHETIC_DATA_FILTER:
-    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (ActiveKey::synthetic_key(cit->first))
-	filt_vars_map.insert(*cit);
-    break;
   case RAW_DATA_FILTER:
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (ActiveKey::raw_data_key(cit->first))
+      if (cit->first.singleton())
+	filt_vars_map.insert(*cit);
+    break;
+  case AGGREGATED_DATA_FILTER:
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (cit->first.aggregated())
+	filt_vars_map.insert(*cit);
+    break;
+  case REDUCTION_FILTER:
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (cit->first.reduction())
+	filt_vars_map.insert(*cit);
+    break;
+  case RECURSIVE_REDUCTION_FILTER:
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (cit->first.recursive_reduction())
+	filt_vars_map.insert(*cit);
+    break;
+  case DISTINCT_REDUCTION_FILTER:
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (cit->first.distinct_reduction())
 	filt_vars_map.insert(*cit);
     break;
   case NO_FILTER:
@@ -1560,19 +1550,29 @@ filtered_response_data_map(short mode) const
 
   filt_resp_map.clear();
   switch (mode) {
-  case AGGREGATED_DATA_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (ActiveKey::aggregated_key(cit->first))
-	filt_resp_map.insert(*cit);
-    break;
-  case SYNTHETIC_DATA_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (ActiveKey::synthetic_key(cit->first))
-	filt_resp_map.insert(*cit);
-    break;
   case RAW_DATA_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (ActiveKey::raw_data_key(cit->first))
+      if (cit->first.singleton())
+	filt_resp_map.insert(*cit);
+    break;
+  case AGGREGATED_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (cit->first.aggregated())
+	filt_resp_map.insert(*cit);
+    break;
+  case REDUCTION_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (cit->first.reduction())
+	filt_resp_map.insert(*cit);
+    break;
+  case RECURSIVE_REDUCTION_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (cit->first.recursive_reduction())
+	filt_resp_map.insert(*cit);
+    break;
+  case DISTINCT_REDUCTION_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (cit->first.distinct_reduction())
 	filt_resp_map.insert(*cit);
     break;
   case NO_FILTER:
@@ -1596,28 +1596,46 @@ filtered_key(short mode, size_t index) const
 
   size_t cntr = 0;
   switch (mode) {
-  case AGGREGATED_DATA_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
-      const ActiveKey& key = cit->first;
-      if (ActiveKey::aggregated_key(key)) {
-	if (cntr == index) return key;
-	else               ++cntr;
-      }
-    }
-    break;
-  case SYNTHETIC_DATA_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
-      const ActiveKey& key = cit->first;
-      if (ActiveKey::synthetic_key(key)) {
-	if (cntr == index) return key;
-	else               ++cntr;
-      }
-    }
-    break;
   case RAW_DATA_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
       const ActiveKey& key = cit->first;
-      if (ActiveKey::raw_data_key(key)) {
+      if (key.singleton()) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case AGGREGATED_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const ActiveKey& key = cit->first;
+      if (key.aggregated()) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case REDUCTION_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const ActiveKey& key = cit->first;
+      if (key.reduction()) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case RECURSIVE_REDUCTION_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const ActiveKey& key = cit->first;
+      if (key.recursive_reduction()) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case DISTINCT_REDUCTION_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const ActiveKey& key = cit->first;
+      if (key.distinct_reduction()) {
 	if (cntr == index) return key;
 	else               ++cntr;
       }
@@ -1704,39 +1722,51 @@ inline void SurrogateData::pop_front(size_t num_pop)
 
 
 inline void SurrogateData::
-history_target(size_t target, const UShort2DArray& keys)
+history_target(size_t target, SDVArray& sdv_array, SDRArray& sdr_array,
+	       std::map<ActiveKey, size_t>::iterator anchor_it)
 {
-  size_t k, num_k = keys.size(), len, num_pops;
-  SDVArray::iterator v_start, v_end;  SDRArray::iterator r_start, r_end;
-  for (k=0; k<num_k; ++k) {
-    const UShortArray& key_k = keys[k];
-    SDVArray& sdv_array = sdRep->varsData[key_k];
-    SDRArray& sdr_array = sdRep->respData[key_k];
-    len = std::min(sdv_array.size(), sdr_array.size());
-    if (len > target) {
-      // erase oldest data (pop from front of array)
-      num_pops  = len - target;
-      v_start = v_end = sdv_array.begin();  std::advance(v_end, num_pops);
-      r_start = r_end = sdr_array.begin();  std::advance(r_end, num_pops);
-      sdv_array.erase(v_start, v_end);      sdr_array.erase(r_start, r_end);
+  size_t len = std::min(sdv_array.size(), sdr_array.size());
+  if (len > target) {
+    // erase oldest data (pop from front of array)
+    size_t num_pops  = len - target;
+    SDVArray::iterator v_start, v_end;  SDRArray::iterator r_start, r_end;
+    v_start = v_end = sdv_array.begin();  std::advance(v_end, num_pops);
+    r_start = r_end = sdr_array.begin();  std::advance(r_end, num_pops);
+    sdv_array.erase(v_start, v_end);      sdr_array.erase(r_start, r_end);
 
-      // Avoid multiple lookups
-      std::map<ActiveKey, size_t>& anchor_index = sdRep->anchorIndex;
-      std::map<ActiveKey, size_t>::iterator anchor_it
-	= anchor_index.find(key_k);
-      if (anchor_it != anchor_index.end() && anchor_it->second != _NPOS) {
-	if (anchor_it->second < num_pops) // a popped point was anchor
-	  anchor_index.erase(anchor_it);//(key_k);
-	else // anchor still exists, decrement its index
-	  anchor_it->second -= num_pops;
-      }
-      /*
-      anch_index = retrieve_anchor_index(key_k);
-      if (anch_index < num_pops)    // a popped point was anchor
-	clear_anchor_index(key_k);
-      else if (anch_index != _NPOS) // anchor still exists, decrement its index
-	anchor_index(anch_index - num_pops, key_k);
-      */
+    // Manage anchorIndex if anchor is popped
+    std::map<ActiveKey, size_t>& anchor_index = sdRep->anchorIndex;
+    if (anchor_it != anchor_index.end() && anchor_it->second != _NPOS) {
+      if (anchor_it->second < num_pops) // a popped point was anchor
+	anchor_index.erase(anchor_it);//(key_k);
+      else // anchor still exists, decrement its index
+	anchor_it->second -= num_pops;
+    }
+    /*
+    anch_index = retrieve_anchor_index(key_k);
+    if (anch_index < num_pops)    // a popped point was anchor
+      clear_anchor_index(key_k);
+    else if (anch_index != _NPOS) // anchor still exists, decrement its index
+      anchor_index(anch_index - num_pops, key_k);
+    */
+  }
+}
+
+
+inline void SurrogateData::
+history_target(size_t target, const ActiveKey& key)
+{
+  bool agg_key = key.aggregated();
+  if (!agg_key || key.reduction()) // process original key
+    history_target(target, sdRep->varsData[key], sdRep->respData[key],
+		   sdRep->anchorIndex.find(key));
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k) {
+      const ActiveKey& key_k = embedded_keys[k];
+      history_target(target, sdRep->varsData[key_k], sdRep->respData[key_k],
+		     sdRep->anchorIndex.find(key_k));
     }
   }
 }
@@ -1757,23 +1787,23 @@ pop(SDVArray& sdv_array, SDRArray& sdr_array, IntArray& data_ids,
       return; // assume inactive SurrogateData -> ignore pop request
     else {
       PCerr << "\nError: active count stack not found in SurrogateData::pop() "
-	    << "for key:\n" << key << std::flush;
+	    << "for key id " << key.id() << std::endl;
       abort_handler(-1);
     }
   }
 
   SizetArray& pop_count_stack = it->second;
   if (pop_count_stack.empty()) {
-    PCerr << "\nError: empty count stack in SurrogateData::pop() for key:\n"
-	  << key << std::flush;
+    PCerr << "\nError: empty count stack in SurrogateData::pop() for key id "
+	  << key.id() << std::endl;
     abort_handler(-1);
   }
   size_t num_pop_pts = pop_count_stack.back(), new_size;
   if (num_pop_pts) {
     if (num_pts < num_pop_pts) {
       PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
-	    << num_pts << ") in SurrogateData::pop(size_t) for key:\n"
-	    << key << std::flush;
+	    << num_pts << ") in SurrogateData::pop(size_t) for key id "
+	    << key.id() << std::endl;
       abort_handler(-1);
     }
     if (save_data) {
@@ -1822,13 +1852,20 @@ inline void SurrogateData::pop(bool save_data)
 }
 
 
-inline void SurrogateData::pop(const UShort2DArray& keys, bool save_data)
+inline void SurrogateData::pop(const ActiveKey& key, bool save_data)
 {
-  size_t k, num_k = keys.size();
-  for (k=0; k<num_k; ++k) {
-    const UShortArray& key_k = keys[k];
-    pop(sdRep->varsData[key_k], sdRep->respData[key_k],
-	sdRep->dataIdentifiers[key_k], key_k, save_data);
+  bool agg_key = key.aggregated();
+  if (!agg_key || key.reduction()) // process original key
+    pop(sdRep->varsData[key], sdRep->respData[key],
+	sdRep->dataIdentifiers[key], key, save_data);
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k) {
+      const ActiveKey& key_k = embedded_keys[k];
+      pop(sdRep->varsData[key_k], sdRep->respData[key_k],
+	  sdRep->dataIdentifiers[key_k], key_k, save_data);
+    }
   }
 }
 
@@ -1900,13 +1937,20 @@ inline void SurrogateData::push(size_t index, bool erase_popped)
 
 
 inline void SurrogateData::
-push(const UShort2DArray& keys, size_t index, bool erase_popped)
+push(const ActiveKey& key, size_t index, bool erase_popped)
 {
-  size_t k, num_k = keys.size();
-  for (k=0; k<num_k; ++k) {
-    const UShortArray& key_k = keys[k];
-    push(sdRep->varsData[key_k], sdRep->respData[key_k],
-	 sdRep->dataIdentifiers[key_k], key_k, index, erase_popped);
+  bool agg_key = key.aggregated();
+  if (!agg_key || key.reduction()) // process original key
+    push(sdRep->varsData[key], sdRep->respData[key],
+	 sdRep->dataIdentifiers[key], key, index, erase_popped);
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k) {
+      ActiveKey& key_k = embedded_keys[k];
+      push(sdRep->varsData[key_k], sdRep->respData[key_k],
+	   sdRep->dataIdentifiers[key_k], key_k, index, erase_popped);
+    }
   }
 }
 
@@ -2552,27 +2596,55 @@ inline void SurrogateData::clear_active_data()
   const ActiveKey& key = sdRep->activeKey;
   sdRep->anchorIndex.erase(key);   //sdRep->anchorIndex[key] = _NPOS;
   sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
+
+  /* *** TO DO: This is not technically active data, rather embedded keys from
+     active data --> it is not currently consistent with clear_active_data(key)
+     *** TO DO: review this case for NO_REDUCTION
+  bool agg_key = key.aggregated();
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k) {
+      const ActiveKey& key_k = embedded_keys[k];
+      // clear instead of erase
+      sdRep->varsData[key_k].clear();  sdRep->respData[key_k].clear();
+      // can erase
+      sdRep->anchorIndex.erase(key_k); sdRep->failedRespData.erase(key_k);
+    }
+  }
+  */
 }
 
 
-inline void SurrogateData::clear_active_data(const UShort2DArray& keys)
+inline void SurrogateData::clear_active_data(const ActiveKey& key)
 {
-  // clear each passed key without disturbing the active key
-  size_t k, num_k = keys.size();
-  for (k=0; k<num_k; ++k) {
-    const UShortArray& key_k = keys[k];
+  bool agg_key = key.aggregated();
+  if (!agg_key || key.reduction()) { // process original key
     // clear instead of erase
-    sdRep->varsData[key_k].clear();
-    sdRep->respData[key_k].clear();
+    sdRep->varsData[key].clear();  sdRep->respData[key].clear();
     // can erase
-    sdRep->anchorIndex.erase(key_k);
-    sdRep->failedRespData.erase(key_k);
+    sdRep->anchorIndex.erase(key); sdRep->failedRespData.erase(key);
+  }
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k) {
+      const ActiveKey& key_k = embedded_keys[k];
+      // clear instead of erase
+      sdRep->varsData[key_k].clear();  sdRep->respData[key_k].clear();
+      // can erase
+      sdRep->anchorIndex.erase(key_k); sdRep->failedRespData.erase(key_k);
+    }
   }
 }
 
 
 inline void SurrogateData::clear_inactive_data()
 {
+  // *** TO DO: This preserves active key, but not embedded keys extracted
+  // from active key.  It is currently the complement of clear_active_data(),
+  // but not clear_active_data(key)
+
   std::map<ActiveKey, SDVArray>::iterator vd_it = sdRep->varsData.begin();
   std::map<ActiveKey, SDRArray>::iterator rd_it = sdRep->respData.begin();
   while (vd_it != sdRep->varsData.end())
@@ -2599,28 +2671,30 @@ inline void SurrogateData::clear_filtered()
 }
 
 
-inline void SurrogateData::clear_active_popped()
+inline void SurrogateData::clear_active_popped(const ActiveKey& key)
 {
-  const ActiveKey& key = sdRep->activeKey;
-  // can erase as will be recreated in pop() if needed:
-  sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
-  sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
-  sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
-}
-
-
-inline void SurrogateData::clear_active_popped(const UShort2DArray& keys)
-{
-  // clear each passed key without disturbing the active key
-  size_t k, num_k = keys.size();
-  for (k=0; k<num_k; ++k) {
-    const UShortArray& key_k = keys[k];
+  bool agg_key = key.aggregated();
+  if (!agg_key || key.reduction()) {// process original key
     // can erase as will be recreated in pop() if needed
-    sdRep->poppedVarsData.erase(key_k);
-    sdRep->poppedRespData.erase(key_k);
-    sdRep->popCountStack.erase(key_k);
+    sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
+    sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
+    sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
+  }
+  if (agg_key) { // enumerate embedded keys
+    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    size_t k, num_k = embedded_keys.size();
+    for (k=0; k<num_k; ++k) {
+      const ActiveKey& key_k = embedded_keys[k];
+      sdRep->poppedVarsData.erase(key_k);
+      sdRep->poppedRespData.erase(key_k);
+      sdRep->popCountStack.erase(key_k);
+    }
   }
 }
+
+
+inline void SurrogateData::clear_active_popped()
+{ clear_active_popped(sdRep->activeKey); }
 
 
 inline void SurrogateData::clear_popped()
@@ -2658,8 +2732,8 @@ inline void SurrogateData::clear_all_active()
 { clear_active_data(); clear_active_popped(); }
 
 
-inline void SurrogateData::clear_all_active(const UShort2DArray& keys)
-{ clear_active_data(keys); clear_active_popped(keys); }
+inline void SurrogateData::clear_all_active(const ActiveKey& key)
+{ clear_active_data(key); clear_active_popped(key); }
 
 
 inline std::shared_ptr<SurrogateDataRep> SurrogateData::data_rep() const

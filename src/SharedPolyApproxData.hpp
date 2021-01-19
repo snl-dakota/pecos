@@ -66,8 +66,8 @@ public:
 
   /// type of expansion combination: additive, multiplicative, or both
   short combineType;
-  /// type of multilevel discrepancy emulation: distinct or recursive
-  short discrepancyType;
+  /// type of multilevel discrepancy emulation: none, distinct, recursive
+  short discrepReduction;
 
   /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   short outputLevel;
@@ -106,7 +106,7 @@ public:
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
-  combineType(NO_COMBINE), discrepancyType(NO_DISCREP),
+  combineType(NO_COMBINE), discrepReduction(NO_REDUCTION),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refineType(NO_REFINEMENT),*/ refineControl(NO_CONTROL),
   refineMetric(NO_METRIC), refineStatsType(NO_EXPANSION_STATS),
@@ -125,7 +125,7 @@ ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 		       int max_solver_iter, Real conv_tol,
 		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
-  combineType(combine_type), discrepancyType(discrep_type),
+  combineType(combine_type), discrepReduction(discrep_type),
   outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
   /*refineType(refine_type),*/ refineControl(refine_cntl),
   refineMetric(refine_metric), refineStatsType(refine_stats),
@@ -138,7 +138,7 @@ inline ExpansionConfigOptions::
 ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   expCoeffsSolnApproach(ec_options.expCoeffsSolnApproach),
   expBasisType(ec_options.expBasisType), combineType(ec_options.combineType),
-  discrepancyType(ec_options.discrepancyType),
+  discrepReduction(ec_options.discrepReduction),
   outputLevel(ec_options.outputLevel), vbdFlag(ec_options.vbdFlag),
   vbdOrderLimit(ec_options.vbdOrderLimit),
   //refineType(ec_options.refineType),
@@ -420,8 +420,8 @@ public:
   /// get ExpansionConfigOptions::convergenceTol
   Real convergence_tolerance() const;
   */
-  /// get ExpansionConfigOptions::discrepancyType
-  short discrepancy_type() const;
+  /// get ExpansionConfigOptions::discrepReduction
+  short discrepancy_reduction() const;
   /// set ExpansionConfigOptions::refineStatsType
   void refinement_statistics_type(short stats_type);
 
@@ -658,8 +658,8 @@ inline Real SharedPolyApproxData::convergence_tolerance() const
 */
 
 
-inline short SharedPolyApproxData::discrepancy_type() const
-{ return expConfigOptions.discrepancyType; }
+inline short SharedPolyApproxData::discrepancy_reduction() const
+{ return expConfigOptions.discrepReduction; }
 
 
 inline void SharedPolyApproxData::refinement_statistics_type(short stats_type)

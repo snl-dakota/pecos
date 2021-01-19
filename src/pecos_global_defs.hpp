@@ -171,12 +171,13 @@ enum { INTERPOLATION_OF_PRODUCTS, REINTERPOLATION_OF_PRODUCTS,
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0, ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 
-/// special values for discrepancy emulation
-enum { NO_DISCREP=0, DISTINCT_DISCREP, RECURSIVE_DISCREP };
+/// special values for augmentation of approximation data through data
+/// reduction (e.g., for discrepancy emulation)
+enum { NO_REDUCTION=0, DISTINCT_DISCREPANCY, RECURSIVE_DISCREPANCY };
 
 /// special values for filtering keyed SurrogateData maps
-enum { NO_FILTER = 0, RAW_DATA_FILTER, SYNTHETIC_DATA_FILTER,
-       AGGREGATED_DATA_FILTER };
+enum { NO_FILTER = 0, RAW_DATA_FILTER, AGGREGATED_DATA_FILTER, REDUCTION_FILTER,
+       DISTINCT_REDUCTION_FILTER, RECURSIVE_REDUCTION_FILTER };
 
 // ----------------
 // Standard streams

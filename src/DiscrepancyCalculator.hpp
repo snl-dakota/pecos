@@ -22,6 +22,7 @@
 namespace Pecos {
 
 class SurrogateData; // forward declaration
+class ActiveKey;
 
 
 /// Class for discrepancy calculations
@@ -114,7 +115,7 @@ public:
 		      SDRArray& delta_sdr_array, short combine_type);
   /// compute discrepancies between two model keys in surr_data and store
   /// results in the discrepancy key
-  static void compute(SurrogateData& surr_data, const UShortArray& delta_key,
+  static void compute(SurrogateData& surr_data, const ActiveKey& delta_key,
 		      short combine_type);
 
   /*

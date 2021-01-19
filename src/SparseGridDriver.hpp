@@ -16,6 +16,7 @@
 #define SPARSE_GRID_DRIVER_HPP
 
 #include "IntegrationDriver.hpp"
+#include "ActiveKey.hpp"
 #include "sandia_rules.hpp"
 
 namespace Pecos {

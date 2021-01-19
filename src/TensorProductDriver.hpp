@@ -16,6 +16,7 @@
 #define TENSOR_PRODUCT_DRIVER_HPP
 
 #include "IntegrationDriver.hpp"
+#include "ActiveKey.hpp"
 
 namespace Pecos {
 
@@ -57,7 +58,7 @@ public:
   int  grid_size();
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
-  const UShortArray& maximal_grid();
+  const ActiveKey& maximal_grid();
   void combine_grid();
   void combined_to_active(bool clear_combined);
 

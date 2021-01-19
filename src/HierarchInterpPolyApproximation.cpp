@@ -95,7 +95,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   /*
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
+  if (data_rep->expConfigOptions.discrepReduction == RECURSIVE_DISCREPANCY)
     compute_recursive_coefficients();
   else
     // surrData is comprised of discrepancy data (for active keys beyond
@@ -993,7 +993,7 @@ increment_products(const UShort2DArray& set_partition)
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
     ActiveKey hf_key, lf_key; // extract either HF or aggregated {HF,LF} keys
-    ActiveKey::extract_keys(data_rep->activeKey, hf_key, lf_key);
+    data_rep->activeKey.extract_keys(hf_key, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
       product_difference_interpolant(
@@ -3831,8 +3831,8 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
   const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
     surr_data_2.response_data(hf_key);
 
-  // Accommodate level 0 --> lf_key is empty
-  if (lf_key.empty()) {
+  // Accommodate level 0 --> lf_key is undefined
+  if (lf_key.is_null()) {
     product_interpolant(sdv_array, hf_sdr_array_1, hf_sdr_array_2, sm_mi,
 			colloc_key, colloc_index, prod_t1c, prod_t2c,
 			set_partition);

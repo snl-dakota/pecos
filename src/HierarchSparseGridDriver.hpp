@@ -60,7 +60,7 @@ public:
   void clear_inactive();
   void clear_keys();
 
-  //const UShortArray& maximal_grid() const;
+  //const ActiveKey& maximal_grid() const;
 
   void initialize_sets();
   void increment_smolyak_multi_index(const UShortArray& set);
@@ -444,7 +444,7 @@ inline void HierarchSparseGridDriver::update_active_iterators()
       collocIndIter == collocIndices.end()     ||
       varSetsIter   == variableSets.end()      ||
       t1WtIter      == type1WeightSets.end()   ||
-      t2WtIter      == type2WeightSets.end()) {
+      t2WtIter      == type2WeightSets.end())
     active_copy = activeKey.copy();
 
   if (smolMIIter == smolyakMultiIndex.end()) {

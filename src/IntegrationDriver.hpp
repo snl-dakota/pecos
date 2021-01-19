@@ -23,6 +23,7 @@ namespace Pecos {
 class MultivariateDistribution;
 class ExpansionConfigOptions;
 class BasisConfigOptions;
+class ActiveKey;
 
 
 /// base class for generating N-dimensional grids for numerical evaluation
@@ -89,7 +90,7 @@ public:
   virtual void reset();
 
   /// return the key of the maximal stored grid state
-  virtual const UShortArray& maximal_grid();
+  virtual const ActiveKey& maximal_grid();
 
   /// combine grid data and points/weights
   virtual void combine_grid();

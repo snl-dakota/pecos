@@ -214,14 +214,14 @@ compute(const SDRArray& hf_sdr_array, const SDRArray& lf_sdr_array,
 
 
 void DiscrepancyCalculator::
-compute(SurrogateData& surr_data, const UShortArray& delta_key,
+compute(SurrogateData& surr_data, const ActiveKey& delta_key,
 	short combine_type)
 {
-  UShortArray hf_key, lf_key;  extract_keys(delta_key, hf_key, lf_key);
+  ActiveKey hf_key, lf_key;  delta_key.extract_keys(hf_key, lf_key);
 
-  const std::map<UShortArray, SDRArray>& resp_map
+  const std::map<ActiveKey, SDRArray>& resp_map
     = surr_data.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator
+  std::map<ActiveKey, SDRArray>::const_iterator
     lf_cit = resp_map.find(lf_key), hf_cit = resp_map.find(hf_key);
   if (lf_cit == resp_map.end() || hf_cit == resp_map.end()) {
     PCerr << "Error: key lookup failure for individual fidelity in Discrepancy"

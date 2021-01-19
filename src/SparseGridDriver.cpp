@@ -424,7 +424,9 @@ const UShortArray& SparseGridDriver::trial_set(const ActiveKey& key) const
   PCerr << "Error: no default implementation for SparseGridDriver::trial_set()."
 	<< std::endl;
   abort_handler(-1);
-  return activeMultiIndex[key].back(); // dummy UShortArray only for compiler
+  // return dummy for compiler
+  const UShortArraySet& ami = activeMultiIndex.find(key)->second;
+  return *ami.begin();
 }
 
 

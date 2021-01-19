@@ -430,7 +430,7 @@ void IntegrationDriver::clear_inactive()
 }
 
 
-const UShortArray& IntegrationDriver::maximal_grid()
+const ActiveKey& IntegrationDriver::maximal_grid()
 {
   if (!driverRep) {
     PCerr << "Error: maximal_grid() not available for this driver type."

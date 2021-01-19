@@ -64,13 +64,13 @@ void PolynomialApproximation::synchronize_surrogate_data()
   }
 
   // level 0: surrData non-aggregated key stores raw data
-  short discrep_type = data_rep->expConfigOptions.discrepancyType,
+  short discrep_type = data_rep->expConfigOptions.discrepReduction,
         combine_type = data_rep->expConfigOptions.combineType;
-  if (!discrep_type || !ActiveKey::aggregated_key(active_key))
+  if (!discrep_type || !active_key.aggregated())
     return;
 
   switch (discrep_type) {
-  case RECURSIVE_DISCREP:
+  case RECURSIVE_DISCREPANCY:
     // When using a recursive discrepancy with additive/multiplicative corr,
     // we will subtract/divide the current polynomial approx prediction from
     // the new surrData so that we form an expansion on the surplus.  Prior
@@ -78,7 +78,7 @@ void PolynomialApproximation::synchronize_surrogate_data()
     // will be stored within surrData in a format that compute() can utilize.
     generate_synthetic_data(surrData, active_key, combine_type);
     break;
-  //case DISTINCT_DISCREP:
+  //case DISTINCT_DISCREPANCY:
     // When using a distinct discrepancy with additive/multiplicative corr,
     // we will subtract/divide the HF,LF pairs.  In this case, the data is
     // already provided within surrData and specific pairings are identified
@@ -101,7 +101,7 @@ generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
   // and emulation of a recursive discrepancy from hf - lf_hat differences
   // (surpluses) at the high-fidelity points
   ActiveKey hf_key, lf0_key, lf_hat_key; // LF-hat in surplus case
-  ActiveKey::extract_keys(active_key, hf_key, lf_hat_key);
+  active_key.extract_keys(hf_key, lf_hat_key);
   lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0);
 
   // initialize surr_data[lf_hat_key]
