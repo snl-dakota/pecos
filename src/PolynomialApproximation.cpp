@@ -64,12 +64,12 @@ void PolynomialApproximation::synchronize_surrogate_data()
   }
 
   // level 0: surrData non-aggregated key stores raw data
-  short discrep_type = data_rep->expConfigOptions.discrepReduction,
+  short discrepancy  = data_rep->expConfigOptions.discrepReduction,
         combine_type = data_rep->expConfigOptions.combineType;
-  if (!discrep_type || !active_key.aggregated())
+  if (!discrepancy || !active_key.aggregated())
     return;
 
-  switch (discrep_type) {
+  switch (discrepancy) {
   case RECURSIVE_DISCREPANCY:
     // When using a recursive discrepancy with additive/multiplicative corr,
     // we will subtract/divide the current polynomial approx prediction from
@@ -100,9 +100,9 @@ generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
   // portion of active_key.  This synthetic data then enables the computation
   // and emulation of a recursive discrepancy from hf - lf_hat differences
   // (surpluses) at the high-fidelity points
-  ActiveKey hf_key, lf0_key, lf_hat_key; // LF-hat in surplus case
+  ActiveKey hf_key, lf_hat_key; // LF-hat in surplus case
   active_key.extract_keys(hf_key, lf_hat_key);
-  lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0);
+  ActiveKey lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0);
 
   // initialize surr_data[lf_hat_key]
   surr_data.active_key(lf_hat_key); // active key restored at fn end
@@ -118,7 +118,7 @@ generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
   // extract all discrepancy data sets (which have expansions supporting
   // stored_{value,gradient} evaluations)
   const std::map<ActiveKey, SDRArray>& discrep_resp_map
-    = surr_data.filtered_response_data_map(AGGREGATED_DATA_FILTER);
+    = surr_data.filtered_response_data_map(RECURSIVE_REDUCTION_FILTER);
   std::map<ActiveKey, SDRArray>::const_iterator cit;
   size_t i, num_pts = hf_sdr_array.size();
   switch (combine_type) {

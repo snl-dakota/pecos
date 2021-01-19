@@ -1009,35 +1009,6 @@ form_key(unsigned short group, unsigned short form1, unsigned short lev1,
 }
 
 
-inline void ActiveKey::
-extract_keys(const UShortArray& aggregate_key, UShortArray& key1,
-	     UShortArray& key2)
-{
-  if (aggregate_key.is_null())
-    { key1.clear(); key2.clear(); return; }
-
-  // extract one or two aggregated keys
-  unsigned short group = aggregate_key.front(),
-    len = aggregate_key.size() - 1, num_keys = len / 2;
-  switch (num_keys) {
-  case 1:
-    key1 = aggregate_key;   key2.clear();  break;
-  case 2: { // normal case
-    UShortArray::const_iterator start1 = aggregate_key.begin() + 1,
-      end1 = start1 + 2, end2 = end1 + 2;
-    key1.assign(1, group);  key1.insert(key1.end(), start1, end1);
-    key2.assign(1, group);  key2.insert(key2.end(),   end1, end2);
-    break;
-  }
-  default:
-    PCerr << "Error: bad aggregate key size in ActiveKey::"
-	  << "extract_keys()" << std::endl;
-    abort_handler(-1);
-    break;
-  }
-}
-
-
 inline bool ActiveKey::decrement_key(UShortArray& key, size_t index)
 {
   // decrement the active index, if present, to create a key within the same
@@ -1135,6 +1106,9 @@ aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
   }
 
   aggregate_key.id(id);
+  // Note: aggregated() check will be correct but rely on calling context
+  //       to assign a reduction type
+  //aggregate_key.type(...);
   aggregate_key.clear_data();
   if (!empty1) aggregate_key.append(key1.data(), DEEP_COPY);
   if (!empty2) aggregate_key.append(key2.data(), DEEP_COPY);
@@ -1160,6 +1134,9 @@ aggregate_keys(const std::vector<ActiveKey>& keys,
 
   // form aggregate of group + HF form/lev + LF form/lev
   aggregate_key.id(id);
+  // Note: aggregated() check will be correct but rely on calling context
+  //       to assign a reduction type
+  //aggregate_key.type(...);
   aggregate_key.clear_data();
   for (k=0; k<num_k; ++k)
     aggregate_key.append(keys[k].data(), DEEP_COPY);
@@ -1177,11 +1154,11 @@ extract_keys(ActiveKey& key1, ActiveKey& key2) const
     abort_handler(-1);
   }
 
-  unsigned short key_id = id(), key_type = type();
+  unsigned short key_id = id();
   key1 = (data_size == 1) ? *this :
-    ActiveKey(key_id, key_type, key_data[0], SHALLOW_COPY);
+    ActiveKey(key_id, NO_REDUCTION, key_data[0], SHALLOW_COPY);
   if (data_size > 1)
-    key2 = ActiveKey(key_id, key_type, key_data[1], SHALLOW_COPY);
+    key2 = ActiveKey(key_id, NO_REDUCTION, key_data[1], SHALLOW_COPY);
   else
     key2.clear();
 }
@@ -1194,9 +1171,10 @@ inline std::vector<ActiveKey> ActiveKey::extract_keys() const
   std::vector<ActiveKey> embedded_keys(data_size);
   if (data_size > 1) { // not a singleton key
     // create new singleton keys from embedded key data
-    unsigned short key_id = id(), key_type = type();
+    unsigned short key_id = id();
     for (k=0; k<data_size; ++k)
-      embedded_keys[k] = ActiveKey(key_id, key_type, key_data[k], SHALLOW_COPY);
+      embedded_keys[k]
+	= ActiveKey(key_id, NO_REDUCTION, key_data[k], SHALLOW_COPY);
   }
   else if (data_size == 1)
     embedded_keys[0] = *this;
