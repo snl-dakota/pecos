@@ -36,7 +36,7 @@ public:
   /// full constructor
   ActiveKeyDataRep(const UShortArray& indices, const RealVector&   c_params,
 		   const IntVector& di_params, const SizetVector& ds_params,
-		   short mode);
+		   short copy_mode);
   /// destructor
   ~ActiveKeyDataRep();
 
@@ -79,18 +79,18 @@ inline ActiveKeyDataRep::ActiveKeyDataRep(const UShortArray& indices)
 inline ActiveKeyDataRep::
 ActiveKeyDataRep(const UShortArray& indices, const RealVector&   c_params,
 		 const IntVector& di_params, const SizetVector& ds_params,
-		 short mode)
+		 short copy_mode)
 {
   modelIndices = indices;
 
   // Note: provided a way to query DataAccess mode for c_params, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
-  if (mode == DEEP_COPY) {         // enforce deep vector copy
+  if (copy_mode == DEEP_COPY) {         // enforce deep vector copy
     if (!c_params.empty())  copy_data( c_params, continuousHyperParams);
     if (!di_params.empty()) copy_data(di_params, discreteIntHyperParams);
     if (!ds_params.empty()) copy_data(ds_params, discreteSetHyperParams);
   }
-  else if (mode == SHALLOW_COPY) { // enforce shallow vector copy
+  else if (copy_mode == SHALLOW_COPY) { // enforce shallow vector copy
     if (!c_params.empty())
       continuousHyperParams
 	= RealVector(Teuchos::View,  c_params.values(),  c_params.length());
@@ -131,7 +131,7 @@ public:
   /// full constructor
   ActiveKeyData(const UShortArray& indices, const RealVector&   c_params,
 		const IntVector& di_params, const SizetVector& ds_params,
-		short mode = DEFAULT_COPY);
+		short copy_mode = DEFAULT_COPY);
 
   /// copy constructor
   ActiveKeyData(const ActiveKeyData& key_data);
@@ -174,7 +174,7 @@ public:
   Real continuous_parameter(size_t i) const;
   /// set continuousHyperParams
   void continuous_parameters(const RealVector& c_params,
-			     short mode = DEFAULT_COPY);
+			     short copy_mode = DEFAULT_COPY);
   /// get continuousHyperParams
   const RealVector& continuous_parameters() const;
   /// get view of continuousHyperParams for updating in place
@@ -186,7 +186,7 @@ public:
   int discrete_int_parameter(size_t i) const;
   /// set discreteIntHyperParams
   void discrete_int_parameters(const IntVector& di_params,
-			       short mode = DEFAULT_COPY);
+			       short copy_mode = DEFAULT_COPY);
   /// get discreteIntHyperParams
   const IntVector& discrete_int_parameters() const;
   /// get view of discreteIntHyperParams for updating in place
@@ -198,7 +198,7 @@ public:
   size_t discrete_set_index(size_t i) const;
   /// set discreteSetHyperParams
   void discrete_set_indices(const SizetVector& ds_indices,
-			    short mode = DEFAULT_COPY);
+			    short copy_mode = DEFAULT_COPY);
   /// get discreteSetHyperParams
   const SizetVector& discrete_set_indices() const;
   /// get view of discreteSetHyperParams for updating in place
@@ -230,9 +230,9 @@ inline ActiveKeyData::ActiveKeyData(const UShortArray& indices):
 inline ActiveKeyData::
 ActiveKeyData(const UShortArray& indices, const RealVector&   c_params,
 	      const IntVector& di_params, const SizetVector& ds_params,
-	      short mode):
+	      short copy_mode):
   keyDataRep(std::make_shared<ActiveKeyDataRep>(indices, c_params, di_params,
-						ds_params, mode))
+						ds_params, copy_mode))
 { }
 
 
@@ -377,11 +377,11 @@ inline Real ActiveKeyData::continuous_parameter(size_t i) const
 
 
 inline void ActiveKeyData::
-continuous_parameters(const RealVector& c_params, short mode)
+continuous_parameters(const RealVector& c_params, short copy_mode)
 {
-  if (mode == DEEP_COPY)         // enforce deep vector copy
+  if (copy_mode == DEEP_COPY)         // enforce deep vector copy
     copy_data(c_params, keyDataRep->continuousHyperParams);
-  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
+  else if (copy_mode == SHALLOW_COPY) // enforce shallow vector copy
     keyDataRep->continuousHyperParams
       = RealVector(Teuchos::View, c_params.values(), c_params.length());
   else                           // default: assume existing Copy/View state
@@ -427,11 +427,11 @@ inline int ActiveKeyData::discrete_int_parameter(size_t i) const
 
 
 inline void ActiveKeyData::
-discrete_int_parameters(const IntVector& di_params, short mode)
+discrete_int_parameters(const IntVector& di_params, short copy_mode)
 {
-  if (mode == DEEP_COPY)         // enforce deep vector copy
+  if (copy_mode == DEEP_COPY)         // enforce deep vector copy
     copy_data(di_params, keyDataRep->discreteIntHyperParams);
-  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
+  else if (copy_mode == SHALLOW_COPY) // enforce shallow vector copy
     keyDataRep->discreteIntHyperParams
       = IntVector(Teuchos::View, di_params.values(), di_params.length());
   else                           // default: assume existing Copy/View state
@@ -477,11 +477,11 @@ inline size_t ActiveKeyData::discrete_set_index(size_t i) const
 
 
 inline void ActiveKeyData::
-discrete_set_indices(const SizetVector& ds_indices, short mode)
+discrete_set_indices(const SizetVector& ds_indices, short copy_mode)
 {
-  if (mode == DEEP_COPY)         // enforce deep vector copy
+  if (copy_mode == DEEP_COPY)         // enforce deep vector copy
     copy_data(ds_indices, keyDataRep->discreteSetHyperParams);
-  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
+  else if (copy_mode == SHALLOW_COPY) // enforce shallow vector copy
     keyDataRep->discreteSetHyperParams
       = SizetVector(Teuchos::View, ds_indices.values(), ds_indices.length());
   else                           // default: assume existing Copy/View state
@@ -524,12 +524,16 @@ class ActiveKeyRep
 
 public:
 
-  ActiveKeyRep(unsigned short id); ///< minimal constructor
-  ActiveKeyRep(unsigned short id, const std::vector<ActiveKeyData>& data,
-	       short mode); ///< constructor
-  ActiveKeyRep(unsigned short id, const ActiveKeyData& data,
-	       short mode); ///< constructor
-  ~ActiveKeyRep(); ///< destructor
+  /// minimal constructor
+  ActiveKeyRep(unsigned short set_id, unsigned short r_type);
+  /// constructor for aggregated key data
+  ActiveKeyRep(unsigned short set_id, unsigned short r_type,
+	       const std::vector<ActiveKeyData>& data, short copy_mode);
+  /// constructor for a single key data
+  ActiveKeyRep(unsigned short set_id, unsigned short r_type,
+	       const ActiveKeyData& data, short copy_mode);
+  /// destructor
+  ~ActiveKeyRep();
 
 private:
 
@@ -543,10 +547,10 @@ private:
   //- Heading: Member functions
   //
 
-  /// assign dataSetId and activeKeyDataArray using shallow/deep/default copy
-  void assign(const std::vector<ActiveKeyData>& data_vec, short mode);
-  /// assign dataSetId and activeKeyDataArray using shallow/deep/default copy
-  void assign(const ActiveKeyData& data, short mode);
+  /// assign activeKeyDataArray using shallow/deep/default copy
+  void assign(const std::vector<ActiveKeyData>& data_vec, short copy_mode);
+  /// assign activeKeyDataArray using shallow/deep/default copy
+  void assign(const ActiveKeyData& data, short copy_mode);
 
   //
   //- Heading: Private data members
@@ -617,22 +621,24 @@ inline ActiveKeyRep::ActiveKeyRep()
 { }
 
 
-inline ActiveKeyRep::ActiveKeyRep(unsigned short id):
-  dataSetId(id)
+inline ActiveKeyRep::
+ActiveKeyRep(unsigned short set_id, unsigned short r_type):
+  dataSetId(set_id), reductionType(r_type)
 { }
 
 
 inline ActiveKeyRep::
-ActiveKeyRep(unsigned short id, const std::vector<ActiveKeyData>& key_data_vec,
-	     short mode):
-  dataSetId(id)
-{ assign(key_data_vec, mode); }
+ActiveKeyRep(unsigned short set_id, unsigned short r_type,
+	     const std::vector<ActiveKeyData>& key_data_vec, short copy_mode):
+  dataSetId(set_id), reductionType(r_type)
+{ assign(key_data_vec, copy_mode); }
 
 
 inline ActiveKeyRep::
-ActiveKeyRep(unsigned short id, const ActiveKeyData& key_data, short mode):
-  dataSetId(id)
-{ assign(key_data, mode); }
+ActiveKeyRep(unsigned short set_id, unsigned short r_type,
+	     const ActiveKeyData& key_data, short copy_mode):
+  dataSetId(set_id), reductionType(r_type)
+{ assign(key_data, copy_mode); }
 
 
 inline ActiveKeyRep::~ActiveKeyRep()
@@ -640,9 +646,9 @@ inline ActiveKeyRep::~ActiveKeyRep()
 
 
 inline void ActiveKeyRep::
-assign(const std::vector<ActiveKeyData>& key_data_vec, short mode)
+assign(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
 {
-  if (mode == DEEP_COPY) { // enforce deep copy for each activeKeyData
+  if (copy_mode == DEEP_COPY) { // enforce deep copy for each activeKeyData
     size_t i, num_data = key_data_vec.size();
     activeKeyDataArray.resize(num_data);
     for (i=0; i<num_data; ++i)
@@ -653,11 +659,11 @@ assign(const std::vector<ActiveKeyData>& key_data_vec, short mode)
 }
 
 
-inline void ActiveKeyRep::assign(const ActiveKeyData& key_data, short mode)
+inline void ActiveKeyRep::assign(const ActiveKeyData& key_data, short copy_mode)
 {
   activeKeyDataArray.clear();
-  if (mode == DEEP_COPY) activeKeyDataArray.push_back(key_data.copy());
-  else                   activeKeyDataArray.push_back(key_data);
+  if (copy_mode == DEEP_COPY) activeKeyDataArray.push_back(key_data.copy());
+  else                        activeKeyDataArray.push_back(key_data);
 }
 
 
@@ -674,14 +680,20 @@ public:
   //- Heading: Constructors, destructor, and operators
   //
 
-  ActiveKey();                     ///< default handle ctor (no body)
-  ActiveKey(unsigned short id);    ///< minimal handle + body ctor
-  ActiveKey(unsigned short id, const std::vector<ActiveKeyData>& key_data_vec,
-	    short mode);           ///< full constructor for multiple data
-  ActiveKey(unsigned short id, const ActiveKeyData& key_data,
-	    short mode);           ///< full constructor for 1 data
-  ActiveKey(const ActiveKey& key); ///< copy constructor
-  ~ActiveKey();                    ///< destructor
+  /// default handle ctor (no body)
+  ActiveKey();
+  /// minimal handle + body ctor
+  ActiveKey(unsigned short id, unsigned short type);
+  /// constructor for aggregated key data
+  ActiveKey(unsigned short id, unsigned short type,
+	    const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
+  /// constructor for a single key data
+  ActiveKey(unsigned short id, unsigned short type,
+	    const ActiveKeyData& key_data, short copy_mode);
+  /// copy constructor
+  ActiveKey(const ActiveKey& key);
+  /// destructor
+  ~ActiveKey();
 
   /// assignment operator
   ActiveKey& operator=(const ActiveKey& key);
@@ -701,26 +713,32 @@ public:
   /// set dataSetId
   void id(unsigned short set_id);
 
+  /// get reductionType
+  unsigned short type() const;
+  /// set reductionType
+  void type(unsigned short r_type);
+
   /// get activeKeyDataArray
   const std::vector<ActiveKeyData>& data() const;
   /// set activeKeyDataArray
-  void data(const std::vector<ActiveKeyData>& key_data_vec, short mode);
+  void data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
   /// set activeKeyDataArray
-  void data(const ActiveKeyData& key_data, short mode);
+  void data(const ActiveKeyData& key_data, short copy_mode);
 
   /// assign data to ActiveKey
-  void assign(unsigned short id, const std::vector<ActiveKeyData>& key_data_vec,
-	      short mode);
+  void assign(unsigned short set_id, unsigned short r_type,
+	      const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
   /// assign data to ActiveKey
-  void assign(unsigned short id, const ActiveKeyData& key_data, short mode);
+  void assign(unsigned short set_id, unsigned short r_type,
+	      const ActiveKeyData& key_data, short copy_mode);
 
   /// assign data to ActiveKey
-  void append(const std::vector<ActiveKeyData>& key_data_vec, short mode);
+  void append(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
   /// assign data to ActiveKey
-  void append(const ActiveKeyData& key_data, short mode);
+  void append(const ActiveKeyData& key_data, short copy_mode);
   /// clear activeKeyDataArray
   void clear_data();
-  /// clear activeKeyDataArray and set dataSetId to USHRT_MAX
+  /// clear activeKeyDataArray and reset dataSetId and reductionType
   void clear();
 
   /// return deep copy of ActiveKey instance
@@ -795,21 +813,22 @@ inline ActiveKey::ActiveKey()
 { } // keyRep is null
 
 
-inline ActiveKey::ActiveKey(unsigned short id):
-  keyRep(std::make_shared<ActiveKeyRep>(id))
+inline ActiveKey::ActiveKey(unsigned short set_id, unsigned short r_type):
+  keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type))
 { }
 
 
 inline ActiveKey::
-ActiveKey(unsigned short id, const std::vector<ActiveKeyData>& key_data_vec,
-	  short mode):
-  keyRep(std::make_shared<ActiveKeyRep>(id, key_data_vec, mode))
+ActiveKey(unsigned short set_id, unsigned short r_type,
+	  const std::vector<ActiveKeyData>& key_data_vec, short copy_mode):
+  keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type, key_data_vec,copy_mode))
 { }
 
 
 inline ActiveKey::
-ActiveKey(unsigned short id, const ActiveKeyData& key_data, short mode):
-  keyRep(std::make_shared<ActiveKeyRep>(id, key_data, mode))
+ActiveKey(unsigned short set_id, unsigned short r_type,
+	  const ActiveKeyData& key_data, short copy_mode):
+  keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type, key_data, copy_mode))
 { }
 
 
@@ -832,6 +851,7 @@ inline ActiveKey& ActiveKey::operator=(const ActiveKey& key)
 inline bool ActiveKey::operator==(const ActiveKey& key) const
 {
   return ( keyRep->dataSetId          == key.keyRep->dataSetId &&
+	   keyRep->reductionType      == key.keyRep->reductionType &&
 	   keyRep->activeKeyDataArray == key.keyRep->activeKeyDataArray );
 }
 
@@ -839,6 +859,7 @@ inline bool ActiveKey::operator==(const ActiveKey& key) const
 inline bool ActiveKey::operator!=(const ActiveKey& key) const
 {
   return ( keyRep->dataSetId          != key.keyRep->dataSetId ||
+	   keyRep->reductionType      != key.keyRep->reductionType ||
 	   keyRep->activeKeyDataArray != key.keyRep->activeKeyDataArray );
 }
 
@@ -849,6 +870,12 @@ inline bool ActiveKey::operator<(const ActiveKey& key) const
   if (keyRep->dataSetId < kr->dataSetId)
     return true;
   else if (kr->dataSetId < keyRep->dataSetId)
+    return false;
+  // else equal -> continue to next array
+
+  if (keyRep->reductionType < kr->reductionType)
+    return true;
+  else if (kr->reductionType < keyRep->reductionType)
     return false;
   // else equal -> continue to next array
 
@@ -867,41 +894,56 @@ inline void ActiveKey::id(unsigned short set_id)
 { keyRep->dataSetId = set_id; }
 
 
+inline unsigned short ActiveKey::type() const
+{ return keyRep->reductionType; }
+
+
+inline void ActiveKey::type(unsigned short r_type)
+{ keyRep->reductionType = r_type; }
+
+
 inline const std::vector<ActiveKeyData>& ActiveKey::data() const
 { return keyRep->activeKeyDataArray; }
 
 
 inline void ActiveKey::
-data(const std::vector<ActiveKeyData>& key_data_vec, short mode)
-{ keyRep->assign(key_data_vec, mode); }
+data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
+{ keyRep->assign(key_data_vec, copy_mode); }
 
 
-inline void ActiveKey::data(const ActiveKeyData& key_data, short mode)
-{ keyRep->assign(key_data, mode); }
+inline void ActiveKey::data(const ActiveKeyData& key_data, short copy_mode)
+{ keyRep->assign(key_data, copy_mode); }
 
 
 inline void ActiveKey::
-assign(unsigned short set_id, const std::vector<ActiveKeyData>& key_data_vec,
-       short mode)
+assign(unsigned short set_id, unsigned short r_type,
+       const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
 {
-  if  (keyRep) { id(set_id); data(key_data_vec, mode); }
-  else keyRep = std::make_shared<ActiveKeyRep>(set_id, key_data_vec, mode);
+  if  (keyRep)
+    { id(set_id); type(r_type); data(key_data_vec, copy_mode); }
+  else
+    keyRep = std::make_shared<ActiveKeyRep>(set_id, r_type,
+					    key_data_vec, copy_mode);
 }
 
 
 inline void ActiveKey::
-assign(unsigned short set_id, const ActiveKeyData& key_data, short mode)
+assign(unsigned short set_id, unsigned short r_type,
+       const ActiveKeyData& key_data, short copy_mode)
 {
-  if  (keyRep) { id(set_id); data(key_data, mode); }
-  else keyRep = std::make_shared<ActiveKeyRep>(set_id, key_data, mode);
+  if  (keyRep)
+    { id(set_id); type(r_type); data(key_data, copy_mode); }
+  else
+    keyRep = std::make_shared<ActiveKeyRep>(set_id, r_type,
+					    key_data, copy_mode);
 }
 
 
 inline void ActiveKey::
-append(const std::vector<ActiveKeyData>& key_data_vec, short mode)
+append(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
 {
   std::vector<ActiveKeyData>& act_key_data = keyRep->activeKeyDataArray;
-  if (mode == DEEP_COPY) {
+  if (copy_mode == DEEP_COPY) {
     size_t i, len = key_data_vec.size();
     for (i=0; i<len; ++i)
       act_key_data.push_back(key_data_vec[i].copy());
@@ -912,10 +954,12 @@ append(const std::vector<ActiveKeyData>& key_data_vec, short mode)
 }
 
 
-inline void ActiveKey::append(const ActiveKeyData& key_data, short mode)
+inline void ActiveKey::append(const ActiveKeyData& key_data, short copy_mode)
 {
-  if (mode == DEEP_COPY) keyRep->activeKeyDataArray.push_back(key_data.copy());
-  else                   keyRep->activeKeyDataArray.push_back(key_data);
+  if (copy_mode == DEEP_COPY)
+    keyRep->activeKeyDataArray.push_back(key_data.copy());
+  else
+    keyRep->activeKeyDataArray.push_back(key_data);
 }
 
 
@@ -924,13 +968,18 @@ inline void ActiveKey::clear_data()
 
 
 inline void ActiveKey::clear()
-{ clear_data(); keyRep->dataSetId = USHRT_MAX; }
+{
+  clear_data();
+  keyRep->dataSetId     = USHRT_MAX;
+  keyRep->reductionType = NO_REDUCTION;
+}
 
 
 /// deep copy of ActiveKey instance
 inline ActiveKey ActiveKey::copy() const
 {
-  ActiveKey key(keyRep->dataSetId, keyRep->activeKeyDataArray, DEEP_COPY);
+  ActiveKey key(keyRep->dataSetId, keyRep->reductionType,
+		keyRep->activeKeyDataArray, DEEP_COPY);
   return key;
 }
 
@@ -1128,11 +1177,13 @@ extract_keys(ActiveKey& key1, ActiveKey& key2) const
     abort_handler(-1);
   }
 
-  unsigned short key_id = id();
+  unsigned short key_id = id(), key_type = type();
   key1 = (data_size == 1) ? *this :
-    ActiveKey(key_id, key_data[0], SHALLOW_COPY);
-  if (data_size > 1) key2 = ActiveKey(key_id, key_data[1], SHALLOW_COPY);
-  else               key2.clear();
+    ActiveKey(key_id, key_type, key_data[0], SHALLOW_COPY);
+  if (data_size > 1)
+    key2 = ActiveKey(key_id, key_type, key_data[1], SHALLOW_COPY);
+  else
+    key2.clear();
 }
 
 
@@ -1143,9 +1194,9 @@ inline std::vector<ActiveKey> ActiveKey::extract_keys() const
   std::vector<ActiveKey> embedded_keys(data_size);
   if (data_size > 1) { // not a singleton key
     // create new singleton keys from embedded key data
-    unsigned short aggregate_id = id();
+    unsigned short key_id = id(), key_type = type();
     for (k=0; k<data_size; ++k)
-      embedded_keys[k] = ActiveKey(aggregate_id, key_data[k], SHALLOW_COPY);
+      embedded_keys[k] = ActiveKey(key_id, key_type, key_data[k], SHALLOW_COPY);
   }
   else if (data_size == 1)
     embedded_keys[0] = *this;
@@ -1161,8 +1212,8 @@ inline ActiveKey ActiveKey::extract_key(size_t index) const
     return *this;
   else if (index < data_size)
     return (data_size == 1) ?
-      *this :                            // no extraction, already a singleton
-      ActiveKey(id(), key_data[index], SHALLOW_COPY); // extract singleton key
+      *this :                            // no extraction, already a single key
+      ActiveKey(id(), type(), key_data[index], SHALLOW_COPY); // extract single
   else {
     PCerr << "Error: index out of range in ActiveKey::extract_key(index)."
 	  << std::endl;
