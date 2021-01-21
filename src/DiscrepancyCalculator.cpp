@@ -237,9 +237,11 @@ compute(SurrogateData& surr_data, const ActiveKey& delta_key,
   // TO DO: do this more incrementally (based on curr state of delta sdr_array)
   const SDRArray& hf_sdr_array = hf_cit->second;
   surr_data.size_active_sdr(hf_sdr_array);
-  compute(hf_sdr_array, lf_cit->second, surr_data.response_data(),combine_type);
+  SDRArray& delta_sdr_array = surr_data.response_data();
+  compute(hf_sdr_array, lf_cit->second, delta_sdr_array, combine_type);
 
-  // compute discrepancy faults from scratch (aggregates LF,HF failures)
+  // compute discrepancy faults from scratch for delta_sdr_array
+  // (aggregates LF,HF failures)
   surr_data.data_checks();
 }
 
