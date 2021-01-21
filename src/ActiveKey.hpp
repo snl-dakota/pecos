@@ -31,6 +31,8 @@ class ActiveKeyDataRep
 
 public:
 
+  /// default constructor (default empty key)
+  ActiveKeyDataRep();
   /// partial constructor (legacy use case: model indices only)
   ActiveKeyDataRep(const UShortArray& indices);
   /// full constructor
@@ -46,9 +48,6 @@ private:
   //- Heading: Private member functions
   //
 
-  /// default constructor (default empty key)
-  ActiveKeyDataRep();
-
   //
   //- Heading: Private data members
   //
@@ -62,10 +61,6 @@ private:
   IntVector   discreteIntHyperParams; ///< discrete int range hyper-parameters
   SizetVector discreteSetHyperParams; ///< discrete set index hyper-parameters
 };
-
-
-inline ActiveKeyDataRep::~ActiveKeyDataRep()
-{ }
 
 
 inline ActiveKeyDataRep::ActiveKeyDataRep()
@@ -109,6 +104,10 @@ ActiveKeyDataRep(const UShortArray& indices, const RealVector&   c_params,
 }
 
 
+inline ActiveKeyDataRep::~ActiveKeyDataRep()
+{ }
+
+
 /// Handle class for providing a unique key to a data set comprised of
 /// variables and responses.
 
@@ -124,8 +123,10 @@ public:
   //- Heading: Constructors, destructor, and operators
   //
 
-  /// default constructor
+  /// default constructor (no keyDataRep instantiation)
   ActiveKeyData();
+  /// minimal constructor (keyDataRep instantiated if handle is true)
+  ActiveKeyData(bool handle);
   /// partial constructor (legacy use case: model indices only)
   ActiveKeyData(const UShortArray& indices);
   /// full constructor
@@ -220,6 +221,13 @@ private:
 
 inline ActiveKeyData::ActiveKeyData()
 { } // keyDataRep is null
+
+
+inline ActiveKeyData::ActiveKeyData(bool handle)
+{
+  if (handle)
+    keyDataRep = std::make_shared<ActiveKeyDataRep>();
+}
 
 
 inline ActiveKeyData::ActiveKeyData(const UShortArray& indices):
@@ -718,8 +726,15 @@ public:
   /// set reductionType
   void type(unsigned short r_type);
 
+  /// get activeKeyDataArray.size()
+  size_t data_size() const;
+
   /// get activeKeyDataArray
   const std::vector<ActiveKeyData>& data() const;
+  /// get activeKeyDataArray[i]
+  const ActiveKeyData& data(size_t i) const;
+  /// get activeKeyDataArray[i]
+  ActiveKeyData& data(size_t i);
   /// set activeKeyDataArray
   void data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
   /// set activeKeyDataArray
@@ -902,8 +917,20 @@ inline void ActiveKey::type(unsigned short r_type)
 { keyRep->reductionType = r_type; }
 
 
+inline size_t ActiveKey::data_size() const
+{ return keyRep->activeKeyDataArray.size(); }
+
+
 inline const std::vector<ActiveKeyData>& ActiveKey::data() const
 { return keyRep->activeKeyDataArray; }
+
+
+inline const ActiveKeyData& ActiveKey::data(size_t i) const
+{ return keyRep->activeKeyDataArray[i]; }
+
+
+inline ActiveKeyData& ActiveKey::data(size_t i)
+{ return keyRep->activeKeyDataArray[i]; }
 
 
 inline void ActiveKey::
@@ -969,9 +996,13 @@ inline void ActiveKey::clear_data()
 
 inline void ActiveKey::clear()
 {
-  clear_data();
-  keyRep->dataSetId     = USHRT_MAX;
-  keyRep->reductionType = NO_REDUCTION;
+  // only clear keyRep's data:
+  //clear_data();
+  //keyRep->dataSetId     = USHRT_MAX;
+  //keyRep->reductionType = NO_REDUCTION;
+
+  // unbind from this keyRep
+  keyRep.reset(); // decrements ref count by 1 and deletes if count becomes 0
 }
 
 
