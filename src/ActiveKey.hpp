@@ -765,30 +765,28 @@ public:
   /*
   /// define a model key including data group, model form, and resolution
   /// level indices
-  static void form_key(unsigned short group, unsigned short form,
-		       unsigned short lev, UShortArray& key);
+  void form_key(unsigned short group, unsigned short form,
+		unsigned short lev);
   /// define an aggregate model key including data group and two sets of
   /// model form and resolution level indices
-  static void form_key(unsigned short group, unsigned short form1,
-		       unsigned short lev1,  unsigned short form2,
-		       unsigned short lev2,  UShortArray& key);
+  void form_key(unsigned short group, unsigned short form1,
+		unsigned short lev1,  unsigned short form2,
+		unsigned short lev2);
   /// decrement an incoming model key to correspond to the next lower
   /// resolution or fidelity within a model sequence
-  static bool decrement_key(UShortArray& key, size_t index);
+  bool decrement_key(size_t index);
   */
   /// aggregate two model keys to indicate a data combination
   /// (e.g., a discrepancy)
-  static void aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
-			     ActiveKey& aggregate_key);
-  /// aggregate first_key and remaining_keys to indicate a data combination
+  void aggregate_keys(const ActiveKey& key1, const ActiveKey& key2);
+  /// aggregate a vector of keys to indicate a data combination
   /// (e.g., a model ensemble)
-  static void aggregate_keys(const std::vector<ActiveKey>& keys,
-			     ActiveKey& aggregate_key);
+  void aggregate_keys(const std::vector<ActiveKey>& keys);
 
   /// extract two constituent keys from an aggregated key
   void extract_keys(ActiveKey& key1, ActiveKey& key2) const;
   /// extract one or more constituent keys from an aggregated key
-  std::vector<ActiveKey> extract_keys() const;
+  void extract_keys(std::vector<ActiveKey>& keys) const;
   /// extract a particular constituent key from an aggregated key
   ActiveKey extract_key(size_t key_index) const;
 
@@ -1114,63 +1112,61 @@ inline bool ActiveKey::distinct_reduction() const
 
 
 inline void ActiveKey::
-aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
-	       ActiveKey& aggregate_key)
+aggregate_keys(const ActiveKey& key1, const ActiveKey& key2)
 {
   // extract and verify consistency in id number
-  unsigned short id = USHRT_MAX;
+  unsigned short key_id = USHRT_MAX;
   bool empty1 = key1.is_null(), empty2 = key2.is_null();
   if (!empty1 && !empty2) {
-    id = key1.id();
-    if (id != key2.id()) {
+    key_id = key1.id();
+    if (key_id != key2.id()) {
       PCerr << "Error: mismatch in group ids in ActiveKey::aggregate_keys()"
 	    << std::endl;
       abort_handler(-1);
     }
   }
-  else if (!empty1) id = key1.id();
-  else if (!empty2) id = key2.id();
+  else if (!empty1) key_id = key1.id();
+  else if (!empty2) key_id = key2.id();
   else {
     PCerr << "Error: neither key defined in ActiveKey::aggregate_keys"
 	  << "(key1, key2)" << std::endl;
     abort_handler(-1);    
   }
 
-  aggregate_key.id(id);
-  // Note: aggregated() check will be correct but rely on calling context
+  id(key_id);
+  // Note: aggregated() check will be correct but must rely on calling context
   //       to assign a reduction type
-  //aggregate_key.type(...);
-  aggregate_key.clear_data();
-  if (!empty1) aggregate_key.append(key1.data(), DEEP_COPY);
-  if (!empty2) aggregate_key.append(key2.data(), DEEP_COPY);
+  //type(...);
+  clear_data();
+  if (!empty1) append(key1.data(), SHALLOW_COPY);
+  if (!empty2) append(key2.data(), SHALLOW_COPY);
 }
 
 
 inline void ActiveKey::
-aggregate_keys(const std::vector<ActiveKey>& keys,
-	       ActiveKey& aggregate_key)
+aggregate_keys(const std::vector<ActiveKey>& keys)
 {
-  if (keys.empty() && !aggregate_key.is_null()) // leave rep defined
-    { aggregate_key.clear(); return; }
+  if (keys.empty() && !is_null()) // leave rep defined
+    { clear(); return; }
 
   // extract and verify consistency in group number
   size_t k, num_k = keys.size();
-  unsigned short id = keys[0].id();
+  unsigned short key_id = keys[0].id();
   for (k=1; k<num_k; ++k)
-    if (id != keys[k].id()) {
+    if (key_id != keys[k].id()) {
       PCerr << "Error: mismatch in group ids in ActiveKey::aggregate_keys()."
 	    << std::endl;
       abort_handler(-1);
     }
 
   // form aggregate of group + HF form/lev + LF form/lev
-  aggregate_key.id(id);
-  // Note: aggregated() check will be correct but rely on calling context
+  id(key_id);
+  // Note: aggregated() check will be correct but must rely on calling context
   //       to assign a reduction type
-  //aggregate_key.type(...);
-  aggregate_key.clear_data();
+  //type(...);
+  clear_data();
   for (k=0; k<num_k; ++k)
-    aggregate_key.append(keys[k].data(), DEEP_COPY);
+    append(keys[k].data(), SHALLOW_COPY);
 }
 
 
@@ -1195,11 +1191,11 @@ extract_keys(ActiveKey& key1, ActiveKey& key2) const
 }
 
 
-inline std::vector<ActiveKey> ActiveKey::extract_keys() const
+inline void ActiveKey::extract_keys(std::vector<ActiveKey>& embedded_keys) const
 {
   const std::vector<ActiveKeyData>& key_data = data();
   size_t k, data_size = key_data.size();
-  std::vector<ActiveKey> embedded_keys(data_size);
+  embedded_keys.resize(data_size);
   if (data_size > 1) { // not a singleton key
     // create new singleton keys from embedded key data
     unsigned short key_id = id();
@@ -1209,7 +1205,6 @@ inline std::vector<ActiveKey> ActiveKey::extract_keys() const
   }
   else if (data_size == 1)
     embedded_keys[0] = *this;
-  return embedded_keys;
 }
 
 
@@ -1222,7 +1217,7 @@ inline ActiveKey ActiveKey::extract_key(size_t index) const
   else if (index < data_size)
     return (data_size == 1) ?
       *this :                            // no extraction, already a single key
-      ActiveKey(id(), type(), key_data[index], SHALLOW_COPY); // extract single
+      ActiveKey(id(), NO_REDUCTION, key_data[index], SHALLOW_COPY); // singleton
   else {
     PCerr << "Error: index out of range in ActiveKey::extract_key(index)."
 	  << std::endl;

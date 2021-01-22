@@ -1346,7 +1346,8 @@ anchor_index(size_t index, const ActiveKey& key) const
   if (!agg_key || key.reduction()) // process original key
     anchor_index(index, anchor_index_map, key);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k)
       anchor_index(index, anchor_index_map, embedded_keys[k]);
@@ -1382,7 +1383,8 @@ inline void SurrogateData::clear_anchor_index(const ActiveKey& key)
   if (!agg_key || key.reduction()) // process original key
     sdRep->anchorIndex.erase(key);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k)
       sdRep->anchorIndex.erase(embedded_keys[k]);
@@ -1756,7 +1758,8 @@ inline void SurrogateData::pop_back(size_t num_pop)
   if (!agg_key || key.reduction()) // process original key
     pop_back(num_pop, sdRep->varsDataIter->second, sdRep->respDataIter->second);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -1795,7 +1798,8 @@ inline void SurrogateData::pop_front(size_t num_pop)
     pop_front(num_pop, sdRep->varsDataIter->second,
 	      sdRep->respDataIter->second);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -1841,7 +1845,8 @@ history_target(size_t target, const ActiveKey& key)
     history_target(target, sdRep->varsData[key], sdRep->respData[key],
 		   sdRep->anchorIndex.find(key));
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -1942,7 +1947,8 @@ inline void SurrogateData::pop(bool save_data)
   }
 
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -1987,7 +1993,8 @@ inline void SurrogateData::pop(const ActiveKey& key, bool save_data)
   }
 
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -2079,7 +2086,8 @@ inline void SurrogateData::push(size_t index, bool erase_popped)
 	 sdRep->poppedDataIds.find(key),  sdRep->failedRespData[key],
 	 index, erase_popped);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       ActiveKey& key_k = embedded_keys[k];
@@ -2104,7 +2112,8 @@ push(const ActiveKey& key, size_t index, bool erase_popped)
 	 sdRep->poppedDataIds.find(key),  sdRep->failedRespData[key],
 	 index, erase_popped);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       ActiveKey& key_k = embedded_keys[k];
@@ -2203,7 +2212,8 @@ inline void SurrogateData::pop_count(size_t count) const
   if (!agg_key || key.reduction()) // process original key
     sdRep->popCountStack[key].push_back(count);
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k)
       sdRep->popCountStack[embedded_keys[k]].push_back(count);
@@ -2762,7 +2772,8 @@ inline void SurrogateData::clear_active_data()
   }
 
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -2785,7 +2796,8 @@ inline void SurrogateData::clear_active_data(const ActiveKey& key)
     sdRep->anchorIndex.erase(key); sdRep->failedRespData.erase(key);
   }
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -2815,7 +2827,8 @@ inline void SurrogateData::clear_inactive_data()
     new_frd.insert(*sdRep->failedRespData.find(key));
   }
   if (agg_key) {
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
@@ -2869,7 +2882,8 @@ inline void SurrogateData::clear_active_popped(const ActiveKey& key)
     sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
   }
   if (agg_key) { // enumerate embedded keys
-    std::vector<ActiveKey> embedded_keys = key.extract_keys();
+    std::vector<ActiveKey> embedded_keys;
+    key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
