@@ -171,6 +171,9 @@ enum { INTERPOLATION_OF_PRODUCTS, REINTERPOLATION_OF_PRODUCTS,
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0, ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 
+/// special values for type of sequence across a set of model forms/resolutions
+enum { NO_SEQUENCE=0, MODEL_FORM_SEQUENCE, RESOLUTION_LEVEL_SEQUENCE };
+
 /// special values for augmentation of approximation data through data
 /// reduction (e.g., for discrepancy emulation)
 enum { NO_REDUCTION=0, DISTINCT_DISCREPANCY, RECURSIVE_DISCREPANCY };

@@ -146,6 +146,9 @@ public:
   // less-than operator
   bool operator<(const ActiveKeyData& key_data) const;
 
+  template <typename Stream> void read(Stream& s);
+  template <typename Stream> void write(Stream& s) const;
+
   //
   //- Heading: member functions
   //
@@ -512,6 +515,22 @@ inline bool ActiveKeyData::is_null() const
 { return (keyDataRep) ? false : true; }
 
 
+template <typename Stream>
+void ActiveKeyData::read(Stream& s)
+{
+  s >> keyDataRep->modelIndices           >> keyDataRep->continuousHyperParams
+    >> keyDataRep->discreteIntHyperParams >> keyDataRep->discreteSetHyperParams;
+}
+
+
+template <typename Stream>
+void ActiveKeyData::write(Stream& s) const
+{
+  s << keyDataRep->modelIndices           << keyDataRep->continuousHyperParams
+    << keyDataRep->discreteIntHyperParams << keyDataRep->discreteSetHyperParams;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -532,6 +551,8 @@ class ActiveKeyRep
 
 public:
 
+  /// default constructor
+  ActiveKeyRep();
   /// minimal constructor
   ActiveKeyRep(unsigned short set_id, unsigned short r_type);
   /// constructor for aggregated key data
@@ -548,8 +569,6 @@ private:
   //
   //- Heading: Constructors and destructor
   //
-
-  ActiveKeyRep(); ///< default constructor
 
   //
   //- Heading: Member functions
@@ -712,6 +731,9 @@ public:
   // less-than operator
   bool operator<(const ActiveKey& key) const;
 
+  template <typename Stream> void read(Stream& s);
+  template <typename Stream> void write(Stream& s) const;
+
   //
   //- Heading: Member functions
   //
@@ -762,7 +784,6 @@ public:
   /// function to check keyRep (does this handle contain a body)
   bool is_null() const;
 
-  /*
   /// define a model key including data group, model form, and resolution
   /// level indices
   void form_key(unsigned short group, unsigned short form,
@@ -771,11 +792,12 @@ public:
   /// model form and resolution level indices
   void form_key(unsigned short group, unsigned short form1,
 		unsigned short lev1,  unsigned short form2,
-		unsigned short lev2);
+		unsigned short lev2,  unsigned short reduction = NO_REDUCTION);
+
   /// decrement an incoming model key to correspond to the next lower
   /// resolution or fidelity within a model sequence
-  bool decrement_key(size_t index);
-  */
+  bool decrement_key(short seq_type, size_t seq_index = 0);
+
   /// aggregate two model keys to indicate a data combination
   /// (e.g., a discrepancy)
   void aggregate_keys(const ActiveKey& key1, const ActiveKey& key2);
@@ -789,6 +811,19 @@ public:
   void extract_keys(std::vector<ActiveKey>& keys) const;
   /// extract a particular constituent key from an aggregated key
   ActiveKey extract_key(size_t key_index) const;
+
+  /// return the model form index
+  unsigned short retrieve_model_form(size_t d_index = 0,
+				     size_t m_index = 0) const;
+  /// assign the model form index
+  void assign_model_form(unsigned short form, size_t d_index = 0,
+			 size_t m_index = 0);
+  /// return the resolution level index
+  size_t retrieve_resolution_level(size_t d_index  = 0,
+				   size_t hp_index = 0) const;
+  /// assign the resolution level index
+  void assign_resolution_level(size_t lev, size_t d_index = 0,
+			       size_t hp_index = 0);
 
   /// test whether key is an aggregated key (for discrepancy or surplus)
   bool aggregated() const;
@@ -1017,48 +1052,79 @@ inline bool ActiveKey::is_null() const
 { return (keyRep) ? false : true; }
 
 
-////////////////////////////////////////////////////////////////////////////////
-
-
-/*
 inline void ActiveKey::
-form_key(unsigned short group, unsigned short form, unsigned short lev,
-	 UShortArray& key)
-{ key.resize(3);  key[0] = group;  key[1] = form;  key[2] = lev; }
-
-
-inline void ActiveKey::
-form_key(unsigned short group, unsigned short form1, unsigned short lev1,
-	 unsigned short form2, unsigned short lev2,  UShortArray& key)
+form_key(unsigned short group, unsigned short form, unsigned short lev)
 {
-  key.resize(5);
-  key[0] = group;                  // data group
-  key[1] = form1;  key[2] = lev1;  // HF model form, soln level
-  key[3] = form2;  key[4] = lev2;  // LF model form, soln level
+  // create new ActiveKeyData and singleton ActiveKey
+  ActiveKeyData key_data(true); // instantiate rep
+  key_data.model_index(form, 0);       // appends to empty array
+  key_data.discrete_set_index(lev, 0); // appends to empty array
+
+  if (keyRep)
+    assign(group, NO_REDUCTION, key_data, SHALLOW_COPY);
+  else
+    keyRep = std::make_shared<ActiveKeyRep>(group, NO_REDUCTION,
+					    key_data, SHALLOW_COPY);
 }
 
 
-inline bool ActiveKey::decrement_key(UShortArray& key, size_t index)
+inline void ActiveKey::
+form_key(unsigned short group,
+	 unsigned short form1, unsigned short lev1,
+	 unsigned short form2, unsigned short lev2,
+	 unsigned short reduction)
+{
+  // create two new ActiveKeyData and aggregate ActiveKey
+  std::vector<ActiveKeyData> kd_array(2);
+  ActiveKeyData& kd1 = kd_array[0];
+  kd1 = ActiveKeyData(true); // instantiate rep
+  kd1.model_index(form1, 0);       // append to empty array
+  kd1.discrete_set_index(lev1, 0); // append to empty array
+  ActiveKeyData& kd2 = kd_array[1];
+  kd2 = ActiveKeyData(true); // instantiate rep
+  kd2.model_index(form2, 0);       // append to empty array
+  kd2.discrete_set_index(lev2, 0); // append to empty array
+
+  if (keyRep)
+    assign(group, reduction, kd_array, SHALLOW_COPY);
+  else
+    keyRep = std::make_shared<ActiveKeyRep>(group, reduction,
+					    kd_array, SHALLOW_COPY);
+}
+
+
+inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
 {
   // decrement the active index, if present, to create a key within the same
   // group id but with the next lower resolution in the sequence
 
-  //if (key.size() != 3) { // don't allow aggregated keys
-  //  PCerr << "Error: wrong size for {group,form,lev} format in Discrepancy"
-  //	    << "Calculator::decrement_key()" << std::endl;
-  //  abort_handler(-1);    
-  //}
-  if (index >= key.size())
-    return false;
-
-  unsigned short &key_i = key[index];
-  if (key_i && key_i != USHRT_MAX)
-    { --key_i; return true; }
-  else// decrement undefined (e.g., already at coarsest resolution / lowest fid)
-    return false;
+  // For now, only allow this for singleton keys (no indexing by "d_index")
+  if (data_size() != 1) {
+    PCerr << "Error: key should be singleton in ActiveKey::decrement_key()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+  ActiveKeyData& kd0 = data(0);
+  switch (seq_type) {
+  case MODEL_FORM_SEQUENCE: {
+    unsigned short form = kd0.model_index(seq_index);
+    if (form && form != USHRT_MAX)
+      { kd0.model_index(--form, seq_index); return true; }
+    else return false;
+    break;
+  }
+  case RESOLUTION_LEVEL_SEQUENCE: {
+    size_t lev = kd0.discrete_set_index(seq_index);
+    if (lev && lev != std::numeric_limits<size_t>::max())
+      { kd0.discrete_set_index(--lev, seq_index); return true; }
+    else return false;
+    break;
+  }
+  }
 }
 
 
+/*
 inline bool ActiveKey::decrement_key(UShortArray& key)
 {
   // decrement the active index, if present, to create a key within the same
@@ -1067,7 +1133,7 @@ inline bool ActiveKey::decrement_key(UShortArray& key)
   if (key.size() != 3) { // don't allow aggregated keys
     PCerr << "Error: wrong size for {group,form,lev} format in Discrepancy"
 	  << "Calculator::decrement_key()" << std::endl;
-    abort_handler(-1);    
+    abort_handler(-1);
   }
 
   // Logic is fragile in that it fails if a fixed model index (index that is
@@ -1086,6 +1152,26 @@ inline bool ActiveKey::decrement_key(UShortArray& key)
   // Old logic for {form} | {form,lev} format was simply --key.back();
 }
 */
+
+
+inline unsigned short ActiveKey::
+retrieve_model_form(size_t d_index, size_t m_index) const
+{ return data(d_index).model_index(m_index); } // 1D indexing
+
+
+inline void ActiveKey::
+assign_model_form(unsigned short form, size_t d_index, size_t m_index)
+{ data(d_index).model_index(form, m_index); } // 1D indexing w/ push_back
+
+
+inline size_t ActiveKey::
+retrieve_resolution_level(size_t d_index, size_t hp_index) const
+{ return data(d_index).discrete_set_index(hp_index); }//discrete set for now
+
+
+inline void ActiveKey::
+assign_resolution_level(size_t lev, size_t d_index, size_t hp_index)
+{ data(d_index).discrete_set_index(lev, hp_index); } // discrete set for now
 
 
 /** if a key has one data instance, then it is a singleton key; if it has
@@ -1133,6 +1219,7 @@ aggregate_keys(const ActiveKey& key1, const ActiveKey& key2)
     abort_handler(-1);    
   }
 
+  if (!keyRep) keyRep = std::make_shared<ActiveKeyRep>(); // create rep
   id(key_id);
   // Note: aggregated() check will be correct but must rely on calling context
   //       to assign a reduction type
@@ -1160,6 +1247,7 @@ aggregate_keys(const std::vector<ActiveKey>& keys)
     }
 
   // form aggregate of group + HF form/lev + LF form/lev
+  if (!keyRep) keyRep = std::make_shared<ActiveKeyRep>(); // create rep
   id(key_id);
   // Note: aggregated() check will be correct but must rely on calling context
   //       to assign a reduction type
@@ -1224,6 +1312,22 @@ inline ActiveKey ActiveKey::extract_key(size_t index) const
     abort_handler(-1);
     return ActiveKey();
   }
+}
+
+
+template <typename Stream>
+void ActiveKey::read(Stream& s)
+{
+  s >> keyRep->dataSetId >> keyRep->reductionType
+    >> keyRep->activeKeyDataArray;
+}
+
+
+template <typename Stream>
+void ActiveKey::write(Stream& s) const
+{
+  s << keyRep->dataSetId << keyRep->reductionType
+    << keyRep->activeKeyDataArray;
 }
 
 } // namespace Pecos
