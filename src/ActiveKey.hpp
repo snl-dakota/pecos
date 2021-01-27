@@ -123,10 +123,8 @@ public:
   //- Heading: Constructors, destructor, and operators
   //
 
-  /// default constructor (no keyDataRep instantiation)
+  /// default constructor
   ActiveKeyData();
-  /// minimal constructor (keyDataRep instantiated if handle is true)
-  ActiveKeyData(bool handle);
   /// partial constructor (legacy use case: model indices only)
   ActiveKeyData(const UShortArray& indices);
   /// full constructor
@@ -222,15 +220,9 @@ private:
 };
 
 
-inline ActiveKeyData::ActiveKeyData()
-{ } // keyDataRep is null
-
-
-inline ActiveKeyData::ActiveKeyData(bool handle)
-{
-  if (handle)
-    keyDataRep = std::make_shared<ActiveKeyDataRep>();
-}
+inline ActiveKeyData::ActiveKeyData():
+  keyDataRep(std::make_shared<ActiveKeyDataRep>())
+{ }
 
 
 inline ActiveKeyData::ActiveKeyData(const UShortArray& indices):
@@ -644,8 +636,9 @@ private:
 };
 
 
-inline ActiveKeyRep::ActiveKeyRep()
-{ }
+inline ActiveKeyRep::ActiveKeyRep():
+  dataSetId(USHRT_MAX), reductionType(NO_REDUCTION)
+{ } // leave activeKeyDataArray empty
 
 
 inline ActiveKeyRep::
@@ -707,7 +700,7 @@ public:
   //- Heading: Constructors, destructor, and operators
   //
 
-  /// default handle ctor (no body)
+  /// default ctor
   ActiveKey();
   /// minimal handle + body ctor
   ActiveKey(unsigned short id, unsigned short type);
@@ -857,9 +850,9 @@ private:
 };
 
 
-inline ActiveKey::ActiveKey()
-{ } // keyRep is null
-
+inline ActiveKey::ActiveKey():
+  keyRep(std::make_shared<ActiveKeyRep>())
+{ }
 
 inline ActiveKey::ActiveKey(unsigned short set_id, unsigned short r_type):
   keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type))
@@ -978,25 +971,13 @@ inline void ActiveKey::data(const ActiveKeyData& key_data, short copy_mode)
 inline void ActiveKey::
 assign(unsigned short set_id, unsigned short r_type,
        const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
-{
-  if  (keyRep)
-    { id(set_id); type(r_type); data(key_data_vec, copy_mode); }
-  else
-    keyRep = std::make_shared<ActiveKeyRep>(set_id, r_type,
-					    key_data_vec, copy_mode);
-}
+{ id(set_id); type(r_type); data(key_data_vec, copy_mode); }
 
 
 inline void ActiveKey::
 assign(unsigned short set_id, unsigned short r_type,
        const ActiveKeyData& key_data, short copy_mode)
-{
-  if  (keyRep)
-    { id(set_id); type(r_type); data(key_data, copy_mode); }
-  else
-    keyRep = std::make_shared<ActiveKeyRep>(set_id, r_type,
-					    key_data, copy_mode);
-}
+{ id(set_id); type(r_type); data(key_data, copy_mode); }
 
 
 inline void ActiveKey::
@@ -1042,9 +1023,8 @@ inline void ActiveKey::clear()
 /// deep copy of ActiveKey instance
 inline ActiveKey ActiveKey::copy() const
 {
-  ActiveKey key(keyRep->dataSetId, keyRep->reductionType,
-		keyRep->activeKeyDataArray, DEEP_COPY);
-  return key;
+  return ActiveKey(keyRep->dataSetId, keyRep->reductionType,
+		   keyRep->activeKeyDataArray, DEEP_COPY);
 }
 
 
@@ -1056,15 +1036,11 @@ inline void ActiveKey::
 form_key(unsigned short group, unsigned short form, unsigned short lev)
 {
   // create new ActiveKeyData and singleton ActiveKey
-  ActiveKeyData key_data(true); // instantiate rep
+  ActiveKeyData key_data;
   key_data.model_index(form, 0);       // appends to empty array
   key_data.discrete_set_index(lev, 0); // appends to empty array
 
-  if (keyRep)
-    assign(group, NO_REDUCTION, key_data, SHALLOW_COPY);
-  else
-    keyRep = std::make_shared<ActiveKeyRep>(group, NO_REDUCTION,
-					    key_data, SHALLOW_COPY);
+  assign(group, NO_REDUCTION, key_data, SHALLOW_COPY);
 }
 
 
@@ -1077,19 +1053,13 @@ form_key(unsigned short group,
   // create two new ActiveKeyData and aggregate ActiveKey
   std::vector<ActiveKeyData> kd_array(2);
   ActiveKeyData& kd1 = kd_array[0];
-  kd1 = ActiveKeyData(true); // instantiate rep
   kd1.model_index(form1, 0);       // append to empty array
   kd1.discrete_set_index(lev1, 0); // append to empty array
   ActiveKeyData& kd2 = kd_array[1];
-  kd2 = ActiveKeyData(true); // instantiate rep
   kd2.model_index(form2, 0);       // append to empty array
   kd2.discrete_set_index(lev2, 0); // append to empty array
 
-  if (keyRep)
-    assign(group, reduction, kd_array, SHALLOW_COPY);
-  else
-    keyRep = std::make_shared<ActiveKeyRep>(group, reduction,
-					    kd_array, SHALLOW_COPY);
+  assign(group, reduction, kd_array, SHALLOW_COPY);
 }
 
 
