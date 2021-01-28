@@ -141,6 +141,8 @@ public:
   ActiveKeyData& operator=(const ActiveKeyData& key_data);
   // equality operator
   bool operator==(const ActiveKeyData& key_data) const;
+  // inequality operator
+  bool operator!=(const ActiveKeyData& key_data) const;
   // less-than operator
   bool operator<(const ActiveKeyData& key_data) const;
 
@@ -257,14 +259,19 @@ inline ActiveKeyData& ActiveKeyData::operator=(const ActiveKeyData& key_data)
 
 inline bool ActiveKeyData::operator==(const ActiveKeyData& key_data) const
 {
-  return ( keyDataRep->modelIndices == key_data.keyDataRep->modelIndices &&
-    keyDataRep->continuousHyperParams  ==
-      key_data.keyDataRep->continuousHyperParams  &&
-    keyDataRep->discreteIntHyperParams ==
-      key_data.keyDataRep->discreteIntHyperParams &&
-    keyDataRep->discreteSetHyperParams ==
-      key_data.keyDataRep->discreteSetHyperParams );
+  std::shared_ptr<ActiveKeyDataRep> kdr = key_data.keyDataRep;
+  if      (keyDataRep == kdr)                       return true; // same rep
+  else if (keyDataRep == nullptr || kdr == nullptr) return false;
+  else
+    return ( keyDataRep->modelIndices    == kdr->modelIndices &&
+      keyDataRep->continuousHyperParams  == kdr->continuousHyperParams  &&
+      keyDataRep->discreteIntHyperParams == kdr->discreteIntHyperParams &&
+      keyDataRep->discreteSetHyperParams == kdr->discreteSetHyperParams );
 }
+
+
+inline bool ActiveKeyData::operator!=(const ActiveKeyData& key_data) const
+{ return !(*this == key_data); }
 
 
 inline bool ActiveKeyData::operator<(const ActiveKeyData& key_data) const
@@ -854,6 +861,7 @@ inline ActiveKey::ActiveKey():
   keyRep(std::make_shared<ActiveKeyRep>())
 { }
 
+
 inline ActiveKey::ActiveKey(unsigned short set_id, unsigned short r_type):
   keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type))
 { }
@@ -891,18 +899,18 @@ inline ActiveKey& ActiveKey::operator=(const ActiveKey& key)
 
 inline bool ActiveKey::operator==(const ActiveKey& key) const
 {
-  return ( keyRep->dataSetId          == key.keyRep->dataSetId &&
-	   keyRep->reductionType      == key.keyRep->reductionType &&
-	   keyRep->activeKeyDataArray == key.keyRep->activeKeyDataArray );
+  std::shared_ptr<ActiveKeyRep> kr = key.keyRep;
+  if      (keyRep == kr)                       return true; // same (incl. null)
+  else if (keyRep == nullptr || kr == nullptr) return false;
+  else
+    return ( keyRep->dataSetId          == kr->dataSetId &&
+	     keyRep->reductionType      == kr->reductionType &&
+	     keyRep->activeKeyDataArray == kr->activeKeyDataArray );
 }
 
 
 inline bool ActiveKey::operator!=(const ActiveKey& key) const
-{
-  return ( keyRep->dataSetId          != key.keyRep->dataSetId ||
-	   keyRep->reductionType      != key.keyRep->reductionType ||
-	   keyRep->activeKeyDataArray != key.keyRep->activeKeyDataArray );
-}
+{ return !(*this == key); }
 
 
 inline bool ActiveKey::operator<(const ActiveKey& key) const
@@ -1010,13 +1018,21 @@ inline void ActiveKey::clear_data()
 
 inline void ActiveKey::clear()
 {
-  // only clear keyRep's data:
+  // This approach clears keyRep's data to restore to the default ctor state.
+  // This impacts all shallow copies and seems dangerous / too aggressive.
   //clear_data();
   //keyRep->dataSetId     = USHRT_MAX;
   //keyRep->reductionType = NO_REDUCTION;
 
-  // unbind from this keyRep
-  keyRep.reset(); // decrements ref count by 1 and deletes if count becomes 0
+  // unbind from this keyRep and reset shared_ptr to nullptr.
+  // This approach is now inconsistent with the unconditional init of keyRep.
+  //keyRep.reset();
+
+  // This approach unbinds from the current shared keyRep (decrement ref count,
+  // delete if 0) and replaces with fresh alloc, restoring to the default ctor
+  // state.  This only impacts the activeKey instance from the calling context;
+  // other contexts are unaffected.
+  keyRep.reset(new ActiveKeyRep()); // make_shared<> not used for this
 }
 
 
@@ -1041,6 +1057,8 @@ form_key(unsigned short group, unsigned short form, unsigned short lev)
   key_data.discrete_set_index(lev, 0); // appends to empty array
 
   assign(group, NO_REDUCTION, key_data, SHALLOW_COPY);
+
+  //write(PCout);
 }
 
 
@@ -1126,22 +1144,63 @@ inline bool ActiveKey::decrement_key(UShortArray& key)
 
 inline unsigned short ActiveKey::
 retrieve_model_form(size_t d_index, size_t m_index) const
-{ return data(d_index).model_index(m_index); } // 1D indexing
+{
+  return (d_index < data_size()) ?
+    data(d_index).model_index(m_index) : // 1D indexing
+    USHRT_MAX;
+}
 
 
 inline void ActiveKey::
 assign_model_form(unsigned short form, size_t d_index, size_t m_index)
-{ data(d_index).model_index(form, m_index); } // 1D indexing w/ push_back
+{
+  size_t d_size = data_size();
+  if (d_index < d_size)
+    data(d_index).model_index(form, m_index); // 1D indexing w/ push_back
+  /*
+  else if (d_index == d_size) { // support append
+    UShortArray m_indices;  m_indices.assign(m_index+1, 0);
+    m_indices[m_index] = form;
+    append(ActiveKeyData(m_indices), SHALLOW_COPY);
+  }
+  */
+  else {
+    PCerr << "Error: data index " << d_index << " out of bounds in "
+	  << "ActiveKeyData::assign_model_form()" << std::endl;
+    abort_handler(-1);
+  }
+}
 
 
 inline size_t ActiveKey::
 retrieve_resolution_level(size_t d_index, size_t hp_index) const
-{ return data(d_index).discrete_set_index(hp_index); }//discrete set for now
+{
+  return (d_index < data_size()) ?
+    data(d_index).discrete_set_index(hp_index) : //discrete set for now
+    std::numeric_limits<size_t>::max();
+}
 
 
 inline void ActiveKey::
 assign_resolution_level(size_t lev, size_t d_index, size_t hp_index)
-{ data(d_index).discrete_set_index(lev, hp_index); } // discrete set for now
+{
+  size_t d_size = data_size();
+  if (d_index < d_size)
+    data(d_index).discrete_set_index(lev, hp_index); // discrete set for now
+  /*
+  else if (d_index == d_size) { // support append
+    SizetVector ds_indices;  ds_indices.size(hp_index+1); // init to 0
+    ds_indices[hp_index] = lev;
+    ActiveKeyData kd;  kd.discrete_set_indices(ds_indices)
+    append(kd, SHALLOW_COPY);
+  }
+  */
+  else {
+    PCerr << "Error: data index " << d_index << " out of bounds in "
+	  << "ActiveKeyData::assign_resolution_level()" << std::endl;
+    abort_handler(-1);
+  }
+}
 
 
 /** if a key has one data instance, then it is a singleton key; if it has
