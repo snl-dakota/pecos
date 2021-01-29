@@ -2818,13 +2818,19 @@ inline void SurrogateData::clear_inactive_data()
   std::map<ActiveKey, SDRArray> new_rd;
   std::map<ActiveKey, size_t>   new_ai;
   std::map<ActiveKey, SizetShortMap> new_frd;
+  std::map<ActiveKey, SDVArray>::iterator vit;
+  std::map<ActiveKey, SDRArray>::iterator rit;
+  std::map<ActiveKey, size_t>::iterator ait;
+  std::map<ActiveKey, SizetShortMap>::iterator fit;
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
   if (!agg_key || key.reduction()) { // process original key
     new_vd.insert(*sdRep->varsDataIter);
     new_rd.insert(*sdRep->respDataIter);
-    new_ai.insert(*sdRep->anchorIndex.find(key));
-    new_frd.insert(*sdRep->failedRespData.find(key));
+    ait = sdRep->anchorIndex.find(key);
+    if (ait != sdRep->anchorIndex.end()) new_ai.insert(*ait);
+    fit = sdRep->failedRespData.find(key);
+    if (fit != sdRep->failedRespData.end()) new_frd.insert(*fit);
   }
   if (agg_key) {
     std::vector<ActiveKey> embedded_keys;
@@ -2832,10 +2838,14 @@ inline void SurrogateData::clear_inactive_data()
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
-      new_vd.insert(*sdRep->varsData.find(key_k));
-      new_rd.insert(*sdRep->respData.find(key_k));
-      new_ai.insert(*sdRep->anchorIndex.find(key_k));
-      new_frd.insert(*sdRep->failedRespData.find(key_k));
+      vit = sdRep->varsData.find(key_k);
+      if (vit != sdRep->varsData.end()) new_vd.insert(*vit);
+      rit = sdRep->respData.find(key_k);
+      if (rit != sdRep->respData.end()) new_rd.insert(*rit);
+      ait = sdRep->anchorIndex.find(key_k);
+      if (ait != sdRep->anchorIndex.end()) new_ai.insert(*ait);
+      fit = sdRep->failedRespData.find(key_k);
+      if (fit != sdRep->failedRespData.end()) new_frd.insert(*fit);
     }
   }
   sdRep->varsData    = new_vd;  sdRep->respData       = new_rd;
