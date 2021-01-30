@@ -810,7 +810,7 @@ public:
   /// extract one or more constituent keys from an aggregated key
   void extract_keys(std::vector<ActiveKey>& keys) const;
   /// extract a particular constituent key from an aggregated key
-  ActiveKey extract_key(size_t key_index) const;
+  ActiveKey extract_key(size_t k_index) const;
 
   /// return the model form index
   unsigned short retrieve_model_form(size_t d_index = 0,
@@ -1293,8 +1293,8 @@ extract_keys(ActiveKey& key1, ActiveKey& key2) const
   const std::vector<ActiveKeyData>& key_data = data();
   size_t data_size = key_data.size();
   if (data_size < 1 || data_size > 2) { // allow 1 or 2 key data instances
-    PCerr << "Error: wrong key data size in ActiveKey::extract_keys(key1, key2)"
-	  << std::endl;
+    PCerr << "Error: wrong key data size (" << data_size
+	  << ") in ActiveKey::extract_keys(key1, key2)" << std::endl;
     abort_handler(-1);
   }
 
@@ -1325,19 +1325,17 @@ inline void ActiveKey::extract_keys(std::vector<ActiveKey>& embedded_keys) const
 }
 
 
-inline ActiveKey ActiveKey::extract_key(size_t index) const
+inline ActiveKey ActiveKey::extract_key(size_t k_index) const
 {
-  const std::vector<ActiveKeyData>& key_data = data();
-  size_t data_size = key_data.size();
-  if (index == _NPOS) // special value bypasses indexed extraction
+  size_t k_size = data_size();
+  if (k_index == _NPOS) // special value bypasses indexed extraction
     return *this;
-  else if (index < data_size)
-    return (data_size == 1) ?
-      *this :                            // no extraction, already a single key
-      ActiveKey(id(), NO_REDUCTION, key_data[index], SHALLOW_COPY); // singleton
+  else if (k_index < k_size)
+    return (k_size == 1) ? *this : // no extraction, already a single key
+      ActiveKey(id(), NO_REDUCTION, data(k_index), SHALLOW_COPY);//create single
   else {
-    PCerr << "Error: index out of range in ActiveKey::extract_key(index)."
-	  << std::endl;
+    PCerr << "Error: index " << k_index << " out of range in ActiveKey::"
+	  << "extract_key(index)." << std::endl;
     abort_handler(-1);
     return ActiveKey();
   }
