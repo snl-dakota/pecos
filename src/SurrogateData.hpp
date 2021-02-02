@@ -2763,9 +2763,10 @@ inline void SurrogateData::clear_active_data()
 
   bool agg_key = key.aggregated();
   if (!agg_key || key.reduction()) { // process original key
-    // Retain valid {vars,Resp}DataIter when clearing {vars,resp}Data:
+    // Retain valid {varsData,RespData,dataIds}Iter when clearing data:
     sdRep->varsDataIter->second.clear();
     sdRep->respDataIter->second.clear();
+    sdRep->dataIdsIter->second.clear();
     // anchorIndex and failedRespData can be pruned:
     sdRep->anchorIndex.erase(key);   //sdRep->anchorIndex[key] = _NPOS;
     sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
@@ -2779,6 +2780,7 @@ inline void SurrogateData::clear_active_data()
       const ActiveKey& key_k = embedded_keys[k];
       // clear instead of erase
       sdRep->varsData[key_k].clear();  sdRep->respData[key_k].clear();
+      sdRep->dataIdentifiers[key_k].clear();
       // can erase
       sdRep->anchorIndex.erase(key_k); sdRep->failedRespData.erase(key_k);
     }
@@ -2792,6 +2794,7 @@ inline void SurrogateData::clear_active_data(const ActiveKey& key)
   if (!agg_key || key.reduction()) { // process original key
     // clear instead of erase
     sdRep->varsData[key].clear();  sdRep->respData[key].clear();
+    sdRep->dataIdentifiers[key].clear();
     // can erase
     sdRep->anchorIndex.erase(key); sdRep->failedRespData.erase(key);
   }
@@ -2803,6 +2806,7 @@ inline void SurrogateData::clear_active_data(const ActiveKey& key)
       const ActiveKey& key_k = embedded_keys[k];
       // clear instead of erase
       sdRep->varsData[key_k].clear();  sdRep->respData[key_k].clear();
+      sdRep->dataIdentifiers[key_k].clear();
       // can erase
       sdRep->anchorIndex.erase(key_k); sdRep->failedRespData.erase(key_k);
     }
@@ -2816,10 +2820,12 @@ inline void SurrogateData::clear_inactive_data()
   // inefficient, so instead rebuild maps with only active + embedded sets
   std::map<ActiveKey, SDVArray> new_vd;
   std::map<ActiveKey, SDRArray> new_rd;
+  std::map<ActiveKey, IntArray> new_di;
   std::map<ActiveKey, size_t>   new_ai;
   std::map<ActiveKey, SizetShortMap> new_frd;
   std::map<ActiveKey, SDVArray>::iterator vit;
   std::map<ActiveKey, SDRArray>::iterator rit;
+  std::map<ActiveKey, IntArray>::iterator dit;
   std::map<ActiveKey, size_t>::iterator ait;
   std::map<ActiveKey, SizetShortMap>::iterator fit;
   const ActiveKey& key = sdRep->activeKey;
@@ -2827,6 +2833,7 @@ inline void SurrogateData::clear_inactive_data()
   if (!agg_key || key.reduction()) { // process original key
     new_vd.insert(*sdRep->varsDataIter);
     new_rd.insert(*sdRep->respDataIter);
+    new_di.insert(*sdRep->dataIdsIter);
     ait = sdRep->anchorIndex.find(key);
     if (ait != sdRep->anchorIndex.end()) new_ai.insert(*ait);
     fit = sdRep->failedRespData.find(key);
@@ -2842,14 +2849,17 @@ inline void SurrogateData::clear_inactive_data()
       if (vit != sdRep->varsData.end()) new_vd.insert(*vit);
       rit = sdRep->respData.find(key_k);
       if (rit != sdRep->respData.end()) new_rd.insert(*rit);
+      dit = sdRep->dataIdentifiers.find(key_k);
+      if (dit != sdRep->dataIdentifiers.end()) new_di.insert(*dit);
       ait = sdRep->anchorIndex.find(key_k);
       if (ait != sdRep->anchorIndex.end()) new_ai.insert(*ait);
       fit = sdRep->failedRespData.find(key_k);
       if (fit != sdRep->failedRespData.end()) new_frd.insert(*fit);
     }
   }
-  sdRep->varsData    = new_vd;  sdRep->respData       = new_rd;
-  sdRep->anchorIndex = new_ai;  sdRep->failedRespData = new_frd;
+  sdRep->varsData        = new_vd;  sdRep->respData    = new_rd;
+  sdRep->dataIdentifiers = new_di;  sdRep->anchorIndex = new_ai;
+  sdRep->failedRespData  = new_frd;
 
   /*
   // Preserves active key but not embedded keys extracted from active key,
@@ -2889,6 +2899,7 @@ inline void SurrogateData::clear_active_popped(const ActiveKey& key)
     // can erase as will be recreated in pop() if needed
     sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
     sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
+    sdRep->poppedDataIds.erase(key); //sdRep->poppedDataIds[key].clear();
     sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
   }
   if (agg_key) { // enumerate embedded keys
@@ -2899,6 +2910,7 @@ inline void SurrogateData::clear_active_popped(const ActiveKey& key)
       const ActiveKey& key_k = embedded_keys[k];
       sdRep->poppedVarsData.erase(key_k);
       sdRep->poppedRespData.erase(key_k);
+      sdRep->poppedDataIds.erase(key_k);
       sdRep->popCountStack.erase(key_k);
     }
   }
@@ -2913,6 +2925,7 @@ inline void SurrogateData::clear_popped()
 {
   sdRep->poppedVarsData.clear();
   sdRep->poppedRespData.clear();
+  sdRep->poppedDataIds.clear();
   sdRep->popCountStack.clear();
 }
 
@@ -2921,6 +2934,7 @@ inline void SurrogateData::clear_data(bool initialize)
 {
   sdRep->varsData.clear();
   sdRep->respData.clear();
+  sdRep->dataIdentifiers.clear();
   clear_filtered();
 
   sdRep->anchorIndex.clear();
@@ -2932,6 +2946,7 @@ inline void SurrogateData::clear_data(bool initialize)
     sdRep->activeKey.clear();
     sdRep->varsDataIter = sdRep->varsData.end();
     sdRep->respDataIter = sdRep->respData.end();
+    sdRep->dataIdsIter  = sdRep->dataIdentifiers.end();
   }
 }
 
