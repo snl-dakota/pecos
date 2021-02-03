@@ -945,6 +945,8 @@ public:
   void copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const;
 
   /// resize {vars,resp}Data
+  void resize(size_t num_pts);
+  /// resize {vars,resp}Data and allocate new SDV/SDR
   void resize(size_t num_pts, short bits, size_t num_vars);
 
   /// augment {vars,resp}Data and define anchorIndex
@@ -2729,6 +2731,14 @@ copy_active_pop_sdr(const SurrogateData& sd, short sdr_mode) const
   }
   else // shallow SDR copies based on operator=
     new_pop_sdr_array = sd.popped_response();
+}
+
+
+inline void SurrogateData::resize(size_t new_pts)
+{
+  // new SDV/SDR are empty (no rep)
+  sdRep->varsDataIter->second.resize(new_pts);
+  sdRep->respDataIter->second.resize(new_pts);
 }
 
 
