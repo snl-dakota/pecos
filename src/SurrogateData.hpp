@@ -1087,6 +1087,10 @@ public:
   /// return size of {vars,resp}Data instance corresponding to key
   size_t points(const ActiveKey& key) const;
 
+  /// synchonize data size for aggregate reduction key based on data
+  /// sizes for embedded keys
+  void synchronize_reduction_size();
+
   /// return total number of available data components
   size_t response_size() const;
   /// return number of failed data components
@@ -1285,6 +1289,11 @@ inline void SurrogateData::active_key(const ActiveKey& key) const
   if (sdRep->activeKey != key) {
     sdRep->activeKey = key;
     sdRep->update_active_iterators();
+
+    // Seems a bit of overkill; for now, prefer synchronization calls from
+    // contexts that append/pop data
+    //if (key.aggregated() && key.reduction())
+    //  synchronize_reduction_size(); // reduction always derived from embedded
   }
 }
 
@@ -1308,6 +1317,24 @@ inline size_t SurrogateData::points(const ActiveKey& key) const
     = sdRep->respData.find(key);
   return (sdv_it == sdRep->varsData.end() || sdr_it == sdRep->respData.end()) ?
     0 : std::min(sdv_it->second.size(), sdr_it->second.size());
+}
+
+
+inline void SurrogateData::synchronize_reduction_size()
+{
+  const ActiveKey& key = sdRep->activeKey;
+  if (!key.aggregated() || !key.reduction()) return;
+
+  // Could streamline using only 1st embedded key, but retain generality for now
+  std::vector<ActiveKey> embedded_keys;
+  key.extract_keys(embedded_keys);
+  size_t k, num_k = embedded_keys.size(), num_pts_k,
+    num_pts = std::numeric_limits<size_t>::max();
+  for (k=0; k<num_k; ++k) {
+    num_pts_k = points(embedded_keys[k]);
+    if (num_pts_k < num_pts) num_pts = num_pts_k;
+  }
+  if (num_pts != points()) resize(num_pts);
 }
 
 
@@ -1931,21 +1958,18 @@ inline void SurrogateData::pop(bool save_data)
 {
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
+  SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra; IntArrayDeque empty_ia;
   if (!agg_key || key.reduction()) { // process original key
-    if (save_data)
-      pop(sdRep->varsDataIter->second, sdRep->respDataIter->second,
-	  sdRep->dataIdsIter->second,  sdRep->popCountStack.find(key),
-	  sdRep->poppedVarsData[key],  sdRep->poppedRespData[key],
-	  sdRep->poppedDataIds[key],   sdRep->failedRespData[key], save_data);
-    else {
-      // avoid unused lookups
-      SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra;
-      IntArrayDeque empty_ia;
-      pop(sdRep->varsDataIter->second, sdRep->respDataIter->second,
-	  sdRep->dataIdsIter->second,  sdRep->popCountStack.find(key),
-	  empty_sdva, empty_sdra, empty_ia, sdRep->failedRespData[key],
-	  save_data);
-    }
+    IntArray& data_ids = sdRep->dataIdsIter->second;
+    SDVArrayDeque& popped_vars = (save_data) ?
+      sdRep->poppedVarsData[key] : empty_sdva;
+    SDRArrayDeque& popped_resp = (save_data) ?
+      sdRep->poppedRespData[key] : empty_sdra;
+    IntArrayDeque& popped_ids = (save_data && !data_ids.empty()) ?
+      sdRep->poppedDataIds[key] : empty_ia;
+    pop(sdRep->varsDataIter->second, sdRep->respDataIter->second, data_ids,
+	sdRep->popCountStack.find(key), popped_vars, popped_resp, popped_ids,
+	sdRep->failedRespData[key], save_data);
   }
 
   if (agg_key) { // enumerate embedded keys
@@ -1954,21 +1978,16 @@ inline void SurrogateData::pop(bool save_data)
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
-      if (save_data)
-	pop(sdRep->varsData[key_k],        sdRep->respData[key_k],
-	    sdRep->dataIdentifiers[key_k], sdRep->popCountStack.find(key_k),
-	    sdRep->poppedVarsData[key_k],  sdRep->poppedRespData[key_k],
-	    sdRep->poppedDataIds[key_k],   sdRep->failedRespData[key_k],
-	    save_data);
-      else {
-	// avoid unused lookups
-	SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra;
-	IntArrayDeque empty_ia;
-	pop(sdRep->varsData[key_k],        sdRep->respData[key_k],
-	    sdRep->dataIdentifiers[key_k], sdRep->popCountStack.find(key_k),
-	    empty_sdva, empty_sdra, empty_ia, sdRep->failedRespData[key_k],
-	    save_data);
-      }
+      IntArray& data_ids = sdRep->dataIdentifiers[key_k];
+      SDVArrayDeque& popped_vars = (save_data) ?
+	sdRep->poppedVarsData[key_k] : empty_sdva;
+      SDRArrayDeque& popped_resp = (save_data) ?
+	sdRep->poppedRespData[key_k] : empty_sdra;
+      IntArrayDeque& popped_ids = (save_data && !data_ids.empty()) ?
+	sdRep->poppedDataIds[key_k] : empty_ia;
+      pop(sdRep->varsData[key_k], sdRep->respData[key_k], data_ids,
+	  sdRep->popCountStack.find(key_k), popped_vars, popped_resp,
+	  popped_ids, sdRep->failedRespData[key_k], save_data);
     }
   }
 }
@@ -1977,21 +1996,18 @@ inline void SurrogateData::pop(bool save_data)
 inline void SurrogateData::pop(const ActiveKey& key, bool save_data)
 {
   bool agg_key = key.aggregated();
+  SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra; IntArrayDeque empty_ia;
   if (!agg_key || key.reduction()) { // process original key
-    if (save_data)
-      pop(sdRep->varsData[key],        sdRep->respData[key],
-	  sdRep->dataIdentifiers[key], sdRep->popCountStack.find(key),
-	  sdRep->poppedVarsData[key],  sdRep->poppedRespData[key],
-	  sdRep->poppedDataIds[key],   sdRep->failedRespData[key], save_data);
-    else {
-      // avoid unused lookups
-      SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra;
-      IntArrayDeque empty_ia;
-      pop(sdRep->varsData[key],        sdRep->respData[key],
-	  sdRep->dataIdentifiers[key], sdRep->popCountStack.find(key),
-	  empty_sdva, empty_sdra, empty_ia, sdRep->failedRespData[key],
-	  save_data);
-    }
+    IntArray& data_ids = sdRep->dataIdentifiers[key];
+    SDVArrayDeque& popped_vars = (save_data) ?
+      sdRep->poppedVarsData[key] : empty_sdva;
+    SDRArrayDeque& popped_resp = (save_data) ?
+      sdRep->poppedRespData[key] : empty_sdra;
+    IntArrayDeque& popped_ids = (save_data && !data_ids.empty()) ?
+      sdRep->poppedDataIds[key] : empty_ia;
+    pop(sdRep->varsData[key], sdRep->respData[key], data_ids,
+	sdRep->popCountStack.find(key), popped_vars, popped_resp, popped_ids,
+	sdRep->failedRespData[key], save_data);
   }
 
   if (agg_key) { // enumerate embedded keys
@@ -2000,21 +2016,16 @@ inline void SurrogateData::pop(const ActiveKey& key, bool save_data)
     size_t k, num_k = embedded_keys.size();
     for (k=0; k<num_k; ++k) {
       const ActiveKey& key_k = embedded_keys[k];
-      if (save_data)
-	pop(sdRep->varsData[key_k],        sdRep->respData[key_k],
-	    sdRep->dataIdentifiers[key_k], sdRep->popCountStack.find(key_k),
-	    sdRep->poppedVarsData[key_k],  sdRep->poppedRespData[key_k],
-	    sdRep->poppedDataIds[key_k],   sdRep->failedRespData[key_k],
-	    save_data);
-      else {
-	// avoid unused lookups
-	SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra;
-	IntArrayDeque empty_ia;
-	pop(sdRep->varsData[key_k],        sdRep->respData[key_k],
-	    sdRep->dataIdentifiers[key_k], sdRep->popCountStack.find(key_k),
-	    empty_sdva, empty_sdra, empty_ia, sdRep->failedRespData[key_k],
-	    save_data);
-      }
+      IntArray& data_ids = sdRep->dataIdentifiers[key_k];
+      SDVArrayDeque& popped_vars = (save_data) ?
+	sdRep->poppedVarsData[key_k] : empty_sdva;
+      SDRArrayDeque& popped_resp = (save_data) ?
+	sdRep->poppedRespData[key_k] : empty_sdra;
+      IntArrayDeque& popped_ids = (save_data && !data_ids.empty()) ?
+	sdRep->poppedDataIds[key_k] : empty_ia;
+      pop(sdRep->varsData[key_k], sdRep->respData[key_k], data_ids,
+	  sdRep->popCountStack.find(key_k), popped_vars, popped_resp,
+	  popped_ids, sdRep->failedRespData[key_k], save_data);
     }
   }
 }
@@ -2060,8 +2071,9 @@ push(SDVArray& sdv_array, SDRArray& sdr_array,
 	  popped_ids.erase(iit);
       }
       else { // this is an error
-	PCerr << "Error: index out of bounds for evaluation id in "
-	      << "SurrogateData::push()" << std::endl;
+	PCerr << "Error: index (" << index << ") out of bounds (size = "
+	      << popped_ids.size() << ") for evaluation id in SurrogateData"
+	      << "::push()" << std::endl;
 	abort_handler(-1);
       }
     }
