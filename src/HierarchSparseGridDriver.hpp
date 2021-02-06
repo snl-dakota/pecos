@@ -435,8 +435,9 @@ inline void HierarchSparseGridDriver::update_active_iterators()
   t1WtIter      = type1WeightSets.find(activeKey);
   t2WtIter      = type2WeightSets.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (smolMIIter    == smolyakMultiIndex.end() ||
       trialLevIter  == trialLevel.end()        ||
       incrSetsIter  == incrementSets.end()     ||
@@ -446,40 +447,45 @@ inline void HierarchSparseGridDriver::update_active_iterators()
       t1WtIter      == type1WeightSets.end()   ||
       t2WtIter      == type2WeightSets.end())
     active_copy = activeKey.copy();
+  */
 
   if (smolMIIter == smolyakMultiIndex.end()) {
-    std::pair<ActiveKey, UShort3DArray> u3a_pair(active_copy, UShort3DArray());
+    std::pair<ActiveKey, UShort3DArray>
+      u3a_pair(activeKey/*active_copy*/, UShort3DArray());
     smolMIIter = smolyakMultiIndex.insert(u3a_pair).first;
   }
   if (trialLevIter == trialLevel.end()) {
-    std::pair<ActiveKey, unsigned short> us_pair(active_copy, 0);
+    std::pair<ActiveKey, unsigned short> us_pair(activeKey/*active_copy*/, 0);
     trialLevIter = trialLevel.insert(us_pair).first;
   }
   if (incrSetsIter == incrementSets.end()) {
-    std::pair<ActiveKey, UShortArray> ua_pair(active_copy, UShortArray());
+    std::pair<ActiveKey, UShortArray>
+      ua_pair(activeKey/*active_copy*/, UShortArray());
     incrSetsIter = incrementSets.insert(ua_pair).first;
   }
   if (collocKeyIter == collocKey.end()) {
-    std::pair<ActiveKey, UShort4DArray> u4a_pair(active_copy, UShort4DArray());
+    std::pair<ActiveKey, UShort4DArray>
+      u4a_pair(activeKey/*active_copy*/, UShort4DArray());
     collocKeyIter = collocKey.insert(u4a_pair).first;
   }
   if (collocIndIter == collocIndices.end()) {
-    std::pair<ActiveKey, Sizet3DArray> s3a_pair(active_copy, Sizet3DArray());
+    std::pair<ActiveKey, Sizet3DArray>
+      s3a_pair(activeKey/*active_copy*/, Sizet3DArray());
     collocIndIter = collocIndices.insert(s3a_pair).first;
   }
   if (varSetsIter == variableSets.end()) {
     std::pair<ActiveKey, RealMatrix2DArray>
-      rm2_pair(active_copy, RealMatrix2DArray());
+      rm2_pair(activeKey/*active_copy*/, RealMatrix2DArray());
     varSetsIter = variableSets.insert(rm2_pair).first;
   }
   if (t1WtIter == type1WeightSets.end()) {
     std::pair<ActiveKey, RealVector2DArray>
-      rv2_pair(active_copy, RealVector2DArray());
+      rv2_pair(activeKey/*active_copy*/, RealVector2DArray());
     t1WtIter = type1WeightSets.insert(rv2_pair).first;
   }
   if (t2WtIter == type2WeightSets.end()) {
     std::pair<ActiveKey, RealMatrix2DArray>
-      rm2_pair(active_copy, RealMatrix2DArray());
+      rm2_pair(activeKey/*active_copy*/, RealMatrix2DArray());
     t2WtIter = type2WeightSets.insert(rm2_pair).first;
   }
 

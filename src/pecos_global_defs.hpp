@@ -174,13 +174,16 @@ enum { NO_COMBINE=0, ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 /// special values for type of sequence across a set of model forms/resolutions
 enum { NO_SEQUENCE=0, MODEL_FORM_SEQUENCE, RESOLUTION_LEVEL_SEQUENCE };
 
-/// special values for augmentation of approximation data through data
-/// reduction (e.g., for discrepancy emulation)
-enum { NO_REDUCTION=0, DISTINCT_DISCREPANCY, RECURSIVE_DISCREPANCY };
+/// special values for type of discrepancy emulation)
+enum { NO_DISCREPANCY=0, DISTINCT_DISCREPANCY, RECURSIVE_DISCREPANCY };
+
+/// special values for key type indicating augmentation of single data sets
+/// with reduction data (e.g., for augmenting raw data with discrepancy data)
+enum { NO_REDUCTION=0, SINGLE_REDUCTION }; //, MULTIPLE_REDUCTION, ...
 
 /// special values for filtering keyed SurrogateData maps
-enum { NO_FILTER = 0, RAW_DATA_FILTER, AGGREGATED_DATA_FILTER, REDUCTION_FILTER,
-       DISTINCT_REDUCTION_FILTER, RECURSIVE_REDUCTION_FILTER };
+enum { NO_FILTER = 0, RAW_DATA_FILTER, AGGREGATED_DATA_FILTER,
+       REDUCTION_FILTER };//, SINGLE_REDUCTION_FILTER, MULTIPLE_REDUCTION_FILTER
 
 // ----------------
 // Standard streams

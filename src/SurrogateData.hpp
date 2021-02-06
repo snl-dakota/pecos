@@ -873,22 +873,24 @@ inline void SurrogateDataRep::update_active_iterators()
   respDataIter = respData.find(activeKey);
   dataIdsIter  = dataIdentifiers.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (varsDataIter == varsData.end() || respDataIter == respData.end() ||
       dataIdsIter == dataIdentifiers.end())
     active_copy = activeKey.copy();
+  */
 
   if (varsDataIter == varsData.end()) {
-    std::pair<ActiveKey, SDVArray> sdv_pair(active_copy, SDVArray());
-    varsDataIter = varsData.insert(sdv_pair).first;
+    std::pair<ActiveKey, SDVArray> vd_pair(activeKey/*active_copy*/,SDVArray());
+    varsDataIter = varsData.insert(vd_pair).first;
   }
   if (respDataIter == respData.end()) {
-    std::pair<ActiveKey, SDRArray> sdr_pair(active_copy, SDRArray());
-    respDataIter = respData.insert(sdr_pair).first;
+    std::pair<ActiveKey, SDRArray> vr_pair(activeKey/*active_copy*/,SDRArray());
+    respDataIter = respData.insert(vr_pair).first;
   }
   if (dataIdsIter == dataIdentifiers.end()) {
-    std::pair<ActiveKey, IntArray> ia_pair(active_copy, IntArray());
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
     dataIdsIter = dataIdentifiers.insert(ia_pair).first;
   }
 }
@@ -1587,26 +1589,21 @@ filtered_variables_data_map(short mode) const
       if (cit->first.singleton())
 	filt_vars_map.insert(*cit);
     break;
-  case AGGREGATED_DATA_FILTER:
+  case AGGREGATED_DATA_FILTER: // less restrictive
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
       if (cit->first.aggregated())
 	filt_vars_map.insert(*cit);
     break;
-  case REDUCTION_FILTER:
+  case REDUCTION_FILTER:       // more restrictive
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
       if (cit->first.reduction())
 	filt_vars_map.insert(*cit);
     break;
-  case RECURSIVE_REDUCTION_FILTER:
-    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (cit->first.recursive_reduction())
-	filt_vars_map.insert(*cit);
-    break;
-  case DISTINCT_REDUCTION_FILTER:
-    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (cit->first.distinct_reduction())
-	filt_vars_map.insert(*cit);
-    break;
+  //case SINGLE_REDUCTION_FILTER:
+  //  for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+  //    if (cit->first.single_reduction())
+  //      filt_vars_map.insert(*cit);
+  //  break;
   case NO_FILTER:
     filt_vars_map = vars_map;
     break;
@@ -1649,16 +1646,11 @@ filtered_response_data_map(short mode) const
       if (cit->first.reduction())
 	filt_resp_map.insert(*cit);
     break;
-  case RECURSIVE_REDUCTION_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (cit->first.recursive_reduction())
-	filt_resp_map.insert(*cit);
-    break;
-  case DISTINCT_REDUCTION_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (cit->first.distinct_reduction())
-	filt_resp_map.insert(*cit);
-    break;
+  //case SINGLE_REDUCTION_FILTER:
+  //  for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+  //    if (cit->first.single_reduction())
+  // 	  filt_resp_map.insert(*cit);
+  //  break;
   case NO_FILTER:
     filt_resp_map = resp_map;
     break;
@@ -1707,24 +1699,15 @@ filtered_key(short mode, size_t index) const
       }
     }
     break;
-  case RECURSIVE_REDUCTION_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
-      const ActiveKey& key = cit->first;
-      if (key.recursive_reduction()) {
-	if (cntr == index) return key;
-	else               ++cntr;
-      }
-    }
-    break;
-  case DISTINCT_REDUCTION_FILTER:
-    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
-      const ActiveKey& key = cit->first;
-      if (key.distinct_reduction()) {
-	if (cntr == index) return key;
-	else               ++cntr;
-      }
-    }
-    break;
+  //case SINGLE_REDUCTION_FILTER:
+  //  for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+  //    const ActiveKey& key = cit->first;
+  //    if (key.single_reduction()) {
+  // 	  if (cntr == index) return key;
+  // 	  else               ++cntr;
+  //    }
+  //  }
+  //  break;
   case NO_FILTER:
     cit = resp_map.begin();
     std::advance(cit, index);

@@ -391,17 +391,21 @@ inline void SharedOrthogPolyApproxData::update_active_iterators()
   approxOrdIter  = approxOrder.find(activeKey);
   multiIndexIter =  multiIndex.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (approxOrdIter == approxOrder.end() || multiIndexIter == multiIndex.end())
     active_copy = activeKey.copy();
+  */
 
   if (approxOrdIter == approxOrder.end()) {
-    std::pair<ActiveKey, UShortArray> ua_pair(active_copy, approxOrderSpec);//, UShortArray());
+    std::pair<ActiveKey, UShortArray>
+      ua_pair(activeKey/*active_copy*/, approxOrderSpec);//, UShortArray());
     approxOrdIter = approxOrder.insert(ua_pair).first;
   }
   if (multiIndexIter == multiIndex.end()) {
-    std::pair<ActiveKey, UShort2DArray> u2a_pair(active_copy, UShort2DArray());
+    std::pair<ActiveKey, UShort2DArray>
+      u2a_pair(activeKey/*active_copy*/, UShort2DArray());
     multiIndexIter = multiIndex.insert(u2a_pair).first;
     //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
   }

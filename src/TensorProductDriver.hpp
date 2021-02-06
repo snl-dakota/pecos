@@ -271,33 +271,40 @@ inline void TensorProductDriver::update_active_iterators()
   t1WtIter      = type1WeightSets.find(activeKey);
   t2WtIter      = type2WeightSets.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (levelIndIter == levelIndex.end()  || collocKeyIter == collocKey.end() ||
       varSetsIter == variableSets.end() || t1WtIter == type1WeightSets.end() ||
       t2WtIter == type2WeightSets.end())
     active_copy = activeKey.copy();
+  */
 
   if (levelIndIter == levelIndex.end()) {
-    std::pair<ActiveKey, UShortArray> ua_pair(active_copy, UShortArray());
+    std::pair<ActiveKey, UShortArray>
+      ua_pair(activeKey/*active_copy*/, UShortArray());
     levelIndIter = levelIndex.insert(ua_pair).first;
   }
   level_to_order(); // empty for new levelIndex
 
   if (collocKeyIter == collocKey.end()) {
-    std::pair<ActiveKey, UShort2DArray> u2a_pair(active_copy, UShort2DArray());
+    std::pair<ActiveKey, UShort2DArray>
+      u2a_pair(activeKey/*active_copy*/, UShort2DArray());
     collocKeyIter = collocKey.insert(u2a_pair).first;
   }
   if (varSetsIter == variableSets.end()) {
-    std::pair<ActiveKey, RealMatrix> rm_pair(active_copy, RealMatrix());
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
     varSetsIter = variableSets.insert(rm_pair).first;
   }
   if (t1WtIter == type1WeightSets.end()) {
-    std::pair<ActiveKey, RealVector> rv_pair(active_copy, RealVector());
+    std::pair<ActiveKey, RealVector>
+      rv_pair(activeKey/*active_copy*/, RealVector());
     t1WtIter = type1WeightSets.insert(rv_pair).first;
   }
   if (t2WtIter == type2WeightSets.end()) {
-    std::pair<ActiveKey, RealMatrix> rm_pair(active_copy, RealMatrix());
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
     t2WtIter = type2WeightSets.insert(rm_pair).first;
   }
 }

@@ -423,8 +423,9 @@ inline void CombinedSparseGridDriver::update_active_iterators()
   t1WtIter       = type1WeightSets.find(activeKey);
   t2WtIter       = type2WeightSets.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (smolMIIter     == smolyakMultiIndex.end()  ||
       smolCoeffsIter == smolyakCoeffs.end()      ||
       collocKeyIter  == collocKey.end()          ||
@@ -434,37 +435,46 @@ inline void CombinedSparseGridDriver::update_active_iterators()
       t1WtIter       == type1WeightSets.end()    ||
       t2WtIter       == type2WeightSets.end())
     active_copy = activeKey.copy();
+  */
 
   if (smolMIIter == smolyakMultiIndex.end()) {
-    std::pair<ActiveKey, UShort2DArray> u2a_pair(active_copy, UShort2DArray());
+    std::pair<ActiveKey, UShort2DArray>
+      u2a_pair(activeKey/*active_copy*/, UShort2DArray());
     smolMIIter = smolyakMultiIndex.insert(u2a_pair).first;
   }
   if (smolCoeffsIter == smolyakCoeffs.end()) {
-    std::pair<ActiveKey, IntArray> ia_pair(active_copy, IntArray());
+    std::pair<ActiveKey, IntArray>
+      ia_pair(activeKey/*active_copy*/, IntArray());
     smolCoeffsIter = smolyakCoeffs.insert(ia_pair).first;
   }
   if (collocKeyIter == collocKey.end()) {
-    std::pair<ActiveKey, UShort3DArray> u3a_pair(active_copy, UShort3DArray());
+    std::pair<ActiveKey, UShort3DArray>
+      u3a_pair(activeKey/*active_copy*/, UShort3DArray());
     collocKeyIter = collocKey.insert(u3a_pair).first;
   }
   if (collocIndIter == collocIndices.end()) {
-    std::pair<ActiveKey, Sizet2DArray> s2a_pair(active_copy, Sizet2DArray());
+    std::pair<ActiveKey, Sizet2DArray>
+      s2a_pair(activeKey/*active_copy*/, Sizet2DArray());
     collocIndIter = collocIndices.insert(s2a_pair).first;
   }
   if (uniqIndMapIter == uniqueIndexMapping.end()) {
-    std::pair<ActiveKey, IntArray> ua_pair(active_copy, IntArray());
+    std::pair<ActiveKey, IntArray>
+      ua_pair(activeKey/*active_copy*/, IntArray());
     uniqIndMapIter = uniqueIndexMapping.insert(ua_pair).first;
   }
   if (varSetsIter == variableSets.end()) {
-    std::pair<ActiveKey, RealMatrix> rm_pair(active_copy, RealMatrix());
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
     varSetsIter = variableSets.insert(rm_pair).first;
   }
   if (t1WtIter == type1WeightSets.end()) {
-    std::pair<ActiveKey, RealVector> rv_pair(active_copy, RealVector());
+    std::pair<ActiveKey, RealVector>
+      rv_pair(activeKey/*active_copy*/, RealVector());
     t1WtIter = type1WeightSets.insert(rv_pair).first;
   }
   if (t2WtIter == type2WeightSets.end()) {
-    std::pair<ActiveKey, RealMatrix> rm_pair(active_copy, RealMatrix());
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
     t2WtIter = type2WeightSets.insert(rm_pair).first;
   }
 

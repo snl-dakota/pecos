@@ -425,7 +425,9 @@ inline void SharedInterpPolyApproxData::update_active_iterators()
 {
   std::map<ActiveKey, bool>::iterator it = pushAvail.find(activeKey);
   if (it == pushAvail.end()) {
-    std::pair<ActiveKey, bool> b_pair(activeKey.copy(), false);
+    // So long as we only create new keys and avoid modifying existing ones,
+    // this deep copy is not needed.
+    std::pair<ActiveKey, bool> b_pair(activeKey/*.copy()*/, false);
     pushAvail.insert(b_pair);
   }
 }

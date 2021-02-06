@@ -317,7 +317,9 @@ SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
   refineControl(refine_control)//, refineType(NO_REFINEMENT)
 {
   // ssgLevIter init needs to account for incoming ssg_level
-  std::pair<ActiveKey, unsigned short> us_pair(activeKey.copy(), ssg_level);
+  // So long as we only create new keys and avoid modifying existing ones,
+  // this deep copy is not needed.
+  std::pair<ActiveKey, unsigned short> us_pair(activeKey/*.copy()*/, ssg_level);
   ssgLevIter = ssgLevel.insert(us_pair).first;
   // now update the rest using default assignments
   SparseGridDriver::update_active_iterators();
@@ -353,27 +355,31 @@ inline void SparseGridDriver::update_active_iterators()
   anisoWtsIter = anisoLevelWts.find(activeKey);
   //axisLBndsIter = axisLowerBounds.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (ssgLevIter == ssgLevel.end() || numPtsIter == numCollocPts.end() ||
       anisoWtsIter == anisoLevelWts.end())
     active_copy = activeKey.copy();
+  */
 
   if (ssgLevIter == ssgLevel.end()) {
-    std::pair<ActiveKey, unsigned short> us_pair(active_copy, 0);
+    std::pair<ActiveKey, unsigned short> us_pair(activeKey/*active_copy*/, 0);
     ssgLevIter = ssgLevel.insert(us_pair).first;
   }
   if (numPtsIter == numCollocPts.end()) {
     // use special value for grid_size() (instead of 1 pt for ssgLev 0)
-    std::pair<ActiveKey, int> ui_pair(active_copy, 0);
+    std::pair<ActiveKey, int> ui_pair(activeKey/*active_copy*/, 0);
     numPtsIter = numCollocPts.insert(ui_pair).first;
   }
   if (anisoWtsIter == anisoLevelWts.end()) {
-    std::pair<ActiveKey, RealVector> urv_pair(active_copy, RealVector());
+    std::pair<ActiveKey, RealVector>
+      urv_pair(activeKey/*active_copy*/, RealVector());
     anisoWtsIter = anisoLevelWts.insert(urv_pair).first;
   }
   //if (axisLBndsIter == axisLowerBounds.end()) {
-  //  std::pair<ActiveKey, RealVector> urv_pair(active_copy, RealVector());
+  //  std::pair<ActiveKey, RealVector>
+  //    urv_pair(activeKey/*active_copy*/, RealVector());
   //  axisLBndsIter = axisLowerBounds.insert(urv_pair).first;
   //}
 }

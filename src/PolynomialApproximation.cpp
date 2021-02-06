@@ -102,7 +102,7 @@ generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
   // (surpluses) at the high-fidelity points
   ActiveKey hf_key, lf_hat_key; // LF-hat in surplus case
   active_key.extract_keys(hf_key, lf_hat_key);
-  ActiveKey lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0);
+  ActiveKey lf0_key = surr_data.filtered_key(RAW_DATA_FILTER, 0); // *** TO DO: fragile?
 
   // initialize surr_data[lf_hat_key]
   surr_data.active_key(lf_hat_key); // active key restored at fn end
@@ -111,14 +111,14 @@ generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
   surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
 
   const SDRArray& hf_sdr_array = surr_data.response_data(hf_key);
-  surr_data.size_active_sdr(hf_sdr_array); // size lf_hat_sdr_array
+  surr_data.size_active_sdr(hf_sdr_array); // size lf_hat_sdr_array *** TO DO: works with new resize() of empty SDV/SDR?
   const SDVArray&  sdv_array = surr_data.variables_data();
   SDRArray& lf_hat_sdr_array = surr_data.response_data();
 
   // extract all discrepancy data sets (which have expansions supporting
   // stored_{value,gradient} evaluations)
   const std::map<ActiveKey, SDRArray>& discrep_resp_map
-    = surr_data.filtered_response_data_map(RECURSIVE_REDUCTION_FILTER);
+    = surr_data.filtered_response_data_map(REDUCTION_FILTER);
   std::map<ActiveKey, SDRArray>::const_iterator cit;
   size_t i, num_pts = hf_sdr_array.size();
   switch (combine_type) {

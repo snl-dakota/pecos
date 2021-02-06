@@ -574,15 +574,15 @@ private:
   //
 
   /// assign activeKeyDataArray using shallow/deep/default copy
-  void assign(const std::vector<ActiveKeyData>& data_vec, short copy_mode);
+  void data(const std::vector<ActiveKeyData>& data_vec, short copy_mode);
   /// assign activeKeyDataArray using shallow/deep/default copy
-  void assign(const ActiveKeyData& data, short copy_mode);
+  void data(const ActiveKeyData& data, short copy_mode);
 
   //
   //- Heading: Private data members
   //
 
-  // Currently Dakota,Pecos use two types of key aggregations:
+  // Previously Dakota,Pecos used two types of UShortArray key aggregations:
   // 1. concatenation: a single UShortArray activeKey like 40302, identifying
   //    data group 4 for a discrepancy comprised of HF model 0 + resolution 3
   //    and LF model 0 + resolution 2
@@ -591,49 +591,40 @@ private:
   //    includes raw HF, raw LF, and processed (distinct,recursive discrepancy)
   //    records.  In SharedApproxData::active_model_key(), our 40302 key is
   //    unrolled into keys for 3 datasets: HF = 403, LF = 402, discrep = 40302.
+  //    > Note: 3rd key only exists as combination of keys 1,2 and adds no new
+  //      info (and it cannot be defined as a single state corresponding to an
+  //      ActiveKeyData instance). Therefore target 1st case above w/ ActiveKey,
+  //      and support 2nd case through enumeration ops on this aggregation.
   //
-  // Key question is how to redesign this...
-  // > ActiveKeyDataArray --> ActiveKeyData2DArray ???   Hopefully not.
-  // > Note: 3rd key only exists as combination of keys 1,2 and adds no new
-  //   info (and it cannot be defined as a single state corresponding to an
-  //   ActiveKeyData instance).  Therefore target 1st case above with ActiveKey,
-  //   and support 2nd case through enumeration ops on this aggregation.
-  //   >> need a way to mark discrepancy data in the combined SurrogateData
-  //      database.  Consider subsetting the DB into map<ActiveKeyData, ...> raw
-  //      data and map<ActiveKey, ...> derived data --> could eliminate some
-  //      current dataset filtering but disallows plug-and-play of raw/filtered.
-  //      Detail: ActiveKeyData does not currently contain a group id.
-  //      --> could push this down (exclusively) and generalize aggregation
-  //          to allow cross group combination
-  //      --> or go the other way and use map<ActiveKey, ...> exclusively
-  //          where raw data uses an ActiveKey with only the set id and a
-  //          single ActiveKeyData (*** seems preferable to start ***)
+  // Need a way to mark discrepancy data in the combined SurrogateData database.
+  // Consider subsetting the DB into map<ActiveKeyData, ...> raw data and
+  // map<ActiveKey, ...> derived data --> could eliminate some current dataset
+  // filtering but disallows plug-and-play of raw/filtered.
+  // Detail: ActiveKeyData does not currently contain a group id.
+  // --> could push this down (exclusively) and generalize aggregation to allow
+  //     cross-group combination
+  // --> or go the other way and use map<ActiveKey, ...> exclusively where raw
+  //     data uses an ActiveKey with only the set id and a single ActiveKeyData
+  //     (*** seems preferable to start ***)
 
+  /// group identifier for a data set, allowing appearance of the same
+  /// ActiveKeyData's within multiple groupings
   unsigned short dataSetId;
 
-  // NO_AGGREGATION = 0 (raw only), AGGREGATION_AUGMENTS (enumerate raw + agg),
-  // AGGREGATION_REPLACES (no raw, agg only)
-  //unsigned short aggregationMode;
-  // RAW, DISTINCT_DISCREPANCY, RECURSIVE_DISCREPANCY, ...;
-  // retire some special case logic (USHRT_MAX for no model, no resolution)
-  //unsigned short aggregationType;
-  // SHOULD BE ABLE TO COMBINE / CONDENSE THESE...
-
   /// indicates type of data reduction, if present, that augments raw data:
-  /// > NO_REDUCTION: new data is NOT generated from an aggregation, which may
-  ///   or may not be present --> one or more embedded KeyDatas correspond to
+  /// > NO_REDUCTION: new data is NOT generated from an aggregation (which may
+  ///   or may not be present) --> one or more embedded KeyDatas correspond to
   ///   unique data sets, but ActiveKey's array only serves to group them by id
-  /// > DISTINCT_DISCREPANCY: new data is generated from a difference of
-  ///   model-based data --> both embedded keys and original aggregate key
-  ///   manage unique data sets
-  /// > RECURSIVE_DISCREPANCY: new data is generated from a difference of
-  ///   model-based and surrogate-based (synthetic) data --> both embedded keys
-  ///   and original aggregate key manage unique data sets
+  /// > SINGLE_REDUCTION: new data is generated from a reduction of the data
+  ///   sets corresponding to the embedded keys --> each embedded key and the
+  ///   original aggregate key manage one unique data set each
   /// > Note: if a reduction replaces the raw data (e.g., Dakota responseMode
   ///   of MODEL_DISCREPANCY instead of AGGREGATED_MODELS), then Pecos will
   ///   view this as raw data with no additional reduction.
   unsigned short reductionType;
 
+  /// array of ActiveKeyData instances, whether one (singleton Key) or several
+  /// (key aggregation)
   std::vector<ActiveKeyData> activeKeyDataArray;
 
   // Don't need this since the idea is that the ActiveKeyData instances do not
@@ -658,14 +649,14 @@ inline ActiveKeyRep::
 ActiveKeyRep(unsigned short set_id, unsigned short r_type,
 	     const std::vector<ActiveKeyData>& key_data_vec, short copy_mode):
   dataSetId(set_id), reductionType(r_type)
-{ assign(key_data_vec, copy_mode); }
+{ data(key_data_vec, copy_mode); }
 
 
 inline ActiveKeyRep::
 ActiveKeyRep(unsigned short set_id, unsigned short r_type,
 	     const ActiveKeyData& key_data, short copy_mode):
   dataSetId(set_id), reductionType(r_type)
-{ assign(key_data, copy_mode); }
+{ data(key_data, copy_mode); }
 
 
 inline ActiveKeyRep::~ActiveKeyRep()
@@ -673,7 +664,7 @@ inline ActiveKeyRep::~ActiveKeyRep()
 
 
 inline void ActiveKeyRep::
-assign(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
+data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
 {
   if (copy_mode == DEEP_COPY) { // enforce deep copy for each activeKeyData
     size_t i, num_data = key_data_vec.size();
@@ -686,7 +677,7 @@ assign(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
 }
 
 
-inline void ActiveKeyRep::assign(const ActiveKeyData& key_data, short copy_mode)
+inline void ActiveKeyRep::data(const ActiveKeyData& key_data, short copy_mode)
 {
   activeKeyDataArray.clear();
   if (copy_mode == DEEP_COPY) activeKeyDataArray.push_back(key_data.copy());
@@ -710,7 +701,9 @@ public:
   /// default ctor
   ActiveKey();
   /// minimal handle + body ctor
-  ActiveKey(unsigned short id, unsigned short type);
+  ActiveKey(unsigned short id, unsigned short type,
+	    unsigned short form = USHRT_MAX,
+	    size_t lev = std::numeric_limits<size_t>::max());
   /// constructor for aggregated key data
   ActiveKey(unsigned short id, unsigned short type,
 	    const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
@@ -740,14 +733,8 @@ public:
 
   /// get dataSetId
   unsigned short id() const;
-  /// set dataSetId
-  void id(unsigned short set_id);
-
   /// get reductionType
   unsigned short type() const;
-  /// set reductionType
-  void type(unsigned short r_type);
-
   /// get activeKeyDataArray.size()
   size_t data_size() const;
 
@@ -757,25 +744,8 @@ public:
   const ActiveKeyData& data(size_t i) const;
   /// get activeKeyDataArray[i]
   ActiveKeyData& data(size_t i);
-  /// set activeKeyDataArray
-  void data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
-  /// set activeKeyDataArray
-  void data(const ActiveKeyData& key_data, short copy_mode);
 
-  /// assign data to ActiveKey
-  void assign(unsigned short set_id, unsigned short r_type,
-	      const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
-  /// assign data to ActiveKey
-  void assign(unsigned short set_id, unsigned short r_type,
-	      const ActiveKeyData& key_data, short copy_mode);
-
-  /// assign data to ActiveKey
-  void append(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
-  /// assign data to ActiveKey
-  void append(const ActiveKeyData& key_data, short copy_mode);
-  /// clear activeKeyDataArray
-  void clear_data();
-  /// clear activeKeyDataArray and reset dataSetId and reductionType
+  /// clear Rep and reinitialize
   void clear();
 
   /// return deep copy of ActiveKey instance
@@ -798,19 +768,28 @@ public:
   /// resolution or fidelity within a model sequence
   bool decrement_key(short seq_type, size_t seq_index = 0);
 
-  /// aggregate two model keys to indicate a data combination
-  /// (e.g., a discrepancy)
-  void aggregate_keys(const ActiveKey& key1, const ActiveKey& key2);
-  /// aggregate a vector of keys to indicate a data combination
-  /// (e.g., a model ensemble)
-  void aggregate_keys(const std::vector<ActiveKey>& keys);
+  /// append two model keys to create a data combination (e.g., a discrepancy)
+  void aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
+		      unsigned short reduction = NO_REDUCTION);
+  /// append a vector of keys to create a data combination (e.g., a
+  /// model ensemble)
+  void aggregate_keys(const std::vector<ActiveKey>& keys,
+		      unsigned short reduction = NO_REDUCTION);
+  /// append a single model key plus a vector of keys to create a data
+  /// combination (e.g., a truth model and a set of approximations)
+  void aggregate_keys(const ActiveKey& key1,
+		      const std::vector<ActiveKey>& keys,
+		      unsigned short reduction = NO_REDUCTION);
 
+  /// extract a particular constituent key from an aggregated key
+  void extract_key(size_t k_index, ActiveKey& key) const;
   /// extract two constituent keys from an aggregated key
   void extract_keys(ActiveKey& key1, ActiveKey& key2) const;
-  /// extract one or more constituent keys from an aggregated key
+  /// extract an array of constituent keys from an aggregated key
   void extract_keys(std::vector<ActiveKey>& keys) const;
-  /// extract a particular constituent key from an aggregated key
-  ActiveKey extract_key(size_t k_index) const;
+  /// extract a first constituent key plus an array of constituent keys
+  /// from an aggregated key
+  void extract_keys(ActiveKey& key1, std::vector<ActiveKey>& keys) const;
 
   /// return the model form index
   unsigned short retrieve_model_form(size_t d_index = 0,
@@ -833,13 +812,8 @@ public:
   /// test whether this key manages a reduction of data from multiple
   /// embedded keys
   bool reduction() const;
-  /// test whether this key manages a reduction of data from multiple embedded
-  /// keys, where one or more of these keys manage synthetic data (e.g., from
-  /// an interpolant using a previous level's model-based data)
-  bool recursive_reduction() const;
-  /// test whether this key manages a reduction of data from multiple embedded
-  /// keys, where all keys manage model-based data
-  bool distinct_reduction() const;
+  //bool single_reduction() const;
+  //bool multiple_reduction() const;
 
 private:
 
@@ -847,6 +821,36 @@ private:
   //- Heading: Member functions
   //
 
+  // restrict key modifications after initial construction, allowing broader
+  // use of shallow copies / shared Reps:
+
+  /// set dataSetId
+  void id(unsigned short set_id);
+  /// set reductionType
+  void type(unsigned short r_type);
+
+  /// set activeKeyDataArray
+  void data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
+  /// set activeKeyDataArray
+  void data(const ActiveKeyData& key_data, short copy_mode);
+
+  /// assign data to ActiveKey
+  void assign(unsigned short set_id, unsigned short r_type,
+	      const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
+  /// assign data to ActiveKey
+  void assign(unsigned short set_id, unsigned short r_type,
+	      const ActiveKeyData& key_data, short copy_mode);
+
+  /// assign data to ActiveKey
+  void append(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
+  /// assign data to ActiveKey
+  void append(const ActiveKeyData& key_data, short copy_mode);
+
+  /// clear activeKeyDataArray
+  void clear_data();
+
+  /// append a model key to create a data combination (e.g., a discrepancy)
+  void aggregate_key(const ActiveKey& key);
 
   //
   //- Heading: Private data members
@@ -862,9 +866,17 @@ inline ActiveKey::ActiveKey():
 { }
 
 
-inline ActiveKey::ActiveKey(unsigned short set_id, unsigned short r_type):
+inline ActiveKey::
+ActiveKey(unsigned short set_id, unsigned short r_type,
+	  unsigned short form,   size_t lev):
   keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type))
-{ }
+{
+  size_t SZ_MAX = std::numeric_limits<size_t>::max();   
+  if (form != USHRT_MAX || lev != SZ_MAX)
+    keyRep->activeKeyDataArray.push_back(ActiveKeyData());
+  if (form != USHRT_MAX)  assign_model_form(form);
+  if (lev  != SZ_MAX)     assign_resolution_level(lev);
+}
 
 
 inline ActiveKey::
@@ -969,11 +981,11 @@ inline ActiveKeyData& ActiveKey::data(size_t i)
 
 inline void ActiveKey::
 data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode)
-{ keyRep->assign(key_data_vec, copy_mode); }
+{ keyRep->data(key_data_vec, copy_mode); }
 
 
 inline void ActiveKey::data(const ActiveKeyData& key_data, short copy_mode)
-{ keyRep->assign(key_data, copy_mode); }
+{ keyRep->data(key_data, copy_mode); }
 
 
 inline void ActiveKey::
@@ -1030,7 +1042,7 @@ inline void ActiveKey::clear()
 
   // This approach unbinds from the current shared keyRep (decrement ref count,
   // delete if 0) and replaces with fresh alloc, restoring to the default ctor
-  // state.  This only impacts the activeKey instance from the calling context;
+  // state.  This only impacts the ActiveKey instance from the calling context;
   // other contexts are unaffected.
   keyRep.reset(new ActiveKeyRep()); // make_shared<> not used for this
 }
@@ -1154,6 +1166,12 @@ retrieve_model_form(size_t d_index, size_t m_index) const
 inline void ActiveKey::
 assign_model_form(unsigned short form, size_t d_index, size_t m_index)
 {
+  if (keyRep.use_count() > 1) {
+    PCerr << "Error: keyRep count protection violated in ActiveKey::"
+	  << "assign_model_form()" << std::endl;
+    abort_handler(-1);
+  }
+    
   size_t d_size = data_size();
   if (d_index < d_size)
     data(d_index).model_index(form, m_index); // 1D indexing w/ push_back
@@ -1184,6 +1202,12 @@ retrieve_resolution_level(size_t d_index, size_t hp_index) const
 inline void ActiveKey::
 assign_resolution_level(size_t lev, size_t d_index, size_t hp_index)
 {
+  if (keyRep.use_count() > 1) {
+    PCerr << "Error: keyRep count protection violated in ActiveKey::"
+	  << "assign_resolution_level()" << std::endl;
+    abort_handler(-1);
+  }
+    
   size_t d_size = data_size();
   if (d_index < d_size)
     data(d_index).discrete_set_index(lev, hp_index); // discrete set for now
@@ -1218,127 +1242,118 @@ inline bool ActiveKey::reduction() const
 { return (keyRep->reductionType != NO_REDUCTION); } //&& aggregated()
 
 
-inline bool ActiveKey::recursive_reduction() const
-{ return (keyRep->reductionType == RECURSIVE_DISCREPANCY); } //&& aggregated()
+//inline bool ActiveKey::single_reduction() const
+//{ return (keyRep->reductionType == SINGLE_REDUCTION); } //&& aggregated()
 
 
-inline bool ActiveKey::distinct_reduction() const
-{ return (keyRep->reductionType == DISTINCT_DISCREPANCY); } //&& aggregated()
+//inline bool ActiveKey::multiple_reduction() const
+//{ return (keyRep->reductionType == MULTIPLE_REDUCTION); } //&& aggregated()
 
 
-inline void ActiveKey::
-aggregate_keys(const ActiveKey& key1, const ActiveKey& key2)
+inline void ActiveKey::aggregate_key(const ActiveKey& key)
 {
+  if (key.is_null()) return;
+
   // extract and verify consistency in id number
-  unsigned short key_id = USHRT_MAX;
-  bool empty1 = key1.is_null(), empty2 = key2.is_null();
-  if (!empty1 && !empty2) {
-    key_id = key1.id();
-    if (key_id != key2.id()) {
+  unsigned short curr_key_id = id(), new_key_id = key.id();
+  if (curr_key_id != new_key_id) {
+    if (curr_key_id == USHRT_MAX) // undefined --> define it with new
+      id(new_key_id);
+    else { // mismatch in defined ids
       PCerr << "Error: mismatch in group ids in ActiveKey::aggregate_keys()"
 	    << std::endl;
       abort_handler(-1);
     }
   }
-  else if (!empty1) key_id = key1.id();
-  else if (!empty2) key_id = key2.id();
-  else {
-    PCerr << "Error: neither key defined in ActiveKey::aggregate_keys"
-	  << "(key1, key2)" << std::endl;
-    abort_handler(-1);    
-  }
 
-  if (!keyRep) keyRep = std::make_shared<ActiveKeyRep>(); // create rep
-  id(key_id);
-  // Note: aggregated() check will be correct but must rely on calling context
-  //       to assign a reduction type
-  //type(...);
-  clear_data();
-  if (!empty1) append(key1.data(), SHALLOW_COPY);
-  if (!empty2) append(key2.data(), SHALLOW_COPY);
+  //if (!keyRep) keyRep = std::make_shared<ActiveKeyRep>(); // create rep
+  //type(...);    // aggregated key may use reduction
+  //clear_data(); // caling context clears
+  append(key.data(), SHALLOW_COPY);
 }
 
 
 inline void ActiveKey::
-aggregate_keys(const std::vector<ActiveKey>& keys)
+aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
+	       unsigned short reduction)
 {
-  if (keys.empty() && !is_null()) // leave rep defined
-    { clear(); return; }
+  clear(); // disconnect rep before update, id->USHRT_MAX, type->NO_REDUCTION
+  aggregate_key(key1);
+  aggregate_key(key2);
+  type(reduction);
+}
 
-  // extract and verify consistency in group number
+
+inline void ActiveKey::
+aggregate_keys(const std::vector<ActiveKey>& keys, unsigned short reduction)
+{
+  clear(); // disconnect rep before update, id->USHRT_MAX, type->NO_REDUCTION
   size_t k, num_k = keys.size();
-  unsigned short key_id = keys[0].id();
-  for (k=1; k<num_k; ++k)
-    if (key_id != keys[k].id()) {
-      PCerr << "Error: mismatch in group ids in ActiveKey::aggregate_keys()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-
-  // form aggregate of group + HF form/lev + LF form/lev
-  if (!keyRep) keyRep = std::make_shared<ActiveKeyRep>(); // create rep
-  id(key_id);
-  // Note: aggregated() check will be correct but must rely on calling context
-  //       to assign a reduction type
-  //type(...);
-  clear_data();
   for (k=0; k<num_k; ++k)
-    append(keys[k].data(), SHALLOW_COPY);
+    aggregate_key(keys[k]);
+  type(reduction);
 }
 
 
 inline void ActiveKey::
-extract_keys(ActiveKey& key1, ActiveKey& key2) const
+aggregate_keys(const ActiveKey& key1, const std::vector<ActiveKey>& keys,
+	       unsigned short reduction)
 {
-  const std::vector<ActiveKeyData>& key_data = data();
-  size_t data_size = key_data.size();
-  if (data_size < 1 || data_size > 2) { // allow 1 or 2 key data instances
-    PCerr << "Error: wrong key data size (" << data_size
-	  << ") in ActiveKey::extract_keys(key1, key2)" << std::endl;
+  clear(); // disconnect rep before update, id->USHRT_MAX, type->NO_REDUCTION
+  aggregate_key(key1);
+  size_t k, num_k = keys.size();
+  for (k=0; k<num_k; ++k)
+    aggregate_key(keys[k]);
+  type(reduction);
+}
+
+
+inline void ActiveKey::extract_key(size_t k_index, ActiveKey& key) const
+{
+  key.clear(); // disconnect rep and re-init
+  if (k_index == _NPOS) return;
+  if (k_index >= data_size()) {
+    PCerr << "Error: index " << k_index << " out of range in ActiveKey::"
+	  << "extract_key(index) for key size " << data_size() << std::endl;
     abort_handler(-1);
   }
+  key.assign(id(), NO_REDUCTION, data(k_index), SHALLOW_COPY);
+}
 
-  unsigned short key_id = id();
-  key1 = (data_size == 1) ? *this :
-    ActiveKey(key_id, NO_REDUCTION, key_data[0], SHALLOW_COPY);
-  if (data_size > 1)
-    key2 = ActiveKey(key_id, NO_REDUCTION, key_data[1], SHALLOW_COPY);
-  else
-    key2.clear();
+
+inline void ActiveKey::extract_keys(ActiveKey& key1, ActiveKey& key2) const
+{
+  size_t num_k = data_size();
+  if (num_k)     extract_key(0, key1);
+  else           key1.clear();
+  if (num_k > 1) extract_key(1, key2);
+  else           key2.clear();
 }
 
 
 inline void ActiveKey::extract_keys(std::vector<ActiveKey>& embedded_keys) const
 {
-  const std::vector<ActiveKeyData>& key_data = data();
-  size_t k, data_size = key_data.size();
-  embedded_keys.resize(data_size);
-  if (data_size > 1) { // not a singleton key
-    // create new singleton keys from embedded key data
-    unsigned short key_id = id();
-    for (k=0; k<data_size; ++k)
-      embedded_keys[k]
-	= ActiveKey(key_id, NO_REDUCTION, key_data[k], SHALLOW_COPY);
-  }
-  else if (data_size == 1)
-    embedded_keys[0] = *this;
+  size_t k, num_k = data_size();
+  embedded_keys.resize(num_k);
+  for (k=0; k<num_k; ++k)
+    extract_key(k, embedded_keys[k]);
 }
 
 
-inline ActiveKey ActiveKey::extract_key(size_t k_index) const
+inline void ActiveKey::
+extract_keys(ActiveKey& key1, std::vector<ActiveKey>& extra_keys) const
 {
-  size_t k_size = data_size();
-  if (k_index == _NPOS) // special value bypasses indexed extraction
-    return *this;
-  else if (k_index < k_size)
-    return (k_size == 1) ? *this : // no extraction, already a single key
-      ActiveKey(id(), NO_REDUCTION, data(k_index), SHALLOW_COPY);//create single
-  else {
-    PCerr << "Error: index " << k_index << " out of range in ActiveKey::"
-	  << "extract_key(index)." << std::endl;
-    abort_handler(-1);
-    return ActiveKey();
+  size_t k, num_k = data_size();
+  if (num_k) extract_key(0, key1);
+  else       key1.clear();
+
+  if (num_k > 1) {
+    size_t e, num_e = num_k - 1;
+    extra_keys.resize(num_e);
+    for (e=0, k=1; e<num_e; ++e, ++k)
+      extract_key(k, extra_keys[e]);
   }
+  else extra_keys.clear();
 }
 
 

@@ -336,8 +336,9 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
   isUniq1Iter  = isUnique1.find(activeKey);
   isUniq2Iter  = isUnique2.find(activeKey);
 
-  // share 1 deep copy of current active key
-  ActiveKey active_copy;
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
   if (a1PIter    == a1Points.end()       || a1T1WIter == a1Type1Weights.end() ||
       a1T2WIter  == a1Type2Weights.end() || a2PIter   == a2Points.end()       ||
       a2T1WIter  == a2Type1Weights.end() || a2T2WIter == a2Type2Weights.end() ||
@@ -347,62 +348,69 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
       uniqInd2Iter == uniqueIndex2.end() ||
       isUniq1Iter == isUnique1.end()     || isUniq2Iter  == isUnique2.end())
     active_copy = activeKey.copy();
-  
+  */
+
   if (a1PIter == a1Points.end()) {
-    std::pair<ActiveKey, RealMatrix> ua_pair(active_copy, RealMatrix());
-    a1PIter = a1Points.insert(ua_pair).first;
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a1PIter = a1Points.insert(rm_pair).first;
   }
   if (a1T1WIter == a1Type1Weights.end()) {
-    std::pair<ActiveKey, RealVector> ua_pair(active_copy, RealVector());
-    a1T1WIter = a1Type1Weights.insert(ua_pair).first;
+    std::pair<ActiveKey, RealVector>
+      rv_pair(activeKey/*active_copy*/, RealVector());
+    a1T1WIter = a1Type1Weights.insert(rv_pair).first;
   }
   if (a1T2WIter == a1Type2Weights.end()) {
-    std::pair<ActiveKey, RealMatrix> ua_pair(active_copy, RealMatrix());
-    a1T2WIter = a1Type2Weights.insert(ua_pair).first;
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a1T2WIter = a1Type2Weights.insert(rm_pair).first;
   }
   if (a2PIter == a2Points.end()) {
-    std::pair<ActiveKey, RealMatrix> ua_pair(active_copy, RealMatrix());
-    a2PIter = a2Points.insert(ua_pair).first;
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a2PIter = a2Points.insert(rm_pair).first;
   }
   if (a2T1WIter == a2Type1Weights.end()) {
-    std::pair<ActiveKey, RealVector> ua_pair(active_copy, RealVector());
-    a2T1WIter = a2Type1Weights.insert(ua_pair).first;
+    std::pair<ActiveKey, RealVector>
+      rv_pair(activeKey/*active_copy*/, RealVector());
+    a2T1WIter = a2Type1Weights.insert(rv_pair).first;
   }
   if (a2T2WIter == a2Type2Weights.end()) {
-    std::pair<ActiveKey, RealMatrix> ua_pair(active_copy, RealMatrix());
-    a2T2WIter = a2Type2Weights.insert(ua_pair).first;
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a2T2WIter = a2Type2Weights.insert(rm_pair).first;
   }
   if (numUniq1Iter == numUnique1.end()) {
-    std::pair<ActiveKey, int> ua_pair(active_copy, 0);
-    numUniq1Iter = numUnique1.insert(ua_pair).first;
+    std::pair<ActiveKey, int> i_pair(activeKey/*active_copy*/, 0);
+    numUniq1Iter = numUnique1.insert(i_pair).first;
   }
   if (numUniq2Iter == numUnique2.end()) {
-    std::pair<ActiveKey, int> ua_pair(active_copy, 0);
-    numUniq2Iter = numUnique2.insert(ua_pair).first;
+    std::pair<ActiveKey, int> i_pair(activeKey/*active_copy*/, 0);
+    numUniq2Iter = numUnique2.insert(i_pair).first;
   }
   if (uniqSet1Iter == uniqueSet1.end()) {
-    std::pair<ActiveKey, IntArray> ua_pair(active_copy, IntArray());
-    uniqSet1Iter = uniqueSet1.insert(ua_pair).first;
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqSet1Iter = uniqueSet1.insert(ia_pair).first;
   }
   if (uniqSet2Iter == uniqueSet2.end()) {
-    std::pair<ActiveKey, IntArray> ua_pair(active_copy, IntArray());
-    uniqSet2Iter = uniqueSet2.insert(ua_pair).first;
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqSet2Iter = uniqueSet2.insert(ia_pair).first;
   }
   if (uniqInd1Iter == uniqueIndex1.end()) {
-    std::pair<ActiveKey, IntArray> ua_pair(active_copy, IntArray());
-    uniqInd1Iter = uniqueIndex1.insert(ua_pair).first;
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqInd1Iter = uniqueIndex1.insert(ia_pair).first;
   }
   if (uniqInd2Iter == uniqueIndex2.end()) {
-    std::pair<ActiveKey, IntArray> ua_pair(active_copy, IntArray());
-    uniqInd2Iter = uniqueIndex2.insert(ua_pair).first;
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqInd2Iter = uniqueIndex2.insert(ia_pair).first;
   }
   if (isUniq1Iter == isUnique1.end()) {
-    std::pair<ActiveKey, BitArray> ua_pair(active_copy, BitArray());
-    isUniq1Iter = isUnique1.insert(ua_pair).first;
+    std::pair<ActiveKey, BitArray> ba_pair(activeKey/*active_copy*/,BitArray());
+    isUniq1Iter = isUnique1.insert(ba_pair).first;
   }
   if (isUniq2Iter == isUnique2.end()) {
-    std::pair<ActiveKey, BitArray> ua_pair(active_copy, BitArray());
-    isUniq2Iter = isUnique2.insert(ua_pair).first;
+    std::pair<ActiveKey, BitArray> ba_pair(activeKey/*active_copy*/,BitArray());
+    isUniq2Iter = isUnique2.insert(ba_pair).first;
   }
 
   CombinedSparseGridDriver::update_active_iterators();
