@@ -1331,10 +1331,13 @@ inline void SurrogateData::synchronize_reduction_size()
   std::vector<ActiveKey> embedded_keys;
   key.extract_keys(embedded_keys);
   size_t k, num_k = embedded_keys.size(), num_pts_k,
-    num_pts = std::numeric_limits<size_t>::max();
+    num_pts = 0;//std::numeric_limits<size_t>::max();
   for (k=0; k<num_k; ++k) {
     num_pts_k = points(embedded_keys[k]);
-    if (num_pts_k < num_pts) num_pts = num_pts_k;
+    //if (num_pts_k < num_pts) num_pts = num_pts_k; // min points
+    // Due to use of 2 embedded keys for synthetic surrogate data, which is
+    // not yet defined, we use a max operation over these keys:
+    if (num_pts_k > num_pts) num_pts = num_pts_k; // max points
   }
   if (num_pts != points()) resize(num_pts);
 }
