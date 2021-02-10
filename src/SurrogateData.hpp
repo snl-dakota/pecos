@@ -2945,13 +2945,16 @@ inline void SurrogateData::clear_data(bool initialize)
   sdRep->anchorIndex.clear();
   sdRep->failedRespData.clear();
 
+  // dataIdsIter must be reset in either case below (used at beginning of
+  // update_active_iterators())
+  sdRep->dataIdsIter = sdRep->dataIdentifiers.end();
+
   if (initialize) // preserve activeKey and restore to initialization state
     sdRep->update_active_iterators();
   else {
     sdRep->activeKey.clear();
     sdRep->varsDataIter = sdRep->varsData.end();
     sdRep->respDataIter = sdRep->respData.end();
-    sdRep->dataIdsIter  = sdRep->dataIdentifiers.end();
   }
 }
 
