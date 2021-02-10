@@ -3832,7 +3832,7 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
     surr_data_2.response_data(hf_key);
 
   // Accommodate level 0 --> lf_key is undefined
-  if (lf_key.is_null()) {
+  if (lf_key.empty()) {
     product_interpolant(sdv_array, hf_sdr_array_1, hf_sdr_array_2, sm_mi,
 			colloc_key, colloc_index, prod_t1c, prod_t2c,
 			set_partition);

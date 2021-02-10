@@ -208,8 +208,8 @@ public:
   /// get view of discreteSetHyperParams for updating in place
   SizetVector discrete_set_indices_view();
 
-  /// function to check keyDataRep (does this handle contain a body)
-  bool is_null() const;
+  // function to check keyDataRep (does this handle contain a body)
+  //bool is_null() const;
 
 private:
 
@@ -510,8 +510,8 @@ inline SizetVector ActiveKeyData::discrete_set_indices_view()
 }
 
 
-inline bool ActiveKeyData::is_null() const
-{ return (keyDataRep) ? false : true; }
+//inline bool ActiveKeyData::is_null() const
+//{ return (keyDataRep) ? false : true; }
 
 
 template <typename Stream>
@@ -751,8 +751,10 @@ public:
   /// return deep copy of ActiveKey instance
   ActiveKey copy() const;
 
-  /// function to check keyRep (does this handle contain a body)
-  bool is_null() const;
+  // function to check keyRep (does this handle contain a body)
+  //bool is_null() const;
+  /// function to check for a valid key definition (at least 1 ActiveKeyData)
+  bool empty() const;
 
   /// define a model key including data group, model form, and resolution
   /// level indices
@@ -1056,8 +1058,13 @@ inline ActiveKey ActiveKey::copy() const
 }
 
 
-inline bool ActiveKey::is_null() const
-{ return (keyRep) ? false : true; }
+//inline bool ActiveKey::is_null() const
+//{ return (keyRep) ? false : true; }
+
+
+inline bool ActiveKey::empty() const
+{ return (data_size() == 0); }
+//&& dataSetId == USHRT_MAX && reductionType == NO_REDUCTION (init state)
 
 
 inline void ActiveKey::
@@ -1252,7 +1259,7 @@ inline bool ActiveKey::reduction() const
 
 inline void ActiveKey::aggregate_key(const ActiveKey& key)
 {
-  if (key.is_null()) return;
+  if (key.empty()) return;
 
   // extract and verify consistency in id number
   unsigned short curr_key_id = id(), new_key_id = key.id();
