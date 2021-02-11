@@ -758,13 +758,12 @@ public:
 
   /// define a model key including data group, model form, and resolution
   /// level indices
-  void form_key(unsigned short group, unsigned short form,
-		unsigned short lev);
+  void form_key(unsigned short group, unsigned short form, size_t lev);
   /// define an aggregate model key including data group and two sets of
   /// model form and resolution level indices
-  void form_key(unsigned short group, unsigned short form1,
-		unsigned short lev1,  unsigned short form2,
-		unsigned short lev2,  unsigned short reduction = NO_REDUCTION);
+  void form_key(unsigned short group, unsigned short form1, size_t lev1,
+		unsigned short form2, size_t lev2,
+		unsigned short reduction = NO_REDUCTION);
 
   /// decrement an incoming model key to correspond to the next lower
   /// resolution or fidelity within a model sequence
@@ -1068,7 +1067,7 @@ inline bool ActiveKey::empty() const
 
 
 inline void ActiveKey::
-form_key(unsigned short group, unsigned short form, unsigned short lev)
+form_key(unsigned short group, unsigned short form, size_t lev)
 {
   // create new ActiveKeyData and singleton ActiveKey
   ActiveKeyData key_data;
@@ -1082,10 +1081,8 @@ form_key(unsigned short group, unsigned short form, unsigned short lev)
 
 
 inline void ActiveKey::
-form_key(unsigned short group,
-	 unsigned short form1, unsigned short lev1,
-	 unsigned short form2, unsigned short lev2,
-	 unsigned short reduction)
+form_key(unsigned short group, unsigned short form1, size_t lev1,
+	 unsigned short form2, size_t lev2, unsigned short reduction)
 {
   // create two new ActiveKeyData and aggregate ActiveKey
   std::vector<ActiveKeyData> kd_array(2);
@@ -1129,36 +1126,6 @@ inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
   }
   }
 }
-
-
-/*
-inline bool ActiveKey::decrement_key(UShortArray& key)
-{
-  // decrement the active index, if present, to create a key within the same
-  // group id but with the next lower resolution in the sequence
-
-  if (key.size() != 3) { // don't allow aggregated keys
-    PCerr << "Error: wrong size for {group,form,lev} format in Discrepancy"
-	  << "Calculator::decrement_key()" << std::endl;
-    abort_handler(-1);
-  }
-
-  // Logic is fragile in that it fails if a fixed model index (index that is
-  // not part of the sequence) is assigned a value other than 0 or USHRT_MAX
-  // > precedence given to lev for this reason, as form is more likely to have
-  //   a non-zero/inf fixed value (see NonDExpansion::configure_sequence())
-  // > more robust approach would be to pass in a multilev boolean
-  unsigned short &form = key[1], &lev = key[2];
-  if      (lev  && lev  != USHRT_MAX)
-    { --lev;  return true; }
-  else if (form && form != USHRT_MAX)
-    { --form; return true; }
-  //else no op (already at coarsest resolution / lowest fidelity)
-  return false;
-
-  // Old logic for {form} | {form,lev} format was simply --key.back();
-}
-*/
 
 
 inline unsigned short ActiveKey::
