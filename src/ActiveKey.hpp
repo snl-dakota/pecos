@@ -755,6 +755,8 @@ public:
   //bool is_null() const;
   /// function to check for a valid key definition (at least 1 ActiveKeyData)
   bool empty() const;
+  /// check use_count() for a keyRep that is shared among multiple keys
+  bool shared() const;
 
   /// define a model key including data group, model form, and resolution
   /// level indices
@@ -1062,8 +1064,16 @@ inline ActiveKey ActiveKey::copy() const
 
 
 inline bool ActiveKey::empty() const
-{ return (data_size() == 0); }
-//&& dataSetId == USHRT_MAX && reductionType == NO_REDUCTION (init state)
+{
+  // uninitialized
+  return ( keyRep->activeKeyDataArray.empty() &&
+	   keyRep->dataSetId     == USHRT_MAX &&
+	   keyRep->reductionType == NO_REDUCTION );
+}
+
+
+inline bool ActiveKey::shared() const
+{ return (keyRep.use_count() > 1); }
 
 
 inline void ActiveKey::
@@ -1074,6 +1084,7 @@ form_key(unsigned short group, unsigned short form, size_t lev)
   key_data.model_index(form, 0);       // appends to empty array
   key_data.discrete_set_index(lev, 0); // appends to empty array
 
+  if (shared()) clear(); // don't overwrite existing key that could be shared
   assign(group, NO_REDUCTION, key_data, SHALLOW_COPY);
 
   //write(PCout);
@@ -1093,6 +1104,7 @@ form_key(unsigned short group, unsigned short form1, size_t lev1,
   kd2.model_index(form2, 0);       // append to empty array
   kd2.discrete_set_index(lev2, 0); // append to empty array
 
+  if (shared()) clear(); // don't overwrite existing key that could be shared
   assign(group, reduction, kd_array, SHALLOW_COPY);
 }
 
@@ -1104,7 +1116,7 @@ inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
 
   // For now, only allow this for singleton keys (no indexing by "d_index")
   if (data_size() != 1) {
-    PCerr << "Error: key should be singleton in ActiveKey::decrement_key()"
+    PCerr << "Error: key must be singleton in ActiveKey::decrement_key()"
 	  << std::endl;
     abort_handler(-1);
   }
@@ -1140,7 +1152,7 @@ retrieve_model_form(size_t d_index, size_t m_index) const
 inline void ActiveKey::
 assign_model_form(unsigned short form, size_t d_index, size_t m_index)
 {
-  if (keyRep.use_count() > 1) {
+  if (shared()) {
     PCerr << "Error: keyRep count protection violated in ActiveKey::"
 	  << "assign_model_form()" << std::endl;
     abort_handler(-1);
@@ -1176,7 +1188,7 @@ retrieve_resolution_level(size_t d_index, size_t hp_index) const
 inline void ActiveKey::
 assign_resolution_level(size_t lev, size_t d_index, size_t hp_index)
 {
-  if (keyRep.use_count() > 1) {
+  if (shared()) {
     PCerr << "Error: keyRep count protection violated in ActiveKey::"
 	  << "assign_resolution_level()" << std::endl;
     abort_handler(-1);
@@ -1251,7 +1263,7 @@ inline void ActiveKey::
 aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
 	       unsigned short reduction)
 {
-  clear(); // disconnect rep before update, id->USHRT_MAX, type->NO_REDUCTION
+  if (shared()) clear(); // disconnect rep before update
   aggregate_key(key1);
   aggregate_key(key2);
   type(reduction);
@@ -1261,7 +1273,7 @@ aggregate_keys(const ActiveKey& key1, const ActiveKey& key2,
 inline void ActiveKey::
 aggregate_keys(const std::vector<ActiveKey>& keys, unsigned short reduction)
 {
-  clear(); // disconnect rep before update, id->USHRT_MAX, type->NO_REDUCTION
+  if (shared()) clear(); // disconnect rep before update
   size_t k, num_k = keys.size();
   for (k=0; k<num_k; ++k)
     aggregate_key(keys[k]);
@@ -1273,7 +1285,7 @@ inline void ActiveKey::
 aggregate_keys(const ActiveKey& key1, const std::vector<ActiveKey>& keys,
 	       unsigned short reduction)
 {
-  clear(); // disconnect rep before update, id->USHRT_MAX, type->NO_REDUCTION
+  if (shared()) clear(); // disconnect rep before update
   aggregate_key(key1);
   size_t k, num_k = keys.size();
   for (k=0; k<num_k; ++k)
