@@ -733,8 +733,14 @@ public:
 
   /// get dataSetId
   unsigned short id() const;
+  /// set dataSetId (with use count protection)
+  void id(unsigned short set_id);
+
   /// get reductionType
   unsigned short type() const;
+  /// set reductionType (with use count protection)
+  void type(unsigned short r_type);
+
   /// get activeKeyDataArray.size()
   size_t data_size() const;
 
@@ -826,11 +832,6 @@ private:
 
   // restrict key modifications after initial construction, allowing broader
   // use of shallow copies / shared Reps:
-
-  /// set dataSetId
-  void id(unsigned short set_id);
-  /// set reductionType
-  void type(unsigned short r_type);
 
   /// set activeKeyDataArray
   void data(const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
@@ -955,7 +956,14 @@ inline unsigned short ActiveKey::id() const
 
 
 inline void ActiveKey::id(unsigned short set_id)
-{ keyRep->dataSetId = set_id; }
+{
+  if (shared()) {
+    PCerr << "Error: keyRep count protection violated in ActiveKey::id()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+  keyRep->dataSetId = set_id;
+}
 
 
 inline unsigned short ActiveKey::type() const
@@ -963,7 +971,14 @@ inline unsigned short ActiveKey::type() const
 
 
 inline void ActiveKey::type(unsigned short r_type)
-{ keyRep->reductionType = r_type; }
+{
+  if (shared()) {
+    PCerr << "Error: keyRep count protection violated in ActiveKey::id()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+  keyRep->reductionType = r_type;
+}
 
 
 inline size_t ActiveKey::data_size() const
