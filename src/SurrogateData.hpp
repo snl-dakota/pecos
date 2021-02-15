@@ -952,16 +952,18 @@ public:
   void resize(size_t num_pts, short bits, size_t num_vars);
 
   /// augment {vars,resp}Data and define anchorIndex
-  void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
+  void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr,
+		    bool append = true);
   /// set {vars,resp}Data
   void data_points(const SDVArray& sdv_array, const SDRArray& sdr_array);
 
-  /// augment varsData and define anchorIndex
-  void anchor_variables(const SurrogateDataVars& sdv);
+  // augment varsData and define anchorIndex
+  //void anchor_variables(const SurrogateDataVars& sdv);
+  // augment respData and define anchorIndex
+  //void anchor_response(const SurrogateDataResp& sdr);
+
   /// get varsData instance corresponding to anchorIndex
   const SurrogateDataVars& anchor_variables() const;
-  /// augment respData and define anchorIndex
-  void anchor_response(const SurrogateDataResp& sdr);
   /// get respData instance corresponding to anchorIndex
   const SurrogateDataResp& anchor_response() const;
 
@@ -1294,7 +1296,7 @@ inline void SurrogateData::active_key(const ActiveKey& key) const
 
     // Seems a bit of overkill; for now, prefer synchronization calls from
     // contexts that append/pop data
-    //if (key.aggregated() && key.reduction())
+    //if (key.raw_with_reduction_data())
     //  synchronize_reduction_size(); // reduction always derived from embedded
   }
 }
@@ -1325,7 +1327,7 @@ inline size_t SurrogateData::points(const ActiveKey& key) const
 inline void SurrogateData::synchronize_reduction_size()
 {
   const ActiveKey& key = sdRep->activeKey;
-  if (!key.aggregated() || !key.reduction()) return;
+  if (!key.aggregated() || !key.raw_with_reduction_data()) return;
 
   // Could streamline using only 1st embedded key, but retain generality for now
   std::vector<ActiveKey> embedded_keys;
@@ -1377,9 +1379,9 @@ anchor_index(size_t index, const ActiveKey& key) const
 {
   std::map<ActiveKey, size_t>& anchor_index_map = sdRep->anchorIndex;
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     anchor_index(index, anchor_index_map, key);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -1414,9 +1416,9 @@ anchor_index_map(const std::map<ActiveKey, size_t>& ai_map) const
 inline void SurrogateData::clear_anchor_index(const ActiveKey& key)
 {
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     sdRep->anchorIndex.erase(key);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -1503,14 +1505,25 @@ assign_response(const SurrogateDataResp& sdr, size_t index)
 
 
 inline void SurrogateData::
-anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
+anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr,
+	     bool append)
 {
-  size_t index = assign_anchor_index();
-  assign_variables(sdv, index);
-  assign_response(sdr, index);
+  size_t new_index;
+  if (append)
+    new_index = assign_anchor_index();
+  else {
+    size_t curr_index = retrieve_anchor_index(); // no hard error
+    new_index = (curr_index == _NPOS) ? assign_anchor_index() : curr_index;
+  }
+  assign_variables(sdv, new_index);
+  assign_response(sdr,  new_index);
 }
 
 
+/*
+  *** FRAGILE: index assignment relies on points() using min vars,resp size
+  *** Migrate to anchor_point() with append = true: default for backwards
+      compat --> DiscrepancyCorrection could use false or clear_active_data()
 inline void SurrogateData::anchor_variables(const SurrogateDataVars& sdv)
 {
   size_t index = assign_anchor_index();
@@ -1518,17 +1531,18 @@ inline void SurrogateData::anchor_variables(const SurrogateDataVars& sdv)
 }
 
 
-inline const SurrogateDataVars& SurrogateData::anchor_variables() const
-{
-  size_t index = retrieve_anchor_index(true); // abort on index error
-  return sdRep->varsDataIter->second[index];
-}
-
-
 inline void SurrogateData::anchor_response(const SurrogateDataResp& sdr)
 {
   size_t index = assign_anchor_index();
   assign_response(sdr, index);
+}
+*/
+
+
+inline const SurrogateDataVars& SurrogateData::anchor_variables() const
+{
+  size_t index = retrieve_anchor_index(true); // abort on index error
+  return sdRep->varsDataIter->second[index];
 }
 
 
@@ -1587,26 +1601,31 @@ filtered_variables_data_map(short mode) const
 
   filt_vars_map.clear();
   switch (mode) {
-  case RAW_DATA_FILTER:
+  case SINGLETON_FILTER:
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
       if (cit->first.singleton())
 	filt_vars_map.insert(*cit);
     break;
-  case AGGREGATED_DATA_FILTER: // less restrictive
+  case AGGREGATED_FILTER: // less restrictive
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
       if (cit->first.aggregated())
 	filt_vars_map.insert(*cit);
     break;
-  case REDUCTION_FILTER:       // more restrictive
+  case RAW_DATA_FILTER:       // more restrictive
     for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-      if (cit->first.reduction())
+      if (cit->first.raw_data())
 	filt_vars_map.insert(*cit);
     break;
-  //case SINGLE_REDUCTION_FILTER:
-  //  for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
-  //    if (cit->first.single_reduction())
-  //      filt_vars_map.insert(*cit);
-  //  break;
+  case REDUCTION_DATA_FILTER:       // more restrictive
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (cit->first.reduction_data())
+	filt_vars_map.insert(*cit);
+    break;
+  case RAW_WITH_REDUCTION_DATA_FILTER:       // more restrictive
+    for (cit=vars_map.begin(); cit!=vars_map.end(); ++cit)
+      if (cit->first.raw_with_reduction_data())
+	filt_vars_map.insert(*cit);
+    break;
   case NO_FILTER:
     filt_vars_map = vars_map;
     break;
@@ -1634,26 +1653,31 @@ filtered_response_data_map(short mode) const
 
   filt_resp_map.clear();
   switch (mode) {
-  case RAW_DATA_FILTER:
+  case SINGLETON_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
       if (cit->first.singleton())
 	filt_resp_map.insert(*cit);
     break;
-  case AGGREGATED_DATA_FILTER:
+  case AGGREGATED_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
       if (cit->first.aggregated())
 	filt_resp_map.insert(*cit);
     break;
-  case REDUCTION_FILTER:
+  case RAW_DATA_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-      if (cit->first.reduction())
+      if (cit->first.raw_data())
 	filt_resp_map.insert(*cit);
     break;
-  //case SINGLE_REDUCTION_FILTER:
-  //  for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
-  //    if (cit->first.single_reduction())
-  // 	  filt_resp_map.insert(*cit);
-  //  break;
+  case REDUCTION_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (cit->first.reduction_data())
+	filt_resp_map.insert(*cit);
+    break;
+  case RAW_WITH_REDUCTION_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit)
+      if (cit->first.raw_with_reduction_data())
+	filt_resp_map.insert(*cit);
+    break;
   case NO_FILTER:
     filt_resp_map = resp_map;
     break;
@@ -1675,7 +1699,7 @@ filtered_key(short mode, size_t index) const
 
   size_t cntr = 0;
   switch (mode) {
-  case RAW_DATA_FILTER:
+  case SINGLETON_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
       const ActiveKey& key = cit->first;
       if (key.singleton()) {
@@ -1684,7 +1708,7 @@ filtered_key(short mode, size_t index) const
       }
     }
     break;
-  case AGGREGATED_DATA_FILTER:
+  case AGGREGATED_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
       const ActiveKey& key = cit->first;
       if (key.aggregated()) {
@@ -1693,24 +1717,33 @@ filtered_key(short mode, size_t index) const
       }
     }
     break;
-  case REDUCTION_FILTER:
+  case RAW_DATA_FILTER:
     for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
       const ActiveKey& key = cit->first;
-      if (key.reduction()) {
+      if (key.raw_data()) {
 	if (cntr == index) return key;
 	else               ++cntr;
       }
     }
     break;
-  //case SINGLE_REDUCTION_FILTER:
-  //  for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
-  //    const ActiveKey& key = cit->first;
-  //    if (key.single_reduction()) {
-  // 	  if (cntr == index) return key;
-  // 	  else               ++cntr;
-  //    }
-  //  }
-  //  break;
+  case REDUCTION_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const ActiveKey& key = cit->first;
+      if (key.reduction_data()) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
+  case RAW_WITH_REDUCTION_DATA_FILTER:
+    for (cit=resp_map.begin(); cit!=resp_map.end(); ++cit) {
+      const ActiveKey& key = cit->first;
+      if (key.raw_with_reduction_data()) {
+	if (cntr == index) return key;
+	else               ++cntr;
+      }
+    }
+    break;
   case NO_FILTER:
     cit = resp_map.begin();
     std::advance(cit, index);
@@ -1770,9 +1803,9 @@ inline void SurrogateData::pop_back(size_t num_pop)
 
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     pop_back(num_pop, sdRep->varsDataIter->second, sdRep->respDataIter->second);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -1809,10 +1842,10 @@ inline void SurrogateData::pop_front(size_t num_pop)
 {
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     pop_front(num_pop, sdRep->varsDataIter->second,
 	      sdRep->respDataIter->second);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -1856,10 +1889,10 @@ inline void SurrogateData::
 history_target(size_t target, const ActiveKey& key)
 {
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     history_target(target, sdRep->varsData[key], sdRep->respData[key],
 		   sdRep->anchorIndex.find(key));
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -1945,7 +1978,7 @@ inline void SurrogateData::pop(bool save_data)
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
   SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra; IntArrayDeque empty_ia;
-  if (!agg_key || key.reduction()) { // process original key
+  if (!agg_key || key.reduction_data()) { // process original key
     IntArray& data_ids = sdRep->dataIdsIter->second;
     SDVArrayDeque& popped_vars = (save_data) ?
       sdRep->poppedVarsData[key] : empty_sdva;
@@ -1958,7 +1991,7 @@ inline void SurrogateData::pop(bool save_data)
 	sdRep->failedRespData[key], save_data);
   }
 
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -1983,7 +2016,7 @@ inline void SurrogateData::pop(const ActiveKey& key, bool save_data)
 {
   bool agg_key = key.aggregated();
   SDVArrayDeque empty_sdva; SDRArrayDeque empty_sdra; IntArrayDeque empty_ia;
-  if (!agg_key || key.reduction()) { // process original key
+  if (!agg_key || key.reduction_data()) { // process original key
     IntArray& data_ids = sdRep->dataIdentifiers[key];
     SDVArrayDeque& popped_vars = (save_data) ?
       sdRep->poppedVarsData[key] : empty_sdva;
@@ -1996,7 +2029,7 @@ inline void SurrogateData::pop(const ActiveKey& key, bool save_data)
 	sdRep->failedRespData[key], save_data);
   }
 
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2079,13 +2112,13 @@ inline void SurrogateData::push(size_t index, bool erase_popped)
 {
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     push(sdRep->varsDataIter->second,     sdRep->respDataIter->second,
 	 sdRep->dataIdsIter->second,      sdRep->popCountStack[key],
 	 sdRep->poppedVarsData.find(key), sdRep->poppedRespData.find(key),
 	 sdRep->poppedDataIds.find(key),  sdRep->failedRespData[key],
 	 index, erase_popped);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2105,13 +2138,13 @@ inline void SurrogateData::
 push(const ActiveKey& key, size_t index, bool erase_popped)
 {
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     push(sdRep->varsData[key],            sdRep->respData[key],
 	 sdRep->dataIdentifiers[key],     sdRep->popCountStack[key],
 	 sdRep->poppedVarsData.find(key), sdRep->poppedRespData.find(key),
 	 sdRep->poppedDataIds.find(key),  sdRep->failedRespData[key],
 	 index, erase_popped);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2209,9 +2242,9 @@ inline void SurrogateData::pop_count(size_t count) const
 {
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) // process original key
+  if (!agg_key || key.reduction_data()) // process original key
     sdRep->popCountStack[key].push_back(count);
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2770,7 +2803,7 @@ inline void SurrogateData::clear_active_data()
   */
 
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) { // process original key
+  if (!agg_key || key.reduction_data()) { // process original key
     // Retain valid {varsData,RespData,dataIds}Iter when clearing data:
     sdRep->varsDataIter->second.clear();
     sdRep->respDataIter->second.clear();
@@ -2780,7 +2813,7 @@ inline void SurrogateData::clear_active_data()
     sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
   }
 
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2799,14 +2832,14 @@ inline void SurrogateData::clear_active_data()
 inline void SurrogateData::clear_active_data(const ActiveKey& key)
 {
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) { // process original key
+  if (!agg_key || key.reduction_data()) { // process original key
     // clear instead of erase
     sdRep->varsData[key].clear();  sdRep->respData[key].clear();
     sdRep->dataIdentifiers[key].clear();
     // can erase
     sdRep->anchorIndex.erase(key); sdRep->failedRespData.erase(key);
   }
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2838,7 +2871,7 @@ inline void SurrogateData::clear_inactive_data()
   std::map<ActiveKey, SizetShortMap>::iterator fit;
   const ActiveKey& key = sdRep->activeKey;
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) { // process original key
+  if (!agg_key || key.reduction_data()) { // process original key
     new_vd.insert(*sdRep->varsDataIter);
     new_rd.insert(*sdRep->respDataIter);
     new_di.insert(*sdRep->dataIdsIter);
@@ -2847,7 +2880,7 @@ inline void SurrogateData::clear_inactive_data()
     fit = sdRep->failedRespData.find(key);
     if (fit != sdRep->failedRespData.end()) new_frd.insert(*fit);
   }
-  if (agg_key) {
+  if (agg_key && key.raw_data()) {
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();
@@ -2903,14 +2936,14 @@ inline void SurrogateData::clear_filtered()
 inline void SurrogateData::clear_active_popped(const ActiveKey& key)
 {
   bool agg_key = key.aggregated();
-  if (!agg_key || key.reduction()) {// process original key
+  if (!agg_key || key.reduction_data()) {// process original key
     // can erase as will be recreated in pop() if needed
     sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
     sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
     sdRep->poppedDataIds.erase(key); //sdRep->poppedDataIds[key].clear();
     sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
   }
-  if (agg_key) { // enumerate embedded keys
+  if (agg_key && key.raw_data()) { // enumerate embedded keys
     std::vector<ActiveKey> embedded_keys;
     key.extract_keys(embedded_keys);
     size_t k, num_k = embedded_keys.size();

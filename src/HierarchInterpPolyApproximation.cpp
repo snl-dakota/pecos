@@ -4410,13 +4410,13 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   std::map<ActiveKey, UShort2DArray>::const_iterator p_cit;
 
   const std::map<ActiveKey, SDVArray>& vars_data_map
-    = surrData.filtered_variables_data_map(REDUCTION_FILTER);
+    = surrData.filtered_variables_data_map(REDUCTION_DATA_FILTER);
   std::map<ActiveKey, SDVArray>::const_iterator sdv_cit
     = vars_data_map.begin();
   const std::map<ActiveKey, SDRArray>& resp_data_map1
-    = surrData.filtered_response_data_map(REDUCTION_FILTER);
+    = surrData.filtered_response_data_map(REDUCTION_DATA_FILTER);
   const std::map<ActiveKey, SDRArray>& resp_data_map2
-    = hip_approx_2->surrData.filtered_response_data_map(REDUCTION_FILTER);
+    = hip_approx_2->surrData.filtered_response_data_map(REDUCTION_DATA_FILTER);
   std::map<ActiveKey, SDRArray>::const_iterator
     sdr1_cit = resp_data_map1.begin(), sdr2_cit = resp_data_map2.begin();
 

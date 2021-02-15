@@ -106,7 +106,7 @@ public:
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
-  combineType(NO_COMBINE), discrepReduction(NO_REDUCTION),
+  combineType(NO_COMBINE), discrepReduction(NO_DISCREPANCY),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refineType(NO_REFINEMENT),*/ refineControl(NO_CONTROL),
   refineMetric(NO_METRIC), refineStatsType(NO_EXPANSION_STATS),
