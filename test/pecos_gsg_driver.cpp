@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
   ExpansionConfigOptions expcfgopt(INCREMENTAL_SPARSE_GRID, // expsolnapp
                                    DEFAULT_BASIS,        // expbassus
 				   NO_COMBINE,           // exp combine type
-				   NO_REDUCTION,         // reduction type
+				   NO_DISCREPANCY,       // discrepancy type
                                    SILENT_OUTPUT,        // output level
                                    true,                 // vbd flag
                                    2,                    // vbd order

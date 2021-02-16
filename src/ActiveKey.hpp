@@ -1173,7 +1173,8 @@ inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
 inline unsigned short ActiveKey::
 retrieve_model_form(size_t d_index, size_t m_index) const
 {
-  return (d_index < data_size()) ?
+  return (d_index < data_size() &&
+	  m_index < data(d_index).model_indices().size()) ?
     data(d_index).model_index(m_index) : // 1D indexing
     USHRT_MAX;
 }
@@ -1211,7 +1212,8 @@ assign_model_form(unsigned short form, size_t d_index, size_t m_index)
 inline size_t ActiveKey::
 retrieve_resolution_level(size_t d_index, size_t hp_index) const
 {
-  return (d_index < data_size()) ?
+  return ( d_index < data_size() &&
+	  hp_index < data(d_index).discrete_set_indices().length()) ?
     data(d_index).discrete_set_index(hp_index) : //discrete set for now
     std::numeric_limits<size_t>::max();
 }
