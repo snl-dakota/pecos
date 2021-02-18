@@ -1389,6 +1389,7 @@ extract_keys(ActiveKey& key1, std::vector<ActiveKey>& extra_keys) const
 template <typename Stream>
 void ActiveKey::read(Stream& s)
 {
+  if (shared()) clear(); // disconnect Rep
   s >> keyRep->dataSetId >> keyRep->reductionType
     >> keyRep->activeKeyDataArray;
 }
