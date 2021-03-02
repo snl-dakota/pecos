@@ -212,6 +212,8 @@ private:
   /// provides the greatest reduction in cross-validation error
   Real select_best_basis_expansion();
 
+  /// check for valid configuration before invoking CV
+  bool valid_cross_validation_expansion_configuration();
   /// Use cross validation to choose solver hyper-parameters when
   /// solving the linear system Ax=b. e.g. if the linear solver has an
   /// epsilon tolerance internally select the best epsilon and return
@@ -468,6 +470,35 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points )
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   build_linear_system( A, B, points, data_rep->multi_index() );
+}
+
+
+inline bool RegressOrthogPolyApproximation::
+valid_cross_validation_expansion_configuration()
+{
+  // require more than 1 data point for k-fold cross validation
+  // (need at least 2 for meaningful leave-one-out fold definition)
+  if (surrData.points() <= 1) return false;
+
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+
+  // require solver alignment
+  short ec_options_solver = data_rep->expConfigOptions.expCoeffsSolnApproach;
+  if (ec_options_solver == EQ_CON_LEAST_SQ_REGRESSION ||
+      ec_options_solver == ORTHOG_LEAST_INTERPOLATION )
+     return false;
+
+  // require at least one approxOrder[i] > 0
+  // (need at least 2 expansion order candidates)
+  const UShortArray& approx_order = data_rep->expansion_order();
+  bool ao1 = false;  size_t i, len = approx_order.size();
+  for (i=0; i<len; ++i)
+    if (approx_order[i] > 0)
+      ao1 = true;
+  if (!ao1) return false;
+
+  return true;
 }
 
 

@@ -474,7 +474,8 @@ void RegressOrthogPolyApproximation::run_regression()
   // Perform cross validation loop over degrees here.
   // Current cross validation will not work for equality 
   // constrained least squares
-  if (data_rep->regressConfigOptions.crossValidation) // CV: MULTIPLE CS SOLVES
+  if (data_rep->regressConfigOptions.crossValidation &&
+      valid_cross_validation_expansion_configuration())
     run_cross_validation_expansion(); // updates all global bookkeeping
                                       // multiple RHS not currently supported
   else {
