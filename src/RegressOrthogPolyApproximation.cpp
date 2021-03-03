@@ -1845,7 +1845,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
   build_linear_system(A, multi_index);
 
   if (expansionCoeffFlag) {
-    
+
     // matrix/vector sizing
     std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
       std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);

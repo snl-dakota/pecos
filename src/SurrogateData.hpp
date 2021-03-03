@@ -819,6 +819,10 @@ private:
   std::map<ActiveKey, SDRArray>::iterator respDataIter;
   /// filtered database of response data sets, a subset drawn from respData
   std::map<ActiveKey, SDRArray> filteredRespData;
+  /// additive and multiplicative factors for scaling active response
+  /// functions to [0,1]:  scaled_fn = (unscaled - min) / range  -->
+  /// unscaled = range * scaled_fn + min  where RealRealPair = (min,range)
+  /*std::map<ActiveKey,*/ RealRealPair respFnScaling;
 
   /// optional data identifiers, one per entry in {vars,Resp}Data, allowing
   /// individual data point interactions (e.g., replace(id))
@@ -976,6 +980,9 @@ public:
   /// get varsData[activeKey]
   SDVArray& variables_data();
 
+  /// return the i-th active continuous variables
+  const RealVector& continuous_variables(size_t i) const;
+
   /// set respData[activeKey]
   void response_data(const SDRArray& sdr_array);
   /// get respData[activeKey]
@@ -984,6 +991,14 @@ public:
   const SDRArray& response_data(const ActiveKey& key) const;
   /// get respData[activeKey]
   SDRArray& response_data();
+
+  /// return the i-th active response function
+  Real response_function(size_t i) const;
+  /// return the i-th active response function, scaled by active respFnScaling
+  Real scaled_response_function(size_t i) const;
+
+  /// return active respFnScaling
+  const RealRealPair& response_function_scaling() const;
 
   /// set dataIdentifiers
   void data_ids(const IntArray& ids);
@@ -1116,6 +1131,9 @@ public:
   /// return number of derivative variables as indicated by size of
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
+
+  /// compute a simple bounds-based scaling for response functions
+  bool compute_response_function_scaling() const;
 
   /// convenience function used by data_checks() for respData
   void response_check(const SurrogateDataResp& sdr, short& failed_data) const;
@@ -1570,6 +1588,10 @@ inline SDVArray& SurrogateData::variables_data()
 { return sdRep->varsDataIter->second; }
 
 
+inline const RealVector& SurrogateData::continuous_variables(size_t i) const
+{ return sdRep->varsDataIter->second[i].continuous_variables(); }
+
+
 inline void SurrogateData::response_data(const SDRArray& sdr_array)
 { sdRep->respDataIter->second = sdr_array; }
 
@@ -1585,6 +1607,22 @@ response_data(const ActiveKey& key) const
 
 inline SDRArray& SurrogateData::response_data()
 { return sdRep->respDataIter->second; }
+
+
+inline Real SurrogateData::response_function(size_t i) const
+{ return sdRep->respDataIter->second[i].response_function(); }
+
+
+inline Real SurrogateData::scaled_response_function(size_t i) const
+{
+  const RealRealPair& scaling = sdRep->respFnScaling;
+  return (sdRep->respDataIter->second[i].response_function() - scaling.first)
+    / scaling.second; // fn - min / range
+}
+
+
+inline const RealRealPair& SurrogateData::response_function_scaling() const
+{ return sdRep->respFnScaling; }
 
 
 inline const std::map<ActiveKey, SDVArray>& SurrogateData::
@@ -2366,6 +2404,31 @@ inline size_t SurrogateData::num_derivative_variables() const
   size_t num_grad_vars = num_gradient_variables();
   if (num_grad_vars) return num_grad_vars;           // precedence
   else               return num_hessian_variables(); // fall-back
+}
+
+
+inline bool SurrogateData::compute_response_function_scaling() const
+{
+  // compute scale factors for mapping active response functions to [0,1]
+  // current uses do not require key management
+  const SDRArray& sdr_array = sdRep->respDataIter->second;
+  size_t i, pts = sdr_array.size();
+  if (pts <= 1) return false;
+
+  Real fn, min_fn, max_fn, range;
+  min_fn = max_fn = sdr_array[0].response_function();
+  for (i=1; i<pts; ++i) {
+    fn = sdr_array[i].response_function();
+    if      (fn > max_fn) max_fn = fn;
+    else if (fn < min_fn) min_fn = fn;
+  }
+  range = max_fn - min_fn;
+  if (range > 0.) {
+    sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn, range);
+    return true;
+  }
+  else
+    return false;
 }
 
 
