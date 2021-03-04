@@ -1213,10 +1213,9 @@ private:
   /// define or update anchorIndex[activeKey]
   size_t assign_anchor_index();
   /// retrieve anchorIndex[activeKey]
-  size_t retrieve_anchor_index(bool hard_fail = false) const;
+  size_t retrieve_anchor_index(bool hard_fail) const;
   /// retrieve anchorIndex[key]
-  size_t retrieve_anchor_index(const ActiveKey& key,
-			       bool hard_fail = false) const;
+  size_t retrieve_anchor_index(const ActiveKey& key, bool hard_fail) const;
 
   /// helper function for an individual key
   void anchor_index(size_t index, std::map<ActiveKey, size_t>& anchor_index_map,
@@ -1516,7 +1515,7 @@ retrieve_anchor_index(const ActiveKey& key, bool hard_fail) const
 
 
 inline size_t SurrogateData::retrieve_anchor_index(bool hard_fail) const
-{ retrieve_anchor_index(sdRep->activeKey, hard_fail); }
+{ return retrieve_anchor_index(sdRep->activeKey, hard_fail); }
 
 
 inline void SurrogateData::
@@ -1545,7 +1544,7 @@ anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr,
   if (append)
     new_index = assign_anchor_index();
   else {
-    size_t curr_index = retrieve_anchor_index(); // no hard error
+    size_t curr_index = retrieve_anchor_index(false); // no hard error
     new_index = (curr_index == _NPOS) ? assign_anchor_index() : curr_index;
   }
   assign_variables(sdv, new_index);
@@ -1868,7 +1867,7 @@ inline void SurrogateData::pop_back(size_t num_pop)
     }
   }
 
-  size_t a_index = retrieve_anchor_index(key);
+  size_t a_index = retrieve_anchor_index(key, false);
   if (a_index != _NPOS && a_index >= start_pts - num_pop)// popped pt was anchor
     clear_anchor_index(key);
 }
@@ -1908,7 +1907,7 @@ inline void SurrogateData::pop_front(size_t num_pop)
     }
   }
 
-  size_t a_index = retrieve_anchor_index(key);
+  size_t a_index = retrieve_anchor_index(key, false);
   if (a_index < num_pop)     // anchor has been popped
     clear_anchor_index(key);
   else if (a_index != _NPOS) // anchor (still) exists, decrement its index
