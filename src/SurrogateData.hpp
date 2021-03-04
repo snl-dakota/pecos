@@ -219,6 +219,8 @@ public:
 
   /// function to check sdvRep (does this handle contain a body)
   bool is_null() const;
+  /// output response function, gradient, and Hessian data
+  void write(std::ostream& s) const;
 
 private:
 
@@ -399,6 +401,19 @@ inline RealVector SurrogateDataVars::discrete_real_variables_view()
 
 inline bool SurrogateDataVars::is_null() const
 { return (sdvRep) ? false : true; }
+
+
+inline void SurrogateDataVars::write(std::ostream& s) const
+{
+  s << "SDV continuous variables:\n"    << sdvRep->continuousVars
+    << "SDV discrete int variables:\n"  << sdvRep->discreteIntVars
+    << "SDV discrete real variables:\n" << sdvRep->discreteRealVars << '\n';
+}
+
+
+/// std::ostream insertion operator for SurrogateDataVars
+inline std::ostream& operator<<(std::ostream& s, const SurrogateDataVars& sdv)
+{ sdv.write(s); return s; }
 
 
 /// The representation of a surrogate data response.  This representation,
@@ -750,14 +765,14 @@ inline bool SurrogateDataResp::is_null() const
 inline void SurrogateDataResp::write(std::ostream& s) const
 {
   if (sdrRep->activeBits & 1)
-    s << "function value    =  " << std::setw(WRITE_PRECISION+7)
+    s << "SDR function value    =  " << std::setw(WRITE_PRECISION+7)
       << sdrRep->responseFn << '\n';
   if (sdrRep->activeBits & 2) {
-    s << "function gradient =\n";
+    s << "SDR function gradient =\n";
     write_data_trans(s, sdrRep->responseGrad, true, true, true);
   }
   if (sdrRep->activeBits & 4)
-    s << "function Hessian  =\n" << sdrRep->responseHess;
+    s << "SDR function Hessian  =\n" << sdrRep->responseHess;
 }
 
 
