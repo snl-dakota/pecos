@@ -526,9 +526,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // CV err for the reference candidate basis.
   bestAdaptedMultiIndex = mi;
   SizetSet& sparse_ind = sparseIndIter->second;
-  cvErrorRef
-    = run_cross_validation_solver(bestAdaptedMultiIndex, expCoeffsIter->second,
-				  sparse_ind);
+  cvErrorRef = run_cross_validation_solver(bestAdaptedMultiIndex,
+					   expCoeffsIter->second, sparse_ind);
   PCout << "<<<<< Cross validation error reference = " << cvErrorRef << '\n';
 
   // absolute error instead of delta error for initial tolerance check
@@ -1857,16 +1856,22 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
 
     B.shapeUninitialized(num_rows_B, num_rhs);
     Real *b_vectors = B.values();
-    
+
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
     b_cntr = 0; b_grad_cntr = num_data_pts_fn;
-    for (i=0; i<num_surr_data_pts; ++i) {
-      add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
-      data_rep->pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr,
-				   add_grad, b_vectors, b_grad_cntr);
+    add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
+    if (data_rep->regressConfigOptions.respScaling) {
+      const RealRealPair& factors = surrData.response_function_scaling();
+      for (i=0; i<num_surr_data_pts; ++i)
+	data_rep->pack_response_data(sdr_array[i], factors, add_val, b_vectors,
+				     b_cntr, add_grad, b_vectors, b_grad_cntr);
     }
+    else
+      for (i=0; i<num_surr_data_pts; ++i)
+	data_rep->pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr,
+				     add_grad, b_vectors, b_grad_cntr);
   }
 
   if (expansionCoeffGradFlag) {
@@ -1875,12 +1880,13 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
       num_rows_B = num_data_pts_grad; num_rhs = num_grad_rhs; num_coeff_rhs = 0;
       B.shapeUninitialized(num_rows_B, num_rhs);
     }
-    
+
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
     Real *b_vectors = B.values();
     b_cntr = 0;
+    //if (data_rep->regressConfigOptions.respScaling) { // *** TO DO
     for (i=0; i<num_surr_data_pts; ++i) {
       //add_val = false; add_grad = true;
       //if (add_grad) {
@@ -1890,6 +1896,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
 	++b_cntr;
       //}
     }
+    //} // *** TO DO
   }
 }
 
