@@ -2119,7 +2119,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   for ( int order = min_order; order <= ao0; order++ )
     {
       if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
-	PCout << "Testing PCE order " << order << std::endl;
+	PCout << "Testing PCE expansion order " << order << std::endl;
       int num_basis_terms = util::nchoosek( num_dims + order, order );
       RealMatrix vandermonde_submatrix( Teuchos::View, 
 					A,
@@ -2156,12 +2156,16 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 	cv_iterator.set_num_equations_per_point( 1 );
 
 
-      Real score = cv_iterator.run_cross_validation( vandermonde_submatrix, b );
+      Real score = cv_iterator.run_cross_validation( vandermonde_submatrix, b ),
+	     tol = cv_iterator.get_best_residual_tolerance();
+      if ( data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT )
+	PCout << "Cross validation error = " << score << " (exp order " << order
+	      << ", noise tol " << tol << ')' << std::endl;
 
       if ( score < best_score )
 	{
 	  best_score = score;
-	  best_tolerance = cv_iterator.get_best_residual_tolerance();
+	  best_tolerance = tol;
 	  best_basis_parameters_index = i;
 	  bestApproxOrder[0] = order;
 	}
@@ -2170,19 +2174,17 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
       //if ( score >= best_score && i - best_basis_parameters_index >= 2 )
       //break;
 
-      if ( data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT )
-	{
-	  PCout << "Cross validation error for degree ";
-	  PCout << order << ": " << score << "\n";
-	}
-      i++;
+      ++i;
     }
 
   int num_basis_terms = util::nchoosek( num_dims + bestApproxOrder[0],
 					      bestApproxOrder[0] );
   if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
-    PCout << "Best approximation order: " << bestApproxOrder[0]
-	  << "\nBest cross validation error: " << best_score << "\n";
+    PCout << "\nCross validation complete:"
+	  << "\n  Best expansion order:        " << bestApproxOrder[0]
+	  << "\n  Best cross validation error: " << best_score
+	  << "\n  Best noise tolerance:        " << best_tolerance
+	  << "\n\nFinal solve with full data:\n";
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
   RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
 				    num_basis_terms, 0, 0 );
