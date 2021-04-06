@@ -79,6 +79,10 @@ public:
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
 
+  /// test whether a refinement candidate can be generated for an approximation
+  /// or if refinement has "saturated"
+  virtual bool advancement_available();
+
   /*
   /// store the current coefficients for later combination
   virtual void store_coefficients(size_t index = _NPOS);

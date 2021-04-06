@@ -304,6 +304,10 @@ public:
   /// finalizes the shared approximation data following a set of increments
   virtual void post_finalize_data();
 
+  /// tests for whether further advancement in refinement candidates is
+  /// available or if refinement opportunities have "saturated"
+  virtual bool advancement_available();
+
   /// clear inactive approximation data
   virtual void clear_inactive_data();
 

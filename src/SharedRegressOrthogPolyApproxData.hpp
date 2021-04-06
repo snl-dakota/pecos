@@ -206,6 +206,8 @@ protected:
   //void pre_finalize_data();
   //void post_finalize_data();
 
+  bool advancement_available();
+
   //
   //- Heading: Member functions
   //
@@ -304,6 +306,15 @@ inline SharedRegressOrthogPolyApproxData::~SharedRegressOrthogPolyApproxData()
 inline void SharedRegressOrthogPolyApproxData::
 configuration_options(const RegressionConfigOptions& rc_options)
 { regressConfigOptions = rc_options; }
+
+
+inline bool SharedRegressOrthogPolyApproxData::advancement_available()
+{
+  // if CV saturation is possible, delegate test down to individual QoI in
+  // RegressOrthogPolyApproximation::advancement_available()
+  return ( regressConfigOptions.crossValidation &&
+	  !regressConfigOptions.crossValidNoiseOnly ) ? false : true;
+}
 
 
 inline void SharedRegressOrthogPolyApproxData::clear_adapted()

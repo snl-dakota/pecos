@@ -251,6 +251,13 @@ void BasisApproximation::finalize_coefficients()
 }
 
 
+bool BasisApproximation::advancement_available()
+{
+  // default is no saturation in refinement candidates
+  return (basisApproxRep) ? basisApproxRep->advancement_available() : true;
+}
+
+
 /*
 void BasisApproximation::store_coefficients(size_t index)
 {

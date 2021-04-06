@@ -415,6 +415,10 @@ void SharedPolyApproxData::post_finalize_data()
 { } // default implementation is no op
 
 
+bool SharedPolyApproxData::advancement_available()
+{ return true; } // default is no saturation in refinement candidates
+
+
 void SharedPolyApproxData::pre_combine_data()
 { } // default implementation is no op
 

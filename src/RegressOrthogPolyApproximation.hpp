@@ -94,6 +94,8 @@ protected:
   void pop_coefficients(bool save_data);
   void push_coefficients();
 
+  bool advancement_available();
+
   /*
   void store_coefficients(size_t index = _NPOS);
   void restore_coefficients(size_t index = _NPOS);
@@ -356,7 +358,7 @@ private:
   //
 
   /// order of orthogonal best polynomial expansion found using cross validation
-  IntVector bestApproxOrder;
+  int bestApproxOrder;
 
   /// Stuct use to define the options of a compressed sensing solve
   CompressedSensingOptions CSOpts;

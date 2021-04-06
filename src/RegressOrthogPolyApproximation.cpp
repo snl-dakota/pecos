@@ -450,6 +450,46 @@ void RegressOrthogPolyApproximation::combined_to_active(bool clear_combined)
 }
 
 
+bool RegressOrthogPolyApproximation::advancement_available()
+{
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+
+  // In the context of cross-validation (CV), expansion_order() is the current
+  // upper bound for a set of candidates, and bestApproxOrder indicates the
+  // selected candidate.  Note: a recovered solution for which the selected
+  // candidate has lower order is managed using the sparse indices per QoI,
+  // such that it is not necessary to update the shared exp order/multi-index.
+  unsigned short order_max = find_max(data_rep->expansion_order());
+
+  // if multi-index entries for all recovered terms are < approxOrder,
+  // then this QoI is saturated within advancement of refinement candidates
+  // > could do this by selected CV order or based on recovered terms, where
+  //   a recovered sparse solution <= cardinality for selected CV order
+  if (bestApproxOrder < order_max) return false;
+  else {
+    // for a sparse recovery, could check terms in recovered solution
+    // > for uniform refinement of isotropic approxOrder with well-ordered
+    //   total-order/tensor-product basis, can just check last term
+    //   (generalized index set increments would require a full scan)
+    // > seems unlikely to select a best order and not have it represented
+    //   (would expect its presence to degrade solve due to mutual coherence)
+    //const SizetSet& sparse_ind = sparseIndIter->second;
+    //if (!sparse_ind.empty()) {
+    //    //&& expConfigOptions.refineControl == UNIFORM_CONTROL ) {
+    //  const UShort2DArray& mi = data_rep->multi_index();
+    //  SizetSet::const_iterator last_cit = --sparse_ind.end();
+    //  return (l1_norm(mi[*last_cit]) == order_max);
+    //}
+    // > for dense, all terms in bestApproxOrder are represented
+
+    // if order_max was the best selected, allow advancement even in rare case
+    // that no order_max terms were recovered (if helpful, then continue).
+    return true;
+  }
+}
+
+
 void RegressOrthogPolyApproximation::run_regression()
 {
   // Assume all function values are stored in top block of matrix in rows
@@ -1987,13 +2027,13 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   RealMatrix A, B;
   build_linear_system( A, B, multi_index );
 
-  int num_data_pts_fn = surrData.points();
+  int num_data_pts_fn = surrData.points();//, num_rhs = B.numCols();
+  size_t num_v = sharedDataRep->numVars;
 
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
   const UShortArray& approx_order = data_rep->expansion_order();
-  int num_rhs = B.numCols(), num_dims( approx_order.size() );
 
   Real best_score = std::numeric_limits<Real>::max();
   int best_basis_parameters_index = 0;
@@ -2034,7 +2074,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   cv_iterator.set_num_folds( num_folds );
   cv_iterator.set_num_points( num_build_points );
   if ( use_gradients )
-    cv_iterator.set_num_equations_per_point( sharedDataRep->numVars + 1 );
+    cv_iterator.set_num_equations_per_point( num_v + 1 );
   else 
     cv_iterator.set_num_equations_per_point( 1 );
 
@@ -2082,23 +2122,23 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   RealMatrix A, B;
   build_linear_system( A, B );
 
-  int num_data_pts_fn = surrData.points();
+  int num_data_pts_fn = surrData.points();//, num_rhs = B.numCols();
+  size_t num_v = sharedDataRep->numVars;
 
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  const UShortArray& approx_order = data_rep->expansion_order();
-  int num_rhs = B.numCols(), num_dims( approx_order.size() );
+  const UShortArray& exp_order = data_rep->expansion_order();
+  RealVector dim_pref;  unsigned short order_max;
+  anisotropic_order_to_dimension_preference(exp_order, order_max, dim_pref);
   // Do cross validation for varing polynomial orders up to 
   // a maximum order defined by approxOrder[0]
-  unsigned short ao0 = approx_order[0],
-    min_order = (data_rep->regressConfigOptions.crossValidNoiseOnly)
-    ? ao0 : std::min((unsigned short)1, ao0);
-  //if ( min_order > ao0 ) min_order = ao0;
+  unsigned short order_min
+    = (data_rep->regressConfigOptions.crossValidNoiseOnly) ? order_max
+    : std::min((unsigned short)1, order_max); // usually start from 1
 
   Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
-  int best_basis_parameters_index = 0;
-  int num_build_points = num_data_pts_fn;
+  int best_basis_parameters_index = 0, num_build_points = num_data_pts_fn;
   bool use_gradients = false;
   if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
@@ -2106,86 +2146,88 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo, surrData.failed_response_data() );
   
-  RealVector basis_scores;
-  basis_scores.sizeUninitialized( ao0 - min_order + 1 );
+  RealVector basis_scores( order_max - order_min + 1, false );
   basis_scores = std::numeric_limits<double>::max();
 
   data_rep->CSTool.set_linear_solver( CSOpts );
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 
-  int i = 0;
-  bestApproxOrder.size( 1 ); 
-  for ( int order = min_order; order <= ao0; order++ )
-    {
-      if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
-	PCout << "Testing PCE expansion order " << order << std::endl;
-      int num_basis_terms = util::nchoosek( num_dims + order, order );
-      RealMatrix vandermonde_submatrix( Teuchos::View, 
-					A,
-					A.numRows(),
-					num_basis_terms, 0, 0 );
+  int i = 0, order;
+  UShortArray cv_exp_order;
+  for ( order = order_min; order <= order_max; ++order ) {
+    if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
+      PCout << "Testing PCE expansion order " << order << std::endl;
+    dimension_preference_to_anisotropic_order(order, dim_pref, num_v,
+					      cv_exp_order);
+    int num_basis_terms = //util::nchoosek( num_v + order, order );
+      data_rep->total_order_terms(cv_exp_order);
+    // TO DO: verify submatrix view works with anistropic Vandermonde ordering
+    RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
+				      num_basis_terms, 0, 0 );
 
+    int num_folds = std::min(10, num_data_pts_fn);
+    int max_num_pts_per_fold = num_data_pts_fn / num_folds;
+    if ( num_data_pts_fn % num_folds != 0 ); ++max_num_pts_per_fold;
+    if ( CSOpts.solver != ORTHOG_MATCH_PURSUIT   &&
+	 CSOpts.solver != LASSO_REGRESSION       &&
+	 CSOpts.solver != LEAST_ANGLE_REGRESSION &&
+	 num_data_pts_fn - max_num_pts_per_fold <
+	   vandermonde_submatrix.numCols() &&
+	 num_data_pts_fn >= vandermonde_submatrix.numCols() ) {
+      // use one at a time cross validation
+      PCout << "The linear system will switch from over-determined to " << 
+	" under-determined when K = 10 cross validation is employed. " <<
+	" Switching to one at a time cross validation to avoid this\n";
+      num_folds = num_data_pts_fn;
 
-      int num_folds = std::min(10, num_data_pts_fn);
-      int max_num_pts_per_fold = num_data_pts_fn / num_folds;
-      if ( num_data_pts_fn % num_folds != 0 ); ++max_num_pts_per_fold;
-      if ( CSOpts.solver != ORTHOG_MATCH_PURSUIT   &&
-	   CSOpts.solver != LASSO_REGRESSION       &&
-	   CSOpts.solver != LEAST_ANGLE_REGRESSION &&
-	   ( num_data_pts_fn - max_num_pts_per_fold < vandermonde_submatrix.numCols() ) &&
-	   ( num_data_pts_fn >= vandermonde_submatrix.numCols() ) ) {
-	  // use one at a time cross validation
-	PCout << "The linear system will switch from over-determined to " << 
-	  " under-determined when K = 10 cross validation is employed. " <<
-	  " Switching to one at a time cross validation to avoid this\n";
-	num_folds = num_data_pts_fn;
-
-	if ( num_data_pts_fn == vandermonde_submatrix.numCols() )
-	  PCout << "Warning: The linear system will switch from exactly " <<
-	    " determined to under-determined when leave one out cross " << 
-	    " validation is employed\n.";
-	}
-
-      cv_iterator.set_max_num_unique_tolerances( 100 );
-      cv_iterator.set_num_folds( num_folds );
-      cv_iterator.set_num_points( num_build_points );
-      if ( use_gradients )
-	cv_iterator.set_num_equations_per_point( sharedDataRep->numVars + 1 );
-      else 
-	cv_iterator.set_num_equations_per_point( 1 );
-
-
-      Real score = cv_iterator.run_cross_validation( vandermonde_submatrix, b ),
-	     tol = cv_iterator.get_best_residual_tolerance();
-      if ( data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT )
-	PCout << "Cross validation error = " << score << " (exp order " << order
-	      << ", noise tol " << tol << ')' << std::endl;
-
-      if ( score < best_score )
-	{
-	  best_score = score;
-	  best_tolerance = tol;
-	  best_basis_parameters_index = i;
-	  bestApproxOrder[0] = order;
-	}
-      basis_scores[i] = score;
-
-      //if ( score >= best_score && i - best_basis_parameters_index >= 2 )
-      //break;
-
-      ++i;
+      if ( num_data_pts_fn == vandermonde_submatrix.numCols() )
+	PCout << "Warning: The linear system will switch from exactly " <<
+	  " determined to under-determined when leave one out cross " << 
+	  " validation is employed\n.";
     }
 
-  int num_basis_terms = util::nchoosek( num_dims + bestApproxOrder[0],
-					      bestApproxOrder[0] );
+    cv_iterator.set_max_num_unique_tolerances( 100 );
+    cv_iterator.set_num_folds( num_folds );
+    cv_iterator.set_num_points( num_build_points );
+    if ( use_gradients )
+      cv_iterator.set_num_equations_per_point( num_v + 1 );
+    else 
+      cv_iterator.set_num_equations_per_point( 1 );
+
+    Real score = cv_iterator.run_cross_validation( vandermonde_submatrix, b ),
+           tol = cv_iterator.get_best_residual_tolerance();
+    if ( data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT )
+      PCout << "Cross validation error = " << score << " (exp order " << order
+	    << ", noise tol " << tol << ')' << std::endl;
+
+    if ( score < best_score ) {
+      best_score = score;
+      best_tolerance = tol;
+      best_basis_parameters_index = i;
+      bestApproxOrder = order;
+    }
+    basis_scores[i] = score;
+
+    //if ( score >= best_score && i - best_basis_parameters_index >= 2 )
+    //break;
+
+    ++i;
+  }
+
+  dimension_preference_to_anisotropic_order(bestApproxOrder, dim_pref,
+					    num_v, cv_exp_order);
+  int num_basis_terms //= util::nchoosek(num_v+bestApproxOrder, bestApproxOrder)
+    = data_rep->total_order_terms(cv_exp_order);
+
   if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
     PCout << "\nCross validation complete:"
-	  << "\n  Best expansion order:        " << bestApproxOrder[0]
+	  << "\n  Best expansion order:        " << bestApproxOrder
 	  << "\n  Best cross validation error: " << best_score
 	  << "\n  Best noise tolerance:        " << best_tolerance
 	  << "\n\nFinal solve with full data:\n";
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
+  // TO DO: verify submatrix view works with anistropic Vandermonde ordering
   RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
 				    num_basis_terms, 0, 0 );
   IntVector index_mapping;
