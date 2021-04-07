@@ -316,7 +316,7 @@ unscale_coefficients(RealVector& exp_coeffs, RealMatrix& exp_coeff_grads)
   // > unscaled_grad = range * scaled_grad
   if (!exp_coeffs.empty()) {
     exp_coeffs.scale(range);
-    exp_coeffs[0] += min; // Note: first coeff guaranteed for sparse soln
+    exp_coeffs[0] += min; // Note: coeff 0 guaranteed for sparse soln
   }
   if (!exp_coeff_grads.empty())
     exp_coeff_grads.scale(range);

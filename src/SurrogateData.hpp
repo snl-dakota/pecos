@@ -875,7 +875,8 @@ private:
 };
 
 
-inline SurrogateDataRep::SurrogateDataRep(): dataIdsIter(dataIdentifiers.end())
+inline SurrogateDataRep::SurrogateDataRep():
+  respFnScaling(0.,0.), dataIdsIter(dataIdentifiers.end())
 { }
 
 
@@ -1014,6 +1015,9 @@ public:
 
   /// return active respFnScaling
   const RealRealPair& response_function_scaling() const;
+  /// check for valid response scaling (non-zero range defined from at
+  /// least two different points)
+  bool valid_response_scaling() const;
 
   /// set dataIdentifiers
   void data_ids(const IntArray& ids);
@@ -1637,6 +1641,10 @@ inline Real SurrogateData::scaled_response_function(size_t i) const
 
 inline const RealRealPair& SurrogateData::response_function_scaling() const
 { return sdRep->respFnScaling; }
+
+
+inline bool SurrogateData::valid_response_scaling() const
+{ return (sdRep->respFnScaling.second > 0.); } // non-zero range
 
 
 inline const std::map<ActiveKey, SDVArray>& SurrogateData::
@@ -2437,12 +2445,8 @@ inline bool SurrogateData::compute_response_function_scaling() const
     else if (fn < min_fn) min_fn = fn;
   }
   range = max_fn - min_fn;
-  if (range > 0.) {
-    sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn, range);
-    return true;
-  }
-  else
-    return false;
+  sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn, range);
+  return (range > 0.);
 }
 
 

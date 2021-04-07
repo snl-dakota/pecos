@@ -189,6 +189,13 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   // array allocations dependent on solver type
   allocate_arrays();
 
+  // Scale the data here and then unscale the final PCE at bottom (currently
+  // there are no inner stats evals that are dependent on scale).  Scaling
+  // can be important for regression on small ML/MF discrepancy expansions
+  // using absolute solver tolerances.
+  if (data_rep->regressConfigOptions.respScaling)
+    surrData.compute_response_function_scaling();
+
   switch (data_rep->expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // least interpolation case
   case TOTAL_ORDER_BASIS: case TENSOR_PRODUCT_BASIS:
@@ -199,7 +206,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     break;
   }
 
-  if (data_rep->regressConfigOptions.respScaling)
+  if (surrData.valid_response_scaling())
     unscale_coefficients(expCoeffsIter->second, expCoeffGradsIter->second);
 
   clear_computed_bits();
@@ -1884,7 +1891,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
   const SDRArray& sdr_array = surrData.response_data();
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
-  bool scaling = data_rep->regressConfigOptions.respScaling;
+  bool scaling = surrData.valid_response_scaling();
 
   // populate A
   build_linear_system(A, multi_index);
