@@ -199,6 +199,11 @@ protected:
 			  const UShort2DArray& multi_index_c,
 			  RealVector& exp_coeffs_c, RealMatrix& exp_grads_c);
 
+  /// unscale the expansion coefficients following computation using scaled
+  /// response data
+  void unscale_coefficients(RealVector& exp_coeffs,
+			    RealMatrix& exp_coeff_grads);
+
   /// update add_val and add_gradient based on failure map from SurrogateData
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		     bool& add_val, bool& add_grad);

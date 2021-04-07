@@ -199,6 +199,9 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     break;
   }
 
+  if (data_rep->regressConfigOptions.respScaling)
+    unscale_coefficients(expCoeffsIter->second, expCoeffGradsIter->second);
+
   clear_computed_bits();
 }
 
@@ -1879,6 +1882,9 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
   const SDRArray& sdr_array = surrData.response_data();
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+  bool scaling = data_rep->regressConfigOptions.respScaling;
 
   // populate A
   build_linear_system(A, multi_index);
@@ -1886,8 +1892,6 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
   if (expansionCoeffFlag) {
 
     // matrix/vector sizing
-    std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
-      std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
     num_rows_B = (data_rep->basisConfigOptions.useDerivs) ?
       num_data_pts_fn + num_data_pts_grad * num_v : num_data_pts_fn;
     num_coeff_rhs = 1;
@@ -1895,14 +1899,14 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
       num_coeff_rhs + num_grad_rhs : num_coeff_rhs;
 
     B.shapeUninitialized(num_rows_B, num_rhs);
-    Real *b_vectors = B.values();
+    Real* b_vectors = B.values();
 
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
     b_cntr = 0; b_grad_cntr = num_data_pts_fn;
     add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
-    if (data_rep->regressConfigOptions.respScaling) {
+    if (scaling) {
       const RealRealPair& factors = surrData.response_function_scaling();
       for (i=0; i<num_surr_data_pts; ++i)
 	data_rep->pack_response_data(sdr_array[i], factors, add_val, b_vectors,
@@ -1924,19 +1928,14 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
-    Real *b_vectors = B.values();
-    b_cntr = 0;
-    //if (data_rep->regressConfigOptions.respScaling) { // *** TO DO
+    Real* b_vectors = B.values();  Real scale;
+    if (scaling) scale = surrData.response_function_scaling().second;
     for (i=0; i<num_surr_data_pts; ++i) {
-      //add_val = false; add_grad = true;
-      //if (add_grad) {
-	const RealVector& resp_grad = sdr_array[i].response_gradient();
-	for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
-	  b_vectors[(j+num_coeff_rhs)*num_data_pts_grad+b_cntr] = resp_grad[j];
-	++b_cntr;
-      //}
+      const RealVector& resp_grad = sdr_array[i].response_gradient();
+      for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
+	b_vectors[(j+num_coeff_rhs)*num_data_pts_grad + i]
+	  = (scaling) ? resp_grad[j] / scale : resp_grad[j];
     }
-    //} // *** TO DO
   }
 }
 

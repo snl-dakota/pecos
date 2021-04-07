@@ -306,6 +306,24 @@ multiply_expansion(const UShort2DArray& multi_index_a,
 
 
 void OrthogPolyApproximation::
+unscale_coefficients(RealVector& exp_coeffs, RealMatrix& exp_coeff_grads)
+{
+  const RealRealPair& factors = surrData.response_function_scaling();
+  Real min = factors.first, range = factors.second;
+
+  // Bounds scaling: scaled_fn = (unscaled_fn - min) / range
+  // > unscaled_fn   = range * scaled_fn + min
+  // > unscaled_grad = range * scaled_grad
+  if (!exp_coeffs.empty()) {
+    exp_coeffs.scale(range);
+    exp_coeffs[0] += min; // Note: first coeff guaranteed for sparse soln
+  }
+  if (!exp_coeff_grads.empty())
+    exp_coeff_grads.scale(range);
+}
+
+
+void OrthogPolyApproximation::
 basis_value(const RealVector& x, std::vector<BasisPolynomial>& polynomial_basis,
 	    const UShort2DArray& multi_index, RealVector& basis_values)
 {
