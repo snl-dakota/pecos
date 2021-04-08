@@ -2139,9 +2139,12 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   anisotropic_order_to_dimension_preference(exp_order, order_max, dim_pref);
   // Do cross validation for varing polynomial orders up to 
   // a maximum order defined by approxOrder[0]
-  unsigned short order_min
-    = (data_rep->regressConfigOptions.crossValidNoiseOnly) ? order_max
-    : std::min((unsigned short)1, order_max); // usually start from 1
+  unsigned short order_min = 1,
+    max_cv = data_rep->regressConfigOptions.maxCVOrderCandidates;
+  if (data_rep->regressConfigOptions.crossValidNoiseOnly || order_max <= 1)
+    order_min = order_max;
+  else if (order_max > max_cv) // including max_cv default = USHRT_MAX
+    order_min = order_max - max_cv + 1; // kick_order is 1
 
   Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
   int best_basis_parameters_index = 0, num_build_points = num_data_pts_fn;

@@ -39,7 +39,8 @@ public:
   /// default constructor
   RegressionConfigOptions();
   /// constructor
-  RegressionConfigOptions(bool cv, bool cv_noise_only, bool scaling, int seed,
+  RegressionConfigOptions(bool cv, bool cv_noise_only,
+			  unsigned short max_cv_order, bool scaling, int seed,
 			  const RealVector& noise_tols, Real l2_penalty,
 			  bool normalize_cv, unsigned short init_lev,
 			  unsigned short growth_fact,
@@ -57,6 +58,8 @@ public:
   /// flag to restrict cross-validation to only estimate the noise
   /// tolerance in order to manage computational cost
   bool crossValidNoiseOnly;
+  /// maximum number of order candidates for cross-validation
+  unsigned short maxCVOrderCandidates;
   /// scale range of response data to [0,1] to align with regression tols
   bool respScaling;
 
@@ -95,22 +98,24 @@ public:
 
 
 inline RegressionConfigOptions::RegressionConfigOptions():
-  crossValidation(false), crossValidNoiseOnly(false), respScaling(false),
-  randomSeed(0), l2Penalty(0.), normalizeCV(false), initSGLevel(0),
-  multiIndexGrowthFactor(2), numAdvancements(3), advanceByFrontier(false)
+  crossValidation(false), crossValidNoiseOnly(false),
+  maxCVOrderCandidates(USHRT_MAX), respScaling(false), randomSeed(0),
+  l2Penalty(0.), normalizeCV(false), initSGLevel(0), multiIndexGrowthFactor(2),
+  numAdvancements(3), advanceByFrontier(false)
 { }
 
 
 inline RegressionConfigOptions::
-RegressionConfigOptions(bool cv, bool cv_noise_only, bool scaling, int seed,
+RegressionConfigOptions(bool cv, bool cv_noise_only,
+			unsigned short max_cv_order, bool scaling, int seed,
 			const RealVector& noise_tols, Real l2_penalty,
 			bool normalize_cv, unsigned short init_lev,
 			unsigned short growth_fact, unsigned short num_advance):
-  crossValidation(cv), crossValidNoiseOnly(cv_noise_only), respScaling(scaling),
-  randomSeed(seed), noiseTols(noise_tols), l2Penalty(l2_penalty),
-  normalizeCV(normalize_cv), initSGLevel(init_lev),
-  multiIndexGrowthFactor(growth_fact), numAdvancements(num_advance),
-  advanceByFrontier(false)
+  crossValidation(cv), crossValidNoiseOnly(cv_noise_only),
+  maxCVOrderCandidates(max_cv_order), respScaling(scaling), randomSeed(seed),
+  noiseTols(noise_tols), l2Penalty(l2_penalty), normalizeCV(normalize_cv),
+  initSGLevel(init_lev), multiIndexGrowthFactor(growth_fact),
+  numAdvancements(num_advance), advanceByFrontier(false)
 { }
 
 
@@ -118,6 +123,7 @@ inline RegressionConfigOptions::
 RegressionConfigOptions(const RegressionConfigOptions& rc_options):
   crossValidation(rc_options.crossValidation),
   crossValidNoiseOnly(rc_options.crossValidNoiseOnly),
+  maxCVOrderCandidates(rc_options.maxCVOrderCandidates),
   respScaling(rc_options.respScaling),
   randomSeed(rc_options.randomSeed), noiseTols(rc_options.noiseTols),
   l2Penalty(rc_options.l2Penalty), normalizeCV(rc_options.normalizeCV),
