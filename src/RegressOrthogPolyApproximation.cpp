@@ -465,6 +465,10 @@ bool RegressOrthogPolyApproximation::advancement_available()
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
 
+  std::map<ActiveKey, unsigned short>::iterator it
+    = bestApproxOrder.find(data_rep->activeKey);
+  if (it == bestApproxOrder.end()) return true;
+
   // In the context of cross-validation (CV), expansion_order() is the current
   // upper bound for a set of candidates, and bestApproxOrder indicates the
   // selected candidate.  Note: a recovered solution for which the selected
@@ -476,7 +480,7 @@ bool RegressOrthogPolyApproximation::advancement_available()
   // then this QoI is saturated within advancement of refinement candidates
   // > could do this by selected CV order or based on recovered terms, where
   //   a recovered sparse solution <= cardinality for selected CV order
-  if (bestApproxOrder < order_max) return false;
+  if (it->second < order_max) return false;
   else {
     // for a sparse recovery, could check terms in recovered solution
     // > for uniform refinement of isotropic approxOrder with well-ordered
@@ -2147,6 +2151,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
     order_min = order_max - max_cv + 1; // kick_order is 1
 
   Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
+  unsigned short best_order = 0;
   int best_basis_parameters_index = 0, num_build_points = num_data_pts_fn;
   bool use_gradients = false;
   if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
@@ -2214,7 +2219,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
       best_score = score;
       best_tolerance = tol;
       best_basis_parameters_index = i;
-      bestApproxOrder = order;
+      best_order = order;
     }
     basis_scores[i] = score;
 
@@ -2224,14 +2229,16 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
     ++i;
   }
 
-  dimension_preference_to_anisotropic_order(bestApproxOrder, dim_pref,
+  bestApproxOrder[data_rep->activeKey] = best_order;
+  dimension_preference_to_anisotropic_order(best_order, dim_pref,
 					    num_v, cv_exp_order);
-  int num_basis_terms //= util::nchoosek(num_v+bestApproxOrder, bestApproxOrder)
+  int num_basis_terms //= util::nchoosek(num_v+best_order, best_order)
     = data_rep->total_order_terms(cv_exp_order);
 
   if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
     PCout << "\nCross validation complete:"
-	  << "\n  Best expansion order:        " << bestApproxOrder
+	  << "\n  Best expansion order:        " << best_order
+	  << " within [" << order_min << ", " << order_max << ']'
 	  << "\n  Best cross validation error: " << best_score
 	  << "\n  Best noise tolerance:        " << best_tolerance
 	  << "\n\nFinal solve with full data:\n";

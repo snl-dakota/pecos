@@ -358,7 +358,7 @@ private:
   //
 
   /// order of orthogonal best polynomial expansion found using cross validation
-  int bestApproxOrder;
+  std::map<ActiveKey, unsigned short> bestApproxOrder;
 
   /// Stuct use to define the options of a compressed sensing solve
   CompressedSensingOptions CSOpts;
