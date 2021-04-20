@@ -146,16 +146,12 @@ update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
   assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
 
-  UShort2DArray::iterator            sm_it =     sm_mi.begin();
-  UShort2DArray::const_iterator new_sm_cit = new_sm_mi.begin();
-  size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index = 0;
+  size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size();
   sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
-
   size_t start = 0, end = num_old;
   for (i=0; i<num_new; ++i) {
     UShortArray& new_sm_mi_i = new_sm_mi[i];
-    //size_t index = find_index(sm_mi, new_sm_mi_i);// restrict the search range
-    size_t index = find_index(sm_mi, new_sm_mi_i, start, end);
+    size_t index = find_index(sm_mi, new_sm_mi_i, start, end);// restrict search
     if (index == _NPOS) {
       sm_mi.push_back(new_sm_mi_i);
       sm_coeffs.push_back(new_sm_coeffs[i]);
