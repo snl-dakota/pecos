@@ -45,10 +45,10 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 
 void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 {
-  RealVector& curr_aniso_wts = anisoWtsIter->second;
+  RealVector& active_aniso_wts = anisoWtsIter->second;
   if (aniso_wts.empty()) {
-    if (!curr_aniso_wts.empty()) { // change from current
-      curr_aniso_wts.sizeUninitialized(0);
+    if (!active_aniso_wts.empty()) { // change from current
+      active_aniso_wts.sizeUninitialized(0);
       clear_size(); // clear state to mandate a grid / grid size update
     }
   }
@@ -68,24 +68,24 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 	{ dim_iso = false; break; }
     // update active anisoLevelWts and grid update indicator
     if (dim_iso) {
-      if (!curr_aniso_wts.empty()) {
-	curr_aniso_wts.sizeUninitialized(0);
+      if (!active_aniso_wts.empty()) {
+	active_aniso_wts.sizeUninitialized(0);
 	clear_size(); // clear state to mandate a grid / grid size update
       }
     }
     else {
-      RealVector prev_aniso_wts = curr_aniso_wts; // for update indicator
+      RealVector prev_aniso_wts = active_aniso_wts; // for update indicator
       // truncate any negative values
-      curr_aniso_wts.resize(numVars);
+      active_aniso_wts.resize(numVars);
       for (i=0; i<numVars; ++i)
-	curr_aniso_wts[i] = std::max(aniso_wts[i], 0.);
+	active_aniso_wts[i] = std::max(aniso_wts[i], 0.);
       // normalize and enforce axis lower bounds/weight upper bounds
       int option = 1; // weights scaled so that minimum nonzero entry is 1
       webbur::sandia_sgmga_aniso_normalize(option, numVars,
-					   curr_aniso_wts.values());
+					   active_aniso_wts.values());
 #ifdef DEBUG
       PCout << "anisoLevelWts after sandia_sgmga_aniso_normalize():\n"
-	    << curr_aniso_wts;
+	    << active_aniso_wts;
 #endif
       // enforce axis lower bounds, if present, for current ssgLevel.  An axis
       // lower bound defines a weight upper bound based on the current ssgLevel:
@@ -96,18 +96,19 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       if (!axis_l_bnds.empty()) {
 	Real ssg_lev = (Real)(ssgLevIter->second);
 	for (i=0; i<numVars; ++i)
-	  if (axis_l_bnds[i] > SMALL_NUMBER) {                     // nonzero LB
+	  if (axis_l_bnds[i] > SMALL_NUMBER) {       // nonzero lower bound
 	    Real wt_u_bnd = ssg_lev / axis_l_bnds[i];
-	    curr_aniso_wts[i] = (curr_aniso_wts[i] > SMALL_NUMBER) // nonzero wt
-	      ? std::min(wt_u_bnd, curr_aniso_wts[i]) : wt_u_bnd;
+	    active_aniso_wts[i]
+	      = (active_aniso_wts[i] > SMALL_NUMBER) // nonzero weight
+	      ? std::min(wt_u_bnd, active_aniso_wts[i]) : wt_u_bnd;
 	  }
 #ifdef DEBUG
 	PCout << "anisoLevelWts after axisLowerBounds enforcement:\n"
-	      << curr_aniso_wts;
+	      << active_aniso_wts;
 #endif
       }
       // indicate need for numCollocPts update
-      if (curr_aniso_wts != prev_aniso_wts)
+      if (active_aniso_wts != prev_aniso_wts)
 	clear_size(); // clear state to mandate a grid / grid size update
     }
   }

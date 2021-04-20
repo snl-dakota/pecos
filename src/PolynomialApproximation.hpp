@@ -46,6 +46,9 @@ public:
   //- Heading: Virtual member functions
   //
 
+  /// update *Iter assignments for new active key
+  virtual bool update_active_iterators(const ActiveKey& key);
+
   /// size derived class data attributes
   virtual void allocate_arrays() = 0;
 
@@ -356,13 +359,6 @@ protected:
   const RealVector& gradient(const RealVector& x);
   /// generic base class function mapped to hessian_basis_variables(x)
   const RealSymMatrix& hessian(const RealVector& x);
-
-  //
-  //- Heading: New virtual functions
-  //
-
-  /// update *Iter for new activeKey from sharedDataRep
-  virtual bool update_active_iterators(const ActiveKey& key);
 
   //
   //- Heading: Member functions

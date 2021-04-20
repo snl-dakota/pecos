@@ -214,6 +214,23 @@ inline size_t find_index(const PecosContainerType& c,
 }
 
 
+template <typename PecosContainerType>
+inline size_t find_index(const PecosContainerType& c,
+			 const typename PecosContainerType::value_type& val,
+			 size_t start, size_t end)
+{
+  // For a default container, employ one traversal
+
+  typename PecosContainerType::const_iterator cit = c.begin();
+  std::advance(cit, start);
+  size_t cntr = start; // force size_t to ensure that _NPOS is valid
+  for (; cit!=c.end() && cntr<end; ++cit, ++cntr)
+    if (*cit == val)
+      return cntr;
+  return _NPOS;
+}
+
+
 template <typename ScalarType>
 inline ScalarType find_min(const std::vector<ScalarType>& vec)
 {

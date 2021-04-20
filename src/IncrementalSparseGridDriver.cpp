@@ -146,6 +146,30 @@ update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
   assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
 
+  UShort2DArray::iterator            sm_it =     sm_mi.begin();
+  UShort2DArray::const_iterator new_sm_cit = new_sm_mi.begin();
+  size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index = 0;
+  sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
+
+  size_t start = 0, end = num_old;
+  for (i=0; i<num_new; ++i) {
+    UShortArray& new_sm_mi_i = new_sm_mi[i];
+    //size_t index = find_index(sm_mi, new_sm_mi_i);// restrict the search range
+    size_t index = find_index(sm_mi, new_sm_mi_i, start, end);
+    if (index == _NPOS) {
+      sm_mi.push_back(new_sm_mi_i);
+      sm_coeffs.push_back(new_sm_coeffs[i]);
+    }
+    else {
+      sm_coeffs[index] = new_sm_coeffs[i];
+      // trim contiguous search range when straightforward to do so
+      // (this minimal performance optimization is easily defeated)
+      if      (index == start) ++start;
+      else if (index == end-1) --end;
+    }
+  }
+
+  /*
   // Assumptions to accelerate increment (relative to simplest option above):
   // > consistent ordering for index sets present in old & new
   // > leading sm_mi index sets that are unmatched at front of new_sm_mi
@@ -167,11 +191,15 @@ update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs)
       sm_coeffs[old_index] = new_sm_coeffs[i];
       ++old_index;
     }
-    else { // assumption: sm_mi lacks new_sm_mi index set, not visa versa
+    else {
       sm_mi.push_back(new_sm_mi_i);
       sm_coeffs.push_back(new_sm_coeffs[i]);
     }
   }
+  // Retired 4/19/21: these simplifying assumptions can be violated, e.g. level
+  // 1 isotropic mi {0,0},{1,0},{0,1} w/ coeffs {-1,1,1} incremented to level 2
+  // anisotropic mi {0,0},{2,0},{0,1} w/ same coeffs
+  */
 }
 
 
