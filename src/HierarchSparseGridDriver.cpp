@@ -150,7 +150,8 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
       UShort2DArray& sm_mi_l = sm_mi[lev];
       if (sm_mi_l.empty()) // short cut for uniform decrement
     //if (sm_mi_l.size() != SharedPolyApproxData::total_order_terms())
-	SharedPolyApproxData::total_order_multi_index(lev, numVars, sm_mi_l);
+	SharedPolyApproxData::
+	  total_order_multi_index_by_level(lev, numVars, sm_mi_l);
     }
   }
   else { // utilize webbur::sandia_sgmga_vcn_ordered

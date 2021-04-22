@@ -47,20 +47,34 @@ dimension_preference_to_anisotropic_order(unsigned short scalar_order,
 inline void
 anisotropic_order_to_dimension_preference(const UShortArray& aniso_order,
 					  unsigned short& scalar_order,
-					  RealVector& dim_pref)
+					  RealVector& dim_pref,
+					  bool normalize = false)
 {
   // Note: this fn is the inverse of dimension_preference_to_anisotropic_order()
 
-  scalar_order = aniso_order[0];
   size_t i, num_v = aniso_order.size(); bool anisotropic = false;
-  for (i=1; i<num_v; ++i)
-    if (aniso_order[i] > scalar_order)
-      { scalar_order = aniso_order[i]; anisotropic = true; }
+  if (num_v) {
+    scalar_order = aniso_order[0];
+    for (i=1; i<num_v; ++i) {
+      unsigned short ao = aniso_order[i];
+      if (ao != scalar_order) {
+	anisotropic = true;
+	if (ao > scalar_order)
+	  scalar_order = ao;
+      }
+    }
+  }
+  else
+    scalar_order = USHRT_MAX; // undefined
 
-  if (anisotropic) { // preserve ratios; normalization not required
+  if (anisotropic) {
     dim_pref.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      dim_pref[i] = (Real)aniso_order[i];
+    if (normalize)
+      for (i=0; i<num_v; ++i)
+	dim_pref[i] = (Real)aniso_order[i] / (Real)scalar_order;
+    else // just preserve ratios
+      for (i=0; i<num_v; ++i)
+	dim_pref[i] = (Real)aniso_order[i];
   }
   else
     dim_pref.sizeUninitialized(0);

@@ -2138,9 +2138,17 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+
+  // *** TO DO: migrate Pecos::SharedOrthogPoly to scalar order + dim_pref
+  // *** this avoids proliferating a truncation from Real pref to int order
+  // *** (inferred dim_pref below may differ from user spec)
   const UShortArray& exp_order = data_rep->expansion_order();
   RealVector dim_pref;  unsigned short order_max;
   anisotropic_order_to_dimension_preference(exp_order, order_max, dim_pref);
+  if (data_rep->expConfigOptions.outputLevel >= DEBUG_OUTPUT)
+    PCout << "Run CV: incoming expansion order:\n" << exp_order
+	  << "\n        inferred dimension preference:\n" << dim_pref;
+
   // Do cross validation for varing polynomial orders up to 
   // a maximum order defined by approxOrder[0]
   unsigned short order_min = 1,
@@ -2167,16 +2175,20 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 
-  int i = 0, order;
-  UShortArray cv_exp_order;
+  int i = 0, order, num_basis_terms;
+  bool isotropic = dim_pref.empty();
   for ( order = order_min; order <= order_max; ++order ) {
-    if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
-      PCout << "Testing PCE expansion order " << order << std::endl;
-    dimension_preference_to_anisotropic_order(order, dim_pref, num_v,
-					      cv_exp_order);
-    int num_basis_terms = //util::nchoosek( num_v + order, order );
-      data_rep->total_order_terms(cv_exp_order);
-    // TO DO: verify submatrix view works with anistropic Vandermonde ordering
+    num_basis_terms = (isotropic) ? data_rep->total_order_terms(order, num_v) :
+      data_rep->total_order_terms(order, dim_pref);
+    if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT) {
+      if (isotropic) PCout << "Testing isotropic ";
+      else           PCout << "Testing anisotropic ";
+      PCout << "PCE expansion order " << order << " with "
+	    << num_basis_terms << " terms" << std::endl;
+    }
+    // Note: submatrix view works with Vandermonde from both isotropic and
+    // anisotropic expansions (construction in SharedPolyApproxData::
+    // total_order_multi_index() enforces increasing order sequence)
     RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
 				      num_basis_terms, 0, 0 );
 
@@ -2230,10 +2242,9 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   }
 
   bestApproxOrder[data_rep->activeKey] = best_order;
-  dimension_preference_to_anisotropic_order(best_order, dim_pref,
-					    num_v, cv_exp_order);
-  int num_basis_terms //= util::nchoosek(num_v+best_order, best_order)
-    = data_rep->total_order_terms(cv_exp_order);
+  num_basis_terms = (isotropic) ?
+    data_rep->total_order_terms(best_order, num_v) :
+    data_rep->total_order_terms(best_order, dim_pref);
 
   if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
     PCout << "\nCross validation complete:"
@@ -2475,8 +2486,9 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
       UShort2DArray new_indices;
       if ( basis_indices.size() == 0 )
 	{
-	  data_rep->total_order_multi_index( (unsigned short)k_counter,
-					     (size_t)num_vars, new_indices );
+	  data_rep->total_order_multi_index_by_level( (unsigned short)k_counter,
+						      (size_t)num_vars,
+						      new_indices );
 	  int num_indices = internal_basis_indices.size();
 	}
       else

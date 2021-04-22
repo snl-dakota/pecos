@@ -241,7 +241,10 @@ assign_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 	* (int)std::floor(BasisPolynomial::n_choose_k(numVars - 1, wpNmi)+.5);
     }
   }
-  else { // utilize webbur::sgmga_vcn_{ordered,coef}
+  else {
+    // utilize webbur::sgmga_vcn_{ordered,coef} (Note: anisotropic version
+    // of SharedPolyApproxData::total_order_multi_index() does not support
+    // lower_bound_offset, but could be updated to employ/collect logic below)
     sm_mi.clear();
     sm_coeffs.clear();
     // Utilize webbur::sandia_sgmga_vcn_{ordered,coef} for 0-based index sets

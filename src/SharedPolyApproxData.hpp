@@ -438,31 +438,52 @@ public:
   /// set randomVarsKey
   void random_variables_key(const BitArray& random_vars_key);
 
-  /// return the number of expansion terms for a total order expansion
-  /// with the provided (anisotropic) upper_bound array specification
-  static size_t total_order_terms(const UShortArray& upper_bound,
-				  short lower_bound_offset = -1);
   /// return the number of expansion terms for a tensor-product
   /// expansion with the provided (anisotropic) quadrature orders
   /// (include_upper_bound = false) or expansion orders (default)
-  static size_t tensor_product_terms(const UShortArray& order,
+  static size_t tensor_product_terms(const UShortArray& orders,
 				     bool include_upper_bound = true);
+  /// return the number of expansion terms for a total order expansion of
+  /// given (isotropic/anisotropic) expansion orders
+  static size_t total_order_terms(const UShortArray& orders,
+				  short lower_bound_offset = -1);
+  /// return the number of expansion terms for an isotropic total
+  /// order expansion of given order
+  static size_t total_order_terms(unsigned short order, size_t num_vars,
+				  short lower_bound_offset = -1);
+  /// return the number of expansion terms for an anisotropic total
+  /// order expansion of given max_order and dimension preference
+  static size_t total_order_terms(unsigned short max_order,
+				  const RealVector& dim_pref,
+				  short lower_bound_offset = -1);
 
   /// initialize expansion multi_index using a tensor-product expansion
-  static void tensor_product_multi_index(const UShortArray& order,
+  static void tensor_product_multi_index(const UShortArray& orders,
 					 UShort2DArray& multi_index,
 					 bool include_upper_bound = true);
   /// initialize multi_index using a hierarchical tensor-product expansion
   static void hierarchical_tensor_product_multi_index(
     const UShort2DArray& delta_quad, UShort2DArray& multi_index);
-  /// initialize multi_index using a total-order expansion from a scalar level
-  static void total_order_multi_index(unsigned short level, size_t num_vars, 
-				      UShort2DArray& multi_index);
-  /// initialize expansion multi_index using a total-order expansion from an
-  /// upper_bound array specification
-  static void total_order_multi_index(const UShortArray& upper_bound,
+  /// initialize expansion multi_index using an (isotropic/anisotropic)
+  /// total-order expansion of given orders 
+  static void total_order_multi_index(const UShortArray& orders,
     UShort2DArray& multi_index, short lower_bound_offset = -1,
-    size_t max_terms = _NPOS); // SIZE_MAX is a non-portable extension
+    size_t max_terms = _NPOS);
+  /// initialize expansion multi_index using an isotropic total-order
+  /// expansion of given order
+  static void total_order_multi_index(unsigned short max_order,
+    size_t num_vars, UShort2DArray& multi_index,
+    short lower_bound_offset = -1, size_t max_terms = _NPOS);
+  /// initialize expansion multi_index using an anisotropic total-order
+  /// expansion of given order and dimension preference
+  static void total_order_multi_index(unsigned short max_order,
+    const RealVector& dim_pref, UShort2DArray& multi_index,
+    short lower_bound_offset = -1, size_t max_terms = _NPOS);
+  /// define a portion of the multi_index for a total-order expansion
+  /// corresponding to a single scalar level
+  static void total_order_multi_index_by_level(unsigned short level,
+					       size_t num_vars, 
+					       UShort2DArray& multi_index);
 
   /// utility function for incrementing a set of multidimensional indices
   static void increment_indices(UShortArray& indices, const UShortArray& limits,
@@ -544,6 +565,14 @@ protected:
   BitArrayULongMap sobolIndexMap;
 
 private:
+
+  //
+  //- Heading: Member functions
+  //
+
+  static Real dot(const UShortArray& mi, const RealVector& wts);
+
+  static size_t sum(const UShortArray& mi);
 
   //
   //- Heading: Data
@@ -886,6 +915,30 @@ match_nonrandom_vars(const RealVector& vars_1, const RealVector& vars_2) const
     if (vars_1[*cit] != vars_2[*cit]) // double match w/o tolerance
       return false;
   return true;
+}
+
+
+inline size_t SharedPolyApproxData::sum(const UShortArray& mi)
+{
+  size_t i, num_v = mi.size(), sum = 0;
+  for (i=0; i<num_v; ++i)
+    sum += mi[i];
+  return sum;
+}
+
+
+inline Real SharedPolyApproxData::
+dot(const UShortArray& mi, const RealVector& wts)
+{
+  size_t i, num_v = mi.size();
+  Real inner_prod = 0.;
+  if (wts.empty())
+    for (i=0; i<num_v; ++i)
+      inner_prod += mi[i];
+  else
+    for (i=0; i<num_v; ++i)
+      inner_prod += mi[i] * wts[i];
+  return inner_prod;
 }
 
 } // namespace Pecos
