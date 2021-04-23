@@ -474,16 +474,16 @@ allocate_main_interaction_sobol(unsigned short max_order)
     UShortArray terms(ord, 1); // # of terms = level
     bool order_complete = false;
     while (!order_complete) {
-      size_t order_m1 = ord - 1, order_m2 = ord - 2;
-      for (terms[order_m1]=1; terms[order_m1]<terms[order_m2];
-	   ++terms[order_m1]) {
+      size_t last_index = ord - 1, prev_index = ord - 2;
+      for (terms[last_index]=1; terms[last_index]<terms[prev_index];
+	   ++terms[last_index]) {
 	// convert orders (within terms) to variable indices (within set)
 	set.reset();
 	for (size_t i=0; i<ord; ++i)
 	  set.set(terms[i]-1);
 	sobolIndexMap[set] = cntr; ++cntr;
       }
-      increment_terms(terms, order_m1, order_m2, numVars,
+      increment_terms(terms, last_index, prev_index, numVars,
 		      order_complete, true);
     }
   }
@@ -700,14 +700,14 @@ total_order_terms(unsigned short max_order, const RealVector& dim_pref,
     for (i=0; i<num_vars; ++i)
       if (aniso_wts[i] <= (Real)max_order)
 	++num_terms;
-  unsigned short order;  size_t order_m1, order_m2;  Real inner_prod;
+  unsigned short order;  size_t last_index, prev_index;  Real inner_prod;
   for (order=2; order<=max_order; ++order) { // order 2 through max
     UShortArray terms(order, 1); // # of terms = current order
     bool order_complete = false;
     while (!order_complete) {
-      order_m1 = order - 1; order_m2 = order - 2;
-      for (terms[order_m1]=1; terms[order_m1]<=terms[order_m2]; 
-	   ++terms[order_m1]) {
+      last_index = order - 1; prev_index = order - 2;
+      for (terms[last_index]=1; terms[last_index]<=terms[prev_index]; 
+	   ++terms[last_index]) {
 	inner_prod = 0.;
 	for (i=0; i<num_vars; ++i)
 	  inner_prod += aniso_wts[i] *
@@ -716,7 +716,7 @@ total_order_terms(unsigned short max_order, const RealVector& dim_pref,
 	  ++num_terms;
       }
       // increment term hierarchy
-      increment_terms(terms, order_m1, order_m2, num_vars, order_complete);
+      increment_terms(terms, last_index, prev_index, num_vars, order_complete);
     }
   }
 #ifdef DEBUG
@@ -751,8 +751,8 @@ total_order_multi_index(unsigned short max_order, size_t num_vars,
     min_order = (lower_bound_offset >= max_order) ? 0 :
       max_order - lower_bound_offset; // e.g., Smolyak l.b. = w-N+1
 
-  // special logic required for order < 2 due to order_m2 defn below
-  size_t i, cntr = 0, order_m1, order_m2;
+  // special logic required for order < 2 due to prev_index defn below
+  size_t i, cntr = 0, last_index, prev_index;
   UShortArray mi(num_vars, 0);
   multi_index.clear();
   if (min_order == 0 && cntr<max_terms) // && max_order >= 0
@@ -773,10 +773,10 @@ total_order_multi_index(unsigned short max_order, size_t num_vars,
     bool order_complete = false;
     while (!order_complete) {
       // this is the inner-most loop w/i the nested looping managed by terms
-      order_m1 = order - 1; order_m2 = order - 2;
-      for (terms[order_m1]=1;
-	   terms[order_m1]<=terms[order_m2] && cntr<max_terms;
-	   ++terms[order_m1]) {
+      last_index = order - 1; prev_index = order - 2;
+      for (terms[last_index]=1;
+	   terms[last_index]<=terms[prev_index] && cntr<max_terms;
+	   ++terms[last_index]) {
 	// store the orders of the univariate polynomials to be used for
 	// constructing the current multivariate basis function
 	for (i=0; i<num_vars; ++i)
@@ -786,7 +786,7 @@ total_order_multi_index(unsigned short max_order, size_t num_vars,
       if (cntr == max_terms)
 	order_complete = true;
       else // increment term hierarchy
-	increment_terms(terms, order_m1, order_m2, num_vars, order_complete);
+	increment_terms(terms, last_index, prev_index, num_vars,order_complete);
     }
   }
 
@@ -827,53 +827,77 @@ total_order_multi_index(unsigned short max_order, const RealVector& dim_pref,
   // option 1: scaled so that minimum nonzero entry is 1
   webbur::sandia_sgmga_aniso_normalize(1, num_vars, aniso_wts.values());
 
-  unsigned short min_order = 0, order, order_m1, sub_order;
-  UShortArray mi(num_vars, 0);
+  unsigned short min_order = 0, order, order_m1;
   multi_index.clear();
+  std::list<UShortArray> excluded_multi_index;
+
+  // order 0
+  UShortArray mi(num_vars, 0);
   if (min_order == 0 && cntr<max_terms) // && max_order >= 0
     { multi_index.push_back(mi); ++cntr; } // order 0
 
-  size_t sub_order_m1, sub_order_m2;
-  for (order=std::max(min_order,(unsigned short)1); order<=max_order; ++order) {
-    order_m1 = order - 1;
-    // order 1 has 1 potential term per dim and does not require recursion
-    if (min_order <= 1) {
-      for (i=0; i<num_vars && cntr<max_terms; ++i) {
-	if (aniso_wts[i] <= order && aniso_wts[i] > order_m1) {
-	  mi[i] = 1; // ith entry is nonzero
-	  multi_index.push_back(mi); ++cntr;
-	  mi[i] = 0; // reset
-	}
-      }
-    }
-    // order 2 and above require terms recursion
-    for (sub_order=2; sub_order<=order; ++sub_order) {
-      UShortArray terms(sub_order, 1);//# of terms = current order
-      bool include, order_complete = false;  size_t mi_sum;  Real inner_prod;
-      while (!order_complete) {
-	// this is the inner-most loop w/i the nested looping managed by terms
-	sub_order_m1 = sub_order - 1; sub_order_m2 = sub_order - 2;
-	for (terms[sub_order_m1]=1;
-	     terms[sub_order_m1]<=terms[sub_order_m2] && cntr<max_terms;
-	     ++terms[sub_order_m1]) {
-	  // store the orders of the univariate polynomials to be used for
-	  // constructing the current multivariate basis function
-	  for (i=0; i<num_vars; ++i)
-	    mi[i] = std::count(terms.begin(), terms.end(), i+1);
-	  // evaluate candidate mi for inclusion during this order increment
-	  inner_prod = dot(mi, aniso_wts);
-	  if (inner_prod <= (Real)order && inner_prod > (Real)order_m1)
-	    { multi_index.push_back(mi); ++cntr; }
-	}
-	if (cntr == max_terms)
-	  order_complete = true;
-	else // increment term hierarchy
-	  increment_terms(terms, sub_order_m1, sub_order_m2,
-			  num_vars, order_complete);
-      }
+  // order 1 has 1 potential term per dim and does not require terms recursion
+  if (min_order <= 1 && max_order >= 1) {
+    order = 1; order_m1 = 0;
+    for (i=0; i<num_vars && cntr<max_terms; ++i) {
+      mi[i] = 1; // ith entry is active
+      if (aniso_wts[i] <= order && aniso_wts[i] > order_m1)
+	{ multi_index.push_back(mi); ++cntr; }
+      else
+	excluded_multi_index.push_back(mi);
+      mi[i] = 0; // reset ith entry
     }
 #ifdef DEBUG
-    PCout << "MI anisotropic sub-order = " << order << std::endl;
+    PCout << "MI anisotropic order = " << order << std::endl;
+    size_t mi_len = multi_index.size();
+    for (i=0; i<mi_len; ++i)
+      PCout << "multiIndex[" << i << "]:\n" << multi_index[i] << std::endl;
+#endif // DEBUG
+  }
+
+  // order 2 and higher require terms recursion
+  Real inner_prod;  size_t last_index, prev_index;  bool order_complete;
+  for (order=std::max(min_order,(unsigned short)2); order<=max_order; ++order) {
+    order_m1 = order - 1;
+
+    // re-check excluded mi's each time for inclusion after order advancement
+    std::list<UShortArray>::iterator it = excluded_multi_index.begin();
+    while (it != excluded_multi_index.end()) {
+      UShortArray& mi = *it;
+      inner_prod = dot(mi, aniso_wts);
+      if (inner_prod <= (Real)order && inner_prod > (Real)order_m1) {
+	multi_index.push_back(mi); ++cntr;
+	it = excluded_multi_index.erase(it); // safely advances to next
+      }
+      else ++it;
+    }
+
+    UShortArray terms(order, 1);//# of terms = current order
+    order_complete = false;
+    while (!order_complete) {
+      // this is the inner-most loop w/i the nested looping managed by terms
+      last_index = order - 1; prev_index = order - 2;
+      for (terms[last_index]=1;
+	   terms[last_index]<=terms[prev_index] && cntr<max_terms;
+	   ++terms[last_index]) {
+	// store the orders of the univariate polynomials to be used for
+	// constructing the current multivariate basis function
+	for (i=0; i<num_vars; ++i)
+	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
+	// evaluate candidate mi for inclusion during this order increment
+	inner_prod = dot(mi, aniso_wts);
+	if (inner_prod <= (Real)order && inner_prod > (Real)order_m1)
+	  { multi_index.push_back(mi); ++cntr; }
+	else
+	  excluded_multi_index.push_back(mi);
+      }
+      if (cntr == max_terms)
+	order_complete = true;
+      else // increment term hierarchy
+	increment_terms(terms, last_index, prev_index, num_vars,order_complete);
+    }
+#ifdef DEBUG
+    PCout << "MI anisotropic order = " << order << std::endl;
     size_t mi_len = multi_index.size();
     for (i=0; i<mi_len; ++i)
       PCout << "multiIndex[" << i << "]:\n" << multi_index[i] << std::endl;
@@ -890,7 +914,7 @@ total_order_multi_index_by_level(unsigned short level, size_t num_vars,
 {
   UShortArray mi(num_vars, 0);
   multi_index.clear();
-  // special logic required for level < 2 due to order_m2 defn below
+  // special logic required for level < 2 due to level_m2 defn below
   switch (level) {
   case 0:
     multi_index.push_back(mi); break;
