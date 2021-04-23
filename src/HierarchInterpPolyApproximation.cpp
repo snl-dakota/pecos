@@ -818,6 +818,9 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   //   that are now assimilated within the active expansion
   // > we reassign T1Coeffs,T2Coeffs,T1CoeffGrads even if not active in order
   //   to preserve hierarchical sizing needed downstream (in value() et al.)
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  update_active_iterators(data_rep->activeKey);
 
   if (clear_combined) {
     std::swap(expT1CoeffsIter->second,     combinedExpT1Coeffs);
@@ -838,15 +841,9 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   productType2Coeffs.clear();     prodT2CoeffsIter = productType2Coeffs.end();
   poppedProdType1Coeffs.clear();  poppedProdType2Coeffs.clear();
 
-  // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
-  // processing (integration, VBD, etc.) for the combined-now-active coeffs
-  synthetic_surrogate_data(surrData); // overwrite data for activeKey
-
   // migrate reference moments (for completeness)
   primaryRefMeanIter->second = combinedRefMeanBits;
   primaryRefVarIter->second  = combinedRefVarBits;
-  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
-    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   bool all_vars = !data_rep->nonRandomIndices.empty();
   const ActiveKey& key = data_rep->activeKey;
   if (all_vars) {
@@ -874,8 +871,8 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   }
   else
     primaryDeltaMomIter->second = combinedDeltaMoments; // deep copy
-  // migrate current moments
-  PolynomialApproximation::combined_to_active(clear_combined);
+
+  InterpPolyApproximation::combined_to_active(clear_combined);
 }
 
 

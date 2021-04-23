@@ -89,6 +89,8 @@ protected:
   void integrate_response_moments(size_t num_moments, bool combined_stats);
   void integrate_expansion_moments(size_t num_moments, bool combined_stats);
 
+  void synthetic_surrogate_data(SurrogateData& surr_data);
+
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x,
@@ -168,10 +170,6 @@ private:
   //
   //- Heading: Convenience functions
   //
-
-  /// emulate new surrogate data following promotion of combined expansion
-  /// to active (simplifies stats computation for FINAL_RESULTS)
-  void synthetic_surrogate_data(SurrogateData& surr_data);
 
   /// reset computedRef* to zero
   void clear_reference_active_bits();

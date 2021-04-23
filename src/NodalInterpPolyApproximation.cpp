@@ -347,6 +347,8 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
 
   std::shared_ptr<SharedNodalInterpPolyApproxData> data_rep =
     std::static_pointer_cast<SharedNodalInterpPolyApproxData>(sharedDataRep);
+  update_active_iterators(data_rep->activeKey);
+
   if (expansionCoeffFlag) {
     if (clear_combined) {
       expT1CoeffsIter->second.swap(combinedExpT1Coeffs); // shallow ptr swap
@@ -374,11 +376,7 @@ void NodalInterpPolyApproximation::combined_to_active(bool clear_combined)
       expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;     // deep copy
   }
 
-  // Overwrite active surrData with synthetic data to accelerate FINAL_RESULTS
-  // processing (integration, VBD, etc.) for the combined-now-active coeffs
-  synthetic_surrogate_data(surrData); // overwrite data for activeKey
-
-  PolynomialApproximation::combined_to_active(clear_combined);
+  InterpPolyApproximation::combined_to_active(clear_combined);
 }
 
 

@@ -76,6 +76,8 @@ protected:
   void integrate_response_moments(size_t num_moments, bool combined_stats);
   void integrate_expansion_moments(size_t num_moments, bool combined_stats);
 
+  void synthetic_surrogate_data(SurrogateData& surr_data);
+
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x,
@@ -127,10 +129,6 @@ private:
   /// update expansionType{1Coeffs,2Coeffs,1CoeffGrads} following
   /// changes to surrogate data
   void update_expansion_coefficients();
-
-  /// update surr_data with synthetic data (from evaluating the interpolant)
-  /// in order to ease downstream processing
-  void synthetic_surrogate_data(SurrogateData& surr_data);
 
   /// helper function to evaluate mean(x) for passed coefficients
   Real mean(const RealVector& x, const RealVector& exp_t1_coeffs, 

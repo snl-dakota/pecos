@@ -61,6 +61,8 @@ protected:
 
   void allocate_arrays();
 
+  void combined_to_active(bool clear_combined);
+
   /// computes component (main and interaction) Sobol' indices
   void compute_component_sobol();
   /// computes total Sobol' indices
@@ -78,6 +80,10 @@ protected:
   //
   //- Heading: New virtual functions
   //
+
+  /// update surr_data with synthetic data (from evaluating the interpolant)
+  /// in order to ease downstream processing
+  virtual void synthetic_surrogate_data(SurrogateData& surr_data) = 0;
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments,

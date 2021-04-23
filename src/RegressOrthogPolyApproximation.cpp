@@ -2187,8 +2187,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 	    << num_basis_terms << " terms" << std::endl;
     }
     // Note: submatrix view works with Vandermonde from both isotropic and
-    // anisotropic expansions (construction in SharedPolyApproxData::
-    // total_order_multi_index() enforces increasing order sequence)
+    // anisotropic expansions (careful ordering in SharedPolyApproxData::
+    // total_order_multi_index() enables views for candidate order sequence)
     RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
 				      num_basis_terms, 0, 0 );
 
@@ -2253,8 +2253,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 	  << "\n  Best cross validation error: " << best_score
 	  << "\n  Best noise tolerance:        " << best_tolerance
 	  << "\n\nFinal solve with full data:\n";
-  // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
-  // TO DO: verify submatrix view works with anistropic Vandermonde ordering
+
+  // final solve with selected configuration + full data:
   RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
 				    num_basis_terms, 0, 0 );
   IntVector index_mapping;

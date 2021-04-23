@@ -43,6 +43,18 @@ void InterpPolyApproximation::allocate_arrays()
 }
 
 
+void InterpPolyApproximation::combined_to_active(bool clear_combined)
+{
+  // emulate new surrogate data following promotion of combined expansion
+  // coeffs to active: simplifies stats computation for FINAL_RESULTS
+  // (integration, VBD, etc.) for the combined-now-active coeffs
+  synthetic_surrogate_data(surrData); // overwrite data for activeKey
+
+  // migrate current moments
+  PolynomialApproximation::combined_to_active(clear_combined);
+}
+
+
 void InterpPolyApproximation::test_interpolation()
 {
   // SC should accurately interpolate the collocation data for TPQ and

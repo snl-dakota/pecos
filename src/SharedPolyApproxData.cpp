@@ -827,21 +827,21 @@ total_order_multi_index(unsigned short max_order, const RealVector& dim_pref,
   // option 1: scaled so that minimum nonzero entry is 1
   webbur::sandia_sgmga_aniso_normalize(1, num_vars, aniso_wts.values());
 
-  unsigned short min_order = 0, order, order_m1;
+  unsigned short min_order = 0, order;
   multi_index.clear();
   std::list<UShortArray> excluded_multi_index;
 
   // order 0
   UShortArray mi(num_vars, 0);
-  if (min_order == 0 && cntr<max_terms) // && max_order >= 0
+  if (min_order == 0 && cntr<max_terms)
     { multi_index.push_back(mi); ++cntr; } // order 0
 
   // order 1 has 1 potential term per dim and does not require terms recursion
   if (min_order <= 1 && max_order >= 1) {
-    order = 1; order_m1 = 0;
+    order = 1;
     for (i=0; i<num_vars && cntr<max_terms; ++i) {
       mi[i] = 1; // ith entry is active
-      if (aniso_wts[i] <= order && aniso_wts[i] > order_m1)
+      if (aniso_wts[i] <= (Real)order)
 	{ multi_index.push_back(mi); ++cntr; }
       else
 	excluded_multi_index.push_back(mi);
@@ -856,16 +856,14 @@ total_order_multi_index(unsigned short max_order, const RealVector& dim_pref,
   }
 
   // order 2 and higher require terms recursion
-  Real inner_prod;  size_t last_index, prev_index;  bool order_complete;
+  size_t last_index, prev_index;  bool order_complete;
   for (order=std::max(min_order,(unsigned short)2); order<=max_order; ++order) {
-    order_m1 = order - 1;
 
     // re-check excluded mi's each time for inclusion after order advancement
     std::list<UShortArray>::iterator it = excluded_multi_index.begin();
     while (it != excluded_multi_index.end()) {
       UShortArray& mi = *it;
-      inner_prod = dot(mi, aniso_wts);
-      if (inner_prod <= (Real)order && inner_prod > (Real)order_m1) {
+      if (dot(mi, aniso_wts) <= (Real)order) {
 	multi_index.push_back(mi); ++cntr;
 	it = excluded_multi_index.erase(it); // safely advances to next
       }
@@ -875,18 +873,16 @@ total_order_multi_index(unsigned short max_order, const RealVector& dim_pref,
     UShortArray terms(order, 1);//# of terms = current order
     order_complete = false;
     while (!order_complete) {
-      // this is the inner-most loop w/i the nested looping managed by terms
       last_index = order - 1; prev_index = order - 2;
       for (terms[last_index]=1;
 	   terms[last_index]<=terms[prev_index] && cntr<max_terms;
 	   ++terms[last_index]) {
-	// store the orders of the univariate polynomials to be used for
-	// constructing the current multivariate basis function
+	// mi[i] = orders of univariate polynomials used for constructing the
+	//         i-th multivariate basis function
 	for (i=0; i<num_vars; ++i)
 	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
 	// evaluate candidate mi for inclusion during this order increment
-	inner_prod = dot(mi, aniso_wts);
-	if (inner_prod <= (Real)order && inner_prod > (Real)order_m1)
+	if (dot(mi, aniso_wts) <= (Real)order)
 	  { multi_index.push_back(mi); ++cntr; }
 	else
 	  excluded_multi_index.push_back(mi);
