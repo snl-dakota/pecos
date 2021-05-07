@@ -1505,7 +1505,7 @@ void least_angle_regression( RealMatrix &A,
 	  index_to_add = ordering[num_covariates];
 	  Real correlation_n = correlation(index_to_add,0);
 	  Real x_n = result_0(index_to_add,prev_iter);
-	  max_abs_correlation = std::abs( correlation_n-delta*x_n );
+	  max_abs_correlation = std::abs( correlation_n-delta*x_n ); // *** IMPACTS gamma_hat step size below (this iter), plus there is some history through prev_iter ***
 	}
       else {
 	for ( inactive_index_iter = inactive_indices.begin();
