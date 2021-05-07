@@ -140,8 +140,9 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
     sparseSoln = false; break;
   }
 
-  // assign solver and set minimial index recovery requirements
+  // assign solver selection within CSTool
   data_rep->CSTool.set_linear_solver( CSOpts );
+  // set minimial index recovery requirements for solvers that support this
   switch (CSOpts.solver) {
   case ORTHOG_MATCH_PURSUIT: {
     IntVector minimal_mi_to_recover(1);  minimal_mi_to_recover[0] = 0;
@@ -156,7 +157,8 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
       (data_rep->CSTool.get_linear_solver());
     lars_sol->set_ordering( minimal_mi_to_recover );
     break;
-  // LASSO_REGRESSION can't support this because it adds and removes terms
+  // LASSO_REGRESSION can't support this since it dynamically adds/removes terms
+  // BP and BPDN are due to be retired
   }
 }
 
