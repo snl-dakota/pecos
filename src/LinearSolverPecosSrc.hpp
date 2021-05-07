@@ -324,6 +324,10 @@ private:
   
   Real delta_;
 
+protected:
+  IntVector ordering_; // enforce a set of columns to be chosen first
+                       //(LARS only, not LASSO)
+
 public:
   LARSSolver() : solver_( LEAST_ANGLE_REGRESSION ), delta_( 0.0 ){};
 
@@ -371,10 +375,16 @@ public:
 
     least_angle_regression( A_copy, b, result_0, result_1, 
 			    residualTols_[0], solver_, delta_, 
-			    maxIters_, verbosity_ );
+			    maxIters_, verbosity_, ordering_ );
 
     if ( normaliseInputs_ )
       adjust_coefficients( column_norms, result_0 );
+  };
+
+  void set_ordering( IntVector &ordering )
+  {
+    ordering_.resize( ordering.length() );
+    ordering_.assign( ordering );
   };
 };
 

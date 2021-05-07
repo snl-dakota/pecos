@@ -865,21 +865,21 @@ void orthogonal_matching_pursuit( RealMatrix &A,
     {
       int active_index;
       Real max_correlation;
-      if ( num_active_indices >= ordering.length() )
+      if ( num_active_indices < ordering.length() )
 	{
-	  // Find the column that has the largest inner product with
-	  // the residual
+	  // start from user-specified inclusions (e.g., always recover coeff 0)
+	  active_index = ordering[num_active_indices];
+	  RealVector active_col( Teuchos::View, A[active_index], A.numRows() );
+	  max_correlation = std::abs( active_col.dot( residual ) );
+	}
+      else
+	{
+	  // Find column that has the largest inner product with the residual
 	  // Warning IAMX returns the index of the element with the 
 	  // largest magnitude but IAMAX assumes indexing 1,..,N not 0,...,N-1
 	  active_index = blas.IAMAX( correlation.numRows(), 
 				     correlation[0], 1 ) - 1;
 	  max_correlation = std::abs( correlation[0][active_index] );
-	}
-      else
-	{
-	  active_index = ordering[num_active_indices];
-	  RealVector active_col( Teuchos::View, A[active_index], A.numRows() );
-	  max_correlation = std::abs( active_col.dot( residual ) );
 	}
 
       // todo define active_index_set as std::set and use find function
@@ -1406,7 +1406,8 @@ void least_angle_regression( RealMatrix &A,
 			     int solver,
 			     Real delta,
 			     int max_num_iterations,
-			     int verbosity )
+			     int verbosity,
+			     IntVector &ordering )
 {
   Teuchos::BLAS<int, Real> blas;
 
@@ -1497,21 +1498,31 @@ void least_angle_regression( RealMatrix &A,
       // will be 0 and a segfault will occur.
       Real max_abs_correlation( -1.0 );
       int prev_iter( std::max( 0, homotopy_iter -1 ) );
-      for ( inactive_index_iter = inactive_indices.begin(); 
-	    inactive_index_iter != inactive_indices.end(); 
-	    inactive_index_iter++ )
-	{
-	  int n = *inactive_index_iter;
-	  Real correlation_n = correlation(n,0);
-	  Real x_n = result_0(n,prev_iter);
-	  Real abs_correlation_n = std::abs( correlation_n-delta*x_n );
-	  if ( abs_correlation_n > max_abs_correlation )
-	    {
-	      max_abs_correlation = abs_correlation_n;
-	      index_to_add = n;
-	    }
-	}
 
+      if ( num_covariates < ordering.length() )
+	{
+	  // start from user-specified inclusions (e.g., always recover coeff 0)
+	  index_to_add = ordering[num_covariates];
+	  Real correlation_n = correlation(index_to_add,0);
+	  Real x_n = result_0(index_to_add,prev_iter);
+	  max_abs_correlation = std::abs( correlation_n-delta*x_n );
+	}
+      else {
+	for ( inactive_index_iter = inactive_indices.begin();
+	      inactive_index_iter != inactive_indices.end();
+	      inactive_index_iter++ )
+	  {
+	    int n = *inactive_index_iter;
+	    Real correlation_n = correlation(n,0);
+	    Real x_n = result_0(n,prev_iter);
+	    Real abs_correlation_n = std::abs( correlation_n-delta*x_n );
+	    if ( abs_correlation_n > max_abs_correlation )
+	      {
+		max_abs_correlation = abs_correlation_n;
+		index_to_add = n;
+	      }
+	  }
+      }
 
       if ( U.numRows() <= num_covariates )
 	{

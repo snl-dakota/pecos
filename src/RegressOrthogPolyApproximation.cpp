@@ -139,6 +139,25 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
   default:
     sparseSoln = false; break;
   }
+
+  // assign solver and set minimial index recovery requirements
+  data_rep->CSTool.set_linear_solver( CSOpts );
+  switch (CSOpts.solver) {
+  case ORTHOG_MATCH_PURSUIT: {
+    IntVector minimal_mi_to_recover(1);  minimal_mi_to_recover[0] = 0;
+    std::shared_ptr<OMPSolver> omp_sol = std::static_pointer_cast<OMPSolver>
+      (data_rep->CSTool.get_linear_solver());
+    omp_sol->set_ordering( minimal_mi_to_recover );
+    break;
+  }
+  case LEAST_ANGLE_REGRESSION:
+    IntVector minimal_mi_to_recover(1, false);  minimal_mi_to_recover[0] = 0;
+    std::shared_ptr<LARSSolver> lars_sol = std::static_pointer_cast<LARSSolver>
+      (data_rep->CSTool.get_linear_solver());
+    lars_sol->set_ordering( minimal_mi_to_recover );
+    break;
+  // LASSO_REGRESSION can't support this because it adds and removes terms
+  }
 }
 
 
@@ -2055,7 +2074,6 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo, surrData.failed_response_data() );
   
-  data_rep->CSTool.set_linear_solver( CSOpts );
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 
@@ -2171,7 +2189,6 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   RealVector basis_scores( order_max - order_min + 1, false );
   basis_scores = std::numeric_limits<double>::max();
 
-  data_rep->CSTool.set_linear_solver( CSOpts );
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 
