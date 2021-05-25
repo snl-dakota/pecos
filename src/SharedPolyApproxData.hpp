@@ -45,8 +45,8 @@ public:
 			 short output_level, bool vbd_flag,
 			 unsigned short vbd_order, //short refine_type,
 			 short refine_cntl, short refine_metric,
-			 short refine_stats, int max_refine_iter,
-			 int max_solver_iter, Real conv_tol,
+			 short refine_stats, size_t max_refine_iter,
+			 size_t max_solver_iter, Real conv_tol,
 			 unsigned short sc_limit);
   /// copy constructor
   ExpansionConfigOptions(const ExpansionConfigOptions& ec_options);
@@ -92,10 +92,10 @@ public:
 
   /// control for limiting the maximum number of refinement iterations
   /// in adapted approximation algorithms
-  int maxRefineIterations;
+  size_t maxRefineIterations;
   /// control for limiting the maximum number of solver iterations in iterative
   /// solver-based approximation algorithms (e.g., regularized regression)
-  int maxSolverIterations;
+  size_t maxSolverIterations;
   /// convergence tolerance for adapted or iterated approximation algorithms
   Real convergenceTol;
   /// number of consecutive cycles for which convergence criterion
@@ -121,8 +121,8 @@ ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 		       short output_level, bool vbd_flag,
 		       unsigned short vbd_order, //short refine_type,
 		       short refine_cntl, short refine_metric,
-		       short refine_stats, int max_refine_iter,
-		       int max_solver_iter, Real conv_tol,
+		       short refine_stats, size_t max_refine_iter,
+		       size_t max_solver_iter, Real conv_tol,
 		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
   combineType(combine_type), discrepReduction(discrep_type),
@@ -415,9 +415,9 @@ public:
   short refinement_control() const;
 
   /// set ExpansionConfigOptions::maxIterations
-  void maximum_iterations(int max_iter);
+  void maximum_iterations(size_t max_iter);
   /// get ExpansionConfigOptions::maxIterations
-  int maximum_iterations() const;
+  size_t maximum_iterations() const;
 
   /// set ExpansionConfigOptions::convergenceTol
   void convergence_tolerance(Real conv_tol);
@@ -674,11 +674,11 @@ inline short SharedPolyApproxData::refinement_control() const
 { return expConfigOptions.refineControl; }
 
 
-inline void SharedPolyApproxData::maximum_iterations(int max_iter)
+inline void SharedPolyApproxData::maximum_iterations(size_t max_iter)
 { expConfigOptions.maxIterations = max_iter; }
 
 
-inline int SharedPolyApproxData::maximum_iterations() const
+inline size_t SharedPolyApproxData::maximum_iterations() const
 { return expConfigOptions.maxIterations; }
 
 

@@ -887,7 +887,6 @@ inline ActiveKey::
 ActiveKey(unsigned short set_id, short r_type, unsigned short form, size_t lev):
   keyRep(std::make_shared<ActiveKeyRep>(set_id, r_type))
 {
-  size_t SZ_MAX = std::numeric_limits<size_t>::max();
   if (form != USHRT_MAX || lev != SZ_MAX)
     keyRep->activeKeyDataArray.push_back(ActiveKeyData());
   if (form != USHRT_MAX)  assign_model_form(form);
@@ -1124,7 +1123,6 @@ inline void ActiveKey::
 form_key(unsigned short group, unsigned short form1, size_t lev1,
 	 unsigned short form2, size_t lev2, short reduction)
 {
-  size_t SZ_MAX = std::numeric_limits<size_t>::max();
   // create two new ActiveKeyData and aggregate ActiveKey
   std::vector<ActiveKeyData> kd_array(2);
   ActiveKeyData& kd1 = kd_array[0];
