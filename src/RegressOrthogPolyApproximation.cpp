@@ -2076,6 +2076,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo, surrData.failed_response_data() );
   
+  //data_rep->CSTool.set_linear_solver( CSOpts );
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 
@@ -2191,6 +2192,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   RealVector basis_scores( order_max - order_min + 1, false );
   basis_scores = std::numeric_limits<double>::max();
 
+  //data_rep->CSTool.set_linear_solver( CSOpts );
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 

@@ -1805,7 +1805,13 @@ void least_angle_regression( RealMatrix &A,
 	  {
 	    result_0(n,iter) *= ( 1.0 + delta );
 	  }
-      }  
+      }
+
+    std::cout << "LARS: A norm = " << A.normFrobenius()
+	      << " b norm = " << b.normFrobenius()
+	      << " result_0 norm = " << result_0.normFrobenius()
+	      << " result_1 norm = " << result_1.normFrobenius() << std::endl;
+
 };
 //Check out for elastic nets
 //http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3897
