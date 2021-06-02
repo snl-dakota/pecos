@@ -1520,6 +1520,8 @@ void least_angle_regression( RealMatrix &A,
 	      {
 		max_abs_correlation = abs_correlation_n;
 		index_to_add = n;
+		std::cout << "max update: " << max_abs_correlation << " for "
+			  << n << std::endl;
 	      }
 	  }
       }
@@ -1743,7 +1745,7 @@ void least_angle_regression( RealMatrix &A,
 	}
 
       if ( ( verbosity > 1 ) &&( !sign_condition_violated ) )
-      	std::printf( "%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
+      	std::printf( "%1.16e\t%1.16e\t%1.16e\n", max_abs_correlation, 
 		     residual_norm, x.normOne() );
 
       if ( ( homotopy_iter > 0 ) && 
