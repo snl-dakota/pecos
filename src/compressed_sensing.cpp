@@ -1406,8 +1406,7 @@ void least_angle_regression( RealMatrix &A,
 			     int solver,
 			     Real delta,
 			     int max_num_iterations,
-			     int verbosity,
-			     IntVector &ordering )
+			     int verbosity )//, IntVector &ordering )
 {
   Teuchos::BLAS<int, Real> blas;
 
@@ -1499,15 +1498,14 @@ void least_angle_regression( RealMatrix &A,
       Real max_abs_correlation( -1.0 );
       int prev_iter( std::max( 0, homotopy_iter -1 ) );
 
-      if ( num_covariates < ordering.length() )
-	{
-	  // start from user-specified inclusions (e.g., always recover coeff 0)
-	  index_to_add = ordering[num_covariates];
-	  Real correlation_n = correlation(index_to_add,0);
-	  Real x_n = result_0(index_to_add,prev_iter);
-	  max_abs_correlation = std::abs( correlation_n-delta*x_n ); // *** IMPACTS gamma_hat step size below (this iter), plus there is some history through prev_iter ***
-	}
-      else {
+      //if ( num_covariates < ordering.length() ) {
+      //  // start from user-specified inclusions (e.g., always recover coeff 0)
+      //  index_to_add = ordering[num_covariates];
+      //  Real correlation_n = correlation(index_to_add,0);
+      //  Real x_n = result_0(index_to_add,prev_iter);
+      //  max_abs_correlation = std::abs( correlation_n-delta*x_n ); // *** IMPACTS gamma_hat step size below (this iter), plus there is some history through prev_iter ***
+      //}
+      //else {
 	for ( inactive_index_iter = inactive_indices.begin();
 	      inactive_index_iter != inactive_indices.end();
 	      inactive_index_iter++ )
@@ -1520,11 +1518,11 @@ void least_angle_regression( RealMatrix &A,
 	      {
 		max_abs_correlation = abs_correlation_n;
 		index_to_add = n;
-		std::cout << "max update: " << max_abs_correlation << " for "
-			  << n << std::endl;
+		//std::cout << "max update: " << max_abs_correlation << " for "
+		//	    << n << std::endl;
 	      }
 	  }
-      }
+      //}
 
       if ( U.numRows() <= num_covariates )
 	{
@@ -1745,7 +1743,7 @@ void least_angle_regression( RealMatrix &A,
 	}
 
       if ( ( verbosity > 1 ) &&( !sign_condition_violated ) )
-      	std::printf( "%1.16e\t%1.16e\t%1.16e\n", max_abs_correlation, 
+      	std::printf( "%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
 		     residual_norm, x.normOne() );
 
       if ( ( homotopy_iter > 0 ) && 
@@ -1809,11 +1807,10 @@ void least_angle_regression( RealMatrix &A,
 	  }
       }
 
-    std::cout << "LARS: A norm = " << A.normFrobenius()
-	      << " b norm = " << b.normFrobenius()
-	      << " result_0 norm = " << result_0.normFrobenius()
-	      << " result_1 norm = " << result_1.normFrobenius() << std::endl;
-
+  //std::cout << "LARS: A norm = " << A.normFrobenius()
+  // 	      << " b norm = " << b.normFrobenius()
+  // 	      << " result_0 norm = " << result_0.normFrobenius()
+  // 	      << " result_1 norm = " << result_1.normFrobenius() << std::endl;
 };
 //Check out for elastic nets
 //http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3897

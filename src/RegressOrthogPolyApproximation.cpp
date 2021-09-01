@@ -142,23 +142,25 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
 
   // assign solver selection within CSTool
   data_rep->CSTool.set_linear_solver( CSOpts );
-  // set minimial index recovery requirements for solvers that support this
+  // set minimial index recovery requirements for solvers that support option
   switch (CSOpts.solver) {
   case ORTHOG_MATCH_PURSUIT: {
     IntVector minimal_mi_to_recover(1);  minimal_mi_to_recover[0] = 0;
     std::shared_ptr<OMPSolver> omp_sol = std::static_pointer_cast<OMPSolver>
       (data_rep->CSTool.get_linear_solver());
-    omp_sol->set_ordering( minimal_mi_to_recover );
-    break;
+    omp_sol->set_ordering( minimal_mi_to_recover );  break;
   }
-  case LEAST_ANGLE_REGRESSION:
-    IntVector minimal_mi_to_recover(1, false);  minimal_mi_to_recover[0] = 0;
-    std::shared_ptr<LARSSolver> lars_sol = std::static_pointer_cast<LARSSolver>
-      (data_rep->CSTool.get_linear_solver());
-    lars_sol->set_ordering( minimal_mi_to_recover );
-    break;
-  // LASSO_REGRESSION can't support this since it dynamically adds/removes terms
-  // BP and BPDN are due to be retired
+  // Step size gamma_hat depends on max_abs_correlation --> inserting residual0
+  // into LARS sequence is reducing the step and disrupting iteration.
+  //case LEAST_ANGLE_REGRESSION:
+  //  IntVector minimal_mi_to_recover(1, false);  minimal_mi_to_recover[0] = 0;
+  //  std::shared_ptr<LARSSolver> lars_sol = std::static_pointer_cast
+  //    <LARSSolver>(data_rep->CSTool.get_linear_solver());
+  //  lars_sol->set_ordering( minimal_mi_to_recover );  break;
+  //case LASSO_REGRESSION:
+  //  can't support this since it dynamically adds/removes terms
+  //case BASIS_PURSUIT: case BASIS_PURSUIT_DENOISING:
+  //  due to be retired
   }
 }
 
