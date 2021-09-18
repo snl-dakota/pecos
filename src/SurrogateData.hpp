@@ -1152,7 +1152,9 @@ public:
   size_t num_derivative_variables() const;
 
   /// compute a simple bounds-based scaling for response functions
-  bool compute_response_function_scaling() const;
+  bool compute_response_function_scaling(Real shift = 0.) const;
+  /// assign a scalar shift for the set of response function data
+  void assign_response_function_shift(Real shift) const;
 
   /// convenience function used by data_checks() for respData
   void response_check(const SurrogateDataResp& sdr, short& failed_data) const;
@@ -2429,7 +2431,7 @@ inline size_t SurrogateData::num_derivative_variables() const
 }
 
 
-inline bool SurrogateData::compute_response_function_scaling() const
+inline bool SurrogateData::compute_response_function_scaling(Real shift) const
 {
   // compute scale factors for mapping active response functions to [0,1]
   // current uses do not require key management
@@ -2445,9 +2447,13 @@ inline bool SurrogateData::compute_response_function_scaling() const
     else if (fn < min_fn) min_fn = fn;
   }
   range = max_fn - min_fn;
-  sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn, range);
+  sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn - shift, range);
   return (range > 0.);
 }
+
+
+inline void SurrogateData::assign_response_function_shift(Real shift) const
+{ sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(-shift, 1.); }
 
 
 inline void SurrogateData::

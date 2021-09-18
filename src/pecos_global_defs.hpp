@@ -52,6 +52,9 @@ enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
 enum { NO_DIST=0, MARGINALS_CORRELATIONS, MULTIVARIATE_NORMAL, JOINT_KDE };
      //GAUSSIAN_COPULA, ...
 
+// define special values for type of moment results
+enum { NO_MOMENTS=0, STANDARD_MOMENTS, CENTRAL_MOMENTS };
+
 // define special values for univariate RandomVariable types
 enum { NO_TYPE=0,
        // continuous + discrete design / state / other

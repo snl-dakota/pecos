@@ -311,7 +311,7 @@ unscale_coefficients(RealVector& exp_coeffs, RealMatrix& exp_coeff_grads)
   const RealRealPair& factors = surrData.response_function_scaling();
   Real min = factors.first, range = factors.second;
 
-  // Bounds scaling: scaled_fn = (unscaled_fn - min) / range
+  // Bounds scaling to [0,1]: scaled_fn = (unscaled_fn - min) / range
   // > unscaled_fn   = range * scaled_fn + min
   // > unscaled_grad = range * scaled_grad
   if (!exp_coeffs.empty()) {
