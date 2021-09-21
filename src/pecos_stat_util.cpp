@@ -129,13 +129,13 @@ void accumulate_variance(const RealVectorArray& fn_samples, Real mean,
     sample = fn_samples[s][q];
     if (std::isfinite(sample)) { // neither NaN nor +/-Inf
       centered_fn = sample - mean;
-      sum2 += centered_fn * centered_fn; // variance
+      sum2 += centered_fn * centered_fn;
       ++num_samp;
     }
   }
 
   // unbiased central moment estimator
-  var = (num_samp > 1 && sum2 > 0.) ? sum2 / ((Real)num_samp - 1.) : 0.;
+  var = (num_samp > 1) ? sum2 / ((Real)num_samp - 1.) : 0.;
 }
 
 
@@ -149,13 +149,13 @@ void accumulate_variance(const SDRArray& sdr_samples, Real mean,
     sample = sdr_samples[s].response_function();
     if (std::isfinite(sample)) { // neither NaN nor +/-Inf
       centered_fn = sample - mean;
-      sum2 += centered_fn * centered_fn; // variance
+      sum2 += centered_fn * centered_fn;
       ++num_samp;
     }
   }
 
   // unbiased central moment estimator
-  var = (num_samp > 1 && sum2 > 0.) ? sum2 / ((Real)num_samp - 1.) : 0.;
+  var = (num_samp > 1) ? sum2 / ((Real)num_samp - 1.) : 0.;
 }
 
 

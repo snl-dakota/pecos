@@ -1151,8 +1151,9 @@ public:
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
 
+  void clear_response_function_scaling() const;
   /// compute a simple bounds-based scaling for response functions
-  bool compute_response_function_scaling(Real shift = 0.) const;
+  void compute_response_function_scaling() const;
   /// assign a scalar shift for the set of response function data
   void assign_response_function_shift(Real shift) const;
 
@@ -1635,9 +1636,10 @@ inline Real SurrogateData::response_function(size_t i) const
 
 inline Real SurrogateData::scaled_response_function(size_t i) const
 {
-  const RealRealPair& scaling = sdRep->respFnScaling;
-  return (sdRep->respDataIter->second[i].response_function() - scaling.first)
-    / scaling.second; // fn - min / range
+  // return (fn - min) / range
+  return (valid_response_scaling()) ? (response_function(i) -
+    sdRep->respFnScaling.first) / sdRep->respFnScaling.second :
+    response_function(i);
 }
 
 
@@ -2431,13 +2433,17 @@ inline size_t SurrogateData::num_derivative_variables() const
 }
 
 
-inline bool SurrogateData::compute_response_function_scaling(Real shift) const
+inline void SurrogateData::clear_response_function_scaling() const
+{ sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(0., 0.); }
+
+
+inline void SurrogateData::compute_response_function_scaling() const
 {
   // compute scale factors for mapping active response functions to [0,1]
   // current uses do not require key management
   const SDRArray& sdr_array = sdRep->respDataIter->second;
   size_t i, pts = sdr_array.size();
-  if (pts <= 1) return false;
+  if (pts <= 1) { clear_response_function_scaling(); return; }
 
   Real fn, min_fn, max_fn, range;
   min_fn = max_fn = sdr_array[0].response_function();
@@ -2447,8 +2453,7 @@ inline bool SurrogateData::compute_response_function_scaling(Real shift) const
     else if (fn < min_fn) min_fn = fn;
   }
   range = max_fn - min_fn;
-  sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn - shift, range);
-  return (range > 0.);
+  sdRep->respFnScaling/*[activeKey]*/ = RealRealPair(min_fn, range);
 }
 
 

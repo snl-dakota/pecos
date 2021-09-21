@@ -145,8 +145,8 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
 
   /* Specific set ordering logic replaced by more general approach of augmenting
      response data scaling with a stdev shift (see compute_coefficients())
-  // set minimal index recovery requirements for solvers that support option
   switch (CSOpts.solver) {
+  // set minimal index recovery requirements for solvers that support option
   case ORTHOG_MATCH_PURSUIT: {
     IntVector minimal_mi_to_recover(1);  minimal_mi_to_recover[0] = 0;
     std::shared_ptr<OMPSolver> omp_sol = std::static_pointer_cast<OMPSolver>
@@ -216,36 +216,47 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   // array allocations dependent on solver type
   allocate_arrays();
 
+  /*
   // For CS, shift the data to ensure recovery of the mean coefficient. Unlike
   // the set_ordering() option, this approach is portable across solver types.
+  // > since Var[Q] = \Sum_{i>0} \alpha_i^2 for normalized \Psi, no single coeff
+  //   for i>0 can be greater than stdev[Q].  By shifting the data to force
+  //   abs(\alpha_0) >= stdev, \alpha_0 becomes dominant coeff in the recovery.
   // > no shift for abs(mean) > stdev --> avoid disruption of test baselines
-  // > shift in direction that augments magnitude of mean
-  bool shift_mean = false;  Real addtl_offset = 0.;
+  // > shift in +/- direction so as to augment magnitude of mean
+  bool shift_mean = false;  Real shift_val = 0.;
   switch (CSOpts.solver) {
   //case ORTHOG_LEAST_INTERPOLATION: // TO DO: needed here?
   case BASIS_PURSUIT: case BASIS_PURSUIT_DENOISING: case ORTHOG_MATCH_PURSUIT:
   case LASSO_REGRESSION: case LEAST_ANGLE_REGRESSION: {
     Real sample_mean, sample_var;  size_t num_finite;
-    const SDRArray& sdr_samp = surrData.response_data();
-    accumulate_mean(sdr_samp, num_finite, sample_mean);
-    accumulate_variance(sdr_samp, sample_mean, num_finite, sample_var);
+    const SDRArray& sdr_array = surrData.response_data();
+    accumulate_mean(sdr_array, num_finite, sample_mean);
+    accumulate_variance(sdr_array, sample_mean, num_finite, sample_var);
     Real sample_stdev = std::sqrt(sample_var);
     if (std::abs(sample_mean) < sample_stdev) {
       shift_mean = true;
-      addtl_offset = (sample_mean >= 0.) ? sample_stdev : -sample_stdev;
+      shift_val  = (sample_mean >= 0.) ? sample_stdev : -sample_stdev;
     }
     break;
   }
   }
+  */
 
   // Scale the data here and then unscale the final PCE at bottom (currently
   // there are no inner stats evals that are dependent on scale).  Scaling
   // can be important for regression on small ML/MF discrepancy expansions
-  // using absolute solver tolerances.
+  // using absolute solver tolerances.  It also addresses reliable recovery
+  // of the mean coefficient since data is scaled to [0,1] (for uniform resp,
+  // scaled mean = 0.5 and stdev = sqrt(1/12) = .289).
+  // > For now, suppress sample mean,stdev logic above and rely on resp scaling
+  //   spec for reliable mean recovery.  Simpler and likely sufficient.
   if (data_rep->regressConfigOptions.respScaling)
-    surrData.compute_response_function_scaling(addtl_offset);
-  else if (shift_mean)
-    surrData.assign_response_function_shift(addtl_offset);
+    surrData.compute_response_function_scaling();
+  //else if (shift_mean)
+  //  surrData.assign_response_function_shift(shift_val);
+  else
+    surrData.clear_response_function_scaling();
 
   switch (data_rep->expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // least interpolation case
