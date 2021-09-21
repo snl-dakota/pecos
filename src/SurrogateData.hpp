@@ -1637,9 +1637,8 @@ inline Real SurrogateData::response_function(size_t i) const
 inline Real SurrogateData::scaled_response_function(size_t i) const
 {
   // return (fn - min) / range
-  return (valid_response_scaling()) ? (response_function(i) -
-    sdRep->respFnScaling.first) / sdRep->respFnScaling.second :
-    response_function(i);
+  Real range = sdRep->respFnScaling.second, fn = response_function(i);
+  return (range > 0.) ? (fn - sdRep->respFnScaling.first) / range : fn;
 }
 
 

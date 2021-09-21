@@ -140,8 +140,10 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
     sparseSoln = false; break;
   }
 
-  // assign solver selection within CSTool
-  data_rep->CSTool.set_linear_solver( CSOpts );
+  // assign solver selection within CSTool.
+  // Note: least_interpolation() is implemented separately.
+  if (CSOpts.solver != ORTHOG_LEAST_INTERPOLATION)
+    data_rep->CSTool.set_linear_solver( CSOpts );
 
   /* Specific set ordering logic replaced by more general approach of augmenting
      response data scaling with a stdev shift (see compute_coefficients())
@@ -251,6 +253,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   // scaled mean = 0.5 and stdev = sqrt(1/12) = .289).
   // > For now, suppress sample mean,stdev logic above and rely on resp scaling
   //   spec for reliable mean recovery.  Simpler and likely sufficient.
+  // > If needed in the future, scaling to [1,2] would fully ensure mean>stdev
   if (data_rep->regressConfigOptions.respScaling)
     surrData.compute_response_function_scaling();
   //else if (shift_mean)
