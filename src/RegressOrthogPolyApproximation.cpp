@@ -140,8 +140,8 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
     sparseSoln = false; break;
   }
 
-  // assign solver selection within CSTool.
-  // Note: least_interpolation() is implemented separately.
+  // assign solver selection within CSTool.  Note: OLI is not part of CSTool
+  // (least_interpolation() is implemented separately)
   if (CSOpts.solver != ORTHOG_LEAST_INTERPOLATION)
     data_rep->CSTool.set_linear_solver( CSOpts );
 
