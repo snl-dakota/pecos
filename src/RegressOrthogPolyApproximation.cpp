@@ -1379,8 +1379,11 @@ const RealVector& RegressOrthogPolyApproximation::mean_gradient()
   size_t first_sparse_ind = *sparseIndIter->second.begin();
   if (first_sparse_ind == 0)
     mean_grad = Teuchos::getCol(Teuchos::Copy, expCoeffGradsIter->second, 0);
-  else
-    mean_grad = 0.;
+  else {
+    size_t num_v = expCoeffGradsIter->second.numRows();
+    if  (mean_grad.length() != num_v) mean_grad.size(num_v); // init to 0
+    else mean_grad = 0.;
+  }
   if (use_tracker) primaryMeanIter->second |=  2;//activate bit
   else             primaryMeanIter->second &= ~2;//deactivate: protect mixed use
   return mean_grad;
