@@ -50,6 +50,11 @@ public:
   /// variable dimension using linear least squares in semilog space
   virtual const RealVector& dimension_decay_rates();
 
+  /// unscale the expansion coefficients following computation using scaled
+  /// response data
+  virtual void unscale_coefficients(RealVector& exp_coeffs,
+				    RealMatrix& exp_coeff_grads);
+
   /// evaluate all pce basis functions at a single point
   static void basis_value(const RealVector& x,
 			  std::vector<BasisPolynomial> &polynomial_basis,
@@ -198,11 +203,6 @@ protected:
 			  const RealMatrix&    exp_grads_b,
 			  const UShort2DArray& multi_index_c,
 			  RealVector& exp_coeffs_c, RealMatrix& exp_grads_c);
-
-  /// unscale the expansion coefficients following computation using scaled
-  /// response data
-  void unscale_coefficients(RealVector& exp_coeffs,
-			    RealMatrix& exp_coeff_grads);
 
   /// update add_val and add_gradient based on failure map from SurrogateData
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,

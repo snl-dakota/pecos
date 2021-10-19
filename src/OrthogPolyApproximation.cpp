@@ -513,13 +513,6 @@ hessian_basis_variables(const RealVector& x, const UShort2DArray& mi,
     mean of the expansion is simply the first chaos coefficient. */
 Real OrthogPolyApproximation::mean()
 {
-  // Error check for required data
-  if (!expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::mean()" << std::endl;
-    abort_handler(-1);
-  }
-
   std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   bool use_tracker = (data_rep->nonRandomIndices.empty()); // std mode
@@ -527,6 +520,12 @@ Real OrthogPolyApproximation::mean()
   if (use_tracker && (primaryMeanIter->second & 1))
     return primaryMomIter->second[0];
 
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "OrthogPolyApproximation::mean()" << std::endl;
+    abort_handler(-1);
+  }
   Real mean = expCoeffsIter->second[0];
 
   if (use_tracker)

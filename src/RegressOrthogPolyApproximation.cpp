@@ -1220,6 +1220,81 @@ hessian_basis_variables(const RealVector& x, const UShort2DArray& mi,
 }
 
 
+void RegressOrthogPolyApproximation::
+unscale_coefficients(RealVector& exp_coeffs, RealMatrix& exp_coeff_grads)
+{
+  if (sparseIndIter == sparseIndices.end() || sparseIndIter->second.empty())
+    OrthogPolyApproximation::unscale_coefficients(exp_coeffs, exp_coeff_grads);
+
+  const RealRealPair& factors = surrData.response_function_scaling();
+  Real min = factors.first, range = factors.second;
+
+  // Bounds scaling to [0,1]: scaled_fn = (unscaled_fn - min) / range
+  // > unscaled_fn   = range * scaled_fn + min
+  // > unscaled_grad = range * scaled_grad
+  SizetSet& sparse_ind = sparseIndIter->second;
+  bool push_frnt = (*sparse_ind.begin() != 0); // coeff 0 not recovered
+  if (push_frnt) sparse_ind.insert(0);
+  if (!exp_coeffs.empty()) {
+    exp_coeffs.scale(range);
+    if (push_frnt) {
+      //exp_coeffs.push_front(min);
+      size_t i, len = exp_coeffs.length(), new_len = len + 1;
+      RealVector new_exp_coeffs(new_len, false);
+      for (i=0; i<len; ++i)
+	new_exp_coeffs[i+1] = exp_coeffs[i];
+      new_exp_coeffs[0] = min;
+      exp_coeffs.swap(new_exp_coeffs); // shallow ptr swap
+    }
+    else
+      exp_coeffs[0] += min; // common case: coeff 0 included in sparse soln
+  }
+  if (!exp_coeff_grads.empty()) {
+    exp_coeff_grads.scale(range); // all no-zero
+    if (push_frnt) { // push a zero column to front
+      size_t r, c, num_r = exp_coeff_grads.numRows(),
+	num_c = exp_coeff_grads.numCols();
+      RealMatrix new_exp_coeff_grads(num_r, num_c+1, false);
+      for (r=0; r<num_r; ++r)
+	for (c=0; c<num_c; ++c)
+	  new_exp_coeff_grads(r,c+1) = exp_coeff_grads(r,c);
+      for (r=0; r<num_r; ++r)
+	new_exp_coeff_grads(r,0) = 0.;
+      exp_coeff_grads.swap(new_exp_coeff_grads); // shallow ptr swap
+    }
+  }
+}
+
+
+/** In this case, all expansion variables are random variables and the
+    mean of the expansion is simply the first chaos coefficient. */
+Real RegressOrthogPolyApproximation::mean()
+{
+  if (sparseIndIter == sparseIndices.end() || sparseIndIter->second.empty())
+    return OrthogPolyApproximation::mean();
+
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+  bool use_tracker = (data_rep->nonRandomIndices.empty()); // std mode
+  //&& data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryMeanIter->second & 1))
+    return primaryMomIter->second[0];
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "OrthogPolyApproximation::mean()" << std::endl;
+    abort_handler(-1);
+  }
+  size_t first_sparse_ind = *sparseIndIter->second.begin();
+  Real mean = (first_sparse_ind == 0) ? expCoeffsIter->second[0] : 0.;
+
+  if (use_tracker)
+    { primaryMomIter->second[0] = mean; primaryMeanIter->second |= 1; }
+  return mean;
+}
+
+
 /** In this case, a subset of the expansion variables are random
     variables and the mean of the expansion involves evaluating the
     expectation over this subset. */
@@ -1248,9 +1323,9 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
   const UShort2DArray& mi = data_rep->multi_index();
   const SizetSet& sparse_ind = sparseIndIter->second;
   const RealVector& exp_coeffs = expCoeffsIter->second;
-  Real mean = exp_coeffs[0];
+  Real mean = 0.;
   size_t i; StSCIter cit;
-  for (i=1, cit=++sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit) {
+  for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit) {
     const UShortArray& mi_i = mi[*cit];
     // expectations are zero for expansion terms with nonzero random indices
     if (data_rep->zero_random(mi_i)) {
@@ -1270,6 +1345,45 @@ Real RegressOrthogPolyApproximation::mean(const RealVector& x)
     primaryMeanIter->second |= 1;  xPrevMean[key] = x;
   }
   return mean;
+}
+
+
+/** In this function, all expansion variables are random variables and
+    any design/state variables are omitted from the expansion.  In
+    this case, the derivative of the expectation is the expectation of
+    the derivative.  The mixed derivative case (some design variables
+    are inserted and some are augmented) requires no special treatment. */
+const RealVector& RegressOrthogPolyApproximation::mean_gradient()
+{
+  if (sparseIndIter == sparseIndices.end() || sparseIndIter->second.empty())
+    return OrthogPolyApproximation::mean_gradient();
+
+  // d/ds \mu_R = d/ds \alpha_0 = <dR/ds>
+
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryMeanIter->second & 2))
+    return primaryMomGradsIter->second[0];
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (!expansionCoeffGradFlag) {  // Error check for required data
+    PCerr << "Error: expansion coefficient gradients not defined in "
+	  << "OrthogPolyApproximation::mean_gradient()." << std::endl;
+    abort_handler(-1);
+  }
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
+  size_t first_sparse_ind = *sparseIndIter->second.begin();
+  if (first_sparse_ind == 0)
+    mean_grad = Teuchos::getCol(Teuchos::Copy, expCoeffGradsIter->second, 0);
+  else
+    mean_grad = 0.;
+  if (use_tracker) primaryMeanIter->second |=  2;//activate bit
+  else             primaryMeanIter->second &= ~2;//deactivate: protect mixed use
+  return mean_grad;
 }
 
 
@@ -1311,26 +1425,22 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
   const SizetSet&   sparse_ind      = sparseIndIter->second;  StSCIter cit;
   for (i=0; i<num_deriv_v; ++i) {
-    Real& grad_i = mean_grad[i];
+    Real& grad_i = mean_grad[i];  grad_i = 0.;
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     bool random = data_rep->randomVarsKey[deriv_index];
     if (random) { // deriv w.r.t. des var insertion
-      if (!expansionCoeffGradFlag) { // error check for required data
-	PCerr << "Error: expansion coefficient gradients not defined in Regress"
+      if (!expansionCoeffGradFlag) { // check for required data for DVV[i]
+	PCerr << "Error: expansion coefficient gradients required in Regress"
 	      << "OrthogPolyApproximation::mean_gradient()." << std::endl;
 	abort_handler(-1);
       }
-      grad_i = exp_coeff_grads[0][cntr];
     }
-    else {
-      grad_i = 0.;
-      if (!expansionCoeffFlag) { // check for reqd data
-	PCerr << "Error: expansion coefficients not defined in RegressOrthog"
-	      << "PolyApproximation::mean_gradient()" << std::endl;
-	abort_handler(-1);
-      }
+    else if (!expansionCoeffFlag) { // check for reqd data for DVV[i]
+      PCerr << "Error: expansion coefficients required in RegressOrthogPoly"
+	    << "Approximation::mean_gradient()" << std::endl;
+      abort_handler(-1);
     }
-    for (j=1, cit=++sparse_ind.begin(); cit!=sparse_ind.end(); ++j, ++cit) {
+    for (j=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++j, ++cit) {
       const UShortArray& mi_j = mi[*cit];
       // expectations are zero for expansion terms with nonzero random indices
       if (data_rep->zero_random(mi_j)) {
@@ -1458,6 +1568,71 @@ covariance(PolynomialApproximation* poly_approx_2)
     return covariance(data_rep->multi_index(), expCoeffsIter->second,
 		      sparseIndIter->second, ropa_2->expCoeffsIter->second,
 		      ropa_2->sparseIndIter->second);
+}
+
+
+/** In this case, all expansion variables are random variables and the
+    mean of the expansion is simply the first chaos coefficient. */
+Real RegressOrthogPolyApproximation::combined_mean()
+{
+  if (combinedSparseIndices.empty())
+    return OrthogPolyApproximation::combined_mean();
+
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedMeanBits & 1))
+    return combinedMoments[0];
+
+  size_t first_sparse_ind = *combinedSparseIndices.begin();
+  Real mean = (first_sparse_ind == 0) ? combinedExpCoeffs[0] : 0.;
+
+  if (use_tracker)
+    { combinedMoments[0] = mean;  combinedMeanBits |= 1; }
+  return mean;
+}
+
+
+/** In this case, a subset of the expansion variables are random
+    variables and the mean of the expansion involves evaluating the
+    expectation over this subset. */
+Real RegressOrthogPolyApproximation::combined_mean(const RealVector& x)
+{
+  if (combinedSparseIndices.empty())
+    return OrthogPolyApproximation::combined_mean(x);
+
+  std::shared_ptr<SharedRegressOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedRegressOrthogPolyApproxData>(sharedDataRep);
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  bool use_tracker = !nrand_ind.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedMeanBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombMean))
+    return combinedMoments[0];
+
+  Real mean = 0.; size_t i; StSCIter cit;
+  const UShort2DArray& comb_mi = data_rep->combinedMultiIndex;
+  for (i=0, cit=combinedSparseIndices.begin();
+       cit!=combinedSparseIndices.end(); ++i, ++cit) {
+    const UShortArray& comb_mi_i = comb_mi[*cit];
+    // expectations are zero for expansion terms with nonzero random indices
+    if (data_rep->zero_random(comb_mi_i)) {
+      mean += combinedExpCoeffs[i] *
+	data_rep->multivariate_polynomial(x, comb_mi_i, nrand_ind);
+#ifdef DEBUG
+      PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
+	    << data_rep->multivariate_polynomial(x, comb_mi_i, nrand_ind)
+	    << " PCE coeff = " << combinedExpCoeffs[i] << " total = " << mean
+	    << std::endl;
+#endif // DEBUG
+    }
+  }
+
+  if (use_tracker)
+    { combinedMoments[0] = mean;  combinedMeanBits |= 1;  xPrevCombMean = x; }
+  return mean;
 }
 
 

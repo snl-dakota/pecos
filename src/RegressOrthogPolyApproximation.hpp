@@ -106,6 +106,8 @@ protected:
   void combine_coefficients();
   void combined_to_active(bool clear_combined = true);
 
+  void unscale_coefficients(RealVector& exp_coeffs,RealMatrix& exp_coeff_grads);
+
   void allocate_arrays();
 
   size_t expansion_terms() const;
@@ -129,7 +131,9 @@ protected:
   const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
 						      const ActiveKey& key);
 
+  Real mean();
   Real mean(const RealVector& x);
+  const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
 
   Real variance(const UShort2DArray& mi, const RealVector& exp_coeffs,
@@ -138,12 +142,15 @@ protected:
 		  const SizetSet& sparse_ind, const RealVector& exp_coeffs_2,
 		  const SizetSet& sparse_ind_2);
   Real covariance(PolynomialApproximation* poly_approx_2);
-  Real combined_covariance(PolynomialApproximation* poly_approx_2);
 
   Real covariance(const RealVector& x, const UShort2DArray& mi,
 		  const RealVector& exp_coeffs,   const SizetSet& sparse_ind,
 		  const RealVector& exp_coeffs_2, const SizetSet& sparse_ind_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
+
+  Real combined_mean();
+  Real combined_mean(const RealVector& x);
+  Real combined_covariance(PolynomialApproximation* poly_approx_2);
   Real combined_covariance(const RealVector& x,
 			   PolynomialApproximation* poly_approx_2);
 
