@@ -35,7 +35,10 @@ const int WRITE_PRECISION = 10;
 /// small value used for protecting division by zero, etc.; an alternative
 /// to DBL_MIN that is less likely to cause underflow/overflow when numbers
 /// larger than it are used in calculations
-const double SMALL_NUMBER = 1.e-25;
+const double SMALL_NUMBER    = 1.e-25;
+/// when SMALL_NUMBER is used for QoI scale like mean, standard deviation,
+/// etc., it's square can be used for variance
+const double SMALL_NUMBER_SQ = 1.e-50;
 /// large value used as a surrogate for infinity in error traps; an alternative
 /// to DBL_MAX or inf that is less likely to cause underflow/overflow when used
 /// in subsequent calculations

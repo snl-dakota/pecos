@@ -3313,7 +3313,7 @@ void RegressOrthogPolyApproximation::compute_component_sobol()
       sobolIndices[sp_index] += p_var; // divide by sum_p_var below
     }
   }
-  if (sum_p_var > SMALL_NUMBER) // don't attribute variance if zero/negligible
+  if (sum_p_var > SMALL_NUMBER_SQ) // don't attribute variance if zero/negligible
     sobolIndices.scale(1./sum_p_var);
 
 #ifdef DEBUG
@@ -3355,7 +3355,7 @@ void RegressOrthogPolyApproximation::compute_total_sobol()
     // of this variance is suspect.  Defaulting totalSobolIndices to zero is a
     // good choice since it drops out from anisotropic refinement based on the
     // response-average of these indices.
-    if (sum_p_var > SMALL_NUMBER) // avoid division by zero
+    if (sum_p_var > SMALL_NUMBER_SQ) // avoid division by zero
       totalSobolIndices.scale(1./sum_p_var);
   }
   else {
