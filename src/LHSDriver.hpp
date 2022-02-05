@@ -64,14 +64,14 @@ public:
 
   /// generates a set of parameter samples from RandomVariable distributions
   void generate_samples(const std::vector<RandomVariable>& random_vars,
-			const RealSymMatrix& corr, int num_samples,
+			const RealSymMatrix& corr, size_t num_samples,
 			RealMatrix& samples, RealMatrix& sample_ranks,
 			const BitArray& active_vars = BitArray(),
 			const BitArray& active_corr = BitArray());
   /// Similar to generate_samples, but this function seeks uniqueness in
   /// discrete samples through iterative replacement of duplicates
   void generate_unique_samples(const std::vector<RandomVariable>& random_vars,
-			       const RealSymMatrix& corr, int num_samples,
+			       const RealSymMatrix& corr, size_t num_samples,
 			       RealMatrix& samples, RealMatrix& sample_ranks,
 			       const BitArray& active_vars = BitArray(),
 			       const BitArray& active_corr = BitArray());
@@ -81,36 +81,36 @@ public:
   /// for the uncertain variable subset
   void generate_uncertain_samples(
     const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
-    int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
+    size_t num_samples, RealMatrix& samples_array, bool backfill_flag = false);
   /// generates a set of parameter samples from RandomVariable distributions
   /// for the aleatory uncertain variable subset
   void generate_aleatory_samples(
     const std::vector<RandomVariable>& random_vars,
-    const RealSymMatrix& corr, int num_samples, RealMatrix& samples_array,
+    const RealSymMatrix& corr, size_t num_samples, RealMatrix& samples_array,
     bool backfill_flag = false);
   /// generates a set of parameter samples from RandomVariable distributions
   /// for the epistemic uncertain variable subset
   void generate_epistemic_samples(
     const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
-    int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
+    size_t num_samples, RealMatrix& samples_array, bool backfill_flag = false);
   */
 
   /// generates a set of parameter samples for a set of (correlated)
   /// normal distributions
   void generate_normal_samples(const RealVector& n_means,
     const RealVector& n_std_devs, const RealVector& n_l_bnds,
-    const RealVector& n_u_bnds,	RealSymMatrix& corr, int num_samples,
+    const RealVector& n_u_bnds,	RealSymMatrix& corr, size_t num_samples,
     RealMatrix& samples_array);
   /// generates a set of parameter samples for a set of (correlated)
   /// uniform distributions
   void generate_uniform_samples(const RealVector& u_l_bnds,
-    const RealVector& u_u_bnds, RealSymMatrix& corr, int num_samples,
+    const RealVector& u_u_bnds, RealSymMatrix& corr, size_t num_samples,
     RealMatrix& samples_array);
 
   /// generates integer index samples from within uncorrelated uniform
   /// discrete range distributions
   void generate_uniform_index_samples(const IntVector& index_l_bnds,
-    const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples,
+    const IntVector& index_u_bnds, size_t num_samples, IntMatrix& index_samples,
     bool backfill_flag = false);
 
 private:
@@ -228,7 +228,7 @@ inline void LHSDriver::advance_seed_sequence()
 /*
 inline void LHSDriver::
 generate_uncertain_samples(const std::vector<RandomVariable>& random_vars,
-			   const RealSymMatrix& corr, int num_samples,
+			   const RealSymMatrix& corr, size_t num_samples,
 			   RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -251,7 +251,7 @@ generate_uncertain_samples(const std::vector<RandomVariable>& random_vars,
 
 inline void LHSDriver::
 generate_aleatory_samples(const std::vector<RandomVariable>& random_vars,
-			  const RealSymMatrix& corr, int num_samples,
+			  const RealSymMatrix& corr, size_t num_samples,
 			  RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -273,7 +273,7 @@ generate_aleatory_samples(const std::vector<RandomVariable>& random_vars,
 
 inline void LHSDriver::
 generate_epistemic_samples(const std::vector<RandomVariable>& random_vars,
-			   const RealSymMatrix& corr, int num_samples,
+			   const RealSymMatrix& corr, size_t num_samples,
 			   RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -298,7 +298,7 @@ generate_epistemic_samples(const std::vector<RandomVariable>& random_vars,
 inline void LHSDriver::
 generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
-			RealSymMatrix& corr, int num_samples,
+			RealSymMatrix& corr, size_t num_samples,
 			RealMatrix& samples_array)//, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -332,7 +332,7 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 
 inline void LHSDriver::
 generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
-			 RealSymMatrix& corr, int num_samples,
+			 RealSymMatrix& corr, size_t num_samples,
 			 RealMatrix& samples_array)//, bool backfill_flag)
 {
   if (sampleRanksMode) {
@@ -359,8 +359,9 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 
 inline void LHSDriver::
 generate_uniform_index_samples(const IntVector& index_l_bnds,
-			       const IntVector& index_u_bnds, int num_samples,
-			       IntMatrix& index_samples, bool backfill_flag)
+			       const IntVector& index_u_bnds,
+			       size_t num_samples, IntMatrix& index_samples,
+			       bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_index_samples() does not support sample "
