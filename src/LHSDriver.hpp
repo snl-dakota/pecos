@@ -152,6 +152,11 @@ private:
 		   const BitArray& active_vars, const Real* new_samp,
 		   std::set<RealArray>& unique_samples);
 
+  /// Use rowIndexToConstantValue to insert constant rows in samples,
+  /// shifting LHS-generated rows down as needed
+  void insert_constant_rows(size_t num_active_rv, RealMatrix& samples) const;
+
+
   //
   //- Heading: Data
   //
@@ -174,6 +179,11 @@ private:
   /// for honoring advance_seed_sequence() calls
   short allowSeedAdvance; // bit 1 = first-time flag
 		          // bit 2 = allow repeated seed update
+
+  // row indices in final returned samples matrix and their associated
+  // constant values for LHS_CONST variables
+  std::map<size_t, Real> rowIndexToConstantValue;
+
 };
 
 
