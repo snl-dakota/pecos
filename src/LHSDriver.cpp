@@ -280,7 +280,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 
   // active_vars identifies the active subset of random_vars for which we will
   // generate samples; it will vary based on sampling context.
-  size_t i, num_rv = random_vars.size(), num_active_rv, av_cntr;
+  size_t num_rv = random_vars.size(), num_active_rv;
   bool subset_rv = false;
   if (active_vars.empty())
     num_active_rv = num_rv;
@@ -310,7 +310,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     if (active_corr.empty())
       num_corr = corr.numRows();
     else {
-      for (i=0; i<num_rv; ++i)
+      for (size_t i=0; i<num_rv; ++i)
 	if (active_corr[i])
 	  { ++num_active_corr; if (active_vars[i]) ++num_corr; }
       if (num_active_corr < num_rv) subset_corr = true;
@@ -386,7 +386,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
   //////////////////////////////////////////////////////////
   rowIndexToConstantValue.clear();
   RealArray dist_params;
-  for (i=0, av_cntr=0; i<num_rv; ++i) {
+  for (size_t i=0, av_cntr=0; i<num_rv; ++i) {
     if (subset_rv && !active_vars[i]) continue; // skip this RV if not active
 
     const RandomVariable& rv_i = random_vars[i];
@@ -736,7 +736,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     // Spec order: {cdv, ddv}, {cauv, dauv, corr}, {ceuv, deuv}, {csv, dsv}
     // > pass in bit array for active RV's to sample + another for active corr's
     // > Default empty arrays --> all RVs active; corr matrix applies to all RVs
-    size_t j, ac_cntr_i, ac_cntr_j, av_cntr_i, av_cntr_j;
+    size_t i, j, ac_cntr_i, ac_cntr_j, av_cntr_i, av_cntr_j;
     bool av_i, av_j, ac_i, ac_j;
     for (i=0, ac_cntr_i=0, av_cntr_i=0; i<num_rv; ++i) {
       av_i = (!subset_rv   || active_vars[i]);
@@ -807,11 +807,13 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 	     sample_ranks.values(), rflag);
   check_error(err_code, "lhs_run");
 
-  // LHS will only populate leading rows for the non-const
-  // variables. Move rows and insert constants as needed
+  // LHS will only populate leading rows for the non-const variables,
+  // but stride between samples based on total number of registered
+  // variables num_active_rv (which include const). This moves rows
+  // and insert constants as needed:
   if (!rowIndexToConstantValue.empty()) {
     insert_constant_rows(num_active_rv, samples);
-    // BMA TODO?
+    // BMA TODO: Possibly insert ranks for constants for incremental LHS
     //if (sampleRanksMode == GET_RANKS)
     //  ...
   }
@@ -828,6 +830,10 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 }
 
 
+/** RATIONALE: Traverses from last to first row of samples, shifting
+    rows down and filling in cached constant values if needed. This is
+    designed to avoid extra memory allocation, and only modifies the
+    samples matrix when there are const random variables present. */
 void LHSDriver::insert_constant_rows(size_t num_active_rv, RealMatrix& samples) const
 {
   auto copy_row = [&samples](int src_row, int dest_row) {
@@ -840,16 +846,15 @@ void LHSDriver::insert_constant_rows(size_t num_active_rv, RealMatrix& samples) 
       samples(dest_row, col) = value;
   };
 
-  // Traverse from last to first row, shifting rows down and filling
-  // in constant values if needed. This is designed to avoid extra
-  // memory allocation.
-
+  // number of variables LHS sampled and populated in leading rows
   size_t num_sampled_rv = num_active_rv - rowIndexToConstantValue.size();
-  size_t lhs_row_index = num_sampled_rv - 1; // index into LHS-returned matrix
-  size_t dest_row_index = num_active_rv - 1; // index into Pecos-returned matrix
+  // index into LHS-returned sub-matrix
+  size_t lhs_row_index = num_sampled_rv - 1;
+  // index into final Pecos-returned samples matrix
+  size_t dest_row_index = num_active_rv - 1;
 
   // Only need to iterate until last constant is populated; then the
-  // leading rows can stay in place...
+  // remaining leading rows can stay in place...
   for (auto ricv_iter = rowIndexToConstantValue.crbegin();
        ricv_iter != rowIndexToConstantValue.crend(); ++ricv_iter) {
     // move data until next constant row
