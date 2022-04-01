@@ -715,7 +715,7 @@ public:
   ActiveKey();
   /// minimal handle + body ctor
   ActiveKey(unsigned short id, short type, unsigned short form = USHRT_MAX,
-	    size_t lev = std::numeric_limits<size_t>::max());
+	    size_t lev = SZ_MAX);
   /// constructor for aggregated key data
   ActiveKey(unsigned short id, short type,
 	    const std::vector<ActiveKeyData>& key_data_vec, short copy_mode);
@@ -1109,7 +1109,7 @@ form_key(unsigned short group, unsigned short form, size_t lev)
   ActiveKeyData key_data;
   if (form != USHRT_MAX)
     key_data.model_index(form, 0);       // appends to empty array
-  if (lev  != std::numeric_limits<size_t>::max())
+  if (lev  != SZ_MAX)
     key_data.discrete_set_index(lev, 0); // appends to empty array
 
   if (shared()) clear(); // don't overwrite existing key that could be shared
@@ -1159,7 +1159,7 @@ inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
   }
   case RESOLUTION_LEVEL_SEQUENCE: {
     size_t lev = kd0.discrete_set_index(seq_index);
-    if (lev && lev != std::numeric_limits<size_t>::max())
+    if (lev && lev != SZ_MAX)
       { kd0.discrete_set_index(--lev, seq_index); return true; }
     else return false;
     break;
@@ -1213,7 +1213,7 @@ retrieve_resolution_level(size_t d_index, size_t hp_index) const
   return ( d_index < data_size() &&
 	  hp_index < data(d_index).discrete_set_indices().length()) ?
     data(d_index).discrete_set_index(hp_index) : //discrete set for now
-    std::numeric_limits<size_t>::max();
+    SZ_MAX;
 }
 
 
