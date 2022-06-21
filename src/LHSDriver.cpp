@@ -237,6 +237,8 @@ void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
 
   LHS_CONST2_FC(var_string.data(), pt_val, err_code, pv_num);
   check_error(err_code, "lhs_const()", var_string.data());
+
+  rowIndexToConstantValue[rv] = pt_val;
 }
 
 
@@ -253,7 +255,7 @@ void LHSDriver::lhs_const_register(const char* var_name, size_t rv, Real pt_val)
     an existing random number sequence. */
 void LHSDriver::
 generate_samples(const std::vector<RandomVariable>& random_vars,
-		 const RealSymMatrix& corr, int num_samples,
+		 const RealSymMatrix& corr, size_t num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks,
 		 const BitArray& active_vars, const BitArray& active_corr)
 {
@@ -262,14 +264,23 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 
   // error check on program parameters
   if (!num_samples) {
-    PCerr << "\nError: number of samples in LHSDriver::generate_samples() must "
-	  << "be nonzero." << std::endl;
+    PCerr << "\nError: number of samples in LHSDriver::generate_samples() "
+	  << "must be nonzero." << std::endl;
     abort_handler(-1);
   }
+  else if (num_samples > std::numeric_limits<int>::max()) {
+    // Provide a helpful error message prior to int overflow.
+    // *** Note: int quantities derived from num_samp_int (e.g., max_samp_size)
+    // *** could still overflow.
+    PCerr << "\nError: number of samples in LHSDriver::generate_samples() "
+	  << "cannot overflow an integer." << std::endl;
+    abort_handler(-1);
+  }
+  int num_samp_int = (int)num_samples;
 
   // active_vars identifies the active subset of random_vars for which we will
   // generate samples; it will vary based on sampling context.
-  size_t i, num_rv = random_vars.size(), num_active_rv, av_cntr;
+  size_t num_rv = random_vars.size(), num_active_rv;
   bool subset_rv = false;
   if (active_vars.empty())
     num_active_rv = num_rv;
@@ -299,7 +310,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     if (active_corr.empty())
       num_corr = corr.numRows();
     else {
-      for (i=0; i<num_rv; ++i)
+      for (size_t i=0; i<num_rv; ++i)
 	if (active_corr[i])
 	  { ++num_active_corr; if (active_vars[i]) ++num_corr; }
       if (num_active_corr < num_rv) subset_corr = true;
@@ -307,13 +318,13 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
   }
 
   int max_corr_size = (num_corr > 1) ? num_corr * (num_corr - 1) / 2 : -1,
-      max_var = num_active_rv, max_samp_size = max_var * num_samples,
+      max_var = num_active_rv, max_samp_size = max_var * num_samp_int,
       max_interval = -1, max_table = -1, err_code = 0, print_level = 0,
       output_width = 1;
   // randomSeed passed below propagates to ISeed in the f77 rnum2, but does
   // not propagate to Boost RNGs (LHSDriver::seed() must be used for that).
-  LHS_INIT_MEM_FC(num_samples, randomSeed, num_samples, max_samp_size, max_var,
-		  max_interval, max_corr_size, max_table, print_level,
+  LHS_INIT_MEM_FC(num_samp_int, randomSeed, num_samp_int, max_samp_size,
+		  max_var, max_interval, max_corr_size, max_table, print_level,
 		  output_width, err_code);
   check_error(err_code, "lhs_init_mem");
 
@@ -373,8 +384,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
   //////////////////////////////////////////////////////////
   // Register RandomVariables with lhs_{dist,udist,const} //
   //////////////////////////////////////////////////////////
+  rowIndexToConstantValue.clear();
   RealArray dist_params;
-  for (i=0, av_cntr=0; i<num_rv; ++i) {
+  for (size_t i=0, av_cntr=0; i<num_rv; ++i) {
     if (subset_rv && !active_vars[i]) continue; // skip this RV if not active
 
     const RandomVariable& rv_i = random_vars[i];
@@ -724,7 +736,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     // Spec order: {cdv, ddv}, {cauv, dauv, corr}, {ceuv, deuv}, {csv, dsv}
     // > pass in bit array for active RV's to sample + another for active corr's
     // > Default empty arrays --> all RVs active; corr matrix applies to all RVs
-    size_t j, ac_cntr_i, ac_cntr_j, av_cntr_i, av_cntr_j;
+    size_t i, j, ac_cntr_i, ac_cntr_j, av_cntr_i, av_cntr_j;
     bool av_i, av_j, ac_i, ac_j;
     for (i=0, ac_cntr_i=0, av_cntr_i=0; i<num_rv; ++i) {
       av_i = (!subset_rv   || active_vars[i]);
@@ -755,6 +767,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
   // RUN THE SAMPLER //
   /////////////////////
   // perform internal checks on input to LHS
+  // NOTE: LHS_PREP_FC appears to leave num_name unchanged, but will
+  // set num_var to number of non-constant sampled variables.
   int num_nam = num_rv, num_var = num_rv;
   LHS_PREP_FC(err_code, num_nam, num_var);
   check_error(err_code, "lhs_prep");
@@ -774,8 +788,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
   // order with all variables for sample 1, followed by all variables for
   // sample 2, etc.  Teuchos::SerialDenseMatrix using column-major memory layout
   // as well, so use samples(var#,sample#) or samples[sample#][var#] for access.
-  if (samples.numRows() != num_var || samples.numCols() != num_samples)
-    samples.shapeUninitialized(num_var, num_samples);
+  if (samples.numRows() != num_active_rv || samples.numCols() != num_samp_int)
+    samples.shape(num_active_rv, num_samp_int);
   if (sampleRanksMode && sample_ranks.empty()) {
     if (sampleRanksMode == SET_RANKS || sampleRanksMode == SET_GET_RANKS) {
       PCerr << "Error: empty sample ranks array cannot be set in Pecos::"
@@ -783,15 +797,26 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       abort_handler(-1);
     }
     else if (sampleRanksMode == GET_RANKS)
-      sample_ranks.shapeUninitialized(num_var, num_samples);
+      sample_ranks.shape(num_active_rv, num_samp_int);
   }
 
   // generate the samples
   int rflag = sampleRanksMode; // short -> int
-  LHS_RUN_FC(max_var, num_samples, num_nam, err_code, dist_name_list,
+  LHS_RUN_FC(max_var, num_samp_int, num_nam, err_code, dist_name_list,
 	     index_list, ptval_list, num_nam, samples.values(), num_var,
 	     sample_ranks.values(), rflag);
   check_error(err_code, "lhs_run");
+
+  // LHS will only populate leading rows for the non-const variables,
+  // but stride between samples based on total number of registered
+  // variables num_active_rv (which include const). This moves rows
+  // and insert constants as needed:
+  if (!rowIndexToConstantValue.empty()) {
+    insert_constant_rows(num_active_rv, samples);
+    // BMA TODO: Possibly insert ranks for constants for incremental LHS
+    //if (sampleRanksMode == GET_RANKS)
+    //  ...
+  }
 
   // deallocate LHS memory
   LHS_CLOSE_FC(err_code);
@@ -805,9 +830,48 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 }
 
 
+/** RATIONALE: Traverses from last to first row of samples, shifting
+    rows down and filling in cached constant values if needed. This is
+    designed to avoid extra memory allocation, and only modifies the
+    samples matrix when there are const random variables present. */
+void LHSDriver::insert_constant_rows(size_t num_active_rv, RealMatrix& samples) const
+{
+  auto copy_row = [&samples](int src_row, int dest_row) {
+    for (int col=0; col<samples.numCols(); ++col)
+      samples(dest_row, col) = samples(src_row, col);
+  };
+
+  auto set_row = [&samples](int dest_row, Real value) {
+    for (int col=0; col<samples.numCols(); ++col)
+      samples(dest_row, col) = value;
+  };
+
+  // number of variables LHS sampled and populated in leading rows
+  size_t num_sampled_rv = num_active_rv - rowIndexToConstantValue.size();
+  // index into LHS-returned sub-matrix
+  size_t lhs_row_index = num_sampled_rv - 1;
+  // index into final Pecos-returned samples matrix
+  size_t dest_row_index = num_active_rv - 1;
+
+  // Only need to iterate until last constant is populated; then the
+  // remaining leading rows can stay in place...
+  for (auto ricv_iter = rowIndexToConstantValue.crbegin();
+       ricv_iter != rowIndexToConstantValue.crend(); ++ricv_iter) {
+    // move data until next constant row
+    while (dest_row_index > ricv_iter->first) {
+      copy_row(lhs_row_index, dest_row_index);
+      lhs_row_index--;
+      dest_row_index--;
+    }
+    set_row(dest_row_index, ricv_iter->second);
+    dest_row_index--;
+  }
+}
+
+
 void LHSDriver::
 generate_unique_samples(const std::vector<RandomVariable>& random_vars,
-			const RealSymMatrix& corr, int num_samples,
+			const RealSymMatrix& corr, size_t num_samples,
 			RealMatrix& samples, RealMatrix& sample_ranks,
 			const BitArray& active_vars,
 			const BitArray& active_corr)
@@ -1048,7 +1112,7 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
     for (int i=0; i<num_discrete_vars; i++)
       discrete_samples_map[i]=num_continuous_vars+i;
 
-    int num_unique_samples = 0;
+    size_t num_unique_samples = 0;
     */
 
     // Eliminate redundant samples by resampling if necessary.  Could pad
