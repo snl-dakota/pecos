@@ -113,10 +113,11 @@ copy(const ProbabilityTransformation& prob_trans)
 
 
 void ProbabilityTransformation::
-trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
+trans_U_to_X(const RealVector& u_vars, SizetMultiArrayConstView u_cv_ids,
+	     RealVector& x_vars, SizetMultiArrayConstView x_cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_U_to_X(u_vars, x_vars);
+    probTransRep->trans_U_to_X(u_vars, u_cv_ids, x_vars, x_cv_ids);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_U_to_X() virtual fn."
 	  << "\nNo default defined at ProbabilityTransformation base class.\n"
@@ -127,10 +128,11 @@ trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
 
 
 void ProbabilityTransformation::
-trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
+trans_X_to_U(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	     RealVector& u_vars, SizetMultiArrayConstView u_cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_X_to_U(x_vars, u_vars);
+    probTransRep->trans_X_to_U(x_vars, x_cv_ids, u_vars, u_cv_ids);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_X_to_U() virtual fn."
 	  << "\nNo default defined at ProbabilityTransformation base class.\n"
@@ -154,13 +156,14 @@ void ProbabilityTransformation::transform_correlations()
 
 
 void ProbabilityTransformation::
-trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealVector& x_vars,    const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+trans_grad_X_to_U(const RealVector& fn_grad_x,
+		  SizetMultiArrayConstView x_cv_ids, RealVector& fn_grad_u,
+		  SizetMultiArrayConstView u_cv_ids, const RealVector& x_vars,
+		  const SizetArray& x_dvv)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, x_vars, x_dvv,
-				    cv_ids);
+    probTransRep->trans_grad_X_to_U(fn_grad_x, x_cv_ids, fn_grad_u, u_cv_ids,
+				    x_vars, x_dvv);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_grad_X_to_U() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -171,13 +174,13 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
 
 
 void ProbabilityTransformation::
-trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
-		  const RealMatrix& jacobian_xu, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+trans_grad_X_to_U(const RealVector& fn_grad_x,
+		  SizetMultiArrayConstView x_cv_ids, RealVector& fn_grad_u,
+		  const RealMatrix& jacobian_xu, const SizetArray& x_dvv)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv,
-				    cv_ids);
+    probTransRep->trans_grad_X_to_U(fn_grad_x, x_cv_ids, fn_grad_u,
+				    jacobian_xu, x_dvv);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_grad_X_to_U() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -230,13 +233,31 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 
 
 void ProbabilityTransformation::
+trans_grad_U_to_X(const RealVector& fn_grad_u,
+		  SizetMultiArrayConstView u_cv_ids, RealVector& fn_grad_x,
+		  SizetMultiArrayConstView x_cv_ids, const RealVector& x_vars,
+		  const SizetArray& x_dvv)
+{
+  if (probTransRep) // envelope fwd to letter
+    probTransRep->trans_grad_U_to_X(fn_grad_u, u_cv_ids, fn_grad_x, x_cv_ids,
+				    x_vars, x_dvv);
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine trans_grad_U_to_X() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void ProbabilityTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealVector& x_vars,    const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+		  SizetMultiArrayConstView x_cv_ids,
+		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_vars, x_dvv,
-				    cv_ids);
+    probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_cv_ids,
+				    jacobian_ux, x_dvv);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_grad_U_to_X() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -247,30 +268,15 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
 
 
 void ProbabilityTransformation::
-trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
-		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
-{
-  if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv,
-				    cv_ids);
-  else { // letter lacking redefinition of virtual fn
-    PCerr << "Error: derived class does not redefine trans_grad_U_to_X() "
-          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
-	  << " class.\n" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void ProbabilityTransformation::
-trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
+trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+		  SizetMultiArrayConstView x_cv_ids, RealSymMatrix& fn_hess_u,
+		  SizetMultiArrayConstView u_cv_ids,
 		  const RealVector& x_vars, const RealVector& fn_grad_x,
-		  const SizetArray& x_dvv, SizetMultiArrayConstView cv_ids)
+		  const SizetArray& x_dvv)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, x_vars, fn_grad_x,
-				    x_dvv, cv_ids);
+    probTransRep->trans_hess_X_to_U(fn_hess_x, x_cv_ids, fn_hess_u, u_cv_ids,
+				    x_vars, fn_grad_x, x_dvv);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_hess_X_to_U() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -281,15 +287,15 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 
 
 void ProbabilityTransformation::
-trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
+trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+		  SizetMultiArrayConstView x_cv_ids, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
-		  const RealVector& fn_grad_x, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+		  const RealVector& fn_grad_x, const SizetArray& x_dvv)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu,
-				    hessian_xu, fn_grad_x, x_dvv, cv_ids);
+    probTransRep->trans_hess_X_to_U(fn_hess_x, x_cv_ids, fn_hess_u, jacobian_xu,
+				    hessian_xu, fn_grad_x, x_dvv);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_hess_X_to_U() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -300,10 +306,11 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 
 
 void ProbabilityTransformation::
-jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
+jacobian_dX_dU(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids, RealMatrix& jacobian_xu)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->jacobian_dX_dU(x_vars, jacobian_xu);
+    probTransRep->jacobian_dX_dU(x_vars, x_cv_ids, u_cv_ids, jacobian_xu);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine jacobian_dX_dU() virtual "
           << "fn.\nNo default defined at ProbabilityTransformation base class."
@@ -314,10 +321,11 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
 
 
 void ProbabilityTransformation::
-jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
+jacobian_dU_dX(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids, RealMatrix& jacobian_ux)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->jacobian_dU_dX(x_vars, jacobian_ux);
+    probTransRep->jacobian_dU_dX(x_vars, x_cv_ids, u_cv_ids, jacobian_ux);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine jacobian_dU_dX() virtual "
           << "fn.\nNo default defined at ProbabilityTransformation base class."
@@ -369,10 +377,12 @@ numerical_design_jacobian(const RealVector& x_vars, bool xs,
 
 
 void ProbabilityTransformation::
-hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
+hessian_d2X_dU2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		SizetMultiArrayConstView u_cv_ids,
+		RealSymMatrixArray& hessian_xu)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->hessian_d2X_dU2(x_vars, hessian_xu);
+    probTransRep->hessian_d2X_dU2(x_vars, x_cv_ids, u_cv_ids, hessian_xu);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine hessian_d2X_dU2() virtual "
           << "fn.\nNo default defined at ProbabilityTransformation base class."

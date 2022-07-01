@@ -41,11 +41,13 @@ protected:
 
   /// Transformation routine from u-space of uncorrelated standard normal
   /// variables to x-space of correlated random variables
-  void trans_U_to_X(const RealVector& u_vars, RealVector& x_vars);
+  void trans_U_to_X(const RealVector& u_vars, SizetMultiArrayConstView u_cv_ids,
+		    RealVector& x_vars, SizetMultiArrayConstView x_cv_ids);
 
   /// Transformation routine from x-space of correlated random variables 
   /// to u-space of uncorrelated standard normal variables
-  void trans_X_to_U(const RealVector& x_vars, RealVector& u_vars);
+  void trans_X_to_U(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		    RealVector& u_vars, SizetMultiArrayConstView u_cv_ids);
 
   /// As part of the Nataf distribution model (Der Kiureghian & Liu, 1986),
   /// this procedure modifies the user-specified correlation matrix
@@ -55,15 +57,16 @@ protected:
   void transform_correlations();
 
   /// Transformation routine for gradient vector from x-space to u-space
-  void trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-			 const RealVector& x_vars,
-			 const SizetArray& x_dvv,
-			 SizetMultiArrayConstView cv_ids);
+  void trans_grad_X_to_U(const RealVector& fn_grad_x,
+			 SizetMultiArrayConstView x_cv_ids,
+			 RealVector& fn_grad_u,
+			 SizetMultiArrayConstView u_cv_ids,
+			 const RealVector& x_vars, const SizetArray& x_dvv);
   /// Transformation routine for gradient vector from x-space to u-space
-  void trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
-			 const RealMatrix& jacobian_xu,
-			 const SizetArray& x_dvv,
-			 SizetMultiArrayConstView cv_ids);
+  void trans_grad_X_to_U(const RealVector& fn_grad_x,
+			 SizetMultiArrayConstView x_cv_ids,
+			 RealVector& fn_grad_u, const RealMatrix& jacobian_xu,
+			 const SizetArray& x_dvv);
 
   /// Transformation routine from x-space gradient vector to design space
   void trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
@@ -81,32 +84,44 @@ protected:
 			 const ShortArray& acv_map2_targets);
 
   /// Transformation routine for gradient vector from u-space to x-space
-  void trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-			 const RealVector& x_vars, const SizetArray& x_dvv,
-			 SizetMultiArrayConstView cv_ids);
+  void trans_grad_U_to_X(const RealVector& fn_grad_u,
+			 SizetMultiArrayConstView u_cv_ids,
+			 RealVector& fn_grad_x,
+			 SizetMultiArrayConstView x_cv_ids,
+			 const RealVector& x_vars, const SizetArray& x_dvv);
   /// Transformation routine for gradient vector from u-space to x-space
-  void trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
-			 const RealMatrix& jacobian_ux, const SizetArray& x_dvv,
-			 SizetMultiArrayConstView cv_ids);
+  void trans_grad_U_to_X(const RealVector& fn_grad_u,
+			 RealVector& fn_grad_x,
+			 SizetMultiArrayConstView x_cv_ids,
+			 const RealMatrix& jacobian_ux,
+			 const SizetArray& x_dvv);
 
   /// Transformation routine for Hessian matrix from x-space to u-space
   void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
-			 RealSymMatrix& fn_hess_u, const RealVector& x_vars,
-			 const RealVector& fn_grad_x, const SizetArray& x_dvv,
-			 SizetMultiArrayConstView cv_ids);
+			 SizetMultiArrayConstView x_cv_ids,
+			 RealSymMatrix& fn_hess_u,
+			 SizetMultiArrayConstView u_cv_ids,
+			 const RealVector& x_vars, const RealVector& fn_grad_x,
+			 const SizetArray& x_dvv);
   /// Transformation routine for Hessian matrix from x-space to u-space
   void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+			 SizetMultiArrayConstView x_cv_ids,
 			 RealSymMatrix& fn_hess_u,
 			 const RealMatrix& jacobian_xu,
 			 const RealSymMatrixArray& hessian_xu,
-			 const RealVector& fn_grad_x, const SizetArray& x_dvv,
-			 SizetMultiArrayConstView cv_ids);
+			 const RealVector& fn_grad_x, const SizetArray& x_dvv);
 
   /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
-  void jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu);
+  void jacobian_dX_dU(const RealVector& x_vars,
+		      SizetMultiArrayConstView x_cv_ids,
+		      SizetMultiArrayConstView u_cv_ids,
+		      RealMatrix& jacobian_xu);
 
   /// Jacobian of u(x) mapping obtained from dU/dZ dZ/dX
-  void jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux);
+  void jacobian_dU_dX(const RealVector& x_vars,
+		      SizetMultiArrayConstView x_cv_ids,
+		      SizetMultiArrayConstView u_cv_ids,
+		      RealMatrix& jacobian_ux);
 
   /// Design Jacobian of x(u,s) mapping obtained from differentiation of
   /// trans_U_to_X() with respect to distribution parameters S
@@ -128,6 +143,8 @@ protected:
 
   /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
   void hessian_d2X_dU2(const RealVector& x_vars,
+		       SizetMultiArrayConstView x_cv_ids,
+		       SizetMultiArrayConstView u_cv_ids,
 		       RealSymMatrixArray& hessian_xu);
 
 private:
@@ -142,30 +159,40 @@ private:
 
   /// Transformation routine from z-space of correlated standard normal
   /// variables to x-space of correlated random variables
-  void trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars);
+  void trans_Z_to_X(const RealVector& z_vars, SizetMultiArrayConstView u_cv_ids,
+		    RealVector& x_vars, SizetMultiArrayConstView x_cv_ids);
   /// Transformation routine from a single z-space variable to a
   /// corresponding x-space variable
-  void trans_Z_to_X(Real z, Real& x, size_t i);
+  void trans_Z_to_X(Real z, size_t u_rv_index, Real& x, size_t x_rv_index);
 
   /// Transformation routine from x-space of correlated random variables
   /// to z-space of correlated standard normal variables
-  void trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars);
+  void trans_X_to_Z(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		    RealVector& z_vars, SizetMultiArrayConstView u_cv_ids);
   /// Transformation routine from a single x-space random variable to
   /// a corresponding z-space variable
-  void trans_X_to_Z(Real x, Real& z, size_t i);
+  void trans_X_to_Z(Real x, size_t x_rv_index, Real& z, size_t u_rv_index);
 
   /// Transformation routine from z-space of correlated standard normal
   /// variables to u-space of uncorrelated standard normal variables
   void trans_Z_to_U(RealVector& z_vars, RealVector& u_vars);
 
   /// Jacobian of x(z) mapping obtained from differentiation of trans_Z_to_X()
-  void jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz);
+  void jacobian_dX_dZ(const RealVector& x_vars,
+		      SizetMultiArrayConstView x_cv_ids,
+		      SizetMultiArrayConstView u_cv_ids,
+		      RealMatrix& jacobian_xz);
 
   /// Jacobian of z(x) mapping obtained from differentiation of trans_X_to_Z()
-  void jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx);
+  void jacobian_dZ_dX(const RealVector& x_vars,
+		      SizetMultiArrayConstView x_cv_ids,
+		      SizetMultiArrayConstView u_cv_ids,
+		      RealMatrix& jacobian_zx);
 
   /// Hessian of x(z) mapping obtained from differentiation of jacobian_dX_dZ()
   void hessian_d2X_dZ2(const RealVector& x_vars,
+		       SizetMultiArrayConstView x_cv_ids,
+		       SizetMultiArrayConstView u_cv_ids,
 		       RealSymMatrixArray& hessian_xz);
 
   //

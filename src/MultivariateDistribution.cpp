@@ -200,7 +200,7 @@ size_t MultivariateDistribution::active_variable_index(size_t i) const
     */
     // Should be more efficient (presuming based on bit shifting)
     size_t index = active_vars.find_first(), cntr = 0;
-    while (cntr < i)
+    while (cntr < i && index != SZ_MAX)
       { index = active_vars.find_next(index); ++cntr; }
     return index;
   }

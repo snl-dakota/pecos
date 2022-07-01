@@ -43,11 +43,17 @@ public:
 
   /// Transformation routine from u-space of uncorrelated standard normal
   /// variables to x-space of correlated random variables
-  virtual void trans_U_to_X(const RealVector& u_vars, RealVector& x_vars);
+  virtual void trans_U_to_X(const RealVector& u_vars,
+			    SizetMultiArrayConstView u_cv_ids,
+			    RealVector& x_vars,
+			    SizetMultiArrayConstView x_cv_ids);
 
   /// Transformation routine from x-space of correlated random variables 
   /// to u-space of uncorrelated standard normal variables
-  virtual void trans_X_to_U(const RealVector& x_vars, RealVector& u_vars);
+  virtual void trans_X_to_U(const RealVector& x_vars,
+			    SizetMultiArrayConstView x_cv_ids,
+			    RealVector& u_vars,
+			    SizetMultiArrayConstView u_cv_ids);
 
   /// As part of the Nataf distribution model (Der Kiureghian & Liu, 1986),
   /// this procedure modifies the user-specified correlation matrix
@@ -58,16 +64,17 @@ public:
 
   /// Transformation routine for gradient vector from x-space to u-space
   virtual void trans_grad_X_to_U(const RealVector& fn_grad_x,
+				 SizetMultiArrayConstView x_cv_ids,
 				 RealVector& fn_grad_u,
+				 SizetMultiArrayConstView u_cv_ids,
 				 const RealVector& x_vars,
-				 const SizetArray& x_dvv,
-				 SizetMultiArrayConstView cv_ids);
+				 const SizetArray& x_dvv);
   /// Transformation routine for gradient vector from x-space to u-space
   virtual void trans_grad_X_to_U(const RealVector& fn_grad_x,
+				 SizetMultiArrayConstView x_cv_ids,
 				 RealVector& fn_grad_u,
 				 const RealMatrix& jacobian_xu,
-				 const SizetArray& x_dvv,
-				 SizetMultiArrayConstView cv_ids);
+				 const SizetArray& x_dvv);
 
   /// Transformation routine from x-space gradient vector to design space
   virtual void trans_grad_X_to_S(const RealVector& fn_grad_x,
@@ -90,39 +97,45 @@ public:
 
   /// Transformation routine for gradient vector from u-space to x-space
   virtual void trans_grad_U_to_X(const RealVector& fn_grad_u,
+				 SizetMultiArrayConstView u_cv_ids,
 				 RealVector& fn_grad_x,
+				 SizetMultiArrayConstView x_cv_ids,
 				 const RealVector& x_vars,
-				 const SizetArray& x_dvv,
-				 SizetMultiArrayConstView cv_ids);
+				 const SizetArray& x_dvv);
   /// Transformation routine for gradient vector from u-space to x-space
   virtual void trans_grad_U_to_X(const RealVector& fn_grad_u,
 				 RealVector& fn_grad_x,
+				 SizetMultiArrayConstView x_cv_ids,
 				 const RealMatrix& jacobian_ux,
-				 const SizetArray& x_dvv,
-				 SizetMultiArrayConstView cv_ids);
+				 const SizetArray& x_dvv);
 
   /// Transformation routine for Hessian matrix from x-space to u-space
   virtual void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+				 SizetMultiArrayConstView x_cv_ids,
 				 RealSymMatrix& fn_hess_u,
+				 SizetMultiArrayConstView u_cv_ids,
 				 const RealVector& x_vars,
 				 const RealVector& fn_grad_x,
-				 const SizetArray& x_dvv,
-				 SizetMultiArrayConstView cv_ids);
+				 const SizetArray& x_dvv);
   /// Transformation routine for Hessian matrix from x-space to u-space
   virtual void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+				 SizetMultiArrayConstView x_cv_ids,
 				 RealSymMatrix& fn_hess_u,
 				 const RealMatrix& jacobian_xu,
 				 const RealSymMatrixArray& hessian_xu,
 				 const RealVector& fn_grad_x,
-				 const SizetArray& x_dvv,
-				 SizetMultiArrayConstView cv_ids);
+				 const SizetArray& x_dvv);
 
   /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
   virtual void jacobian_dX_dU(const RealVector& x_vars,
+			      SizetMultiArrayConstView x_cv_ids,
+			      SizetMultiArrayConstView u_cv_ids,
 			      RealMatrix& jacobian_xu);
 
   /// Jacobian of u(x) mapping obtained from dU/dZ dZ/dX
   virtual void jacobian_dU_dX(const RealVector& x_vars,
+			      SizetMultiArrayConstView x_cv_ids,
+			      SizetMultiArrayConstView u_cv_ids,
 			      RealMatrix& jacobian_ux);
 
   /// Design Jacobian of x(u,s) mapping obtained from differentiation of
@@ -145,6 +158,8 @@ public:
 
   /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
   virtual void hessian_d2X_dU2(const RealVector& x_vars,
+			       SizetMultiArrayConstView x_cv_ids,
+			       SizetMultiArrayConstView u_cv_ids,
 			       RealSymMatrixArray& hessian_xu);
 
   //

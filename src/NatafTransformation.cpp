@@ -25,15 +25,16 @@ namespace Pecos {
     normal space (u-space).  x_vars is the vector of random variables
     in the original user-defined x-space. */
 void NatafTransformation::
-trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
+trans_U_to_X(const RealVector& u_vars, SizetMultiArrayConstView u_cv_ids,
+	     RealVector& x_vars,       SizetMultiArrayConstView x_cv_ids)
 {
   if (xDist.correlation()) {
     RealVector z_vars;
     trans_U_to_Z(u_vars, z_vars);
-    trans_Z_to_X(z_vars, x_vars);
+    trans_Z_to_X(z_vars, u_cv_ids, x_vars, x_cv_ids);
   }
   else // z_vars = u_vars
-    trans_Z_to_X(u_vars, x_vars);
+    trans_Z_to_X(u_vars, u_cv_ids, x_vars, x_cv_ids);
 
 #ifdef DEBUG
   PCout << "Transforming u_vars:\n" << u_vars << "to x_vars:\n" << x_vars;
@@ -51,8 +52,8 @@ trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars)
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
   int u_len = u_vars.length(), z_len = z_vars.length();
-  if (z_len == 0) z_vars.size(u_len); // allow initialization
-  else if (z_len != u_len) {    // disallow inconsistent size
+  if (z_len == 0) z_vars.sizeUninitialized(u_len); // allow for initialization
+  else if (z_len != u_len) {                     // disallow inconsistent size
     PCerr << "Error: inconsistent size in NatafTransformation::trans_U_to_Z()."
 	  << std::endl;
     abort_handler(-1);
@@ -67,10 +68,11 @@ trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars)
     proper correlations (z-space).  x_vars is the vector of random
     variables in the original user-defined x-space */
 void NatafTransformation::
-trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
+trans_Z_to_X(const RealVector& z_vars, SizetMultiArrayConstView u_cv_ids,
+	     RealVector& x_vars,       SizetMultiArrayConstView x_cv_ids)
 {
   int z_len = z_vars.length(), x_len = z_vars.length();
-  if (x_len == 0) x_vars.size(z_len); // allow initialization
+  if (x_len == 0) x_vars.sizeUninitialized(z_len); // allow initialization
   else if (x_len != z_len) {    // disallow inconsistent size
     PCerr << "Error: inconsistent size in NatafTransformation::trans_Z_to_X()."
 	  << std::endl;
@@ -78,7 +80,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
   }
 
   for (size_t i=0; i<z_len; ++i) {
-    trans_Z_to_X(z_vars[i], x_vars[i], i);
+    trans_Z_to_X(z_vars[i], u_cv_ids[i] - 1, x_vars[i], x_cv_ids[i] - 1);
 
 #ifdef DEBUG
     PCout << "Z_to_X: z[" << i << "] = " << z_vars[i]
@@ -92,46 +94,47 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     z_var is the random variable in standardized space with proper
     correlations (z-space).  x_var is the random variable in the
     original user-defined x-space */
-void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
+void NatafTransformation::
+trans_Z_to_X(Real z, size_t u_rv_index, Real& x, size_t x_rv_index)
 {
   // This routine performs an inverse transformation based on CDF/CCDF
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
-  const RandomVariable& x_rv_i = xDist.active_random_variable(i);
-  short x_type = x_rv_i.type(), u_type = uDist.active_random_variable_type(i);
+  const RandomVariable& x_rv = xDist.random_variable(x_rv_index);
+  short x_type = x_rv.type(), u_type = uDist.random_variable_type(u_rv_index);
   if (u_type == x_type)
     x = z;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:  x = x_rv_i.from_standard(z);  break;
+    case NORMAL:  x = x_rv.from_standard(z);  break;
     case LOGNORMAL: {
-      Real lambda;  x_rv_i.pull_parameter(LN_LAMBDA, lambda);
-      Real   zeta;  x_rv_i.pull_parameter(LN_ZETA,   zeta);
+      Real lambda;  x_rv.pull_parameter(LN_LAMBDA, lambda);
+      Real   zeta;  x_rv.pull_parameter(LN_ZETA,   zeta);
       x = std::exp(lambda + zeta * z);
       break;
     }
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-      x = x_rv_i.inverse_log_ccdf(NormalRandomVariable::log_std_ccdf(z)); break;
+      x = x_rv.inverse_log_ccdf(NormalRandomVariable::log_std_ccdf(z)); break;
     case GUMBEL:  // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
     case FRECHET: // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-      x = x_rv_i.inverse_log_cdf(NormalRandomVariable::log_std_cdf(z));   break;
+      x = x_rv.inverse_log_cdf(NormalRandomVariable::log_std_cdf(z));   break;
     */
     default: // default mapping based on either CDF or CCDF equivalence
-      x = (z > 0.) ? x_rv_i.inverse_ccdf(NormalRandomVariable::std_ccdf(z)) :
-	x_rv_i.inverse_cdf(NormalRandomVariable::std_cdf(z));  break;
+      x = (z > 0.) ? x_rv.inverse_ccdf(NormalRandomVariable::std_ccdf(z)) :
+	x_rv.inverse_cdf(NormalRandomVariable::std_cdf(z));  break;
     }
   }
   else if (u_type == STD_UNIFORM)
-    x = (z > 0.) ? x_rv_i.inverse_ccdf(UniformRandomVariable::std_ccdf(z)) :
-      x_rv_i.inverse_cdf(UniformRandomVariable::std_cdf(z));
+    x = (z > 0.) ? x_rv.inverse_ccdf(UniformRandomVariable::std_ccdf(z)) :
+      x_rv.inverse_cdf(UniformRandomVariable::std_cdf(z));
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    x = x_rv_i.from_standard(z);
+    x = x_rv.from_standard(z);
   else {
-    PCerr << "Error: unsupported variable mapping for variable " << i
+    PCerr << "Error: unsupported variable mapping for variable " << u_rv_index
 	  << " in NatafTransformation::trans_Z_to_X()" << std::endl;
     abort_handler(-1);
   }
@@ -143,15 +146,16 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
     normal space (u-space).  x_vars is the vector of random variables
     in the original user-defined x-space. */
 void NatafTransformation::
-trans_X_to_U(const RealVector& x_vars, RealVector& u_vars) 
+trans_X_to_U(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	     RealVector& u_vars,       SizetMultiArrayConstView u_cv_ids) 
 { 
   if (xDist.correlation()) {
     RealVector z_vars;
-    trans_X_to_Z(x_vars, z_vars);
+    trans_X_to_Z(x_vars, x_cv_ids, z_vars, u_cv_ids);
     trans_Z_to_U(z_vars, u_vars);
   }
   else // z_vars = u_vars
-    trans_X_to_Z(x_vars, u_vars);
+    trans_X_to_Z(x_vars, x_cv_ids, u_vars, u_cv_ids);
 
 #ifdef DEBUG
   PCout << "Transforming x_vars:\n" << x_vars << "to u_vars:\n" << u_vars;
@@ -164,10 +168,11 @@ trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
     proper correlations (z-space).  x_vars is the vector of random
     variables in the original user-defined x-space. */
 void NatafTransformation::
-trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
+trans_X_to_Z(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	     RealVector& z_vars,       SizetMultiArrayConstView u_cv_ids)
 {
   int x_len = x_vars.length(), z_len = z_vars.length();
-  if (z_len == 0) z_vars.size(x_len); // allow initialization
+  if (z_len == 0) z_vars.sizeUninitialized(x_len); // allow initialization
   else if (z_len != x_len) {    // disallow inconsistent size
     PCerr << "Error: inconsistent size in NatafTransformation::trans_X_to_Z()."
 	  << std::endl;
@@ -175,7 +180,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
   }
 
   for (size_t i=0; i<x_len; ++i) {
-    trans_X_to_Z(x_vars[i], z_vars[i], i);
+    trans_X_to_Z(x_vars[i], x_cv_ids[i] - 1, z_vars[i], u_cv_ids[i] - 1);
 
 #ifdef DEBUG
     PCout << "X_to_Z: x[" << i << "] = " << x_vars[i]
@@ -189,51 +194,53 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
     z_var is the random variable in standardized space with proper
     correlations (z-space).  x_var is the random variable in the
     original user-defined x-space. */
-void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
+void NatafTransformation::
+trans_X_to_Z(Real x, size_t x_rv_index, Real& z, size_t u_rv_index)
 {
   // This routine performs an forward transformation based on CDF/CCDF
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
-  const RandomVariable& x_rv_i = xDist.active_random_variable(i);
-  short x_type = x_rv_i.type(), u_type = uDist.active_random_variable_type(i);
+  const RandomVariable& x_rv = xDist.random_variable(x_rv_index);
+  short x_type = x_rv.type(), u_type = uDist.random_variable_type(u_rv_index);
+
   if (u_type == x_type)
     z = x;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    z = x_rv_i.to_standard(x); break;
+    case NORMAL:    z = x_rv.to_standard(x); break;
     case LOGNORMAL: {
-      Real lambda;  x_rv_i.pull_parameter(LN_LAMBDA, lambda);
-      Real   zeta;  x_rv_i.pull_parameter(LN_ZETA,   zeta);
+      Real lambda;  x_rv.pull_parameter(LN_LAMBDA, lambda);
+      Real   zeta;  x_rv.pull_parameter(LN_ZETA,   zeta);
       z = (std::log(x) - lambda) / zeta;
       break;
     }
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-      z = NormalRandomVariable::inverse_log_std_ccdf(x_rv_i.log_ccdf(x)); break;
+      z = NormalRandomVariable::inverse_log_std_ccdf(x_rv.log_ccdf(x)); break;
     case GUMBEL:  // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
     case FRECHET: // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-      z = NormalRandomVariable::inverse_log_std_cdf(x_rv_i.log_cdf(x));   break;
+      z = NormalRandomVariable::inverse_log_std_cdf(x_rv.log_cdf(x));   break;
     */
     default: { // default mapping based on either CDF or CCDF equivalence
-      Real xcdf = x_rv_i.cdf(x);
-      z = (xcdf > .5) ? NormalRandomVariable::inverse_std_ccdf(x_rv_i.ccdf(x)) :
+      Real xcdf = x_rv.cdf(x);
+      z = (xcdf > .5) ? NormalRandomVariable::inverse_std_ccdf(x_rv.ccdf(x)) :
 	NormalRandomVariable::inverse_std_cdf(xcdf);
       break;
     }
     }
   }
   else if (u_type == STD_UNIFORM) {
-    Real xcdf = x_rv_i.cdf(x);
-    z = (xcdf > .5) ? UniformRandomVariable::inverse_std_ccdf(x_rv_i.ccdf(x)) :
+    Real xcdf = x_rv.cdf(x);
+    z = (xcdf > .5) ? UniformRandomVariable::inverse_std_ccdf(x_rv.ccdf(x)) :
       UniformRandomVariable::inverse_std_cdf(xcdf);
   }
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    z = x_rv_i.to_standard(x);
+    z = x_rv.to_standard(x);
   else {
-    PCerr << "Error: unsupported variable mapping for variable " << i
+    PCerr << "Error: unsupported variable mapping for variable " << x_rv_index
 	  << " in NatafTransformation::trans_X_to_Z()" << std::endl;
     abort_handler(-1);
   }
@@ -249,7 +256,8 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
   int z_len = z_vars.length(), u_len = u_vars.length();
-  if (u_len && z_len != u_len) { // disallow inconsistent size
+  if (u_len == 0) u_vars.sizeUninitialized(z_len);
+  else if (z_len != u_len) { // disallow inconsistent size
     PCerr << "Error: inconsistent size in NatafTransformation::trans_Z_to_U()."
 	  << std::endl;
     abort_handler(-1);
@@ -259,10 +267,6 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
   // line 647 will call (LHS_ = u_vars) = RHS_, disconnecting the
   // view.  To work around, we use a temporary.
   RealVector tmp_u_vars(z_len);
-  // WARNING: this could also disconnect a view...
-  if (u_vars.length() != z_len)
-    u_vars.size(z_len);
-
 
   RealSolver corr_solver;
   corr_solver.setMatrix(  Teuchos::rcp(&corrCholeskyFactorZ, false) );
@@ -403,13 +407,14 @@ void NatafTransformation::transform_correlations()
     standard normal space (u-space) through application of the Jacobian dx/du.
     x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
-trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealVector& x_vars, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+trans_grad_X_to_U(const RealVector& fn_grad_x,
+		  SizetMultiArrayConstView x_cv_ids, RealVector& fn_grad_u,
+		  SizetMultiArrayConstView u_cv_ids, const RealVector& x_vars,
+		  const SizetArray& x_dvv)
 {
   RealMatrix jacobian_xu;
-  jacobian_dX_dU(x_vars, jacobian_xu);
-  trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv, cv_ids);
+  jacobian_dX_dU(x_vars, x_cv_ids, u_cv_ids, jacobian_xu);
+  trans_grad_X_to_U(fn_grad_x, x_cv_ids, fn_grad_u, jacobian_xu, x_dvv);
 }
 
 
@@ -420,13 +425,13 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     as this matrix is independent of the response function index and can be
     pulled outside response function loops. */
 void NatafTransformation::
-trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealMatrix& jacobian_xu, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+trans_grad_X_to_U(const RealVector& fn_grad_x,
+		  SizetMultiArrayConstView x_cv_ids, RealVector& fn_grad_u,
+		  const RealMatrix& jacobian_xu, const SizetArray& x_dvv)
 {
   // Jacobian dimensions = length of random variables = model.cv()
   int num_v = jacobian_xu.numRows();
-  if (x_dvv == cv_ids) { // standard DVV
+  if (x_dvv == x_cv_ids) { // standard DVV
     if (fn_grad_x.length() != num_v) {
       PCerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
 	    << "trans_grad_X_to_U()." << std::endl;
@@ -443,7 +448,7 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     SizetArray dvv_index_array(num_v);
     // extract relevant DVV components from fn_grad_x
     for (i=0; i<num_v; ++i) {
-      dvv_index_array[i] = dvv_index = find_index(x_dvv, cv_ids[i]);
+      dvv_index_array[i] = dvv_index = find_index(x_dvv, x_cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_x_trans[i] = fn_grad_x(dvv_index);
     }
@@ -471,13 +476,14 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     space (u-space) to the original user-defined x-space through application of
     the Jacobian du/dx.  x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
-trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealVector& x_vars, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+trans_grad_U_to_X(const RealVector& fn_grad_u,
+		  SizetMultiArrayConstView u_cv_ids, RealVector& fn_grad_x,
+		  SizetMultiArrayConstView x_cv_ids,
+		  const RealVector& x_vars, const SizetArray& x_dvv)
 {
   RealMatrix jacobian_ux;
-  jacobian_dU_dX(x_vars, jacobian_ux);
-  trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv, cv_ids);
+  jacobian_dU_dX(x_vars, x_cv_ids, u_cv_ids, jacobian_ux);
+  trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_cv_ids, jacobian_ux, x_dvv);
 }
 
 
@@ -488,12 +494,12 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     function index and can be pulled outside response function loops. */
 void NatafTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+		  SizetMultiArrayConstView x_cv_ids,
+		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv)
 {
   // Jacobian dimensions = length of random variables = model.cv()
   int u_len = jacobian_ux.numRows();
-  if (x_dvv == cv_ids) { // standard DVV
+  if (x_dvv == x_cv_ids) { // standard DVV
     if (fn_grad_u.length() != u_len) {
       PCerr << "Error: bad fn_grad_u dimension in NatafTransformation::"
 	    << "trans_grad_U_to_X()." << std::endl;
@@ -510,7 +516,7 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     SizetArray dvv_index_array(u_len);
     // extract relevant DVV components from fn_grad_u
     for (int i=0; i<u_len; ++i) {
-      dvv_index_array[i] = dvv_index = find_index(x_dvv, cv_ids[i]);
+      dvv_index_array[i] = dvv_index = find_index(x_dvv, x_cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_u_trans[i] = fn_grad_u(dvv_index);
     }
@@ -660,19 +666,22 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
     uncorrelated standard normal space (u-space).  x_vars is the
     vector of the random variables in x-space. */
 void NatafTransformation::
-trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
-		  const RealVector& x_vars, const RealVector& fn_grad_x,
-		  const SizetArray& x_dvv, SizetMultiArrayConstView cv_ids)
+trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+		  SizetMultiArrayConstView x_cv_ids, RealSymMatrix& fn_hess_u,
+		  SizetMultiArrayConstView u_cv_ids, const RealVector& x_vars,
+		  const RealVector& fn_grad_x, const SizetArray& x_dvv)
 {
   RealMatrix jacobian_xu;
-  jacobian_dX_dU(x_vars, jacobian_xu);
+  jacobian_dX_dU(x_vars, x_cv_ids, u_cv_ids, jacobian_xu);
 
   RealSymMatrixArray hessian_xu;
   bool nonlinear_vars_map = false;
-  size_t i, num_v = x_vars.length(); short x_type, u_type;
+  size_t i, num_v = x_vars.length(), x_cv_index, u_cv_index;
+  short x_type, u_type;
   for (i=0; i<num_v; ++i) {
-    x_type = xDist.active_random_variable_type(i);
-    u_type = uDist.active_random_variable_type(i);
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    x_type = xDist.random_variable_type(x_cv_index);
+    u_type = uDist.random_variable_type(u_cv_index);
     if ( ( ( x_type == CONTINUOUS_RANGE || x_type == UNIFORM ||
 	     x_type == CONTINUOUS_INTERVAL_UNCERTAIN ) &&
 	   u_type   != STD_UNIFORM ) ||
@@ -691,10 +700,10 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   }
 
   if (nonlinear_vars_map) // nonlinear transformation has Hessian
-    hessian_d2X_dU2(x_vars, hessian_xu);
+    hessian_d2X_dU2(x_vars, x_cv_ids, u_cv_ids, hessian_xu);
 
-  trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu, hessian_xu,
-		    fn_grad_x, x_dvv, cv_ids);
+  trans_hess_X_to_U(fn_hess_x, x_cv_ids, fn_hess_u, jacobian_xu, hessian_xu,
+		    fn_grad_x, x_dvv);
 }
 
 
@@ -705,15 +714,15 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     hessian_xu, since these are independent of the response function
     index and can be pulled outside response function loops. */
 void NatafTransformation::
-trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
+trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+		  SizetMultiArrayConstView x_cv_ids, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
-		  const RealVector& fn_grad_x, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids)
+		  const RealVector& fn_grad_x, const SizetArray& x_dvv)
 {
   // Jacobian dimensions = length of random variables = model.cv()
   int  num_v   = jacobian_xu.numRows();
-  bool std_dvv = (x_dvv == cv_ids); // standard DVV
+  bool std_dvv = (x_dvv == x_cv_ids); // standard DVV
   bool nonlinear_vars_map = !hessian_xu.empty();
 
   RealSymMatrix fn_hess_x_std, fn_hess_u_std;
@@ -742,7 +751,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     size_t i, j, dvv_index_i, dvv_index_j, num_deriv_vars = x_dvv.size();
     dvv_index_array.resize(num_v);
     for (i=0; i<num_v; ++i)
-      dvv_index_array[i] = dvv_index_i = find_index(x_dvv, cv_ids[i]);
+      dvv_index_array[i] = dvv_index_i = find_index(x_dvv, x_cv_ids[i]);
     if (fn_hess_u.numRows() != num_deriv_vars)
       fn_hess_u.shape(num_deriv_vars);
     // extract relevant DVV components from fn_hess_x
@@ -813,12 +822,13 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     x_vars is the vector of random variables in the original
     user-defined x-space. */
 void NatafTransformation::
-jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
+jacobian_dX_dU(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids, RealMatrix& jacobian_xu)
 {
   if (xDist.correlation()) {
     // dX/dZ = diagonal
     RealMatrix jacobian_xz;
-    jacobian_dX_dZ(x_vars, jacobian_xz);
+    jacobian_dX_dZ(x_vars, x_cv_ids, u_cv_ids, jacobian_xz);
 
     // dX/dU = dX/dZ dZ/dU = dX/dZ L = dense if variables are correlated
     int num_v = x_vars.length();
@@ -828,7 +838,7 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
 			 corrCholeskyFactorZ, 0.);
   }
   else // dX/dU = dX/dZ since dZ/dU = I
-    jacobian_dX_dZ(x_vars, jacobian_xu);
+    jacobian_dX_dZ(x_vars, x_cv_ids, u_cv_ids, jacobian_xu);
 
 #ifdef DEBUG
   PCout << "jacobian_dX_dU:\n" << jacobian_xu;
@@ -840,7 +850,8 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
     x_vars is the vector of random variables in the original
     user-defined x-space. */
 void NatafTransformation::
-jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
+jacobian_dX_dZ(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids, RealMatrix& jacobian_xz)
 {
   int num_v = x_vars.length();
   if (jacobian_xz.numRows() != num_v || jacobian_xz.numCols() != num_v)
@@ -851,10 +862,11 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
   //         dx/dz = phi(z)/f(x)
   // dX/dZ is diagonal as defined by differentiation of trans_Z_to_X()
 
-  Real z_var; short x_type, u_type;
+  Real z_var; short x_type, u_type; size_t x_cv_index, u_cv_index;
   for (int i=0; i<num_v; ++i) {
-    const RandomVariable& x_rv_i = xDist.active_random_variable(i);
-    x_type = x_rv_i.type(); u_type = uDist.active_random_variable_type(i);
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    const RandomVariable&   x_rv_i = xDist.random_variable(x_cv_index);
+    x_type = x_rv_i.type(); u_type = uDist.random_variable_type(u_cv_index);
     if (u_type == x_type)
       jacobian_xz(i, i) = 1.;
     else if (u_type == STD_NORMAL)
@@ -867,7 +879,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	break;
       }
       default:
-	trans_X_to_Z(x_vars[i], z_var, i);
+	trans_X_to_Z(x_vars[i], x_cv_index, z_var, u_cv_index);
 	jacobian_xz(i, i) = NormalRandomVariable::std_pdf(z_var)
 	                  / x_rv_i.pdf(x_vars[i]);                        break;
       }
@@ -902,12 +914,13 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     x_vars is the vector of random variables in the original
     user-defined x-space. */
 void NatafTransformation::
-jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
+jacobian_dU_dX(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids, RealMatrix& jacobian_ux)
 {
   if (xDist.correlation()) {
     // dZ/dX = diagonal
     RealMatrix jacobian_zx;
-    jacobian_dZ_dX(x_vars, jacobian_zx);
+    jacobian_dZ_dX(x_vars, x_cv_ids, u_cv_ids, jacobian_zx);
 
     // dU/dX = dU/dZ dZ/dX = L^-1 dZ/dX = dense if variables are correlated
     // Solve as L dU/dX = dZ/dX
@@ -932,7 +945,7 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
     jacobian_ux.assign(tmp_jac_ux);
   }
   else // dU/dX = dZ/dX since dU/dZ = I
-    jacobian_dZ_dX(x_vars, jacobian_ux);
+    jacobian_dZ_dX(x_vars, x_cv_ids, u_cv_ids, jacobian_ux);
 
 #ifdef DEBUG
   PCout << "jacobian_dU_dX:\n" << jacobian_ux;
@@ -944,7 +957,8 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
     x_vars is the vector of random variables in the original
     user-defined x-space. */
 void NatafTransformation::
-jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx) 
+jacobian_dZ_dX(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids, RealMatrix& jacobian_zx) 
 {
   int num_v = x_vars.length();
   if (jacobian_zx.numRows() != num_v || jacobian_zx.numCols() != num_v)
@@ -955,10 +969,11 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
   //         dz/dx = f(x)/phi(z)
   // dZ/dX is diagonal as defined by differentiation of trans_X_to_Z()
 
-  Real z_var; short x_type, u_type;
+  Real z_var; short x_type, u_type; size_t x_cv_index, u_cv_index;
   for (int i=0; i<num_v; ++i) {
-    const RandomVariable&   x_rv_i = xDist.active_random_variable(i);
-    x_type = x_rv_i.type(); u_type = uDist.active_random_variable_type(i);
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    const RandomVariable&   x_rv_i = xDist.random_variable(x_cv_index);
+    x_type = x_rv_i.type(); u_type = uDist.random_variable_type(u_cv_index);
     if (u_type == x_type)
       jacobian_zx(i, i) = 1.;
     else if (u_type == STD_NORMAL)
@@ -972,7 +987,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	jacobian_zx(i, i) = 1. / (zeta * x_vars[i]);  break;
       }
       default:
-	trans_X_to_Z(x_vars[i], z_var, i);
+	trans_X_to_Z(x_vars[i], x_cv_index, z_var, u_cv_index);
 	jacobian_zx(i, i)
 	  = x_rv_i.pdf(x_vars[i]) / NormalRandomVariable::std_pdf(z_var); break;
       }
@@ -1269,13 +1284,15 @@ numerical_design_jacobian(const RealVector& x_vars,
     the i_th matrix is d^2X_i/dU^2.  x_vars is the vector of random
     variables in the original user-defined x-space. */
 void NatafTransformation::
-hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
+hessian_d2X_dU2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		SizetMultiArrayConstView u_cv_ids,
+		RealSymMatrixArray& hessian_xu)
 {
   if (xDist.correlation()) {
     // d^2X/dZ^2
     int num_v = x_vars.length();
     RealSymMatrixArray hessian_xz(num_v);
-    hessian_d2X_dZ2(x_vars, hessian_xz);
+    hessian_d2X_dZ2(x_vars, x_cv_ids, u_cv_ids, hessian_xz);
 
     if (hessian_xu.size() != num_v)
       hessian_xu.resize(num_v);
@@ -1289,7 +1306,7 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
     }
   }
   else // d^2X/dU^2 = d^2X/dZ^2 since dZ/dU = I
-    hessian_d2X_dZ2(x_vars, hessian_xu);
+    hessian_d2X_dZ2(x_vars, x_cv_ids, u_cv_ids, hessian_xu);
 }
 
 
@@ -1298,7 +1315,9 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
     the i_th matrix is d^2X_i/dZ^2.  x_vars is the vector of random
     variables in the original user-defined x-space. */
 void NatafTransformation::
-hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
+hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		SizetMultiArrayConstView u_cv_ids,
+		RealSymMatrixArray& hessian_xz)
 {
   // This routine calculates the Hessian of the transformation x(z):
   //
@@ -1322,10 +1341,11 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
   if (hessian_xz.size() != num_v)
     hessian_xz.resize(num_v);
 
-  Real x, z, dx_dz, pdf; short x_type, u_type;
+  Real x, z, dx_dz, pdf; short x_type, u_type; size_t x_cv_index, u_cv_index;
   for (int i=0; i<num_v; ++i) {
-    const RandomVariable& x_rv_i = xDist.active_random_variable(i);
-    x_type = x_rv_i.type(); u_type = uDist.active_random_variable_type(i);
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    const RandomVariable&   x_rv_i = xDist.random_variable(x_cv_index);
+    x_type = x_rv_i.type(); u_type = uDist.random_variable_type(u_cv_index);
     if (hessian_xz[i].numRows() != num_v)
       hessian_xz[i].shape(num_v);
     // each d^2X_i/dZ^2 has a single entry on the diagonal as defined by

@@ -328,12 +328,26 @@ random_variables()
 
 inline const RandomVariable& MarginalsCorrDistribution::
 random_variable(size_t rv_index) const
-{ return randomVars[rv_index]; }
+{
+  if (rv_index >= randomVars.size()) { // inclusive of SZ_MAX
+    PCerr << "Error: index (" << rv_index << ") out of range in MarginalsCorr"
+	  << "Distribution::random_variable(size_t)." << std::endl;
+    abort_handler(-1);
+  }
+  return randomVars[rv_index];
+}
 
 
 inline RandomVariable& MarginalsCorrDistribution::
 random_variable(size_t rv_index)
-{ return randomVars[rv_index]; }
+{
+  if (rv_index >= randomVars.size()) { // inclusive of SZ_MAX
+    PCerr << "Error: index (" << rv_index << ") out of range in MarginalsCorr"
+	  << "Distribution::random_variable(size_t)." << std::endl;
+    abort_handler(-1);
+  }
+  return randomVars[rv_index];
+}
 
 
 inline void MarginalsCorrDistribution::check_global_bounds()
@@ -352,6 +366,11 @@ inline void MarginalsCorrDistribution::check_global_bounds()
 inline void MarginalsCorrDistribution::
 check_random_variable_type(size_t rv_index, short rv_type) const
 {
+  if (rv_index >= randomVars.size()) { // inclusive of SZ_MAX
+    PCerr << "Error: index (" << rv_index << ") out of range in MarginalsCorr"
+	  << "Distribution::check_random_variable_type()." << std::endl;
+    abort_handler(-1);
+  }
   if (randomVars[rv_index].type() != rv_type) {
     PCerr << "Error: inconsistent random variable type in MarginalsCorr"
 	  << "Distribution::check_random_variable_type()." << std::endl;
@@ -375,12 +394,24 @@ random_variable_types(const ShortArray& rv_types)
 
 inline short MarginalsCorrDistribution::
 random_variable_type(size_t rv_index) const
-{ return ranVarTypes[rv_index]; }
+{
+  if (rv_index >= ranVarTypes.size()) { // inclusive of SZ_MAX
+    PCerr << "Error: index " << rv_index << " out of range in MarginalsCorr"
+	  << "Distribution::random_variable_type(size_t)." << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarTypes[rv_index];
+}
 
 
 inline void MarginalsCorrDistribution::
 random_variable_type(short rv_type, size_t rv_index)
 {
+  if (rv_index >= ranVarTypes.size()) { // inclusive of SZ_MAX
+    PCerr << "Error: index (" << rv_index << ") out of range in MarginalsCorr"
+	  << "Distribution::random_variable_type(short,size_t)." << std::endl;
+    abort_handler(-1);
+  }
   bool new_rv_global = (rv_type == CONTINUOUS_RANGE ||
 			rv_type ==   DISCRETE_RANGE);
   if (globalBndsFlag) {
