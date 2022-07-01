@@ -50,9 +50,13 @@ trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars)
 {
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
-  int u_len = u_vars.length();
-  if (z_vars.length() != u_len)
-    z_vars.size(u_len);
+  int u_len = u_vars.length(), z_len = z_vars.length();
+  if (z_len == 0) z_vars.size(u_len); // allow initialization
+  else if (z_len != u_len) {    // disallow inconsistent size
+    PCerr << "Error: inconsistent size in NatafTransformation::trans_U_to_Z()."
+	  << std::endl;
+    abort_handler(-1);
+  }
   z_vars.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1., corrCholeskyFactorZ,
 		  u_vars, 0.);
 }
@@ -65,9 +69,13 @@ trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars)
 void NatafTransformation::
 trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 {
-  int z_len = z_vars.length();
-  if (x_vars.length() != z_len)
-    x_vars.size(z_len);
+  int z_len = z_vars.length(), x_len = z_vars.length();
+  if (x_len == 0) x_vars.size(z_len); // allow initialization
+  else if (x_len != z_len) {    // disallow inconsistent size
+    PCerr << "Error: inconsistent size in NatafTransformation::trans_Z_to_X()."
+	  << std::endl;
+    abort_handler(-1);
+  }
 
   for (size_t i=0; i<z_len; ++i) {
     trans_Z_to_X(z_vars[i], x_vars[i], i);
@@ -158,9 +166,13 @@ trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
 void NatafTransformation::
 trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 {
-  int x_len = x_vars.length();
-  if (z_vars.length() != x_len)
-    z_vars.size(x_len);
+  int x_len = x_vars.length(), z_len = z_vars.length();
+  if (z_len == 0) z_vars.size(x_len); // allow initialization
+  else if (z_len != x_len) {    // disallow inconsistent size
+    PCerr << "Error: inconsistent size in NatafTransformation::trans_X_to_Z()."
+	  << std::endl;
+    abort_handler(-1);
+  }
 
   for (size_t i=0; i<x_len; ++i) {
     trans_X_to_Z(x_vars[i], z_vars[i], i);
@@ -236,7 +248,12 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
 {
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
-  int z_len = z_vars.length();
+  int z_len = z_vars.length(), u_len = u_vars.length();
+  if (u_len && z_len != u_len) { // disallow inconsistent size
+    PCerr << "Error: inconsistent size in NatafTransformation::trans_Z_to_U()."
+	  << std::endl;
+    abort_handler(-1);
+  }
   // The inbound u_vars object may be a Teuchos::View we want to
   // update with the solution.  However SerialDenseSolver::solve(),
   // line 647 will call (LHS_ = u_vars) = RHS_, disconnecting the
