@@ -548,16 +548,17 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const RealVector& x_vars, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids,
-		  SizetMultiArrayConstView acv_ids,
-		  const SizetArray& acv_map1_indices,
-		  const ShortArray& acv_map2_targets)
+		  SizetMultiArrayConstView x_cv_ids,
+		  SizetMultiArrayConstView u_cv_ids,
+		  SizetMultiArrayConstView x_acv_ids,
+		  const SizetArray& x_acv_map1_indices,
+		  const ShortArray& x_acv_map2_targets)
 {
   RealMatrix jacobian_xs;
-  jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids,
-                 acv_map1_indices, acv_map2_targets);
-  trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv, cv_ids, acv_ids,
-		    acv_map1_indices, acv_map2_targets);
+  jacobian_dX_dS(x_vars, jacobian_xs, x_cv_ids, u_cv_ids, x_acv_ids,
+                 x_acv_map1_indices, x_acv_map2_targets);
+  trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv, x_cv_ids,
+		    u_cv_ids, x_acv_ids, x_acv_map1_indices,x_acv_map2_targets);
 }
 
 
@@ -571,24 +572,25 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const RealMatrix& jacobian_xs, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids,
-		  SizetMultiArrayConstView acv_ids,
-		  const SizetArray& acv_map1_indices,
-		  const ShortArray& acv_map2_targets)
+		  SizetMultiArrayConstView x_cv_ids,
+		  SizetMultiArrayConstView u_cv_ids,
+		  SizetMultiArrayConstView x_acv_ids,
+		  const SizetArray& x_acv_map1_indices,
+		  const ShortArray& x_acv_map2_targets)
 {
   // Jacobian dim is num_v by num_s, where
   // > num_v = length of random variables  = inner model.cv()
   // > num_s = acv_map1_indices.size() = outer model.cv()
   int num_v = jacobian_xs.numRows(), num_s = jacobian_xs.numCols();
-  if (acv_map1_indices.empty() || acv_map2_targets.empty()) {
+  if (x_acv_map1_indices.empty() || x_acv_map2_targets.empty()) {
     PCerr << "Error: NatafTransformation::trans_grad_X_to_S() requires primary "
 	  << "and secondary variable mappings to define S." << std::endl;
     abort_handler(-1);
   }
 
-  bool std_dvv = (x_dvv == cv_ids);
-  bool mixed_s = std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
-                 (short)NO_TARGET) != acv_map2_targets.end() ? true : false;
+  bool std_dvv = (x_dvv == x_cv_ids);
+  bool mixed_s = std::find(x_acv_map2_targets.begin(), x_acv_map2_targets.end(),
+                 (short)NO_TARGET) != x_acv_map2_targets.end() ? true : false;
   RealVector fn_grad_x_std, fn_grad_s_std;
 
   // manage size of fn_grad_x input
@@ -604,7 +606,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
     // extract relevant DVV components from fn_grad_x
     size_t i, dvv_index;
     for (i=0; i<num_v; ++i) {
-      dvv_index = find_index(x_dvv, cv_ids[i]);
+      dvv_index = find_index(x_dvv, x_cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_x_std[i] = fn_grad_x(dvv_index);
     }
@@ -620,7 +622,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
     final_num_s = 0;
     for (i=0; i<num_s; ++i)
       if ( std::find(x_dvv.begin(), x_dvv.end(),
-                     acv_ids[acv_map1_indices[i]]) != x_dvv.end() )
+                     x_acv_ids[x_acv_map1_indices[i]]) != x_dvv.end() )
 	++final_num_s;
   }
   if (fn_grad_s.length() != final_num_s)
@@ -638,10 +640,10 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
   if (mixed_s || !std_dvv) {
     size_t cntr = 0;
     for (i=0; i<num_s; ++i) {
-      size_t acv_id = acv_ids[acv_map1_indices[i]],
+      size_t acv_id = x_acv_ids[x_acv_map1_indices[i]],
 	dvv_index = find_index(x_dvv, acv_id);
       if (dvv_index != _NPOS)
-	fn_grad_s(cntr++) = (acv_map2_targets[i] == NO_TARGET) ?
+	fn_grad_s(cntr++) = (x_acv_map2_targets[i] == NO_TARGET) ?
 	  fn_grad_x(dvv_index) : // no distribution parameter: if the missing
 	  // fn_grad_s component is available in fn_grad_x, then use it; else it
 	  // must be updated separately (as in NonDLocalReliability::dg_ds_eval)
@@ -1033,21 +1035,22 @@ jacobian_dZ_dX(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
     and dz/ds = dL/ds u. */
 void NatafTransformation::
 jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
-	       SizetMultiArrayConstView cv_ids,
-	       SizetMultiArrayConstView acv_ids,
-	       const SizetArray& acv_map1_indices,
-	       const ShortArray& acv_map2_targets)
+	       SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids,
+	       SizetMultiArrayConstView x_acv_ids,
+	       const SizetArray& x_acv_map1_indices,
+	       const ShortArray& x_acv_map2_targets)
 {
   // Rectangular Jacobian = Gradient^T = num_X by num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t num_var_map_1c = acv_map1_indices.size();
+  size_t num_var_map_1c = x_acv_map1_indices.size();
   int num_v = x_vars.length();
   if (jacobian_xs.numRows() != num_v || jacobian_xs.numCols() != num_var_map_1c)
     jacobian_xs.shape(num_v, num_var_map_1c);
 
   RealVector z_vars;
-  trans_X_to_Z(x_vars, z_vars);
+  trans_X_to_Z(x_vars, x_cv_ids, z_vars, u_cv_ids);
 
   // For distributions without simple closed-form CDFs (beta, gamma), dx/ds is
   // computed numerically for nonlinear mappings.  If uncorrelated, then this
@@ -1056,14 +1059,15 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // design vars (dx/ds for beta/gamma x will include a dz/ds contribution).
   const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
   const BitArray&      x_active_corr = xDist.active_correlations();
-  short x_type, u_type;  size_t i, j, cntr_i, cntr_j;
+  short x_type, u_type;  size_t i, j, cntr_i, cntr_j, x_cv_index, u_cv_index;
   bool need_xs = false, non_std_beta_gamma_map = false,
        x_corr  = xDist.correlation(), no_mask = x_active_corr.empty();
   // non_std_beta_gamma_map detects unsupported X->U cases for dx_ds and
   // dz_ds_factor; this is augmented below with unsupported dist param targets.
   for (i=0, cntr_i=0; i<num_v; ++i) {
-    x_type = xDist.active_random_variable_type(i);
-    u_type = uDist.active_random_variable_type(i);
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    x_type = xDist.random_variable_type(x_cv_index);
+    u_type = uDist.random_variable_type(u_cv_index);
     if ( ( x_type == BETA  && u_type != STD_BETA  ) ||
 	 ( x_type == GAMMA && u_type != STD_GAMMA ) ) {
       // non-std mapping invalidates support for BE_LWR_BND,BE_UPR_BND,GA_BETA
@@ -1086,7 +1090,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // from dz/ds, detect cases where dx_ds is not supported for particular s.
   if (!need_xs) {
     ShortArray::const_iterator cit;
-    for (cit=acv_map2_targets.begin(); cit!=acv_map2_targets.end(); ++cit) {
+    for (cit=x_acv_map2_targets.begin(); cit!=x_acv_map2_targets.end(); ++cit) {
       short tgt = *cit;
       if ( tgt == BE_ALPHA || tgt == BE_BETA || tgt == GA_ALPHA ||
 	   ( non_std_beta_gamma_map &&
@@ -1103,41 +1107,45 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   RealMatrix num_dx_ds, num_dz_ds;
   if (need_xs || x_corr) // compute num_dx_ds and/or num_dz_ds
     numerical_design_jacobian(x_vars, need_xs, num_dx_ds, x_corr, num_dz_ds,
-			      cv_ids, acv_ids, acv_map1_indices,
-			      acv_map2_targets);
+			      x_cv_ids, u_cv_ids, x_acv_ids,
+			      x_acv_map1_indices, x_acv_map2_targets);
   if (need_xs)
-    for (j=0; j<num_v; ++j)              // loop over X
-      switch (xDist.active_random_variable_type(j)) {
+    for (j=0; j<num_v; ++j) {            // loop over X
+      x_cv_index = x_cv_ids[j] - 1;
+      switch (xDist.random_variable_type(x_cv_index)) {
       case BETA: case GAMMA:
 	for (i=0; i<num_var_map_1c; ++i) // loop over S
 	  jacobian_xs(j, i) = num_dx_ds(j, i);
 	break;
       }
+    }
 
-  Real x, z; bool numerical_xs;
+  Real x, z; bool numerical_xs; size_t mapped_i;
   for (i=0; i<num_var_map_1c; ++i) { // loop over S
-    size_t cv_index = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
+    // mapped_i indexes over x-space active CVs to enumerate the i-th mapping
+    mapped_i = find_index(x_cv_ids, x_acv_ids[x_acv_map1_indices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
     // fn_grad_x components, allowing passthrough for computing fn_grad_s for
     // augmented design variables.  For now, this has to be handled spearately
     // in NonDLocalReliability::dg_ds_eval() and NonD::trans_grad_X_to_S().
-    //if (cv_index == _NPOS) // augmented variable: define identity mapping
+    //if (cv_index_i == _NPOS) // augmented variable: define identity mapping
     //  jacobian_xs(dvv_index, i) = 1.;
     //else {
-    if (cv_index != _NPOS) {
-      short target2 = acv_map2_targets[i];
+    if (mapped_i != _NPOS) {
+      short target2 = x_acv_map2_targets[i];
       for (j=0; j<num_v; ++j) {      // loop over X
 	// Jacobian row    = X value = j
 	// Jacobian column = S value = i
 
-	const RandomVariable& x_rv_j = xDist.active_random_variable(j);
+	x_cv_index = x_cv_ids[j] - 1;
+	const RandomVariable& x_rv_j = xDist.random_variable(x_cv_index);
 	x_type = x_rv_j.type();
         numerical_xs = ( need_xs && (x_type == BETA || x_type == GAMMA) );
 	if (!numerical_xs) { // else jacobian_xs already updated above
-	  x = x_vars[j]; z = z_vars[j];
-	  u_type = uDist.active_random_variable_type(j);
+	  x = x_vars[j]; z = z_vars[j]; u_cv_index = u_cv_ids[j] - 1;
+	  u_type = uDist.random_variable_type(u_cv_index);
 	  // corresponding variable has derivative w.r.t. its distribution param
-	  if (j == cv_index)
+	  if (j == mapped_i)
 	    jacobian_xs(j, i)  = x_rv_j.dx_ds(target2, u_type, x, z);
 	  // dz/ds contributions (deriv of jth variable w.r.t. any variable's
 	  // dist param) are included if correlated
@@ -1165,10 +1173,11 @@ void NatafTransformation::
 numerical_design_jacobian(const RealVector& x_vars,
 			  bool xs, RealMatrix& num_jacobian_xs,
 			  bool zs, RealMatrix& num_jacobian_zs,
-			  SizetMultiArrayConstView cv_ids,
-			  SizetMultiArrayConstView acv_ids,
-			  const SizetArray& acv_map1_indices,
-			  const ShortArray& acv_map2_targets)
+			  SizetMultiArrayConstView x_cv_ids,
+			  SizetMultiArrayConstView u_cv_ids,
+			  SizetMultiArrayConstView x_acv_ids,
+			  const SizetArray& x_acv_map1_indices,
+			  const ShortArray& x_acv_map2_targets)
 {
   // For correlated vars, correlation matrix C = C(s) due to Nataf modifications
   //   z(s) = L(s) u  ->  dz/ds = dL/ds u  ->  need dL/ds
@@ -1185,7 +1194,7 @@ numerical_design_jacobian(const RealVector& x_vars,
   // Rectangular Jacobians = Gradient^T = num_Z x num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t i, j, k, num_var_map_1c = acv_map1_indices.size();
+  size_t i, j, k, num_var_map_1c = x_acv_map1_indices.size();
   int x_len = x_vars.length();
   if (xs && (num_jacobian_xs.numRows() != x_len ||
 	     num_jacobian_xs.numCols() != num_var_map_1c) )
@@ -1205,17 +1214,20 @@ numerical_design_jacobian(const RealVector& x_vars,
   }
 
   RealVector u_vars;
-  trans_X_to_U(x_vars, u_vars);
+  trans_X_to_U(x_vars, x_cv_ids, u_vars, u_cv_ids);
 
   Real fd_grad_ss = 1.e-4;
   RealMatrix chol_z0(corrCholeskyFactorZ);
+  size_t x_cv_index, mapped_i;  short acv_map2_target;
   for (i=0; i<num_var_map_1c; i++) {
 
-    size_t cv_index        = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
-    short  acv_map2_target = acv_map2_targets[i];
-    if (cv_index != _NPOS && acv_map2_target != NO_TARGET) {
+    // mapped_i indexes over x-space active CVs to enumerate the i-th mapping
+    mapped_i = find_index(x_cv_ids, x_acv_ids[x_acv_map1_indices[i]]);
+    acv_map2_target = x_acv_map2_targets[i];
+    if (mapped_i != _NPOS && acv_map2_target != NO_TARGET) {
 
-      Pecos::RandomVariable& x_rv_i = xDist.active_random_variable(cv_index);
+      x_cv_index = x_cv_ids[mapped_i] - 1;
+      Pecos::RandomVariable& x_rv_i = xDist.random_variable(x_cv_index);
 
       Real s0;  x_rv_i.pull_parameter(acv_map2_target, s0);
 
@@ -1236,7 +1248,7 @@ numerical_design_jacobian(const RealVector& x_vars,
 	//trans_U_to_Z(u_vars, z_vars_s_plus_h); // z
       }
       if (xs)
-	trans_U_to_X(u_vars, x_vars_s_plus_h);   // x
+	trans_U_to_X(u_vars, u_cv_ids, x_vars_s_plus_h, x_cv_ids);  // x
 
       // ------------------------------------
       // Evaluate (L/z_vars/x_vars)_s_minus_h
@@ -1250,7 +1262,7 @@ numerical_design_jacobian(const RealVector& x_vars,
         //trans_U_to_Z(u_vars, z_vars_s_minus_h); // z
       //}
       if (xs)
-	trans_U_to_X(u_vars, x_vars_s_minus_h);   // x
+	trans_U_to_X(u_vars, u_cv_ids, x_vars_s_minus_h, x_cv_ids);  // x
 
       // -------------------------------
       // Compute the central differences
@@ -1363,12 +1375,13 @@ hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
       }
       case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
       case UNIFORM:          case HISTOGRAM_BIN: // pdf_grad is zero
-	x = x_vars[i]; trans_X_to_Z(x, z, i);
+	x = x_vars[i]; trans_X_to_Z(x, x_cv_index, z, u_cv_index);
 	dx_dz = NormalRandomVariable::std_pdf(z) / x_rv_i.pdf(x);
 	hessian_xz[i](i, i) = -dx_dz * z;
 	break;
       default:
-	x = x_vars[i]; trans_X_to_Z(x, z, i); pdf = x_rv_i.pdf(x);
+	x = x_vars[i]; trans_X_to_Z(x, x_cv_index, z, u_cv_index);
+	pdf = x_rv_i.pdf(x);
 	dx_dz = NormalRandomVariable::std_pdf(z) / pdf;
 	hessian_xz[i](i, i)
 	  = -dx_dz * (z + x_rv_i.pdf_gradient(x) * dx_dz / pdf);
@@ -1387,7 +1400,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
       }
       default:
 	x = x_vars[i]; pdf = x_rv_i.pdf(x);
-	//trans_X_to_Z(x, z, i); 
+	//trans_X_to_Z(x, x_cv_index, z, u_cv_index); 
 	//dx_dz = UniformRandomVariable::std_pdf(z) / pdf;
 
 	// don't bother to compute z constant pdf eval:

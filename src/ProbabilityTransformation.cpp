@@ -193,15 +193,16 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,
 void ProbabilityTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const RealVector& x_vars, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids,
-		  SizetMultiArrayConstView acv_ids,
-		  const SizetArray& acv_map1_indices,
-		  const ShortArray& acv_map2_targets)
+		  SizetMultiArrayConstView x_cv_ids,
+		  SizetMultiArrayConstView u_cv_ids,
+		  SizetMultiArrayConstView x_acv_ids,
+		  const SizetArray& x_acv_map1_indices,
+		  const ShortArray& x_acv_map2_targets)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_grad_X_to_S(fn_grad_x, fn_grad_s, x_vars, x_dvv, cv_ids,
-				    acv_ids, acv_map1_indices,
-				    acv_map2_targets);
+    probTransRep->trans_grad_X_to_S(fn_grad_x, fn_grad_s, x_vars, x_dvv,
+				    x_cv_ids, u_cv_ids, x_acv_ids,
+				    x_acv_map1_indices, x_acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_grad_X_to_S() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -214,15 +215,16 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 void ProbabilityTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const RealMatrix& jacobian_xs, const SizetArray& x_dvv,
-		  SizetMultiArrayConstView cv_ids,
-		  SizetMultiArrayConstView acv_ids,
-		  const SizetArray& acv_map1_indices,
-		  const ShortArray& acv_map2_targets)
+		  SizetMultiArrayConstView x_cv_ids,
+		  SizetMultiArrayConstView u_cv_ids,
+		  SizetMultiArrayConstView x_acv_ids,
+		  const SizetArray& x_acv_map1_indices,
+		  const ShortArray& x_acv_map2_targets)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv,
-				    cv_ids, acv_ids, acv_map1_indices,
-				    acv_map2_targets);
+				    x_cv_ids, u_cv_ids, x_acv_ids,
+				    x_acv_map1_indices, x_acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine trans_grad_X_to_S() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
@@ -337,14 +339,16 @@ jacobian_dU_dX(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
 
 void ProbabilityTransformation::
 jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
-	       SizetMultiArrayConstView cv_ids,
-	       SizetMultiArrayConstView acv_ids,
-	       const SizetArray& acv_map1_indices,
-	       const ShortArray& acv_map2_targets)
+	       SizetMultiArrayConstView x_cv_ids,
+	       SizetMultiArrayConstView u_cv_ids,
+	       SizetMultiArrayConstView x_acv_ids,
+	       const SizetArray& x_acv_map1_indices,
+	       const ShortArray& x_acv_map2_targets)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids,
-				 acv_map1_indices, acv_map2_targets);
+    probTransRep->jacobian_dX_dS(x_vars, jacobian_xs, x_cv_ids, u_cv_ids,
+				 x_acv_ids, x_acv_map1_indices,
+				 x_acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine jacobian_dX_dS() virtual "
           << "fn.\nNo default defined at ProbabilityTransformation base class."
@@ -358,15 +362,17 @@ void ProbabilityTransformation::
 numerical_design_jacobian(const RealVector& x_vars, bool xs,
 			  RealMatrix& num_jacobian_xs, bool zs,
 			  RealMatrix& num_jacobian_zs,
-			  SizetMultiArrayConstView cv_ids,
-			  SizetMultiArrayConstView acv_ids,
-			  const SizetArray& acv_map1_indices,
-			  const ShortArray& acv_map2_targets)
+			  SizetMultiArrayConstView x_cv_ids,
+			  SizetMultiArrayConstView u_cv_ids,
+			  SizetMultiArrayConstView x_acv_ids,
+			  const SizetArray& x_acv_map1_indices,
+			  const ShortArray& x_acv_map2_targets)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->numerical_design_jacobian(x_vars, xs, num_jacobian_xs, zs,
-					    num_jacobian_zs, cv_ids, acv_ids,
-					    acv_map1_indices, acv_map2_targets);
+					    num_jacobian_zs, x_cv_ids, u_cv_ids,
+					    x_acv_ids, x_acv_map1_indices,
+					    x_acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine numerical_design_jacobian"
           << "() virtual fn.\nNo default defined at ProbabilityTransformation "
