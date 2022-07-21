@@ -71,7 +71,7 @@ void NatafTransformation::
 trans_Z_to_X(const RealVector& z_vars, SizetMultiArrayConstView u_cv_ids,
 	     RealVector& x_vars,       SizetMultiArrayConstView x_cv_ids)
 {
-  int z_len = z_vars.length(), x_len = z_vars.length();
+  int z_len = z_vars.length(), x_len = x_vars.length();
   if (x_len == 0) x_vars.sizeUninitialized(z_len); // allow initialization
   else if (x_len != z_len) {    // disallow inconsistent size
     PCerr << "Error: inconsistent size in NatafTransformation::trans_Z_to_X()."
