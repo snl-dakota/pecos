@@ -168,9 +168,11 @@ public:
   //- Heading: Member function definitions
   //
 
-  /// set ranVarTypes and initialize randomVars
+  /// set ranVarTypes and initialize randomVars; optionally assign activeVars
   void initialize_types(const ShortArray& rv_types,
 			const BitArray& active_vars = BitArray());
+  /// assign activeVars
+  void initialize_active_variables(const BitArray& active_vars);
   /// assigns corrMatrix and activeCorr; invokes initialize_correlations()
   void initialize_correlations(const RealSymMatrix& corr,
 			       const BitArray& active_corr = BitArray());

@@ -2437,7 +2437,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 
     int num_folds = std::min(10, num_data_pts_fn);
     int max_num_pts_per_fold = num_data_pts_fn / num_folds;
-    if ( num_data_pts_fn % num_folds != 0 ); ++max_num_pts_per_fold;
+    if ( num_data_pts_fn % num_folds != 0 )
+      ++max_num_pts_per_fold;
     if ( CSOpts.solver != ORTHOG_MATCH_PURSUIT   &&
 	 CSOpts.solver != LASSO_REGRESSION       &&
 	 CSOpts.solver != LEAST_ANGLE_REGRESSION &&

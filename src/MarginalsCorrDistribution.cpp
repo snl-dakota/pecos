@@ -35,6 +35,11 @@ initialize_types(const ShortArray& rv_types, const BitArray& active_vars)
 
 
 void MarginalsCorrDistribution::
+initialize_active_variables(const BitArray& active_vars)
+{ activeVars = active_vars; }
+
+
+void MarginalsCorrDistribution::
 initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
 {
   corrMatrix = corr;
