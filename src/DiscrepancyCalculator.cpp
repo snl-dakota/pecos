@@ -30,8 +30,8 @@ check_multiplicative(Real truth_fn, Real approx_fn, short corr_order)
   //                  function != 0); an approx_val == 0 will cause a division
   //                  by zero FPE.
   return
-    ( std::fabs(approx_fn) < Pecos::SMALL_NUMBER ||
-      ( corr_order == 0 && std::fabs(truth_fn) < Pecos::SMALL_NUMBER ) );
+    ( Pecos::is_below(std::fabs(approx_fn)) ||
+      ( corr_order == 0 && Pecos::is_below(std::fabs(truth_fn))) );
 }
 
 
@@ -42,8 +42,8 @@ check_multiplicative(const RealVector& truth_fns, const RealVector& approx_fns,
   bool bad_scaling = false;
   size_t i, num_fns = std::min(truth_fns.length(), approx_fns.length());
   for (i=0; i<num_fns; ++i)
-    if ( std::fabs(approx_fns[i]) < Pecos::SMALL_NUMBER ||
-	 ( corr_order == 0 && std::fabs(truth_fns[i]) < Pecos::SMALL_NUMBER ) )
+    if ( Pecos::is_below(std::fabs(approx_fns[i])) ||
+	 ( corr_order == 0 && Pecos::is_below(std::fabs(truth_fns[i])) ) )
       { bad_scaling = true; break; }
 
   return bad_scaling;

@@ -238,6 +238,16 @@ T abort_handler_t(int code)
   throw code;
 }
 
+/// global function which handles threshhold testing
+bool is_below(double val);
+bool is_below_sq(double val);
+
+inline bool is_below(double val)
+{ return val <= SMALL_NUMBER; }
+
+inline bool is_below_sq(double val)
+{ return val <= SMALL_NUMBER_SQ; }
+
 } // namespace Pecos
 
 #endif // PECOS_GLOBAL_DEFS_H

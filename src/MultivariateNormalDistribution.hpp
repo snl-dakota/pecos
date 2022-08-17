@@ -100,7 +100,7 @@ inline void MultivariateNormalDistribution::initialize_correlations()
   correlationFlag = false;
   for (i=1; i<num_rv; i++)
     for (j=0; j<i; j++)
-      if (std::abs(mvnCovariance(i,j)) > SMALL_NUMBER_SQ)
+      if (!Pecos::is_below(std::abs(mvnCovariance(i,j))))
 	{ correlationFlag = true; break; }
 }
 
