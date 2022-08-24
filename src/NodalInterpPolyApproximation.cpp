@@ -3677,7 +3677,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
   // since it drops out from anisotropic refinement based on a response-average
   // of total Sobol' indices.
   Real total_variance = variance();
-  if (Pecos::is_below_sq(total_variance))
+  if (Pecos::is_small_sq(total_variance))
     { totalSobolIndices = 0.; return; }
   Real total_mean = mean();
 

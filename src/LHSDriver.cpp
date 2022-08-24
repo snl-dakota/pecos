@@ -747,7 +747,7 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
 	  ac_j = (!subset_corr || active_corr[j]);
 	  if (av_j && ac_j) {
 	    Real corr_val = corr(ac_cntr_i, ac_cntr_j);
-	    if (!Pecos::is_below(std::abs(corr_val))) {
+	    if (!Pecos::is_small(std::abs(corr_val))) {
 	      LHS_CORR2_FC(const_cast<char*>(lhsNames[av_cntr_i].data()),
 			   const_cast<char*>(lhsNames[av_cntr_j].data()),
 			   corr_val, err_code);

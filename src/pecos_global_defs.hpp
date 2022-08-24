@@ -239,13 +239,13 @@ T abort_handler_t(int code)
 }
 
 /// global function which handles threshhold testing
-bool is_below(double val);
-bool is_below_sq(double val);
+bool is_small(double val);
+bool is_small_sq(double val);
 
-inline bool is_below(double val)
+inline bool is_small(double val)
 { return val <= SMALL_NUMBER; }
 
-inline bool is_below_sq(double val)
+inline bool is_small_sq(double val)
 { return val <= SMALL_NUMBER_SQ; }
 
 } // namespace Pecos

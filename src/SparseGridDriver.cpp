@@ -96,10 +96,10 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       if (!axis_l_bnds.empty()) {
 	Real ssg_lev = (Real)(ssgLevIter->second);
 	for (i=0; i<numVars; ++i)
-	  if (!Pecos::is_below(axis_l_bnds[i])) {       // nonzero lower bound
+	  if (!Pecos::is_small(axis_l_bnds[i])) {       // nonzero lower bound
 	    Real wt_u_bnd = ssg_lev / axis_l_bnds[i];
 	    active_aniso_wts[i]
-	      = (!Pecos::is_below(active_aniso_wts[i])) // nonzero weight
+	      = (!Pecos::is_small(active_aniso_wts[i])) // nonzero weight
 	      ? std::min(wt_u_bnd, active_aniso_wts[i]) : wt_u_bnd;
 	  }
 #ifdef DEBUG
@@ -132,7 +132,7 @@ void SparseGridDriver::update_axis_lower_bounds()
     axis_l_bnds = ssg_lev; // all weights = 1
   else // min nonzero weight scaled to 1 --> just catch special case w_i=0
     for (size_t i=0; i<numVars; ++i)
-      axis_l_bnds[i] = (!Pecos::is_below(aniso_wts[i])) ? // nonzero wt
+      axis_l_bnds[i] = (!Pecos::is_small(aniso_wts[i])) ? // nonzero wt
 	ssg_lev / aniso_wts[i] : 0.;
 }
 
