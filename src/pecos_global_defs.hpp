@@ -238,15 +238,27 @@ T abort_handler_t(int code)
   throw code;
 }
 
-/// global function which handles threshhold testing
+/// global functions which handle first-order (mean) threshhold testing
 bool is_small(double val);
+bool is_small(double val, double ref_val);
+
+/// global functions which handle second-order (variance) threshhold testing
 bool is_small_sq(double val);
+bool is_small_sq(double val, double ref_val);
 
 inline bool is_small(double val)
-{ return val <= SMALL_NUMBER; }
+{ return std::fabs(val) <= SMALL_NUMBER; }
+
+inline bool is_small(double val, double ref_val)
+{ return (   (is_small(std::fabs(ref_val)) && std::fabs(val) <= std::fabs(ref_val))
+          || std::fabs(val/ref_val) <= SMALL_NUMBER); } // might need another tolerance for this
 
 inline bool is_small_sq(double val)
-{ return val <= SMALL_NUMBER_SQ; }
+{ return std::fabs(val) <= SMALL_NUMBER_SQ; }
+
+inline bool is_small_sq(double val, double ref_val)
+{ return (   (is_small_sq(std::fabs(ref_val)) && std::fabs(val) <= std::fabs(ref_val))
+          || std::fabs(val/ref_val) <= SMALL_NUMBER_SQ); } // might need another tolerance for this
 
 } // namespace Pecos
 
