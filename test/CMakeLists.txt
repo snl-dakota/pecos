@@ -81,6 +81,7 @@ set(pecos_teuchos_unit_tests_src
   pecos_pochhammer.cpp
   pecos_discrete_poly.cpp
   pecos_linear_solvers.cpp
+  pecos_utils.cpp
   )
 add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
 target_link_libraries(pecos_teuchos_unit_tests ${pecos_test_libs} ${Teuchos_LIBRARIES})
