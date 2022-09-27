@@ -129,6 +129,7 @@ void LHSDriver::abort_if_no_lhs()
 void LHSDriver::seed(int seed)
 {
   randomSeed = seed;
+  seedSeqRNG.seed(randomSeed);
   // The Boost RNG is not set by LHS_INIT_MEM, so must be done here.
   if (BoostRNG_Monostate::randomNum == BoostRNG_Monostate::mt19937)
     BoostRNG_Monostate::seed(seed);
