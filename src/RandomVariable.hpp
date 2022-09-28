@@ -16,6 +16,7 @@
 #define RANDOM_VARIABLE_HPP
 
 #include "pecos_stat_util.hpp"
+#include <random>
 
 namespace Pecos {
 
@@ -270,9 +271,6 @@ private:
   //- Heading: Data members
   //
 
-  /// draws real samples on [0,1]
-  boost::uniform_real<Real> uniformSampler;
-  
   /// pointer to the letter (initialized only for the envelope)
   std::shared_ptr<RandomVariable> ranVarRep;
 };
@@ -296,7 +294,9 @@ Real RandomVariable::draw_sample(Engine& rng) const
     return ranVarRep->draw_sample(rng);
   else {
     // draw random number on [0,1] from a persistent RNG sequence
-    Real u01 = uniformSampler(rng);
+    // TODO: This is actually sampling on [0.0, 1.0), the open interval...
+    std::uniform_real_distribution<Real> uniform_sampler;
+    Real u01 = uniform_sampler(rng);
     return inverse_cdf(u01);
   }
 }
@@ -309,7 +309,8 @@ Real RandomVariable::draw_standard_sample(Engine& rng) const
     return ranVarRep->draw_standard_sample(rng);
   else {
     // draw random number on [0,1] from a persistent RNG sequence
-    Real u01 = uniformSampler(rng);
+    std::uniform_real_distribution<Real> uniform_sampler;
+    Real u01 = uniform_sampler(rng);
     return inverse_standard_cdf(u01);
   }
 }
