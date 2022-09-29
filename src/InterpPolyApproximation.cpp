@@ -127,7 +127,8 @@ void InterpPolyApproximation::compute_component_sobol()
   // trackers.  For all vars mode, they are computed without partial integration
   // restricted to the random indices.
   Real total_variance = variance();
-  if (!Pecos::is_small_sq(total_variance)) { // Solve for partial variances
+  assert(total_variance >= 0.0);
+  if (!Pecos::is_small(std::sqrt(total_variance),mean())) { // Solve for partial variances
     Real total_mean = mean();
     // 0th term gets subtracted as child in compute_partial_variance()
     partialVariance[0] = total_mean * total_mean;

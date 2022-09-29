@@ -4796,7 +4796,8 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   // since it drops out from anisotropic refinement based on a response-average
   // of total Sobol' indices.
   Real total_variance = variance();
-  if (Pecos::is_small_sq(total_variance))
+  assert(total_variance >= 0.0);
+  if (Pecos::is_small(std::sqrt(total_variance),mean()))
     { totalSobolIndices = 0.; return; }
   Real total_mean = mean();
 

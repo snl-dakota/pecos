@@ -1107,7 +1107,8 @@ void OrthogPolyApproximation::compute_component_sobol()
     if (cit != index_map.end()) // may not be found if vbdOrderLimit
       sobolIndices[cit->second] += p_var; // divide by sum_p_var below
   }
-  if (!Pecos::is_small_sq(sum_p_var)) // don't attribute variance if zero/negligible
+  assert(sum_p_var >= 0.0);
+  if (!Pecos::is_small(std::sqrt(sum_p_var),mean())) // don't attribute variance if zero/negligible
     sobolIndices.scale(1./sum_p_var);
 
 #ifdef DEBUG
@@ -1146,7 +1147,8 @@ void OrthogPolyApproximation::compute_total_sobol()
     // of this variance is suspect.  Defaulting totalSobolIndices to zero is a
     // good choice since it drops out from anisotropic refinement based on the
     // response-average of these indices.
-    if (!Pecos::is_small_sq(sum_p_var)) // avoid division by zero
+    assert(sum_p_var >= 0.0);
+    if (!Pecos::is_small(std::sqrt(sum_p_var),mean())) // avoid division by zero
       totalSobolIndices.scale(1./sum_p_var);
   }
   else {
