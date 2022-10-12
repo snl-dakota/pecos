@@ -512,11 +512,12 @@ inline void UniformRandomVariable::update(Real lwr, Real upr)
 { lowerBnd = lwr; upperBnd = upr; }
 
 
+// TODO: Remove in favor of base class impl?
 template <typename Engine> 
 Real UniformRandomVariable::draw_std_sample(Engine& rng)
 {
   // draw random number on [0,1] from a persistent RNG sequence
-  boost::uniform_real<Real> uniform_sampler;
+  std::uniform_real_distribution<Real> uniform_sampler;
   Real u01 = uniform_sampler(rng);
   return inverse_std_cdf(u01);
 }

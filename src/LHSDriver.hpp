@@ -179,6 +179,8 @@ private:
   /// for honoring advance_seed_sequence() calls
   short allowSeedAdvance; // bit 1 = first-time flag
 		          // bit 2 = allow repeated seed update
+  /// RNG governing advancing the seed
+  std::mt19937 seedSeqRNG;
 
   // row indices into final returned samples matrix and their
   // associated constant values for LHS_CONST variables
@@ -198,15 +200,19 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 
 inline LHSDriver::LHSDriver():
   sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true),
-  randomSeed(0), allowSeedAdvance(1)
-{ abort_if_no_lhs(); }
+  allowSeedAdvance(1)
+{
+  abort_if_no_lhs();
+  seed(0);
+}
 
 
 inline LHSDriver::LHSDriver(const String& sample_type,
 			    short sample_ranks_mode, bool reports) :
-  randomSeed(0), allowSeedAdvance(1)
+  allowSeedAdvance(1)
 {
   abort_if_no_lhs();
+  seed(0);
   initialize(sample_type, sample_ranks_mode, reports);
 }
 
@@ -229,8 +235,11 @@ inline int LHSDriver::seed() const
 inline void LHSDriver::advance_seed_sequence()
 {
   if (allowSeedAdvance & 2) { // repeated seed updates allowed
-    std::srand(randomSeed);
-    seed(1 + std::rand()); // from 1 to RANDMAX+1
+    // NOTE: This previously used rand() set seed to [1, RAND_MAX+1],
+    // which could overflow int
+    std::uniform_int_distribution<>
+      rand_int(1, std::numeric_limits<int>::max());
+    randomSeed = rand_int(seedSeqRNG); // from 1 to INT_MAX
   }
 }
 
