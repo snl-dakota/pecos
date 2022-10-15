@@ -112,6 +112,7 @@ public:
   static Real pdf(Real x, Real beta);
   static Real cdf(Real x, Real beta);
 
+  // TODO: Remove in favor of base class impl?
   template <typename Engine> 
   static Real draw_std_sample(Engine& rng);
 
@@ -431,12 +432,11 @@ inline Real ExponentialRandomVariable::cdf(Real x, Real beta)
 }
 
 
-// TODO: Remove in favor of base class impl?
 template <typename Engine> 
 Real ExponentialRandomVariable::draw_std_sample(Engine& rng)
 {
   // draw random number on [0,1] from a persistent RNG sequence
-  std::uniform_real_distribution<Real> uniform_sampler;
+  boost::random::uniform_real_distribution<Real> uniform_sampler;
   Real u01 = uniform_sampler(rng);
   return inverse_std_cdf(u01);
 }
