@@ -8,7 +8,6 @@
 
 #include "math_tools.hpp"
 #include "teuchos_data_types.hpp"
-#include <random>
 
 
 namespace Pecos {
@@ -341,7 +340,7 @@ Real variance( int n, Real *x, int dof )
 void get_permutations( IntMatrix &permutations,
 		       int M , int N, unsigned int seed )
 {
-  std::mt19937 generator( seed );
+  boost::mt19937 generator( seed );
 
   permutations.reshape( M, N );
   IntMatrix numbers;
@@ -353,7 +352,7 @@ void get_permutations( IntMatrix &permutations,
 	  random[i] = i;
 	}
 
-      std::shuffle( random.begin(), random.end(), generator );
+      Pecos::util::rand_shuffle( random.begin(), random.end(), generator );
 
       for ( int i = 0; i < M; i++ )
 	{
@@ -596,8 +595,8 @@ bool allclose(const RealMatrix &A, const RealMatrix &B, Real tol){
 
 void random_permutation(int M, int N, unsigned int seed,
 			IntMatrix &permutations){
-  std::mt19937 generator( seed );
-  std::uniform_int_distribution<> dist( 0, M-1 );
+  boost::mt19937 generator( seed );
+  boost::random::uniform_int_distribution<> dist( 0, M-1 );
   permutations.shapeUninitialized( M, N );
   for ( int j = 0; j < N; j++ )
     {
