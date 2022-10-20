@@ -12,6 +12,16 @@
 #include "pecos_stat_util.hpp"
 #include "RandomVariable.hpp"
 
+#include <boost/version.hpp>
+#if (BOOST_VERSION < 107000) && !defined(BOOST_ALLOW_DEPRECATED_HEADERS)
+//could alternately use: #define BOOST_PENDING_INTEGER_LOG2_HPP 1
+#define BOOST_ALLOW_DEPRECATED_HEADERS 1
+#include <boost/random/mersenne_twister.hpp>
+#undef BOOST_ALLOW_DEPRECATED_HEADERS
+#else
+#include <boost/random/mersenne_twister.hpp>
+#endif
+#include <boost/random/uniform_int_distribution.hpp>
 
 namespace Pecos {
 
@@ -180,7 +190,7 @@ private:
   short allowSeedAdvance; // bit 1 = first-time flag
 		          // bit 2 = allow repeated seed update
   /// RNG governing advancing the seed
-  std::mt19937 seedSeqRNG;
+  boost::mt19937 seedSeqRNG;
 
   // row indices into final returned samples matrix and their
   // associated constant values for LHS_CONST variables
@@ -237,7 +247,7 @@ inline void LHSDriver::advance_seed_sequence()
   if (allowSeedAdvance & 2) { // repeated seed updates allowed
     // NOTE: This previously used rand() set seed to [1, RAND_MAX+1],
     // which could overflow int
-    std::uniform_int_distribution<>
+    boost::random::uniform_int_distribution<>
       rand_int(1, std::numeric_limits<int>::max());
     randomSeed = rand_int(seedSeqRNG); // from 1 to INT_MAX
   }

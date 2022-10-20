@@ -114,6 +114,7 @@ public:
   //static Real inverse_log_std_cdf(Real p_cdf);
   //static Real inverse_log_std_ccdf(Real p_ccdf);
 
+  // TODO: Remove in favor of base class impl?
   template <typename Engine> 
   static Real draw_std_sample(Engine& rng);
   
@@ -522,12 +523,11 @@ inline Real NormalRandomVariable::Phi_inverse(Real p_cdf)
 */
 
 
-// TODO: Remove in favor of base class impl?
 template <typename Engine> 
 Real NormalRandomVariable::draw_std_sample(Engine& rng)
 {
   // draw random number on [0,1] from a persistent RNG sequence
-  std::uniform_real_distribution<Real> uniform_sampler;
+  boost::random::uniform_real_distribution<Real> uniform_sampler;
   Real u01 = uniform_sampler(rng);
   return inverse_std_cdf(u01);
 }
