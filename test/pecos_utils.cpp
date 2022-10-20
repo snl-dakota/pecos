@@ -21,12 +21,19 @@ using namespace Pecos;
 
 TEUCHOS_UNIT_TEST(pecos_utils, is_small)
 {
-  // Behavior without reference value
+  // Test zero without reference value
   TEST_ASSERT( is_small(0.0) );
 
+  // ... and with zero reference value
+  TEST_ASSERT( is_small(0.0, 0.0) );
   Real test_val = SMALL_NUMBER;
-  TEST_ASSERT( is_small(test_val) );
+  TEST_ASSERT( is_small(test_val, 0.0) );
+  test_val += std::numeric_limits<Real>::epsilon()*SMALL_NUMBER;
+  TEST_ASSERT( !is_small(test_val, 0.0) );
 
+  // Test without reference value
+  test_val = SMALL_NUMBER;
+  TEST_ASSERT( is_small(test_val) );
   test_val += std::numeric_limits<Real>::epsilon()*SMALL_NUMBER;
   TEST_ASSERT( !is_small(test_val) );
 
@@ -37,8 +44,8 @@ TEUCHOS_UNIT_TEST(pecos_utils, is_small)
 
   // Behavior with reference value (both positive and negative)
   test_val = SMALL_NUMBER;
-  TEST_ASSERT( !is_small( test_val, 0.0) ); // value is not < reference value
-  TEST_ASSERT( !is_small(-test_val, 0.0) ); // abs(value) is not < reference value
+  TEST_ASSERT( is_small( test_val, 0.0) ); // NOTE that this allows     value  > reference value
+  TEST_ASSERT( is_small(-test_val, 0.0) ); // NOTE that this allows abs(value) > reference value
 
   test_val = (1.0-std::numeric_limits<Real>::epsilon())*SMALL_NUMBER;
   TEST_ASSERT( is_small( test_val,  SMALL_NUMBER) );
@@ -65,4 +72,15 @@ TEUCHOS_UNIT_TEST(pecos_utils, is_small)
   TEST_ASSERT( is_small(-test_val,  ref_val) );
   TEST_ASSERT( is_small( test_val, -ref_val) );
   TEST_ASSERT( is_small(-test_val, -ref_val) );
+}
+
+//----------------------------------------------------------------
+
+TEUCHOS_UNIT_TEST(pecos_utils, is_small_sq)
+{
+  // Behavior without reference value
+  TEST_ASSERT( is_small_sq(0.0) );
+
+  // ... and with zero reference value
+  TEST_ASSERT( is_small_sq(0.0, 0.0) );
 }

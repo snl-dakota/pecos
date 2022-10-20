@@ -247,18 +247,18 @@ bool is_small_sq(double val);
 bool is_small_sq(double val, double ref_val);
 
 inline bool is_small(double val)
-{ return std::fabs(val) <= SMALL_NUMBER; }
+{ return std::abs(val) <= SMALL_NUMBER; }
 
 inline bool is_small(double val, double ref_val)
-{ return (   (is_small(std::fabs(ref_val)) && std::fabs(val) <= std::fabs(ref_val))
-          || std::fabs(val/ref_val) <= SMALL_NUMBER); } // might need another tolerance for this
+{ return ( is_small(std::abs(ref_val)) ? is_small(std::abs(val))
+                                       : std::abs(val/ref_val) <= SMALL_NUMBER); }
 
 inline bool is_small_sq(double val)
-{ return std::fabs(val) <= SMALL_NUMBER_SQ; }
+{ return std::abs(val) <= SMALL_NUMBER_SQ; }
 
 inline bool is_small_sq(double val, double ref_val)
-{ return (   (is_small_sq(std::fabs(ref_val)) && std::fabs(val) <= std::fabs(ref_val))
-          || std::fabs(val/ref_val) <= SMALL_NUMBER_SQ); } // might need another tolerance for this
+{ return ( is_small_sq(std::abs(ref_val)) ? is_small_sq(std::abs(val))
+                                          : std::abs(val/ref_val) <= SMALL_NUMBER_SQ); }
 
 } // namespace Pecos
 
