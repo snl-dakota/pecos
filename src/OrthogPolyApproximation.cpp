@@ -1148,7 +1148,8 @@ void OrthogPolyApproximation::compute_total_sobol()
     // good choice since it drops out from anisotropic refinement based on the
     // response-average of these indices.
     assert(sum_p_var >= 0.0);
-    if (!Pecos::is_small(std::sqrt(sum_p_var),mean())) // avoid division by zero
+    //if (!Pecos::is_small(std::sqrt(sum_p_var),mean())) // avoid division by zero
+    if (!Pecos::is_small(sum_p_var)) // avoid division by zero
       totalSobolIndices.scale(1./sum_p_var);
   }
   else {
