@@ -2597,25 +2597,25 @@ delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
   Real beta0, sigma0 = (var0 > 0.) ? std::sqrt(var0) : 0.,
     sigma1  = sigma0 + delta_sigma;
   if (cdf_flag) {
-    if (sigma0 > SMALL_NUMBER && sigma1 > SMALL_NUMBER) {
+    if (!Pecos::is_small(sigma0) && !Pecos::is_small(sigma1)) {
       beta0 = (mu0 - z_bar) / sigma0;
       return ( delta_mu - delta_sigma * beta0) / sigma1;
     }
-    else if (sigma1 > SMALL_NUMBER)// neglect beta0 term (zero init reliability)
+    else if (!Pecos::is_small(sigma1))// neglect beta0 term (zero init reliability)
       return delta_mu / sigma1; // or delta = beta1 = (mu1 - z_bar) / sigma1 ?
-    else if (sigma0 > SMALL_NUMBER)// assume beta1 = 0 -> delta = -beta0
+    else if (!Pecos::is_small(sigma0))// assume beta1 = 0 -> delta = -beta0
       return (z_bar - mu0) / sigma0;
     else                           // assume beta0 = beta1 = 0
       return 0;
   }
   else {
-    if (sigma0 > SMALL_NUMBER && sigma1 > SMALL_NUMBER) {
+    if (!Pecos::is_small(sigma0) && !Pecos::is_small(sigma1)) {
       beta0 = (z_bar - mu0) / sigma0;
       return (-delta_mu - delta_sigma * beta0) / sigma1;
     }
-    else if (sigma1 > SMALL_NUMBER)// neglect beta0 term (zero init reliability)
+    else if (!Pecos::is_small(sigma1))// neglect beta0 term (zero init reliability)
       return -delta_mu / sigma1;
-    else if (sigma0 > SMALL_NUMBER)// assume beta1 = 0 -> delta = -beta0
+    else if (!Pecos::is_small(sigma0))// assume beta1 = 0 -> delta = -beta0
       return (mu0 - z_bar) / sigma0;
     else                           // assume beta0 = beta1 = 0
       return 0;
@@ -4796,7 +4796,8 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   // since it drops out from anisotropic refinement based on a response-average
   // of total Sobol' indices.
   Real total_variance = variance();
-  if (total_variance <= SMALL_NUMBER)
+  assert(total_variance >= 0.0);
+  if (Pecos::is_small(std::sqrt(total_variance),mean()))
     { totalSobolIndices = 0.; return; }
   Real total_mean = mean();
 

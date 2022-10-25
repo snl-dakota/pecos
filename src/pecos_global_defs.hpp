@@ -35,7 +35,10 @@ const int WRITE_PRECISION = 10;
 /// small value used for protecting division by zero, etc.; an alternative
 /// to DBL_MIN that is less likely to cause underflow/overflow when numbers
 /// larger than it are used in calculations
-const double SMALL_NUMBER = 1.e-25;
+const double SMALL_NUMBER    = 1.e-25;
+/// when SMALL_NUMBER is used for QoI scale like mean, standard deviation,
+/// etc., it's square can be used for variance
+const double SMALL_NUMBER_SQ = 1.e-50;
 /// large value used as a surrogate for infinity in error traps; an alternative
 /// to DBL_MAX or inf that is less likely to cause underflow/overflow when used
 /// in subsequent calculations
@@ -234,6 +237,28 @@ T abort_handler_t(int code)
   abort_handler(code);
   throw code;
 }
+
+/// global functions which handle first-order (mean) threshhold testing
+bool is_small(double val);
+bool is_small(double val, double ref_val);
+
+/// global functions which handle second-order (variance) threshhold testing
+bool is_small_sq(double val);
+bool is_small_sq(double val, double ref_val);
+
+inline bool is_small(double val)
+{ return std::abs(val) <= SMALL_NUMBER; }
+
+inline bool is_small(double val, double ref_val)
+{ return ( is_small(std::abs(ref_val)) ? is_small(std::abs(val))
+                                       : std::abs(val/ref_val) <= SMALL_NUMBER); }
+
+inline bool is_small_sq(double val)
+{ return std::abs(val) <= SMALL_NUMBER_SQ; }
+
+inline bool is_small_sq(double val, double ref_val)
+{ return ( is_small_sq(std::abs(ref_val)) ? is_small_sq(std::abs(val))
+                                          : std::abs(val/ref_val) <= SMALL_NUMBER_SQ); }
 
 } // namespace Pecos
 

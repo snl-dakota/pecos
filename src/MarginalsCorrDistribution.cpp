@@ -79,7 +79,7 @@ void MarginalsCorrDistribution::initialize_correlations()
     if (no_mask || activeCorr[i]) {
       for (j=0, cntr_j=0; j<i; ++j) {
 	if (no_mask || activeCorr[j]) {
-	  if (std::abs(corrMatrix(cntr_i, cntr_j)) > SMALL_NUMBER)
+	  if (!Pecos::is_small(corrMatrix(cntr_i, cntr_j)))
 	    correlationFlag = true;
 	  ++cntr_j;
 	}
