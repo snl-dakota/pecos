@@ -9,18 +9,6 @@
 #include "math_tools.hpp"
 #include "teuchos_data_types.hpp"
 
-#include <boost/version.hpp>
-#if (BOOST_VERSION < 107000) && !defined(BOOST_ALLOW_DEPRECATED_HEADERS)
-//could alternately use: #define BOOST_PENDING_INTEGER_LOG2_HPP 1
-#define BOOST_ALLOW_DEPRECATED_HEADERS 1
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int.hpp>
-#undef BOOST_ALLOW_DEPRECATED_HEADERS
-#else
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int.hpp>
-#endif
-
 
 namespace Pecos {
 namespace util {
@@ -352,7 +340,7 @@ Real variance( int n, Real *x, int dof )
 void get_permutations( IntMatrix &permutations,
 		       int M , int N, unsigned int seed )
 {
-  std::srand( seed );
+  boost::mt19937 generator( seed );
 
   permutations.reshape( M, N );
   IntMatrix numbers;
@@ -364,7 +352,7 @@ void get_permutations( IntMatrix &permutations,
 	  random[i] = i;
 	}
 
-      std::random_shuffle( random.begin(), random.end() );
+      Pecos::util::rand_shuffle( random.begin(), random.end(), generator );
 
       for ( int i = 0; i < M; i++ )
 	{
@@ -608,7 +596,7 @@ bool allclose(const RealMatrix &A, const RealMatrix &B, Real tol){
 void random_permutation(int M, int N, unsigned int seed,
 			IntMatrix &permutations){
   boost::mt19937 generator( seed );
-  boost::uniform_int<> dist( 0, M-1 );
+  boost::random::uniform_int_distribution<> dist( 0, M-1 );
   permutations.shapeUninitialized( M, N );
   for ( int j = 0; j < N; j++ )
     {

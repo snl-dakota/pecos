@@ -107,6 +107,7 @@ public:
   static Real inverse_std_cdf(Real p_cdf);
   static Real inverse_std_ccdf(Real p_ccdf);
 
+  // TODO: Remove in favor of base class impl?
   template <typename Engine> 
   static Real draw_std_sample(Engine& rng);
 
@@ -516,7 +517,7 @@ template <typename Engine>
 Real UniformRandomVariable::draw_std_sample(Engine& rng)
 {
   // draw random number on [0,1] from a persistent RNG sequence
-  boost::uniform_real<Real> uniform_sampler;
+  boost::random::uniform_real_distribution<Real> uniform_sampler;
   Real u01 = uniform_sampler(rng);
   return inverse_std_cdf(u01);
 }

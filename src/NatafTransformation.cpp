@@ -1079,7 +1079,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	// since we don't check all rows, check *all* columns despite symmetry
 	for (j=0, cntr_j=0; j<num_v; ++j)
 	  if (no_mask || x_active_corr[j]) {
-	    if (i != j && std::abs(x_corr_matrix(cntr_i,cntr_j)) > SMALL_NUMBER)
+	    if (i != j && !Pecos::is_small(x_corr_matrix(cntr_i,cntr_j)))
 	      { need_xs = true; break; }
 	    ++cntr_j;
 	  }

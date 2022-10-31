@@ -2437,7 +2437,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 
     int num_folds = std::min(10, num_data_pts_fn);
     int max_num_pts_per_fold = num_data_pts_fn / num_folds;
-    if ( num_data_pts_fn % num_folds != 0 ); ++max_num_pts_per_fold;
+    if ( num_data_pts_fn % num_folds != 0 )
+      ++max_num_pts_per_fold;
     if ( CSOpts.solver != ORTHOG_MATCH_PURSUIT   &&
 	 CSOpts.solver != LASSO_REGRESSION       &&
 	 CSOpts.solver != LEAST_ANGLE_REGRESSION &&
@@ -3313,7 +3314,7 @@ void RegressOrthogPolyApproximation::compute_component_sobol()
       sobolIndices[sp_index] += p_var; // divide by sum_p_var below
     }
   }
-  if (sum_p_var > SMALL_NUMBER) // don't attribute variance if zero/negligible
+  if (!Pecos::is_small(sum_p_var)) // don't attribute variance if zero/negligible
     sobolIndices.scale(1./sum_p_var);
 
 #ifdef DEBUG
@@ -3355,7 +3356,7 @@ void RegressOrthogPolyApproximation::compute_total_sobol()
     // of this variance is suspect.  Defaulting totalSobolIndices to zero is a
     // good choice since it drops out from anisotropic refinement based on the
     // response-average of these indices.
-    if (sum_p_var > SMALL_NUMBER) // avoid division by zero
+    if (!Pecos::is_small(sum_p_var)) // avoid division by zero
       totalSobolIndices.scale(1./sum_p_var);
   }
   else {

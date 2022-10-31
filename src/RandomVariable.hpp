@@ -16,6 +16,7 @@
 #define RANDOM_VARIABLE_HPP
 
 #include "pecos_stat_util.hpp"
+#include <boost/random/uniform_real_distribution.hpp>
 
 namespace Pecos {
 
@@ -271,7 +272,7 @@ private:
   //
 
   /// draws real samples on [0,1]
-  boost::uniform_real<Real> uniformSampler;
+  boost::random::uniform_real_distribution<Real> uniformSampler;
   
   /// pointer to the letter (initialized only for the envelope)
   std::shared_ptr<RandomVariable> ranVarRep;
