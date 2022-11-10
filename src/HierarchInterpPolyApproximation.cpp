@@ -989,8 +989,10 @@ increment_products(const UShort2DArray& set_partition)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    ActiveKey hf_key, lf_key; // extract either HF or aggregated {HF,LF} keys
-    data_rep->activeKey.extract_keys(hf_key, lf_key);
+    ActiveKey lf_key, hf_key; // extract either HF or aggregated {LF,HF} keys
+    size_t num_keys =  data_rep->activeKey.data_size();
+    if (num_keys == 1) data_rep->activeKey.extract_key(0, hf_key);
+    else               data_rep->activeKey.extract_keys(lf_key, hf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
 	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
       product_difference_interpolant(
