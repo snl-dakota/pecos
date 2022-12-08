@@ -77,14 +77,31 @@ add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
 target_link_libraries(pecos_lhs_driver ${pecos_test_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
 
-set(pecos_teuchos_unit_tests_src
-  pecos_pochhammer.cpp
-  pecos_discrete_poly.cpp
-  pecos_linear_solvers.cpp
-  pecos_utils.cpp
-  )
-add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
-target_link_libraries(pecos_teuchos_unit_tests ${pecos_test_libs} ${Teuchos_LIBRARIES})
-add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
+# Complete these for each specific test.
+add_executable(pecos_pochhammer pecos_pochhammer.cpp)
+target_link_libraries(pecos_pochhammer ${pecos_test_libs})
+add_test(pecos_pochhammer pecos_pochhammer)
+
+# Complete these for each specific test.
+add_executable(pecos_discrete_poly pecos_discrete_poly.cpp)
+target_link_libraries(pecos_discrete_poly ${pecos_test_libs})
+add_test(pecos_discrete_poly pecos_discrete_poly)
+
+# Complete these for each specific test.
+add_executable(pecos_linear_solvers pecos_linear_solvers.cpp)
+target_link_libraries(pecos_linear_solvers ${pecos_test_libs})
+add_test(pecos_linear_solvers pecos_linear_solvers)
+
+# Complete these for each specific test.
+add_executable(pecos_utils pecos_utils.cpp)
+target_link_libraries(pecos_utils ${pecos_test_libs})
+add_test(pecos_utils pecos_utils)
+
+#set(pecos_teuchos_unit_tests_src
+#  pecos_utils.cpp
+#  )
+#add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
+#target_link_libraries(pecos_teuchos_unit_tests ${pecos_test_libs} ${Teuchos_LIBRARIES})
+#add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
 
 install(TARGETS pecos_gsg_driver DESTINATION bin)
