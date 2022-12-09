@@ -97,11 +97,4 @@ add_executable(pecos_utils pecos_utils.cpp)
 target_link_libraries(pecos_utils ${pecos_test_libs})
 add_test(pecos_utils pecos_utils)
 
-#set(pecos_teuchos_unit_tests_src
-#  pecos_utils.cpp
-#  )
-#add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests_src} )
-#target_link_libraries(pecos_teuchos_unit_tests ${pecos_test_libs} ${Teuchos_LIBRARIES})
-#add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
-
 install(TARGETS pecos_gsg_driver DESTINATION bin)

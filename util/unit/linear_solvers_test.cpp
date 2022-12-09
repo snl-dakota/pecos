@@ -7,7 +7,8 @@
     _______________________________________________________________________ */
 
 #include "linear_solvers.hpp"
-#include <Teuchos_UnitTestHarness.hpp>
+#define BOOST_TEST_MODULE pecos_solvers_test
+#include <boost/test/included/unit_test.hpp>
 #include "OptionsList.hpp"
 #include <ctype.h>
 #include <string>
@@ -80,21 +81,21 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, ompsolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_ompsolver)
 {
   LinearSystemSolver * psol = new OMPSolver;
   //params.set("Normalize Inputs", true);
   OptionsList params;
   Real diff = test_solver(psol, params, false);
 
-  Real tol = params.get("Solver Tolerance", 1.e-8);
+  Real tol = 100.0*params.get("Solver Tolerance", 1.e-8);
   // This solve fails
-  //TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  //BOOST_CHECK_CLOSE( 1.0, diff, tol )
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, larssolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_larssolver)
 {
   LinearSystemSolver * psol = new LARSolver;
   OptionsList params;
@@ -102,9 +103,9 @@ TEUCHOS_UNIT_TEST(linear_solvers, larssolver)
   params.set("Max Iters", 30);
   Real diff = test_solver(psol, params, false);
 
-  Real tol = params.get("Solver Tolerance", 1.e-8);
+  Real tol = 100.0*params.get("Solver Tolerance", 1.e-8);
   // This solve fails
-  //TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  //BOOST_CHECK_CLOSE( 1.0, diff, tol )
 }
 
 //----------------------------------------------------------------
