@@ -31,15 +31,9 @@ if(HAVE_SPARSE_GRID)
   include_directories(${VPISparseGrid_SOURCE_DIR}/src)
 endif(HAVE_SPARSE_GRID)
 
-set(pce_approx_test
-  test_polynomial_chaos.cpp
-)
-
-add_executable(pce_approx_test teuchos_unit_test_driver.cpp ${pce_approx_test} )
+add_executable(pce_approx_test test_polynomial_chaos.cpp )
 target_link_libraries(pce_approx_test
   pecos_wrapper pecos_src pecos_models pecos_util
   ${Pecos_PKG_LIBS} ${Pecos_TPL_LIBS}
   )
-
-
-add_test(pce_approx_test pce_approx_test)
+add_test(pecos_pce_approx_test pce_approx_test)

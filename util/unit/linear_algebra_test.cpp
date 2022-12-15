@@ -9,7 +9,9 @@
 #include <ctype.h>
 #include <string>
 
-#include <Teuchos_UnitTestHarness.hpp> 
+#define BOOST_TEST_MODULE pecos_linear_algebra_test
+#include <boost/test/included/unit_test.hpp>
+
 #include <Teuchos_SerialDenseHelpers.hpp> 
 
 #include "linear_algebra.hpp"
@@ -113,7 +115,7 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, cholesky)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_cholesky)
 {
 
   // **********************************************************
@@ -132,29 +134,29 @@ TEUCHOS_UNIT_TEST(linear_algebra, cholesky)
   
   // Colesky to get L then solve using the L
   int info = Pecos::util::cholesky( A, L, Teuchos::LOWER_TRI, false );
-  TEST_EQUALITY( 0, info )
+  BOOST_CHECK( 0 == info );
   info =  Pecos::util::solve_using_cholesky_factor( L, B, result, Teuchos::LOWER_TRI);
-  TEST_EQUALITY( 0, info )
+  BOOST_CHECK( 0 == info );
 
   // Test correctness
   gold_soln -= result;
   Real shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
-  Real tol = 1.0e-8; // get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  Real tol = 1.0e-6; // get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
   
   // *********************************************************
   // *** Test Cholesky with a not positive definite matrix ***
   A = get_nspd_test_matrix();
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
   info = Pecos::util::cholesky( A, L, Teuchos::LOWER_TRI, false );
-  TEST_INEQUALITY( 0, info ) //-- info=2
+  BOOST_CHECK( 0 != info ); //-- info=2
 
   // *********************************************************
   // *** Test Cholesky with a singular matrix ***
   A = get_singular_test_matrix();
   B.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, gold_soln, 0.0);
   info = Pecos::util::cholesky( A, L, Teuchos::LOWER_TRI, false );
-  TEST_INEQUALITY( 0, info )  //-- info=1
+  BOOST_CHECK( 0 != info );  //-- info=1
   
   // DEBUG
   //A = get_rect_test_matrix();
@@ -165,7 +167,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, cholesky)
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, teuchos_cholesky)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_teuchos_cholesky)
 {
   // ===> computes L internally
   
@@ -181,20 +183,20 @@ TEUCHOS_UNIT_TEST(linear_algebra, teuchos_cholesky)
   RealMatrix result;
   Real rcond = 1.0;
   int info = Pecos::util::teuchos_cholesky_solve( A, B, result, rcond );
-  TEST_EQUALITY( 0, info )
+  BOOST_CHECK( 0 == info );
 
   // Test correctness
   gold_soln -= result;
   Real shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
 
-  Real tol = 1.0e-8; // get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  Real tol = 1.0e-6; // get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, qr_solve)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_qr_solve)
 {
   // Might need to try an over (under) determined system for better testing
   RealMatrix A = get_test_matrix();
@@ -212,8 +214,8 @@ TEUCHOS_UNIT_TEST(linear_algebra, qr_solve)
   gold_soln -= result;
   Real shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
 
-  Real tol = 1.0e-8; // get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  Real tol = 1.0e-6; // get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 
   // **************************************** 
   // *** Test random rectangular matrices ***
@@ -223,13 +225,13 @@ TEUCHOS_UNIT_TEST(linear_algebra, qr_solve)
   Pecos::util::qr_solve(A, B, result);
   gold_soln -= result;
   shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, svd)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_svd)
 {
   // Might need to try a rank-deficient system for better testing
   RealMatrix A = get_test_matrix();
@@ -255,8 +257,8 @@ TEUCHOS_UNIT_TEST(linear_algebra, svd)
   gold_soln -= result0;
   Real shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
 
-  Real tol = 1.0e-8; // get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  Real tol = 1.0e-6; // get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 
   // **************************************** 
   // *** Test a random rectangular matrix ***
@@ -266,13 +268,13 @@ TEUCHOS_UNIT_TEST(linear_algebra, svd)
   Pecos::util::svd_solve(A, B, result0, result1, rank);
   gold_soln -= result0;
   shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, conj_grad_solv)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_conj_grad_solv)
 {
   // Might need to try a rank-deficient system for better testing
   RealMatrix A = get_spd_test_matrix();
@@ -290,18 +292,18 @@ TEUCHOS_UNIT_TEST(linear_algebra, conj_grad_solv)
   Pecos::util::conjugate_gradients_solve(A, b, result, r_norm, iters /* use defaults for tol, max_iter, verbosity */);
 
   // Test correctness
-  TEST_EQUALITY( 5, iters )
+  BOOST_CHECK( 5 == iters );
   gold_soln -= result;
   Real shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
 
-  Real tol = 1.0e-14; // CG for a spd matrix should nail the solution
-  TEST_ASSERT( r_norm < tol )
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  Real tol = 1.0e-12; // CG for a spd matrix should nail the solution
+  BOOST_CHECK( r_norm < tol );
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, lu_solv)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_lu_solv)
 {
   // Might need to try a rank-deficient system for better testing
   RealMatrix A = get_test_matrix();
@@ -319,18 +321,18 @@ TEUCHOS_UNIT_TEST(linear_algebra, lu_solv)
   Pecos::util::lu_solve(A, B, result2, false, Teuchos::NO_TRANS);
 
   // Test correctness
-  Real tol = 1.0e-14;
+  Real tol = 1.0e-12;
   for( int i=0; i<result1.length(); ++i )
-    TEST_FLOATING_EQUALITY( result1(i), result2(i), tol )
+    BOOST_CHECK_CLOSE( result1(i), result2(i), tol );
 
   gold_soln -= result1;
   Real shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, substitution_solve)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_substitution_solve)
 {
   RealMatrix A = get_test_matrix();
 
@@ -353,8 +355,8 @@ TEUCHOS_UNIT_TEST(linear_algebra, substitution_solve)
   test_gold -= result;
   Real shifted_diff_norm = test_gold.normFrobenius() + 1.0;
 
-  Real tol = 1.0e-8; // get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  Real tol = 1.0e-6; // get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 
 
   // Now test another variant using NON_UNIT_DIAG
@@ -372,7 +374,7 @@ TEUCHOS_UNIT_TEST(linear_algebra, substitution_solve)
   gold_soln -= result;
   shifted_diff_norm = gold_soln.normFrobenius() + 1.0;
 
-  TEST_FLOATING_EQUALITY( 1.0, shifted_diff_norm, tol )
+  BOOST_CHECK_CLOSE( 1.0, shifted_diff_norm, tol );
 }
 
 //----------------------------------------------------------------
@@ -414,7 +416,7 @@ namespace
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, piv_lu_factor)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_piv_lu_factor)
 {
   const RealMatrix A = get_lu_test_matrix();
 
@@ -432,24 +434,24 @@ TEUCHOS_UNIT_TEST(linear_algebra, piv_lu_factor)
   IntVector gold_pivots;
   get_lu_gold_objects(gold_L, gold_U, gold_pivots);
 
-  const Real tol = 2.e-5; // This tolerance was determined empirically via comparison with Matlab results
+  const Real tol = 2.e-3; // This tolerance was determined empirically via comparison with Matlab results
                           // Is this sufficient? - RWH
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( L(i,j), gold_L(i,j), tol )
+      BOOST_CHECK_CLOSE( L(i,j), gold_L(i,j), tol );
 
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( U(i,j), gold_U(i,j), tol )
+      BOOST_CHECK_CLOSE( U(i,j), gold_U(i,j), tol );
 
   for( int i=0; i<NUMROWS; ++i )
-    TEST_EQUALITY( pivots(i), gold_pivots(i) )
+    BOOST_CHECK( pivots(i) == gold_pivots(i) );
 }
 
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, trunc_lu_piv_factor)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_trunc_lu_piv_factor)
 {
   const RealMatrix A = get_lu_test_matrix();
 
@@ -467,24 +469,24 @@ TEUCHOS_UNIT_TEST(linear_algebra, trunc_lu_piv_factor)
   IntVector gold_pivots;
   get_lu_gold_objects(gold_L, gold_U, gold_pivots);
 
-  const Real tol = 2.e-5; // This tolerance was determined empirically via comparison with Matlab results
+  const Real tol = 2.e-3; // This tolerance was determined empirically via comparison with Matlab results
                           // Is this sufficient? - RWH
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( L(i,j), gold_L(i,j), tol )
+      BOOST_CHECK_CLOSE( L(i,j), gold_L(i,j), tol );
 
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( U(i,j), gold_U(i,j), tol )
+      BOOST_CHECK_CLOSE( U(i,j), gold_U(i,j), tol );
 
   for( int i=0; i<NUMROWS; ++i )
-    TEST_EQUALITY( pivots(i), gold_pivots(i) )
+    BOOST_CHECK( pivots(i) == gold_pivots(i) );
 }
 
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, compl_piv_lu_factor)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_compl_piv_lu_factor)
 {
   const RealMatrix A = get_lu_test_matrix();
 
@@ -503,11 +505,11 @@ TEUCHOS_UNIT_TEST(linear_algebra, compl_piv_lu_factor)
   Pecos::util::permute_matrix_rows( permutedA, row_pivots);
   Pecos::util::permute_matrix_columns( permutedA, col_pivots);
 
-  const Real tol = 2.e-16; // This tolerance was determined empirically via comparison with Matlab results
+  const Real tol = 2.e-14; // This tolerance was determined empirically via comparison with Matlab results
                            // Is this sufficient? - RWH
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( chkA(i,j), permutedA(i,j), tol )
+      BOOST_CHECK_CLOSE( chkA(i,j), permutedA(i,j), tol );
 }
 
 //----------------------------------------------------------------
@@ -540,7 +542,7 @@ namespace
                                                                                                                                             gold_R(4,4) = -0.719276189874912;
   }
 }
-TEUCHOS_UNIT_TEST(linear_algebra, qr_factor)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_qr_factor)
 {
   const RealMatrix A = get_lu_test_matrix();
 
@@ -554,20 +556,20 @@ TEUCHOS_UNIT_TEST(linear_algebra, qr_factor)
   RealMatrix gold_R;
   get_qr_gold_objects(gold_Q, gold_R);
   // Why are there sign differences in rows/cols?  - RWH
-  const Real tol = 5.2e-5; // This tolerance was determined empirically via comparison with Matlab results
+  const Real tol = 5.2e-3; // This tolerance was determined empirically via comparison with Matlab results
                           // Is this sufficient? - RWH
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( std::fabs(Q(i,j)), std::fabs(gold_Q(i,j)), tol )
+      BOOST_CHECK_CLOSE( std::fabs(Q(i,j)), std::fabs(gold_Q(i,j)), tol );
 
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( std::fabs(R(i,j)), std::fabs(gold_R(i,j)), tol )
+      BOOST_CHECK_CLOSE( std::fabs(R(i,j)), std::fabs(gold_R(i,j)), tol );
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_algebra, permute_rows)
+BOOST_AUTO_TEST_CASE(test_linear_algebra_permute_rows)
 {
   RealMatrix L;
   RealMatrix U;
@@ -580,9 +582,9 @@ TEUCHOS_UNIT_TEST(linear_algebra, permute_rows)
   RealMatrix permutedA = get_lu_test_matrix();
   Pecos::util::permute_matrix_rows( permutedA, pivots);
 
-  const Real tol = 2.e-6; // This tolerance was determined empirically via comparison with Matlab results
+  const Real tol = 2.e-4; // This tolerance was determined empirically via comparison with Matlab results
                            // Is this sufficient? - RWH
   for( int i=0; i<NUMROWS; ++i )
     for( int j=0; j<NUMCOLS; ++j )
-      TEST_FLOATING_EQUALITY( chkA(i,j), permutedA(i,j), tol )
+      BOOST_CHECK_CLOSE( chkA(i,j), permutedA(i,j), tol );
 }

@@ -11,7 +11,8 @@
 #include <cmath>
 #include <iostream>
 
-#include <Teuchos_UnitTestHarness.hpp>
+#define BOOST_TEST_MODULE pecos_polynomial_approximation
+#include <boost/test/included/unit_test.hpp>
 
 #include <teuchos_data_types.hpp>
 #include <CppFunction.hpp>
@@ -153,15 +154,15 @@ solve a determined linear system Ac=f, where A is the vandermonde-type
 interpolation matrix and f(z) is the function values at a set of samples z,
 and c is the vector of monomial coefficients
 */
-TEUCHOS_UNIT_TEST(polynomial_approximation, monomial)
+BOOST_AUTO_TEST_CASE(test_polynomial_approximation_monomial)
 {
-  TEST_ASSERT(!test_polynomial_regression_builder(ORTHOG_MATCH_PURSUIT, 1e-8));
+  BOOST_CHECK(!test_polynomial_regression_builder(ORTHOG_MATCH_PURSUIT, 1e-8));
 
-  TEST_ASSERT(!test_polynomial_regression_builder(LEAST_ANGLE_REGRESSION, 1e-8));
+  BOOST_CHECK(!test_polynomial_regression_builder(LEAST_ANGLE_REGRESSION, 1e-8));
 
-  TEST_ASSERT(!test_polynomial_regression_builder(LASSO_REGRESSION, 1e-8));
+  BOOST_CHECK(!test_polynomial_regression_builder(LASSO_REGRESSION, 1e-8));
 
-  TEST_ASSERT(!test_polynomial_regression_builder(SVD_LEAST_SQ_REGRESSION, 1e-8));
+  BOOST_CHECK(!test_polynomial_regression_builder(SVD_LEAST_SQ_REGRESSION, 1e-8));
 }
 
 }

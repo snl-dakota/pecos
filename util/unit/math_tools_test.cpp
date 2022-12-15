@@ -9,7 +9,8 @@
 
 #include <string>
 
-#include <Teuchos_UnitTestHarness.hpp> 
+#define BOOST_TEST_MODULE pecos_math_tools
+#include <boost/test/included/unit_test.hpp>
 
 #include "math_tools.hpp"
 
@@ -23,7 +24,7 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(math_tools, multi_index)
+BOOST_AUTO_TEST_CASE(test_math_tools_multi_index)
 {
   IntMatrix indices;
 
@@ -40,14 +41,14 @@ TEUCHOS_UNIT_TEST(math_tools, multi_index)
 
       // Test structure of multi-index array
       int num_indices = Pecos::util::nchoosek((dim+degree-1),(dim-1));
-      TEST_EQUALITY( dim, indices.numRows() );
-      TEST_EQUALITY( num_indices, indices.numCols() );
+      BOOST_CHECK( dim == indices.numRows() );
+      BOOST_CHECK( num_indices == indices.numCols() );
 
       // Test contents of multi-index array
       IntMatrix test_sums(1,num_indices);
       test_sums.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1, ones, indices, 0);
       for( int i=0; i<num_indices; ++i )
-        TEST_EQUALITY( degree, test_sums(0,i) );
+        BOOST_CHECK( degree == test_sums(0,i) );
     }
   }
 }
