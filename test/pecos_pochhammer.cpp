@@ -10,7 +10,8 @@
 #include <ctype.h>
 #include <string>
 
-#include <Teuchos_UnitTestHarness.hpp> 
+#define BOOST_TEST_MODULE pecos_pochhammer
+#include <boost/test/included/unit_test.hpp>
 
 #include "pecos_data_types.hpp"
 #include "BasisPolynomial.hpp"
@@ -19,7 +20,7 @@ using namespace Pecos;
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(pochhammer, simple1)
+BOOST_AUTO_TEST_CASE(test_pochhammer_simple1)
 {
 
   Real testval = -5.0;
@@ -29,16 +30,16 @@ TEUCHOS_UNIT_TEST(pochhammer, simple1)
     //std::cout << n << "\t" << values[n] << std::endl;
   }
 
-  TEST_EQUALITY(    1,  values[0] );
-  TEST_EQUALITY(   -5,  values[1] );
-  TEST_EQUALITY(   20,  values[2] );
-  TEST_EQUALITY(  -60,  values[3] );
-  TEST_EQUALITY(  120,  values[4] );
-  TEST_EQUALITY( -120,  values[5] );
-  TEST_EQUALITY(    0,  values[6] );
-  TEST_EQUALITY(    0,  values[7] );
-  TEST_EQUALITY(    0,  values[8] );
-  TEST_EQUALITY(    0,  values[9] );
+  BOOST_CHECK(    1 ==  values[0] );
+  BOOST_CHECK(   -5 ==  values[1] );
+  BOOST_CHECK(   20 ==  values[2] );
+  BOOST_CHECK(  -60 ==  values[3] );
+  BOOST_CHECK(  120 ==  values[4] );
+  BOOST_CHECK( -120 ==  values[5] );
+  BOOST_CHECK(    0 ==  values[6] );
+  BOOST_CHECK(    0 ==  values[7] );
+  BOOST_CHECK(    0 ==  values[8] );
+  BOOST_CHECK(    0 ==  values[9] );
 }
 
 //----------------------------------------------------------------

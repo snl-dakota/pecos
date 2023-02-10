@@ -6,7 +6,9 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#include "Teuchos_UnitTestHarness.hpp"
+#define BOOST_TEST_MODULE pecos_polynomial_approximation
+#include <boost/test/included/unit_test.hpp>
+
 //#include "PolynomialChaosExpansionWrap.hpp"
 #include "PolynomialChaosExpansion.hpp"
 #include "RegressionBuilder.hpp"
@@ -31,9 +33,9 @@ bool test_polynomial_approximation(short basis_type, Real tol){
   return true;
 }
 
-TEUCHOS_UNIT_TEST(pecos_polynomial_approximation, pce)
+BOOST_AUTO_TEST_CASE(test_pecos_polynomial_approximation_pce)
 {
-  TEST_ASSERT(test_polynomial_approximation(Pecos::LEGENDRE_ORTHOG, 1e-8));
+  BOOST_CHECK(test_polynomial_approximation(Pecos::LEGENDRE_ORTHOG, 1e-8));
 }
 
 } // namespace

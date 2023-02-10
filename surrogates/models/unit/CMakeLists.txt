@@ -28,19 +28,10 @@ if(HAVE_SPARSE_GRID)
   include_directories(${VPISparseGrid_SOURCE_DIR}/src)
 endif(HAVE_SPARSE_GRID)
 
-set(polynomial_approx_test
-  polynomial_approximation.cpp
-)
-
-set(directANN_test
-  directANN_approximation.cpp
-)
-
-add_executable(polynomial_approx_test teuchos_unit_test_driver.cpp ${polynomial_approx_test} )
+add_executable(polynomial_approx_test  polynomial_approximation.cpp)
 target_link_libraries(polynomial_approx_test pecos_models pecos_util ${Pecos_TPL_LIBS})
+add_test(pecos_surr_poly_approx_test polynomial_approx_test)
 
-add_executable(directANN_test teuchos_unit_test_driver.cpp ${directANN_test} )
+add_executable(directANN_test  directANN_approximation.cpp)
 target_link_libraries(directANN_test pecos_models pecos_util ${Pecos_TPL_LIBS})
-
-add_test(polynomial_approx_test polynomial_approx_test)
-add_test(directANN_test directANN_test)
+add_test(pecos_surr_directANN_test directANN_test)

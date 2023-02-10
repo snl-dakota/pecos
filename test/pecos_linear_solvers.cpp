@@ -10,7 +10,8 @@
 #include <ctype.h>
 #include <string>
 
-#include <Teuchos_UnitTestHarness.hpp> 
+#define BOOST_TEST_MODULE pecos_linear_solvers
+#include <boost/test/included/unit_test.hpp>
 
 #include "pecos_data_types.hpp"
 #include "LinearSolverPecosSrc.hpp"
@@ -90,81 +91,81 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, bpsolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_bpsolver)
 {
   LinearSolver * psol = new BPSolver;
   Real diff = test_solver(psol, false);
 
-  Real tol = get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  Real tol = 100.0*get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, diff, tol );
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, bpdnsolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_bpdnsolver)
 {
   LinearSolver * psol = new BPDNSolver;
   Real diff = test_solver(psol, true);
 
-  Real tol = get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  Real tol = 100.0*get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, diff, tol );
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, ompsolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_ompsolver)
 {
   LinearSolver * psol = new OMPSolver;
   //psol->set_normalise_inputs(true);
   Real diff = test_solver(psol, true);
 
-  Real tol = get_solver_solve_tol(psol);
+  Real tol = 100.0*get_solver_solve_tol(psol);
   // This solve fails
-  //TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  //BOOST_CHECK_CLOSE( 1.0, diff, tol );
 }
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, larssolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_larssolver)
 {
   LinearSolver * psol = new LARSSolver;
   Real diff = test_solver(psol, false);
 
-  Real tol = get_solver_solve_tol(psol);
+  Real tol = 100.0*get_solver_solve_tol(psol);
   // This solve fails
-  //TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  //BOOST_CHECK_CLOSE( 1.0, diff, tol );
 }
 
 //----------------------------------------------------------------
 
-//TEUCHOS_UNIT_TEST(linear_solvers, cosampsolver)
+//BOOST_AUTO_TEST_CASE(test_linear_solvers_cosampsolver)
 //{
 //  LinearSolver * psol = new COSAMPSolver;
 //  Real diff = test_solver(psol, true);
 //
-//  Real tol = get_solver_solve_tol(psol);
-//  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+//  Real tol = 100.0*get_solver_solve_tol(psol);
+//  BOOST_CHECK_CLOSE( 1.0, diff, tol );
 //}
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers, lsqsolver)
+BOOST_AUTO_TEST_CASE(test_linear_solvers_lsqsolver)
 {
   LinearSolver * psol = new LSQSolver;
   Real diff = test_solver(psol, false);
 
-  Real tol = get_solver_solve_tol(psol);
-  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+  Real tol = 100.0*get_solver_solve_tol(psol);
+  BOOST_CHECK_CLOSE( 1.0, diff, tol );
 }
 
 //----------------------------------------------------------------
 
-//TEUCHOS_UNIT_TEST(linear_solvers, equalityconstrainedlsqsolver)
+//BOOST_AUTO_TEST_CASE(test_linear_solvers_equalityconstrainedlsqsolver)
 //{
 //  LinearSolver * psol = new EqualityConstrainedLSQSolver;
 //  psol->set_num_primary_equations(NUMROWS);
 //  Real diff = test_solver(psol, true);
 //
-//  Real tol = get_solver_solve_tol(psol);
-//  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
+//  Real tol = 100.0*get_solver_solve_tol(psol);
+//  BOOST_CHECK_CLOSE( 1.0, diff, tol );
 //}
