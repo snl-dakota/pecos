@@ -796,7 +796,7 @@ public:
   void aggregate_keys(const std::vector<ActiveKey>& keys, short reduction);
   /// append a single model key plus a vector of keys to create a data
   /// combination (e.g., a truth model and a set of approximations)
-  void aggregate_keys(const ActiveKey& key1, const std::vector<ActiveKey>& keys,
+  void aggregate_keys(const std::vector<ActiveKey>& keys, const ActiveKey& key1,
 		      short reduction);
 
   /// extract a particular constituent key from an aggregated key
@@ -807,7 +807,7 @@ public:
   void extract_keys(std::vector<ActiveKey>& keys) const;
   /// extract a first constituent key plus an array of constituent keys
   /// from an aggregated key
-  void extract_keys(ActiveKey& key1, std::vector<ActiveKey>& keys) const;
+  void extract_keys(std::vector<ActiveKey>& keys, ActiveKey& last_key) const;
 
   /// return the model form index
   unsigned short retrieve_model_form(size_t d_index = 0,
@@ -1323,15 +1323,11 @@ aggregate_keys(const std::vector<ActiveKey>& keys, short reduction)
 
 
 inline void ActiveKey::
-aggregate_keys(const ActiveKey& key1, const std::vector<ActiveKey>& keys,
+aggregate_keys(const std::vector<ActiveKey>& keys, const ActiveKey& key1,
 	       short reduction)
 {
-  if (shared()) clear(); // disconnect rep before update
+  aggregate_keys(keys, reduction);
   aggregate_key(key1);
-  size_t k, num_k = keys.size();
-  for (k=0; k<num_k; ++k)
-    aggregate_key(keys[k]);
-  type(reduction);
 }
 
 
@@ -1368,19 +1364,19 @@ inline void ActiveKey::extract_keys(std::vector<ActiveKey>& embedded_keys) const
 
 
 inline void ActiveKey::
-extract_keys(ActiveKey& key1, std::vector<ActiveKey>& extra_keys) const
+extract_keys(std::vector<ActiveKey>& embedded_keys, ActiveKey& last_key) const
 {
-  size_t k, num_k = data_size();
-  if (num_k) extract_key(0, key1);
-  else       key1.clear();
-
+  size_t k, num_k = data_size(), last_index = (num_k) ? num_k - 1 : _NPOS;
   if (num_k > 1) {
-    size_t e, num_e = num_k - 1;
-    extra_keys.resize(num_e);
-    for (e=0, k=1; e<num_e; ++e, ++k)
-      extract_key(k, extra_keys[e]);
+    size_t e, num_e = last_index;
+    embedded_keys.resize(num_e);
+    for (e=0; e<num_e; ++e)
+      extract_key(e, embedded_keys[e]);
   }
-  else extra_keys.clear();
+  else embedded_keys.clear();
+
+  if (num_k) extract_key(last_index, last_key);
+  else       last_key.clear();
 }
 
 

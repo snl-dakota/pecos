@@ -85,7 +85,7 @@ void PolynomialApproximation::synchronize_surrogate_data()
     // already provided within surrData and specific pairings are identified
     // by data groups.
   }
-  // now compute the discrepancy between {HF,LF} or {HF,LF-hat} datasets
+  // now compute the discrepancy across {HF,LF} or {HF,LF-hat} dataset pairs
   DiscrepancyCalculator::compute(surrData, active_key, combine_type);
 }
 
@@ -101,9 +101,18 @@ generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
   // portion of active_key.  This synthetic data then enables the computation
   // and emulation of a recursive discrepancy from hf - lf_hat differences
   // (surpluses) at the high-fidelity points
-  ActiveKey hf_key, lf_hat_key; // LF-hat in surplus case
-  active_key.extract_keys(hf_key, lf_hat_key);
-  ActiveKey lf0_key = surr_data.filtered_key(SINGLETON_FILTER, 0); // *** Note: ActiveKey first sorts on group id
+  ActiveKey lf_hat_key, hf_key; // LF-hat in surplus case
+  active_key.extract_keys(lf_hat_key, hf_key);
+  // Note: ActiveKey first sorts on group id
+  ActiveKey lf0_key = surr_data.filtered_key(SINGLETON_FILTER, 0);
+
+  //PCout << "lf_hat_key:\n" << lf_hat_key << "hf_key:\n" << hf_key
+  // 	  << "lf0_key:\n" << lf0_key;
+  //const std::map<ActiveKey,SDVArray>& vars_map=surr_data.variables_data_map();
+  //std::map<ActiveKey, SDVArray>::const_iterator v_cit;
+  //for (v_cit=vars_map.begin(); v_cit!=vars_map.end(); ++v_cit)
+  //  PCout << "vars_map key:\n" << v_cit->first
+  //        << "SDV size = " << v_cit->second.size() << '\n' << std::endl;
 
   // initialize surr_data[lf_hat_key]
   surr_data.active_key(lf_hat_key); // active key restored at fn end

@@ -7,7 +7,7 @@
     _______________________________________________________________________ */
 
 #include "OptionsList.hpp"
-#define BOOST_TEST_MODULE options
+#define BOOST_TEST_MODULE pecos_options
 #include <boost/test/included/unit_test.hpp>
 
 using Pecos::util::OptionsList;

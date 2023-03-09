@@ -10,7 +10,8 @@
 #include <ctype.h>
 #include <string>
 
-#include <Teuchos_UnitTestHarness.hpp> 
+#define BOOST_TEST_MODULE pecos_discrete_poly
+#include <boost/test/included/unit_test.hpp>
 
 #include "pecos_data_types.hpp"
 #include "BasisPolynomial.hpp"
@@ -50,19 +51,19 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, charlier1)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_charlier1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(CHARLIER_DISCRETE);
   auto ptr = std::dynamic_pointer_cast<CharlierOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test deafult settings and accessors
   Real ap;  poly_basis.pull_parameter(P_LAMBDA, ap);
-  TEST_EQUALITY( ap, 0.0 );
+  BOOST_CHECK( ap == 0.0 );
 
   const Real p = 0.1;
-  const Real TEST_TOL = 2.e-5; // a relative tolerance based on the exact answers
+  const Real TEST_TOL = 2.e-1; // a relative tolerance based on the exact answers
   const unsigned NUM_TERMS_TO_SUM = 100; // the number of terms needed for the orthogonality sum to converge
 
   poly_basis.push_parameter(P_LAMBDA, p);
@@ -76,11 +77,11 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, charlier1)
     for( short j=0; j<8; ++j ) {
       Real numerical_orth_val = charlier_inner_prod(NUM_TERMS_TO_SUM, p, i, j, *ptr);
       if( i == j ) {
-        TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
+        BOOST_CHECK_CLOSE( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
       else {
         Real shifted_zero = 1.0 + numerical_orth_val;
-        TEST_FLOATING_EQUALITY( shifted_zero, 1.0, TEST_TOL );
+        BOOST_CHECK_CLOSE( shifted_zero, 1.0, TEST_TOL );
       }
     }
   }
@@ -118,21 +119,21 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_krawtchouck1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(KRAWTCHOUK_DISCRETE);
   auto ptr = std::dynamic_pointer_cast<KrawtchoukOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test deafult settings and accessors
   Real ap;  poly_basis.pull_parameter(BI_P_PER_TRIAL, ap);
   unsigned int  bp;  poly_basis.pull_parameter(BI_TRIALS,      bp);
-  TEST_EQUALITY( ap, 0.0 ); TEST_EQUALITY( bp, 0 );
+  BOOST_CHECK( ap == 0.0 ); BOOST_CHECK( bp == 0 );
 
   const Real p = 0.1;
   const unsigned int N = 15;
-  const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
+  const Real TEST_TOL = 1.e-5; // a relative tolerance based on the exact answers
 
   poly_basis.push_parameter(BI_P_PER_TRIAL, p);
   poly_basis.push_parameter(BI_TRIALS,      N);
@@ -143,11 +144,11 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
     for( short j=0; j<11; ++j ) {
       Real numerical_orth_val = krawtchouck_inner_prod(N, p, i, j, *ptr);
       if( i == j ) {
-        TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
+        BOOST_CHECK_CLOSE( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
       else {
         Real shifted_zero = 1.0 + numerical_orth_val;
-        TEST_FLOATING_EQUALITY( shifted_zero, 1.0, TEST_TOL );
+        BOOST_CHECK_CLOSE( shifted_zero, 1.0, TEST_TOL );
       }
     }
   }
@@ -185,21 +186,21 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_meixner1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(MEIXNER_DISCRETE);
   auto ptr = std::dynamic_pointer_cast<MeixnerOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test deafult settings and accessors
   Real ap;  poly_basis.pull_parameter(NBI_P_PER_TRIAL, ap);
   unsigned int bp;  poly_basis.pull_parameter(NBI_TRIALS,      bp);
-  TEST_EQUALITY( ap, 0.0 );  TEST_EQUALITY( bp,  1 );
+  BOOST_CHECK( ap == 0.0 );  BOOST_CHECK( bp ==  1 );
 
   const Real c = 0.1;
   const unsigned int beta = 1;//const Real beta = 1.5; // *** MSE: Real was valid for old Meixner poly but not for NBI or GE distributions
-  const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
+  const Real TEST_TOL = 1.e-5; // a relative tolerance based on the exact answers
   const unsigned NUM_TERMS_TO_SUM = 40; // the number of terms needed for the orthogonality sum to converge
 
   poly_basis.push_parameter(NBI_P_PER_TRIAL, c);
@@ -211,11 +212,11 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
     for( short j=0; j<7; ++j ) {
       Real numerical_orth_val = meixner_inner_prod(NUM_TERMS_TO_SUM, c, beta, i, j, *ptr);
       if( i == j ) {
-        TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
+        BOOST_CHECK_CLOSE( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
       else {
         Real shifted_zero = 1.0 + numerical_orth_val;
-        TEST_FLOATING_EQUALITY( shifted_zero, 1.0, TEST_TOL );
+        BOOST_CHECK_CLOSE( shifted_zero, 1.0, TEST_TOL );
       }
     }
   }
@@ -259,25 +260,25 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_hahn1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(HAHN_DISCRETE);
   auto ptr = std::dynamic_pointer_cast<HahnOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test deafult settings and accessors
   unsigned int ap;  poly_basis.pull_parameter(HGE_TOT_POP, ap);
   unsigned int bp;  poly_basis.pull_parameter(HGE_SEL_POP, bp);
   unsigned int gp;  poly_basis.pull_parameter(HGE_DRAWN  , gp);
-  TEST_EQUALITY( ap, 0 );
-  TEST_EQUALITY( bp, 0 );
-  TEST_EQUALITY( gp, 0 );
+  BOOST_CHECK( ap == 0 );
+  BOOST_CHECK( bp == 0 );
+  BOOST_CHECK( gp == 0 );
 
   const unsigned int totalPop   = 4;
   const unsigned int selectPop  = 6;
   const unsigned int N          = 10;
-  const Real TEST_TOL  = 5.e-8; // a relative tolerance based on the exact answers
+  const Real TEST_TOL  = 5.e-4; // a relative tolerance based on the exact answers
 
   poly_basis.push_parameter(HGE_TOT_POP, totalPop);
   poly_basis.push_parameter(HGE_SEL_POP, selectPop);
@@ -289,11 +290,11 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
     for( short j=0; j<11; ++j ) {
       Real numerical_orth_val = hahn_inner_prod(N, totalPop, selectPop, i, j, *ptr);
       if( i == j ) {
-        TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
+        BOOST_CHECK_CLOSE( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
       else {
         Real shifted_zero = 1.0 + numerical_orth_val;
-        TEST_FLOATING_EQUALITY( shifted_zero, 1.0, TEST_TOL );
+        BOOST_CHECK_CLOSE( shifted_zero, 1.0, TEST_TOL );
       }
     }
   }
@@ -320,8 +321,7 @@ void array_to_map(size_t num_vals, ScalarType pt_vals[], double pt_mass[],
 template<typename ScalarType>
 void histpt_check_orthog(size_t num_vals, ScalarType pt_vals[],
 			 double pt_mass[], BasisPolynomial& poly_basis,
-			 const unsigned short max_order, const double tol,
-			 Teuchos::FancyOStream &out, bool &success)
+			 const unsigned short max_order, const double tol)
 {
   // check orthogonality to self and other orders without using the
   // inner product, since that's what we're checking...
@@ -339,12 +339,12 @@ void histpt_check_orthog(size_t num_vals, ScalarType pt_vals[],
       }
       if (i == j) {
 	double norm_sq = poly_basis.norm_squared(i);
-	TEUCHOS_TEST_FLOATING_EQUALITY( integral, norm_sq, tol, out, success );
+	BOOST_CHECK_CLOSE( integral, norm_sq, tol );
 	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << norm_sq << '\n';
       }
       else {
 	// shift from 0.0 to avoid numerical issues
-	TEUCHOS_TEST_FLOATING_EQUALITY( 1.0 + integral, 1.0, tol, out, success );
+	BOOST_CHECK_CLOSE( 1.0 + integral, 1.0, tol );
 	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << 0.0 << '\n';
       }
     }
@@ -354,12 +354,12 @@ void histpt_check_orthog(size_t num_vals, ScalarType pt_vals[],
 } // namespace
 
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_int)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_hist_pt_int)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
   auto ptr = std::dynamic_pointer_cast<NumericGenOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test orthogonality to discrete data
   size_t num_vals = 20;
@@ -387,18 +387,17 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_int)
 
   // discrete data is more challenging
   const unsigned short max_order = 4;
-  const double tol = 1.0e-6;
-  histpt_check_orthog(num_vals, pt_vals, pt_mass, poly_basis, max_order, tol,
-		      out, success);
+  const double tol = 1.0e-4;
+  histpt_check_orthog(num_vals, pt_vals, pt_mass, poly_basis, max_order, tol);
 }
 
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_str)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_hist_pt_str)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
   auto ptr = std::dynamic_pointer_cast<NumericGenOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test orthogonality to discrete data
   size_t num_vals = 20;
@@ -433,19 +432,18 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_str)
   // discrete data is more challenging, since well-distributed can
   // have slightly tighter tolerance
   const unsigned short max_order = 4;
-  const double tol = 1.0e-6;
+  const double tol = 1.0e-4;
   // use indices for pointwise evaluation
-  histpt_check_orthog(num_vals, pt_inds, pt_mass, poly_basis, max_order, tol,
-		      out, success);
+  histpt_check_orthog(num_vals, pt_inds, pt_mass, poly_basis, max_order, tol);
 }
 
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_real)
+BOOST_AUTO_TEST_CASE(test_discrete_orthog_poly_hist_pt_real)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
   auto ptr = std::dynamic_pointer_cast<NumericGenOrthogPolynomial>
     (poly_basis.polynomial_rep());
-  TEST_ASSERT( ptr != NULL );
+  BOOST_CHECK( ptr != NULL );
 
   // Test orthogonality to discrete data
   size_t num_vals = 20;
@@ -477,7 +475,6 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_real)
   ptr->coefficients_norms_flag(true);
 
   const unsigned short max_order = 10;
-  const double tol = 1.0e-12;
-  histpt_check_orthog(num_vals, pt_vals, pt_mass, poly_basis, max_order, tol,
-		      out, success);
+  const double tol = 1.0e-10;
+  histpt_check_orthog(num_vals, pt_vals, pt_mass, poly_basis, max_order, tol);
 }

@@ -11,7 +11,8 @@
 #include <cmath>
 #include <iostream>
 
-#include <Teuchos_UnitTestHarness.hpp>
+#define BOOST_TEST_MODULE pecos_directANN_approximation
+#include <boost/test/included/unit_test.hpp>
 
 #include <teuchos_data_types.hpp>
 #include <CppFunction.hpp>
@@ -183,9 +184,9 @@ int test_directANN(Real atol){
 \brief Create a direct ANN from sample data and test performance
        for 3 data scaler types
 */
-TEUCHOS_UNIT_TEST(dry_run, test_directANN)
+BOOST_AUTO_TEST_CASE(test_dry_run_test_directANN)
 {
-  TEST_ASSERT(!test_directANN(1e-10));
+  BOOST_CHECK(!test_directANN(1e-10));
 }
 
 }

@@ -576,7 +576,7 @@ void SharedPolyApproxData::assign_sobol_index_map_values()
 size_t SharedPolyApproxData::
 tensor_product_terms(const UShortArray& order, bool include_upper_bound)
 {
-  size_t i, n = order.size(), num_terms = 1;
+  size_t i, n = order.size(), num_terms = (n) ? 1 : 0;
   if (include_upper_bound)
     for (i=0; i<n; ++i)
       num_terms *= order[i] + 1; // multi-index from expansion order p (default)

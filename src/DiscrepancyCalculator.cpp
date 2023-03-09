@@ -217,7 +217,7 @@ void DiscrepancyCalculator::
 compute(SurrogateData& surr_data, const ActiveKey& delta_key,
 	short combine_type)
 {
-  ActiveKey hf_key, lf_key;  delta_key.extract_keys(hf_key, lf_key);
+  ActiveKey lf_key, hf_key;  delta_key.extract_keys(lf_key, hf_key);
 
   const std::map<ActiveKey, SDRArray>& resp_map
     = surr_data.response_data_map();
