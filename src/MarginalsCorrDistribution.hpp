@@ -108,12 +108,18 @@ public:
   /// assemble variances from RandomVariable::variance()
   RealVector variances() const;
 
-  /// assemble distribution lower and upper bounds from RandomVariable::bounds()
+  /// assemble distribution lower and upper bounds for all random variables
+  /// using RandomVariable::bounds()
   RealRealPairArray distribution_bounds() const;
-  /// assemble distribution lower bounds from RandomVariable::bounds()
+  /// assemble distribution lower bounds for all random variables using
+  /// RandomVariable::bounds()
   RealVector distribution_lower_bounds() const;
-  /// assemble distribution upper bounds from RandomVariable::bounds()
+  /// assemble distribution upper bounds for all random variables using
+  /// RandomVariable::bounds()
   RealVector distribution_upper_bounds() const;
+  /// assemble distribution lower and upper bounds for active random variables
+  /// using RandomVariable::bounds()
+  RealRealPairArray active_distribution_bounds() const;
 
   // these bounds are distinct from distribution bounds: for Dakota, they are
   // "global" bounds; in Pecos, they include RangeVariable bounds
@@ -773,6 +779,37 @@ inline RealVector MarginalsCorrDistribution::variances() const
 inline RealRealPairArray MarginalsCorrDistribution::distribution_bounds() const
 {
   size_t v, num_v = randomVars.size();
+  RealRealPairArray bnds(num_v);
+  for (v=0; v<num_v; ++v)
+    bnds[v] = randomVars[v].distribution_bounds();
+  return bnds;
+}
+
+
+inline RealVector MarginalsCorrDistribution::distribution_lower_bounds() const
+{
+  size_t v, num_v = randomVars.size();
+  RealVector lwr_bnds(num_v, false);
+  for (v=0; v<num_v; ++v)
+    lwr_bnds[v] = randomVars[v].distribution_bounds().first;
+  return lwr_bnds;
+}
+
+
+inline RealVector MarginalsCorrDistribution::distribution_upper_bounds() const
+{
+  size_t v, num_v = randomVars.size();
+  RealVector upr_bnds(num_v, false);
+  for (v=0; v<num_v; ++v)
+    upr_bnds[v] = randomVars[v].distribution_bounds().second;
+  return upr_bnds;
+}
+
+
+inline RealRealPairArray MarginalsCorrDistribution::
+active_distribution_bounds() const
+{
+  size_t v, num_v = randomVars.size();
   RealRealPairArray bnds;
   if (activeVars.empty()) {
     bnds.resize(num_v);
@@ -787,46 +824,6 @@ inline RealRealPairArray MarginalsCorrDistribution::distribution_bounds() const
 	bnds[av_cntr++] = randomVars[v].distribution_bounds();
   }
   return bnds;
-}
-
-
-inline RealVector MarginalsCorrDistribution::distribution_lower_bounds() const
-{
-  size_t v, num_v = randomVars.size();
-  RealVector lwr_bnds;
-  if (activeVars.empty()) {
-    lwr_bnds.sizeUninitialized(num_v);
-    for (v=0; v<num_v; ++v)
-      lwr_bnds[v] = randomVars[v].distribution_bounds().first;
-  }
-  else {
-    lwr_bnds.sizeUninitialized(activeVars.count());
-    size_t av_cntr = 0;
-    for (v=0; v<num_v; ++v)
-      if (activeVars[v])
-	lwr_bnds[av_cntr++] = randomVars[v].distribution_bounds().first;
-  }
-  return lwr_bnds;
-}
-
-
-inline RealVector MarginalsCorrDistribution::distribution_upper_bounds() const
-{
-  size_t v, num_v = randomVars.size();
-  RealVector upr_bnds;
-  if (activeVars.empty()) {
-    upr_bnds.sizeUninitialized(num_v);
-    for (v=0; v<num_v; ++v)
-      upr_bnds[v] = randomVars[v].distribution_bounds().second;
-  }
-  else {
-    upr_bnds.sizeUninitialized(activeVars.count());
-    size_t av_cntr = 0;
-    for (v=0; v<num_v; ++v)
-      if (activeVars[v])
-	upr_bnds[av_cntr++] = randomVars[v].distribution_bounds().second;
-  }
-  return upr_bnds;
 }
 
 

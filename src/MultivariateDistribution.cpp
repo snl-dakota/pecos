@@ -397,6 +397,18 @@ RealVector MultivariateDistribution::distribution_upper_bounds() const
 }
 
 
+RealRealPairArray MultivariateDistribution::active_distribution_bounds() const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: active_distribution_bounds() not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->active_distribution_bounds();
+}
+
+
 bool MultivariateDistribution::global_bounds() const
 { return (mvDistRep) ? mvDistRep->global_bounds() : false; }
 

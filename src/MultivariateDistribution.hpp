@@ -91,12 +91,14 @@ public:
   /// return marginal variances for multivariate distribution
   virtual RealVector variances() const;
 
-  /// return lower and upper bounds for multivariate distribution
+  /// return lower and upper distribution bounds for all random variables
   virtual RealRealPairArray distribution_bounds() const;
-  /// return lower bounds for multivariate distribution
+  /// return lower distribution bounds for all random variables
   virtual RealVector distribution_lower_bounds() const;
-  /// return upper bounds for multivariate distribution
+  /// return upper distribution bounds for all random variables
   virtual RealVector distribution_upper_bounds() const;
+  /// return lower and upper distribution bounds for active random variables
+  virtual RealRealPairArray active_distribution_bounds() const;
 
   /// indicate presence of data beyond distribution bounds, which define the
   /// "global" parameter space
