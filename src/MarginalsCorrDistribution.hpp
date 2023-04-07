@@ -854,7 +854,7 @@ void MarginalsCorrDistribution::check_active_length(
       expect_len = (mask.empty()) ? randomVars.size() : mask.count();
   if (vec_len != expect_len) {
     PCerr << "Error: bad active vector length (" << vec_len << "); "
-	  << expect_len << "expected." << std::endl;
+	  << expect_len << " expected." << std::endl;
     abort_handler(-1);
   }
 }
