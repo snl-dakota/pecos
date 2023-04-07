@@ -93,6 +93,8 @@ public:
 
   /// return lower and upper distribution bounds for all random variables
   virtual RealRealPairArray distribution_bounds() const;
+  /// return lower and upper distribution bounds for i-th random variable
+  virtual RealRealPair distribution_bounds(size_t i) const;
   /// return lower distribution bounds for all random variables
   virtual RealVector distribution_lower_bounds() const;
   /// return upper distribution bounds for all random variables

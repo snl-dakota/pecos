@@ -111,6 +111,8 @@ public:
   /// assemble distribution lower and upper bounds for all random variables
   /// using RandomVariable::bounds()
   RealRealPairArray distribution_bounds() const;
+  /// return distribution lower and upper bounds for i-th random variable
+  RealRealPair distribution_bounds(size_t i) const;
   /// assemble distribution lower bounds for all random variables using
   /// RandomVariable::bounds()
   RealVector distribution_lower_bounds() const;
@@ -783,6 +785,18 @@ inline RealRealPairArray MarginalsCorrDistribution::distribution_bounds() const
   for (v=0; v<num_v; ++v)
     bnds[v] = randomVars[v].distribution_bounds();
   return bnds;
+}
+
+
+inline RealRealPair MarginalsCorrDistribution::
+distribution_bounds(size_t i) const
+{
+  if (i >= randomVars.size()) {
+    PCerr << "Error: index " << i << " out of bounds in MarginalsCorr"
+	  << "Distribution::distribution_bounds(index)." << std::endl;
+    abort_handler(-1);
+  }
+  return randomVars[i].distribution_bounds();
 }
 
 

@@ -373,6 +373,18 @@ RealRealPairArray MultivariateDistribution::distribution_bounds() const
 }
 
 
+RealRealPair MultivariateDistribution::distribution_bounds(size_t i) const
+{
+  if (!mvDistRep) { // forward to letter
+    PCerr << "Error: distribution_bounds() not supported for this multivariate "
+	  << "distribution type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return mvDistRep->distribution_bounds(i);
+}
+
+
 RealVector MultivariateDistribution::distribution_lower_bounds() const
 {
   if (!mvDistRep) { // forward to letter
