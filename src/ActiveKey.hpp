@@ -1140,7 +1140,7 @@ form_key(unsigned short group, unsigned short form1, size_t lev1,
 inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
 {
   // decrement the active index, if present, to create a key within the same
-  // group id but with the next lower resolution in the sequence
+  // group id but with the next lower form/resolution in the sequence
 
   // For now, only allow this for singleton keys (no indexing by "d_index")
   if (data_size() != 1) {
@@ -1150,20 +1150,25 @@ inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
   }
   ActiveKeyData& kd0 = data(0);
   switch (seq_type) {
-  case MODEL_FORM_SEQUENCE: {
+  case MODEL_FORM_1D_SEQUENCE: {
     unsigned short form = kd0.model_index(seq_index);
     if (form && form != USHRT_MAX)
       { kd0.model_index(--form, seq_index); return true; }
     else return false;
     break;
   }
-  case RESOLUTION_LEVEL_SEQUENCE: {
+  case RESOLUTION_LEVEL_1D_SEQUENCE: {
     size_t lev = kd0.discrete_set_index(seq_index);
     if (lev && lev != SZ_MAX)
       { kd0.discrete_set_index(--lev, seq_index); return true; }
     else return false;
     break;
   }
+  default:
+    PCerr << "Error: ActiveKey::decrement_key() unsupported for sequence type "
+	  << seq_type << std:endl;
+    abort_handler(-1);
+    break;
   }
 }
 
