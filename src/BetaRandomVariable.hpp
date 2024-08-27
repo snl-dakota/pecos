@@ -515,7 +515,7 @@ inline Real BetaRandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
   default:
     PCerr << "Error: unsupported u-space type " << u_type
 	  << " in BetaRandomVariable::dz_ds_factor()." << std::endl;
-    abort_handler(-1);
+    abort_handler(-1);  return 0.;
   }
 }
 

@@ -311,8 +311,9 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   if (dist_error) {
     PCerr << "Error: mapping failure for distribution parameter " << dist_param
 	  << " in TriangularRandomVariable::dx_ds()." << std::endl;
-    abort_handler(-1); return 0.;
+    abort_handler(-1);
   }
+  return 0.;
 }
 
 

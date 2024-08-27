@@ -844,22 +844,23 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
   std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
     std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
+  case QUADRATURE: {
     if (data_rep->expConfigOptions.combineType) // not guaranteed to use
       return OrthogPolyApproximation::value(x); // tensor indexing
-    else { // Horner's rule approach applicable for tensor indexing
-      if (!expansionCoeffFlag) { // check for required data
-	PCerr << "Error: expansion coefficients not defined in "
-	      << "ProjectOrthogPolyApproximation::value()" << std::endl;
-	abort_handler(-1);
-      }
+    else if (expansionCoeffFlag) { // Horner's rule for tensor indexing
       RealVector accumulator(sharedDataRep->numVars); // init to 0.
       return data_rep->
 	tensor_product_value(x, expansionCoeffs[data_rep->activeKey],
 			     data_rep->expansion_order(),
 			     data_rep->multi_index(), accumulator);
     }
+    else {
+      PCerr << "Error: expansion coefficients not defined in "
+	    << "ProjectOrthogPolyApproximation::value()" << std::endl;
+      abort_handler(-1);  return 0.;
+    }
     break;
+  }
   /*
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     // Horner's rule approach requires storage of tpExpansionCoeffs in
@@ -896,8 +897,7 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
   }
   */
   default: // other cases are total-order expansions
-    return OrthogPolyApproximation::value(x);
-    break;
+    return OrthogPolyApproximation::value(x);  break;
   }
 }
 

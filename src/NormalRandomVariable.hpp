@@ -371,7 +371,7 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   default:
     PCerr << "Error: mapping failure for distribution parameter " << dist_param
 	  << " in NormalRandomVariable::dx_ds()." << std::endl;
-    abort_handler(-1); break;
+    abort_handler(-1); return 0.; break;
   }
 }
 
@@ -390,7 +390,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
   else {
     PCerr << "Error: unsupported u-space type " << u_type
 	  << " in NormalRandomVariable::dx_ds()." << std::endl;
-    abort_handler(-1);
+    abort_handler(-1); return 0.;
   }
 }
 
