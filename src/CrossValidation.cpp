@@ -289,24 +289,24 @@ void MultipleSolutionLinearModelCrossValidationIterator::set_max_num_unique_tole
 void MultipleSolutionLinearModelCrossValidationIterator::collect_fold_data()
 {
   //std::cout << "Processor " << processor_id() << " collecting data\n";
-  if ( !is_master() )
+  if ( !is_leader() )
     { 
 #ifdef HEAT_ENABLE_MPI
-      send( foldTols_, master_processor_id(), MPICommunicator_ ); 
-      send( foldErrors_, master_processor_id(), MPICommunicator_ );
-      send( foldCoefficientStats_, master_processor_id(), MPICommunicator_ );
+      send( foldTols_, leader_processor_id(), MPICommunicator_ ); 
+      send( foldErrors_, leader_processor_id(), MPICommunicator_ );
+      send( foldCoefficientStats_, leader_processor_id(), MPICommunicator_ );
 #endif
     }
   else 
     { 
       for ( int p = 0; p < num_processors(); p++ )
 	{
-	  if ( p != master_processor_id() )
+	  if ( p != leader_processor_id() )
 	    {
 	      std::vector<RealVector> fold_tols, fold_errors;
 	      std::vector<RealMatrix> fold_coefficient_stats;
 	      
-	      //std::cout << "Master process receiving data from processor "
+	      //std::cout << "Leader process receiving data from processor "
 	      //	  << p << std::endl;
 
 #ifdef HEAT_ENABLE_MPI //hack 
@@ -333,7 +333,7 @@ void MultipleSolutionLinearModelCrossValidationIterator::define_unique_tolerance
 {
   int max_num_unique_tols = 0;
   std::set<Real> unique_tols_set;
-  if ( is_master() )
+  if ( is_leader() )
     {
       for ( int iter = 0; iter < num_folds(); iter++ )
 	{
@@ -372,7 +372,7 @@ void MultipleSolutionLinearModelCrossValidationIterator::define_unique_tolerance
 
 void MultipleSolutionLinearModelCrossValidationIterator::compute_scores()
 {
-  if ( is_master() )
+  if ( is_leader() )
     {
       // Each path will have a different set of parameters. Consequently
       // we need to use interpolation to compute the parameters at 
@@ -549,7 +549,7 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
     
   compute_scores();
     
-  if ( is_master() )
+  if ( is_leader() )
     {
       int argmin_index = 0;
       argmin_index = util::argmin( scores_.length(), scores_.values()  );
