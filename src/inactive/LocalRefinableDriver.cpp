@@ -105,7 +105,7 @@ refine_locally(const BoolDeque& refinement_selector)
   }
 
   //The integer index of the current interp point
-  unsigned int masterIndex;
+  unsigned int interp_pts_index;
   unsigned int this_dim_level, this_dim_index;
   Int2DArray childPointIndex1, childPointIndex2;
 
@@ -115,8 +115,8 @@ refine_locally(const BoolDeque& refinement_selector)
     std::distance(interp_points.begin(),interp_points.end());
   for ( unsigned int i = 0; i < current_level_size; ++i ) {
     if ( refinement_selector[i] ) { //refine this point?
-      masterIndex = num_interp_points - current_level_size + i;
-      childPointIndex1 = interp_points[masterIndex].get_level_index();
+      interp_pts_index = num_interp_points - current_level_size + i;
+      childPointIndex1 = interp_points[interp_pts_index].get_level_index();
       childPointIndex2 = childPointIndex1;
       // loop over numVars
       for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {

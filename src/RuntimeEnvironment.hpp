@@ -155,11 +155,11 @@ class ParallelObject
 {
  
 protected:
-  /// The unqiue identifier of the processor
+  /// The unique identifier of the processor
   int processorId_;
 
-  /// The unqiue identifier of the master processor
-  int masterProcessorId_;
+  /// The unique identifier of the leader processor
+  int leaderProcessorId_;
 
   /// The number of processors in MPICommunicator_
   int numProcessors_;
@@ -173,7 +173,7 @@ protected:
 public:
   /// Default constructor
   ParallelObject() :
-    processorId_( 0 ), masterProcessorId_( 0 ), numProcessors_( 1 ),
+    processorId_( 0 ), leaderProcessorId_( 0 ), numProcessors_( 1 ),
     MPICommunicator_( RUNTIME_MPI_COMM_NULL )
   {};
 
@@ -204,16 +204,16 @@ public:
     verbosity_ = verbosity_in;
   }
   
-  /// Determine if the current processor is the master
-  bool is_master()
+  /// Determine if the current processor is the leader
+  bool is_leader()
   {
-    return ( processorId_ == masterProcessorId_ );
+    return ( processorId_ == leaderProcessorId_ );
   };
 
-  /// Return the id of the master processor
-  int master_processor_id()
+  /// Return the id of the leader processor
+  int leader_processor_id()
   {
-    return masterProcessorId_;
+    return leaderProcessorId_;
   };
 
   /// Return the unqiue identifier of the current processor. 

@@ -68,7 +68,7 @@ void UniformRefinablePointSet::refine(const BoolDeque& points)
   }
 
   const unsigned int currentGridSize = num_interp_points; 
-  unsigned int masterIndex;
+  unsigned int map_index;
   IntArray levelIndex;
   IntArray childIndex1(2);
   IntArray childIndex2(2);
@@ -79,8 +79,8 @@ void UniformRefinablePointSet::refine(const BoolDeque& points)
 				      current_level_size_new);
   for ( unsigned int idx = 0; idx < current_level_size; idx++ ) {
     if ( points[idx] ) {
-      masterIndex = currentGridSize - current_level_size + idx;
-      levelIndex = int_index_to_level_index_map[masterIndex];
+      map_index  = currentGridSize - current_level_size + idx;
+      levelIndex = int_index_to_level_index_map[map_index];
       
       /* Need to handle special case where the boundary points at lvl
 	 2 each only have one child */
