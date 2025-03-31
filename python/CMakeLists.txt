@@ -15,7 +15,7 @@ find_package(Python REQUIRED COMPONENTS Interpreter)
 
 add_custom_command(
   OUTPUT ${pydakota_stamp}
-  COMMAND ${Python_EXECUTABLE} setup.py build
+  COMMAND ${Python3_EXECUTABLE} setup.py build
   COMMAND ${CMAKE_COMMAND} -E touch ${pydakota_stamp}
 ##  DEPENDS ${DEPS}
   )
@@ -25,4 +25,4 @@ add_custom_target(pydakota DEPENDS ${pydakota_stamp})
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
   "build;swigpyrun.h")
 
-install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} setup.py install)")
+install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} setup.py install)")
