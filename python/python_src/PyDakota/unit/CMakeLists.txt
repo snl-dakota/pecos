@@ -22,7 +22,7 @@ swig_link_libraries(swig_example ${Python_LIBRARIES})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_swig_example.py
   ${CMAKE_CURRENT_BINARY_DIR}/test_swig_example.py COPY_ONLY)
 add_test(NAME test_swig_example
-  COMMAND "${Python_EXECUTABLE}" "test_swig_example.py"
+  COMMAND "${Python3_EXECUTABLE}" "test_swig_example.py"
           "$<TARGET_FILE_DIR:_swig_example>"
   )
 
