@@ -1167,8 +1167,7 @@ inline bool ActiveKey::decrement_key(short seq_type, size_t seq_index)
   default:
     PCerr << "Error: ActiveKey::decrement_key() unsupported for sequence type "
 	  << seq_type << std::endl;
-    abort_handler(-1);
-    break;
+    abort_handler(-1);  return false;  break;
   }
 }
 
