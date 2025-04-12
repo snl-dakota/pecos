@@ -109,7 +109,7 @@ inline ExpansionConfigOptions::ExpansionConfigOptions():
   combineType(NO_COMBINE), discrepReduction(NO_DISCREPANCY),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refineType(NO_REFINEMENT),*/ refineControl(NO_CONTROL),
-  refineMetric(NO_METRIC), refineStatsType(NO_EXPANSION_STATS),
+  refineMetric(DEFAULT_METRIC), refineStatsType(NO_EXPANSION_STATS),
   maxRefineIterations(100), maxSolverIterations(100),
   convergenceTol(1.e-4), softConvLimit(3)
 { }
