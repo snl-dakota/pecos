@@ -15,6 +15,7 @@
 #ifndef FRECHET_RANDOM_VARIABLE_HPP
 #define FRECHET_RANDOM_VARIABLE_HPP
 
+#include "NormalRandomVariable.hpp"
 #include "RandomVariable.hpp"
 
 namespace Pecos {
