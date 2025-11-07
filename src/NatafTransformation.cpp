@@ -309,10 +309,10 @@ void NatafTransformation::transform_correlations()
 
   // Enumerate the active correlations (ignoring the active variable subset)
   const std::vector<RandomVariable>& x_rv = xDist.random_variables();
-  const ShortArray&               u_types = uDist.random_variable_types();
+  //const ShortArray&             u_types = uDist.random_variable_types();
   size_t rv_i, rv_j, c_i, c_j, v_i, v_j, num_rv = x_rv.size(),
-    num_active_v = (no_v_mask) ? num_rv : active_vars.count(),
-    num_active_c = (no_c_mask) ? num_rv : active_corr.count();
+    num_active_v = (no_v_mask) ? num_rv : active_vars.count();
+  //num_active_c = (no_c_mask) ? num_rv : active_corr.count();
 
   // Loop over active variables using find_{first,next}:
   // RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
@@ -393,7 +393,7 @@ void NatafTransformation::transform_correlations()
 #endif
 
   // could pre-compute L^-1 to avoid solving L u = z repeatedly for u
-  //corrCholeskyFactorZInv.shape(num_active_vars, num_active_vars);
+  //corrCholeskyFactorZInv.shape(num_active_v, num_active_v);
   //corrCholeskyFactorZInv = corrCholeskyFactorZ; // copy
   //RealSolver chol_solver;
   //chol_solver.setMatrix(corrCholeskyFactorZInv); 
