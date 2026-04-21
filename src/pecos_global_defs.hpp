@@ -13,6 +13,7 @@
 #include <cfloat>  // for DBL_MIN, DBL_MAX
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -26,7 +27,11 @@ const double PI = boost::math::constants::pi<double>();
 
 /// special value returned by index() when entry not found
 //const size_t _NPOS  = ~(size_t)0; // one's complement
-const size_t SZ_MAX = std::numeric_limits<size_t>::max();
+// Keep this sentinel aligned with Dakota/Pydantic/JSON-schema materialization.
+// Dakota canonicalizes integer defaults through int64_t, so PECOS must use the
+// same value when comparing "unset/default" size_t quantities passed across the
+// package boundary.
+const size_t SZ_MAX = static_cast<size_t>(std::numeric_limits<int64_t>::max());
 const size_t _NPOS  = SZ_MAX; // alias old definition
 
 /// used in ostream data output functions
