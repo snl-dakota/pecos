@@ -353,7 +353,8 @@ namespace util {
   
     /**\copydoc  LinearSystemSolver::get_final_solutions()*/
     virtual void get_final_solutions(RealMatrix &result_0) const{
-      shape_uninitialized(result_0,solutions_[0].numRows(),boost::numeric_cast<int>(solutions_.size()));
+      shape_uninitialized(result_0, solutions_[0].numRows(),
+                          static_cast<int>(solutions_.size()));
       for (size_t j=0; j<solutions_.size(); ++j){
         int num_solutions = solutions_[j].numCols();
         for (size_t i=0; i<(size_t)solutions_[j].numRows(); ++i)
@@ -364,7 +365,7 @@ namespace util {
     /**\copydoc  LinearSystemSolver::get_final_residuals()*/
     virtual void get_final_residuals(RealVector &result_0) const{
       size_t num_rhs = residuals_.size();
-      size_uninitialized(result_0, boost::numeric_cast<int>(num_rhs));
+      size_uninitialized(result_0, static_cast<int>(num_rhs));
       for (size_t i=0; i<num_rhs; ++i){
         int num_solutions = residuals_[i].length();
         result_0[i] = residuals_[i][num_solutions-1];
