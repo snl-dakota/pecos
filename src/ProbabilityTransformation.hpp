@@ -128,6 +128,23 @@ public:
 				 const RealVector& fn_grad_x,
 				 const SizetArray& x_dvv);
 
+  /// Transformation routine for Hessian matrix from u-space to x-space
+  virtual void trans_hess_U_to_X(const RealSymMatrix& fn_hess_u,
+				 SizetMultiArrayConstView u_cv_ids,
+				 RealSymMatrix& fn_hess_x,
+				 SizetMultiArrayConstView x_cv_ids,
+				 const RealVector& x_vars,
+				 const RealVector& fn_grad_u,
+				 const SizetArray& x_dvv);
+  /// Transformation routine for Hessian matrix from u-space to x-space
+  virtual void trans_hess_U_to_X(const RealSymMatrix& fn_hess_u,
+				 RealSymMatrix& fn_hess_x,
+				 SizetMultiArrayConstView x_cv_ids,
+				 const RealMatrix& jacobian_ux,
+				 const RealSymMatrixArray& hessian_ux,
+				 const RealVector& fn_grad_u,
+				 const SizetArray& x_dvv);
+
   /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
   virtual void jacobian_dX_dU(const RealVector& x_vars,
 			      SizetMultiArrayConstView x_cv_ids,
@@ -165,6 +182,11 @@ public:
 			       SizetMultiArrayConstView x_cv_ids,
 			       SizetMultiArrayConstView u_cv_ids,
 			       RealSymMatrixArray& hessian_xu);
+  /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
+  virtual void hessian_d2U_dX2(const RealVector& x_vars,
+			       SizetMultiArrayConstView x_cv_ids,
+			       SizetMultiArrayConstView u_cv_ids,
+			       RealSymMatrixArray& hessian_ux);
 
   //
   //- Heading: Member functions

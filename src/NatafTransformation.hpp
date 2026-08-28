@@ -113,6 +113,21 @@ protected:
 			 const RealSymMatrixArray& hessian_xu,
 			 const RealVector& fn_grad_x, const SizetArray& x_dvv);
 
+  /// Transformation routine for Hessian matrix from u-space to x-space
+  void trans_hess_U_to_X(const RealSymMatrix& fn_hess_u,
+			 SizetMultiArrayConstView u_cv_ids,
+			 RealSymMatrix& fn_hess_x,
+			 SizetMultiArrayConstView x_cv_ids,
+			 const RealVector& x_vars, const RealVector& fn_grad_u,
+			 const SizetArray& x_dvv);
+  /// Transformation routine for Hessian matrix from u-space to x-space
+  void trans_hess_U_to_X(const RealSymMatrix& fn_hess_u,
+			 RealSymMatrix& fn_hess_x,
+			 SizetMultiArrayConstView x_cv_ids,
+			 const RealMatrix& jacobian_ux,
+			 const RealSymMatrixArray& hessian_ux,
+			 const RealVector& fn_grad_u, const SizetArray& x_dvv);
+
   /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
   void jacobian_dX_dU(const RealVector& x_vars,
 		      SizetMultiArrayConstView x_cv_ids,
@@ -150,6 +165,12 @@ protected:
 		       SizetMultiArrayConstView x_cv_ids,
 		       SizetMultiArrayConstView u_cv_ids,
 		       RealSymMatrixArray& hessian_xu);
+
+  /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
+  void hessian_d2U_dX2(const RealVector& x_vars,
+		       SizetMultiArrayConstView x_cv_ids,
+		       SizetMultiArrayConstView u_cv_ids,
+		       RealSymMatrixArray& hessian_ux);
 
 private:
 
@@ -199,6 +220,29 @@ private:
 		       SizetMultiArrayConstView u_cv_ids,
 		       RealSymMatrixArray& hessian_xz);
 
+  /// Hessian of x(z) mapping obtained from differentiation of jacobian_dX_dZ()
+  void hessian_d2Z_dX2(const RealVector& x_vars,
+		       SizetMultiArrayConstView x_cv_ids,
+		       SizetMultiArrayConstView u_cv_ids,
+		       RealSymMatrixArray& hessian_zx);
+
+  bool nonlinear_variables_mapping(SizetMultiArrayConstView x_cv_ids,
+				   SizetMultiArrayConstView u_cv_ids);
+
+  void compute_reindexing(const SizetArray& dvv,
+			  SizetMultiArrayConstView cv_ids,
+			  SizetArray& dvv_index_array);
+  void gradient_reindex(const SizetArray& dvv_index_array,
+			const RealVector& fn_grad,
+			RealVector& fn_grad_reindex);
+  void hessian_reindex(const SizetArray& dvv_index_array,
+		       const RealSymMatrix& fn_hess,
+		       RealSymMatrix& fn_hess_reindex);
+  void hessian_index_restore(const SizetArray& dvv_index_array,
+			     size_t num_deriv_v,
+			     const RealSymMatrix& fn_hess_reindex,
+			     RealSymMatrix& fn_hess);
+
   //
   //- Heading: Data
   //
@@ -219,6 +263,102 @@ inline NatafTransformation::NatafTransformation():
 
 inline NatafTransformation::~NatafTransformation()
 { }
+
+
+inline bool NatafTransformation::
+nonlinear_variables_mapping(SizetMultiArrayConstView x_cv_ids,
+			    SizetMultiArrayConstView u_cv_ids)
+{
+  size_t i, num_v = x_cv_ids.size(), x_cv_index, u_cv_index;
+  short x_type, u_type;
+  for (i=0; i<num_v; ++i) {
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    x_type = xDist.random_variable_type(x_cv_index);
+    u_type = uDist.random_variable_type(u_cv_index);
+    if ( ( ( x_type == CONTINUOUS_RANGE || x_type == UNIFORM ||
+	     x_type == CONTINUOUS_INTERVAL_UNCERTAIN ) &&
+	   u_type   != STD_UNIFORM ) ||
+	 ( x_type   == NORMAL      && u_type != STD_NORMAL ) ||
+	 ( x_type   == EXPONENTIAL && u_type != STD_EXPONENTIAL ) ||
+	 ( x_type   == BETA        && u_type != STD_BETA   ) ||
+	 ( x_type   == GAMMA       && u_type != STD_GAMMA  ) ||
+	 ( ( x_type == BOUNDED_NORMAL    || x_type == LOGNORMAL  ||
+	     x_type == BOUNDED_LOGNORMAL || x_type == LOGUNIFORM ||
+	     x_type == TRIANGULAR        || x_type == GUMBEL     ||
+	     x_type == FRECHET           || x_type == WEIBULL ) &&
+	   x_type   != u_type ) ||
+	 ( x_type   == HISTOGRAM_BIN && u_type != STD_UNIFORM &&
+	   x_type   != u_type ) )
+      return true;
+  }
+  return false;
+}
+
+
+inline void NatafTransformation::
+compute_reindexing(const SizetArray& dvv, SizetMultiArrayConstView cv_ids,
+		   SizetArray& dvv_index_array)
+{
+  size_t i, num_v = cv_ids.size();
+  dvv_index_array.resize(num_v);
+  for (i=0; i<num_v; ++i)
+    dvv_index_array[i] = find_index(dvv, cv_ids[i]);
+}
+
+inline void NatafTransformation::
+gradient_reindex(const SizetArray& dvv_index_array, const RealVector& fn_grad,
+		 RealVector& fn_grad_reindex)
+{
+  size_t i, dvv_index, num_v = dvv_index_array.size();
+  if (fn_grad_reindex.length() != num_v) fn_grad_reindex.size(num_v);
+  else                                   fn_grad_reindex = 0.;
+  for (i=0; i<num_v; ++i) {
+    dvv_index = dvv_index_array[i];
+    if (dvv_index != _NPOS)
+      fn_grad_reindex[i] = fn_grad(dvv_index);
+  }
+}
+
+
+inline void NatafTransformation::
+hessian_reindex(const SizetArray& dvv_index_array, const RealSymMatrix& fn_hess,
+		RealSymMatrix& fn_hess_reindex)
+{
+  size_t i, j, dvv_index_i, dvv_index_j, num_v = dvv_index_array.size();
+  if (fn_hess_reindex.numRows() != num_v) fn_hess_reindex.shape(num_v);
+  else                                    fn_hess_reindex = 0.;
+  for (i=0; i<num_v; ++i) {
+    dvv_index_i = dvv_index_array[i];
+    if (dvv_index_i != _NPOS) {
+      for (j=0; j<num_v; ++j) {
+	dvv_index_j = dvv_index_array[j];
+	if (dvv_index_j != _NPOS)
+	  fn_hess_reindex(i, j) = fn_hess(dvv_index_i, dvv_index_j);
+      }
+    }
+  }
+}
+
+
+inline void NatafTransformation::
+hessian_index_restore(const SizetArray& dvv_index_array, size_t num_deriv_v,
+		      const RealSymMatrix& fn_hess_reindex,
+		      RealSymMatrix& fn_hess)
+{
+  if (fn_hess.numRows() != num_deriv_v) fn_hess.shape(num_deriv_v);
+  else                                  fn_hess = 0.;
+  size_t i, j, dvv_index_i, dvv_index_j, num_v = dvv_index_array.size();
+  for (i=0; i<num_v; ++i) {
+    dvv_index_i = dvv_index_array[i];
+    if (dvv_index_i != _NPOS) {
+      for (j=0; j<num_v; ++j) {
+	dvv_index_j = dvv_index_array[j];
+	if (dvv_index_j != _NPOS)
+	  fn_hess(dvv_index_i, dvv_index_j) = fn_hess_reindex(i, j);
+      }
+    }
+  }
+}
 
 } // namespace Pecos
 

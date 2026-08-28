@@ -677,35 +677,33 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
   jacobian_dX_dU(x_vars, x_cv_ids, u_cv_ids, jacobian_xu);
 
   RealSymMatrixArray hessian_xu;
-  bool nonlinear_vars_map = false;
-  size_t i, num_v = x_vars.length(), x_cv_index, u_cv_index;
-  short x_type, u_type;
-  for (i=0; i<num_v; ++i) {
-    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
-    x_type = xDist.random_variable_type(x_cv_index);
-    u_type = uDist.random_variable_type(u_cv_index);
-    if ( ( ( x_type == CONTINUOUS_RANGE || x_type == UNIFORM ||
-	     x_type == CONTINUOUS_INTERVAL_UNCERTAIN ) &&
-	   u_type   != STD_UNIFORM ) ||
-	 ( x_type   == NORMAL      && u_type != STD_NORMAL ) ||
-	 ( x_type   == EXPONENTIAL && u_type != STD_EXPONENTIAL ) ||
-	 ( x_type   == BETA        && u_type != STD_BETA   ) ||
-	 ( x_type   == GAMMA       && u_type != STD_GAMMA  ) ||
-	 ( ( x_type == BOUNDED_NORMAL    || x_type == LOGNORMAL  ||
-	     x_type == BOUNDED_LOGNORMAL || x_type == LOGUNIFORM ||
-	     x_type == TRIANGULAR        || x_type == GUMBEL     ||
-	     x_type == FRECHET           || x_type == WEIBULL ) &&
-	   x_type   != u_type ) ||
-	 ( x_type   == HISTOGRAM_BIN && u_type != STD_UNIFORM &&
-	   x_type   != u_type ) )
-      { nonlinear_vars_map = true; break; }
-  }
-
-  if (nonlinear_vars_map) // nonlinear transformation has Hessian
+  if (nonlinear_variables_mapping(x_cv_ids, u_cv_ids)) // has Hessian
     hessian_d2X_dU2(x_vars, x_cv_ids, u_cv_ids, hessian_xu);
 
   trans_hess_X_to_U(fn_hess_x, x_cv_ids, fn_hess_u, jacobian_xu, hessian_xu,
 		    fn_grad_x, x_dvv);
+}
+
+
+/** This procedure tranforms a Hessian matrix from the original
+    user-defined x-space (where evaluations are performed) to
+    uncorrelated standard normal space (u-space).  x_vars is the
+    vector of the random variables in x-space. */
+void NatafTransformation::
+trans_hess_U_to_X(const RealSymMatrix& fn_hess_u,
+		  SizetMultiArrayConstView u_cv_ids, RealSymMatrix& fn_hess_x,
+		  SizetMultiArrayConstView x_cv_ids, const RealVector& x_vars,
+		  const RealVector& fn_grad_u, const SizetArray& x_dvv)
+{
+  RealMatrix jacobian_ux;
+  jacobian_dU_dX(x_vars, x_cv_ids, u_cv_ids, jacobian_ux);
+
+  RealSymMatrixArray hessian_ux;
+  if (nonlinear_variables_mapping(x_cv_ids, u_cv_ids)) // has Hessian
+    hessian_d2U_dX2(x_vars, x_cv_ids, u_cv_ids, hessian_ux);
+
+  trans_hess_U_to_X(fn_hess_u, fn_hess_x, x_cv_ids, jacobian_ux, hessian_ux,
+		    fn_grad_u, x_dvv);
 }
 
 
@@ -723,12 +721,11 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
 		  const RealVector& fn_grad_x, const SizetArray& x_dvv)
 {
   // Jacobian dimensions = length of random variables = model.cv()
-  int  num_v   = jacobian_xu.numRows();
+  int  num_v   = jacobian_xu.numRows();  size_t i, j, k;
   bool std_dvv = (x_dvv == x_cv_ids); // standard DVV
   bool nonlinear_vars_map = !hessian_xu.empty();
 
-  RealSymMatrix fn_hess_x_std, fn_hess_u_std;
-  RealVector fn_grad_x_std;
+  RealSymMatrix fn_hess_x_std, fn_hess_u_std;  RealVector fn_grad_x_std;
   SizetArray dvv_index_array;
   if (std_dvv) {
     if (fn_hess_x.numRows() != num_v) {
@@ -746,36 +743,17 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
       fn_hess_u.shape(num_v);
   }
   else { // extract relevant DVV components from fn_grad_x & fn_hess_x
-    fn_hess_x_std.shape(num_v);
-    fn_hess_u_std.shape(num_v);
+    compute_reindexing(x_dvv, x_cv_ids, dvv_index_array);
     if (nonlinear_vars_map)
-      fn_grad_x_std.size(num_v);
-    size_t i, j, dvv_index_i, dvv_index_j, num_deriv_vars = x_dvv.size();
-    dvv_index_array.resize(num_v);
-    for (i=0; i<num_v; ++i)
-      dvv_index_array[i] = dvv_index_i = find_index(x_dvv, x_cv_ids[i]);
-    if (fn_hess_u.numRows() != num_deriv_vars)
-      fn_hess_u.shape(num_deriv_vars);
-    // extract relevant DVV components from fn_hess_x
-    for (i=0; i<num_v; ++i) {
-      dvv_index_i = dvv_index_array[i];
-      if (dvv_index_i != _NPOS) {
-	if (nonlinear_vars_map)
-	  fn_grad_x_std[i] = fn_grad_x(dvv_index_i);
-	for (j=0; j<num_v; ++j) {
-	  dvv_index_j = dvv_index_array[j];
-	  if (dvv_index_j != _NPOS)
-	    fn_hess_x_std(i, j) = fn_hess_x(dvv_index_i, dvv_index_j);
-	}
-      }
-    }
+      gradient_reindex(dvv_index_array, fn_grad_x, fn_grad_x_std);
+    hessian_reindex(dvv_index_array, fn_hess_x, fn_hess_x_std);
+    fn_hess_u_std.shape(num_v);
   }
-  const RealVector&    fn_grad_x_trans = (std_dvv) ? fn_grad_x : fn_grad_x_std;
   const RealSymMatrix& fn_hess_x_trans = (std_dvv) ? fn_hess_x : fn_hess_x_std;
   RealSymMatrix&       fn_hess_u_trans = (std_dvv) ? fn_hess_u : fn_hess_u_std;
 
   // transform hess_x -> hess_u
-  // d^2G/dU^2 = dG/dX^T d^2X/dU^2 + dX/dU^T d^2G/dX^2 dX/dU
+  // d^2G/dU^2 = dG/dX^T . d^2X/dU^2 + dX/dU^T d^2G/dX^2 dX/dU
   // Note: G(u) may have curvature even if g(x) is linear due to first term.
   Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., fn_hess_x_trans,
                                jacobian_xu, fn_hess_u_trans);
@@ -784,14 +762,18 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
 #endif
 
   if (nonlinear_vars_map) { // nonlinear transformation has Hessian
-    for (int i=0; i<num_v; ++i) {
-      //hessian_xu[i].Scale(fn_grad_x[i]);
-      //fn_hess_u += hessian_xu[i];
-      const Real&          fn_grad_x_i  = fn_grad_x_trans[i];
+    const RealVector& fn_grad_x_trans = (std_dvv) ? fn_grad_x : fn_grad_x_std;
+    Real fn_grad_x_i;
+    for (i=0; i<num_v; ++i) {
       const RealSymMatrix& hessian_xu_i = hessian_xu[i];
-      for (int j=0; j<num_v; ++j)
-	for (int k=0; k<=j; k++)
-	  fn_hess_u_trans(j,k) += fn_grad_x_i * hessian_xu_i(j,k);
+      fn_grad_x_i = fn_grad_x_trans[i];
+      if (xDist.correlation()) {
+	for (j=0; j<num_v; ++j)
+	  for (k=0; k<=j; k++)
+	    fn_hess_u_trans(j,k) += fn_grad_x_i * hessian_xu_i(j,k);
+      }
+      else // collapse to diagonals if uncorrelated
+	fn_hess_u_trans(i,i) = fn_grad_x_i * hessian_xu_i(i,i);
 #ifdef DEBUG
       PCout << "\nhessian_xu[" << i << "]:\n" << hessian_xu_i
 	    << "fn_hess_u_trans increment:\n" << fn_hess_u_trans;
@@ -799,23 +781,96 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
     }
   }
 
-  if (!std_dvv) { // copy relevant DVV components back into fn_hess_u
-    size_t i, j, dvv_index_i, dvv_index_j;
-    for (i=0; i<num_v; ++i) {
-      dvv_index_i = dvv_index_array[i];
-      if (dvv_index_i != _NPOS) {
-	for (j=0; j<num_v; ++j) {
-	  dvv_index_j = dvv_index_array[j];
-	  if (dvv_index_j != _NPOS)
-	    fn_hess_u(dvv_index_i, dvv_index_j) = fn_hess_u_trans(i, j);
-	}
-      }
-    }
-  }
-
+  if (!std_dvv) // copy relevant DVV components back into fn_hess_u
+    hessian_index_restore(dvv_index_array, x_dvv.size(),
+			  fn_hess_u_trans, fn_hess_u);
 #ifdef DEBUG
   PCout << "Transformed fn_hess_x:\n" << fn_hess_x
         << "to fn_hess_u:\n" << fn_hess_u;
+#endif
+}
+
+
+/** This procedure tranforms a Hessian matrix from the original
+    user-defined x-space (where evaluations are performed) to
+    uncorrelated standard normal space (u-space).  This overloaded
+    form allows for the separate calculation of jacobian_xu and
+    hessian_xu, since these are independent of the response function
+    index and can be pulled outside response function loops. */
+void NatafTransformation::
+trans_hess_U_to_X(const RealSymMatrix& fn_hess_u, RealSymMatrix& fn_hess_x,
+		  SizetMultiArrayConstView x_cv_ids,
+		  const RealMatrix& jacobian_ux,
+		  const RealSymMatrixArray& hessian_ux,
+		  const RealVector& fn_grad_u, const SizetArray& x_dvv)
+{
+  // Jacobian dimensions = length of random variables = model.cv()
+  int  num_v   = jacobian_ux.numRows();  size_t i, j, k;
+  bool std_dvv = (x_dvv == x_cv_ids); // standard DVV
+  bool nonlinear_vars_map = !hessian_ux.empty();
+
+  RealSymMatrix fn_hess_x_std, fn_hess_u_std;  RealVector fn_grad_u_std;
+  SizetArray dvv_index_array;
+  if (std_dvv) {
+    if (fn_hess_u.numRows() != num_v) {
+      PCerr << "Error: bad fn_hess_u dimension in NatafTransformation::"
+	    << "trans_hess_U_to_X()." << std::endl;
+      abort_handler(-1);
+    }
+    if ( nonlinear_vars_map &&
+	 ( fn_grad_u.length() != num_v || hessian_ux.size() != num_v ) ) {
+      PCerr << "Error: bad dimension in NatafTransformation::"
+	    << "trans_hess_U_to_X()." << std::endl;
+      abort_handler(-1);
+    }
+    if (fn_hess_x.numRows() != num_v)
+      fn_hess_x.shape(num_v);
+  }
+  else { // extract relevant DVV components from fn grads,hessians
+    compute_reindexing(x_dvv, x_cv_ids, dvv_index_array);
+    if (nonlinear_vars_map)
+      gradient_reindex(dvv_index_array, fn_grad_u, fn_grad_u_std);
+    hessian_reindex(dvv_index_array, fn_hess_u, fn_hess_u_std);
+    fn_hess_x_std.shape(num_v);
+  }
+  const RealSymMatrix& fn_hess_u_trans = (std_dvv) ? fn_hess_u : fn_hess_u_std;
+  RealSymMatrix&       fn_hess_x_trans = (std_dvv) ? fn_hess_x : fn_hess_x_std;
+
+  // transform hess_u -> hess_x
+  // d^2G/dX^2 = dG/dU^T . d^2U/dX^2 + dU/dX^T d^2G/dU^2 dU/dX
+  // Note: G(u) may have curvature even if g(x) is linear due to first term.
+  Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., fn_hess_u_trans,
+                               jacobian_ux, fn_hess_x_trans);
+#ifdef DEBUG
+  PCout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_x_trans;
+#endif
+
+  if (nonlinear_vars_map) { // nonlinear transformation has Hessian
+    const RealVector& fn_grad_u_trans = (std_dvv) ? fn_grad_u : fn_grad_u_std;
+    Real fn_grad_u_i;
+    for (i=0; i<num_v; ++i) {
+      const RealSymMatrix& hessian_ux_i = hessian_ux[i];
+      fn_grad_u_i = fn_grad_u_trans[i];
+      if (xDist.correlation()) {
+	for (j=0; j<num_v; ++j)
+	  for (k=0; k<=j; k++)
+	    fn_hess_x_trans(j,k) += fn_grad_u_i * hessian_ux_i(j,k);
+      }
+      else
+	fn_hess_x_trans(i,i) = fn_grad_u_i * hessian_ux_i(i,i);
+#ifdef DEBUG
+      PCout << "\nhessian_ux[" << i << "]:\n" << hessian_ux_i
+	    << "fn_hess_x_trans increment:\n" << fn_hess_x_trans;
+#endif
+    }
+  }
+
+  if (!std_dvv) // copy relevant DVV components back into fn_hess_x
+    hessian_index_restore(dvv_index_array, x_dvv.size(),
+			  fn_hess_x_trans, fn_hess_x);
+#ifdef DEBUG
+  PCout << "Transformed fn_hess_u:\n" << fn_hess_u
+        << "to fn_hess_x:\n" << fn_hess_x;
 #endif
 }
 
@@ -991,7 +1046,8 @@ jacobian_dZ_dX(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
       default:
 	trans_X_to_Z(x_vars[i], x_cv_index, z_var, u_cv_index);
 	jacobian_zx(i, i)
-	  = x_rv_i.pdf(x_vars[i]) / NormalRandomVariable::std_pdf(z_var); break;
+	  = x_rv_i.pdf(x_vars[i]) / NormalRandomVariable::std_pdf(z_var);
+	break;
       }
     else if (u_type == STD_UNIFORM) {
       //trans_X_to_Z(x_vars[i], z_var, i);
@@ -1309,8 +1365,8 @@ hessian_d2X_dU2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
     if (hessian_xu.size() != num_v)
       hessian_xu.resize(num_v);
     for (int i=0; i<num_v; ++i) {
-      // d^2X/dU^2 = dX/dZ^T d^2Z/dU^2 + dZ/dU^T d^2X/dZ^2 dZ/dU
-      //           = L^T d^2X/dZ^2 L
+      // d^2X/dU^2 = dX/dZ . d^2Z/dU^2 + dZ/dU^T d^2X/dZ^2 dZ/dU
+      //           = L^T d^2X/dZ^2 L      (since d^2Z/dU^2 = 0)
       if (hessian_xu[i].numRows() != num_v)
 	hessian_xu[i].shape(num_v);
       Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., hessian_xz[i],
@@ -1319,6 +1375,61 @@ hessian_d2X_dU2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
   }
   else // d^2X/dU^2 = d^2X/dZ^2 since dZ/dU = I
     hessian_d2X_dZ2(x_vars, x_cv_ids, u_cv_ids, hessian_xu);
+}
+
+
+/** This procedure computes the Hessian of the transformation u(x).
+    hessian_ux is a 3D tensor modeled as an array of matrices, where
+    the i_th matrix is d^2U_i/dX^2. */
+void NatafTransformation::
+hessian_d2U_dX2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		SizetMultiArrayConstView u_cv_ids,
+		RealSymMatrixArray& hessian_ux)
+{
+  if (xDist.correlation()) {
+    int i, j, num_v = x_vars.length();
+    RealSymMatrixArray hessian_zx(num_v); // d^2Z/dX^2
+    hessian_d2Z_dX2(x_vars, u_cv_ids, x_cv_ids, hessian_zx);
+
+    RealSolver factor_inverter;
+    RealMatrix inv_chol_factor = corrCholeskyFactorZ; // copy
+    factor_inverter.setMatrix( Teuchos::rcp(&inv_chol_factor, false) );
+    factor_inverter.invert(); // L^{-1} in place
+    // *** TO DO: helper that includes equilibration, solveToRefined, ...
+
+    if (hessian_ux.size() != num_v)
+      hessian_ux.resize(num_v);
+    for (i=0; i<num_v; ++i) {
+      //const RealSymMatrix& hessian_zx_i = hessian_zx[i];
+      RealSymMatrix& hessian_ux_i = hessian_ux[i];
+      if (hessian_ux_i.numRows() != num_v) hessian_ux_i.shape(num_v);
+      else                                 hessian_ux_i = 0.;
+
+      // d^2U_i/dX^2 = dU_i/dZ . d^2Z/dX^2 + dZ/dX^T d^2U/dZ^2 dZ/dX
+      //             = L^{-1}  . d^2Z/dX^2    (since d^2U/dZ^2 = 0)
+      // This is NOT a matrix-matrix product (which would lose symmetry from L)
+      //hess_ux_i.multiply(Teuchos::RIGHT_SIDE, 1., hessian_zx[i],
+      //		   chol_factor_inv, 0.); // WRONG!
+      // but rather an inner product of a row vector of L-inv with a 3D tensor.
+      // > Summation of symmetric matrices with single scale factor remains
+      //   symmetric (indices J,K with scale per index I)
+      // > as shown in trans_hess_U_to_X(), entries from the fn_grad_u vector
+      //   scale the i-th Hessian matrix for each U in the matrix array.
+      // > In this context L-inv(i,:) scale the i-th Hessian matrix for i-th U.
+      //Real inv_L_i = inv_chol_factor(,); // ***
+      //for (j=0; j<num_v; ++j)
+      //  for (k=0; k<=j; k++)
+      //    hessian_ux_i(j,k) += inv_L_i * hessian_zx_i(j,k);
+
+      // zx is 1-to-1 --> each hessian_zx_i has 1 term
+      for (j=0; j<=i; ++j)
+	hessian_ux_i(j,j) += inv_chol_factor(i,j) * // row vector of du_i / dz
+	                     hessian_zx[j](j,j); // 1-to-1: only j,j,j defined
+    }
+  }
+  else // d^2X/dU^2 = d^2X/dZ^2 since dZ/dU = I
+    hessian_d2Z_dX2(x_vars, u_cv_ids, x_cv_ids, hessian_ux);
+  // *** TO DO: copy_data() from RSM array to RM array
 }
 
 
@@ -1353,7 +1464,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
   if (hessian_xz.size() != num_v)
     hessian_xz.resize(num_v);
 
-  Real x, z, dx_dz, pdf; short x_type, u_type; size_t x_cv_index, u_cv_index;
+  Real x, z, dx_dz, x_pdf; short x_type, u_type; size_t x_cv_index, u_cv_index;
   for (int i=0; i<num_v; ++i) {
     x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
     const RandomVariable&   x_rv_i = xDist.random_variable(x_cv_index);
@@ -1375,16 +1486,16 @@ hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
       }
       case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
       case UNIFORM:          case HISTOGRAM_BIN: // pdf_grad is zero
-	x = x_vars[i]; trans_X_to_Z(x, x_cv_index, z, u_cv_index);
+	x = x_vars[i];  trans_X_to_Z(x, x_cv_index, z, u_cv_index);
 	dx_dz = NormalRandomVariable::std_pdf(z) / x_rv_i.pdf(x);
 	hessian_xz[i](i, i) = -dx_dz * z;
 	break;
       default:
-	x = x_vars[i]; trans_X_to_Z(x, x_cv_index, z, u_cv_index);
-	pdf = x_rv_i.pdf(x);
-	dx_dz = NormalRandomVariable::std_pdf(z) / pdf;
+	x = x_vars[i];  trans_X_to_Z(x, x_cv_index, z, u_cv_index);
+	x_pdf = x_rv_i.pdf(x);
+	dx_dz = NormalRandomVariable::std_pdf(z) / x_pdf;
 	hessian_xz[i](i, i)
-	  = -dx_dz * (z + x_rv_i.pdf_gradient(x) * dx_dz / pdf);
+	  = -dx_dz * (z + x_rv_i.pdf_gradient(x) * dx_dz / x_pdf);
 	break;
       }
     else if (u_type == STD_UNIFORM)
@@ -1396,16 +1507,17 @@ hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
 	Real l_bnd;  x_rv_i.pull_parameter(LU_LWR_BND, l_bnd);
 	Real u_bnd;  x_rv_i.pull_parameter(LU_UPR_BND, u_bnd);
 	Real log_range = std::log(u_bnd) - std::log(l_bnd);
-	hessian_xz[i](i, i) = log_range * log_range * x_vars[i] / 4.; break;
+	hessian_xz[i](i, i) = log_range * log_range * x_vars[i] / 4.;
+	break;
       }
       default:
-	x = x_vars[i]; pdf = x_rv_i.pdf(x);
+	x = x_vars[i];  x_pdf = x_rv_i.pdf(x);
 	//trans_X_to_Z(x, x_cv_index, z, u_cv_index); 
 	//dx_dz = UniformRandomVariable::std_pdf(z) / pdf;
 
 	// don't bother to compute z constant pdf eval:
-	dx_dz = UniformRandomVariable::std_pdf(0.) / pdf;
-	hessian_xz[i](i, i) = -dx_dz * dx_dz * x_rv_i.pdf_gradient(x) / pdf;
+	dx_dz = UniformRandomVariable::std_pdf(0.) / x_pdf;
+	hessian_xz[i](i, i) = -dx_dz * dx_dz * x_rv_i.pdf_gradient(x) / x_pdf;
 	break;
       }
     else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
@@ -1415,6 +1527,95 @@ hessian_d2X_dZ2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
     else {
       PCerr << "Error: unsupported variable mapping for variable " << i
 	    << " in NatafTransformation::hessian_d2X_dZ2()" << std::endl;
+      abort_handler(-1);
+    }
+  }
+}
+
+
+/** This procedure computes the Hessian of the transformation x(z).
+    hessian_zx is a 3D tensor modeled as an array of matrices, where
+    the i_th matrix is d^2Z_i/dX^2. */
+void NatafTransformation::
+hessian_d2Z_dX2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
+		SizetMultiArrayConstView u_cv_ids,
+		RealSymMatrixArray& hessian_zx)
+{
+  // This routine calculates the Hessian of the transformation x(z):
+  //
+  // For z type is STD_NORMAL:
+  // d^2z/dx^2 = d/dx (dz/dx) = d/dx ( f(x)/phi(z) )
+  //           = (phi(z) f'(x) - f(x) phi'(z) dz/dx) / phi^2(z)
+  //           = (f'(x) + z f(x) dz/dx) / phi(z)       [since phi'(z)=-z phi(z)]
+  //           = f'(x) / phi(z) + z [dz/dx]^2          [since dz/dx=f(x)/phi(z)]
+  //
+  // For z type is STD_UNIFORM:
+  // d^2z/dx^2 = d/dx (dz/dx) = d/dx ( f(x)/U(z) ) where U(z) = constant over z
+  //           = (U(z) f'(x) - f(x) U'(z) dz/dx) / U^2(z)             [ U' = 0 ]
+  //           = f'(x) / U(z)                    [ same as d/dx [ 1/U-bar f(x) ]
+  //
+  // This requires the additional calculation of f'(x), the derivative of
+  // the PDF.  For cases with f'(x) = 0 (e.g., uniform), the expression can
+  // be simplified to d^2x/dz^2 = -z dx/dz
+
+  int num_v = x_vars.length();
+  if (hessian_zx.size() != num_v)
+    hessian_zx.resize(num_v);
+
+  Real x, z, dz_dx, phi_z; short x_type, u_type; size_t x_cv_index, u_cv_index;
+  for (int i=0; i<num_v; ++i) {
+    x_cv_index = x_cv_ids[i] - 1;  u_cv_index = u_cv_ids[i] - 1;
+    const RandomVariable&   x_rv_i = xDist.random_variable(x_cv_index);
+    x_type = x_rv_i.type(); u_type = uDist.random_variable_type(u_cv_index);
+    if (hessian_zx[i].numRows() != num_v)
+      hessian_zx[i].shape(num_v);
+    // each Hessian has a single entry on the diagonal as defined by
+    // differentiation of jacobian_dX_dZ()
+
+    if (u_type == x_type)
+      hessian_zx[i](i, i) = 0.;
+    else if (u_type == STD_NORMAL)
+      switch (x_type) {
+      case NORMAL:
+	hessian_zx[i](i,i) = 0.; break;
+      case LOGNORMAL: {
+	// dx = x zeta dz --> dz_dx = 1/(zeta x)
+	// d^2z_dx^2 = d/dx [1/(zeta x)] = -1/(zeta x^2)
+	x = x_vars[i];  Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
+	hessian_zx[i](i,i) = -1./(zeta * x * x);  break;
+      }
+      case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
+      case UNIFORM:          case HISTOGRAM_BIN: // pdf_grad is zero
+	x = x_vars[i];  trans_X_to_Z(x, x_cv_index, z, u_cv_index);
+	dz_dx = x_rv_i.pdf(x) / NormalRandomVariable::std_pdf(z);
+	hessian_zx[i](i,i) = z * dz_dx * dz_dx;
+	break;
+      default:
+	x = x_vars[i];  trans_X_to_Z(x, x_cv_index, z, u_cv_index);
+	phi_z = NormalRandomVariable::std_pdf(z);
+	dz_dx = x_rv_i.pdf(x) / phi_z;
+	hessian_zx[i](i,i) = x_rv_i.pdf_gradient(x) / phi_z + z * dz_dx * dz_dx;
+	break;
+      }
+    else if (u_type == STD_UNIFORM)
+      switch (x_type) {
+      case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
+      case UNIFORM:          case HISTOGRAM_BIN:
+	hessian_zx[i](i,i) = 0.; break;
+      default:
+	x = x_vars[i]; //trans_X_to_Z(x, x_cv_index, z, u_cv_index);
+	// don't bother to compute z -> U(z) since constant pdf
+	hessian_zx[i](i,i) = x_rv_i.pdf_gradient(x)
+	                   / UniformRandomVariable::std_pdf(0.);
+	break;
+      }
+    else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
+	      (u_type == STD_GAMMA       && x_type == GAMMA)       ||
+	      (u_type == STD_BETA        && x_type == BETA) )
+      hessian_zx[i](i,i) = 0.;
+    else {
+      PCerr << "Error: unsupported variable mapping for variable " << i
+	    << " in NatafTransformation::hessian_d2Z_dX2()" << std::endl;
       abort_handler(-1);
     }
   }
