@@ -433,8 +433,9 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,
   int num_v = jacobian_xu.numRows();
   if (x_dvv == x_cv_ids) { // standard DVV
     if (fn_grad_x.length() != num_v) {
-      PCerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
-	    << "trans_grad_X_to_U()." << std::endl;
+      PCerr << "Error: inconsistent dimensions for fn_grad_x ("
+	    << fn_grad_x.length() << ") and jacobian_xu (" << num_v
+	    << ") in NatafTransformation::trans_grad_X_to_U()." << std::endl;
       abort_handler(-1);
     }
     if (fn_grad_u.length() != num_v)
@@ -498,24 +499,25 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
 		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv)
 {
   // Jacobian dimensions = length of random variables = model.cv()
-  int u_len = jacobian_ux.numRows();
+  int num_v = jacobian_ux.numRows();
   if (x_dvv == x_cv_ids) { // standard DVV
-    if (fn_grad_u.length() != u_len) {
-      PCerr << "Error: bad fn_grad_u dimension in NatafTransformation::"
-	    << "trans_grad_U_to_X()." << std::endl;
+    if (fn_grad_u.length() != num_v) {
+      PCerr << "Error: inconsistent dimensions for fn_grad_u ("
+	    << fn_grad_u.length() << ") and jacobian_ux (" << num_v
+	    << ") in NatafTransformation::trans_grad_U_to_X()." << std::endl;
       abort_handler(-1);
     }
-    if (fn_grad_x.length() != u_len)
-      fn_grad_x.size(u_len);
+    if (fn_grad_x.length() != num_v)
+      fn_grad_x.size(num_v);
     fn_grad_x.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_ux,
 		       fn_grad_u, 0.);
   }
   else { // non-standard DVV
-    RealVector fn_grad_u_trans(u_len), fn_grad_x_trans(u_len, false);
+    RealVector fn_grad_u_trans(num_v), fn_grad_x_trans(num_v, false);
     size_t dvv_index, num_deriv_vars = x_dvv.size();
-    SizetArray dvv_index_array(u_len);
+    SizetArray dvv_index_array(num_v);
     // extract relevant DVV components from fn_grad_u
-    for (int i=0; i<u_len; ++i) {
+    for (int i=0; i<num_v; ++i) {
       dvv_index_array[i] = dvv_index = find_index(x_dvv, x_cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_u_trans[i] = fn_grad_u(dvv_index);
@@ -526,7 +528,7 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     // copy relevant DVV components into fn_grad_x
     if (fn_grad_x.length() != num_deriv_vars)
       fn_grad_x.size(num_deriv_vars);
-    for (int i=0; i<u_len; ++i) {
+    for (int i=0; i<num_v; ++i) {
       dvv_index = dvv_index_array[i];
       if (dvv_index != _NPOS)
 	fn_grad_x(dvv_index) = fn_grad_x_trans[i];
@@ -1394,8 +1396,9 @@ hessian_d2U_dX2(const RealVector& x_vars, SizetMultiArrayConstView x_cv_ids,
     RealSolver factor_inverter;
     RealMatrix inv_chol_factor = corrCholeskyFactorZ; // copy
     factor_inverter.setMatrix( Teuchos::rcp(&inv_chol_factor, false) );
-    factor_inverter.invert(); // L^{-1} in place
-    // *** TO DO: helper that includes equilibration, solveToRefined, ...
+    // equilibration can be applied during factorization but the resulting
+    // inverse is equilibrated and requires additional processing
+    factor_inverter.invert(); // L^{-1} in place, no equilibration
 
     if (hessian_ux.size() != num_v)
       hessian_ux.resize(num_v);
