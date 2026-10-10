@@ -89,6 +89,8 @@ public:
   static Real pdf(Real x, Real alpha, Real beta);
   static Real cdf(Real x, Real alpha, Real beta);
 
+  static Real inverse_cdf(Real p_cdf, Real alpha, Real beta);
+
   static void moments_from_params(Real alpha, Real beta,
 				  Real& mean, Real& std_dev);
 
@@ -355,6 +357,15 @@ inline Real FrechetRandomVariable::pdf(Real x, Real alpha, Real beta)
 
 inline Real FrechetRandomVariable::cdf(Real x, Real alpha, Real beta)
 { return std::exp(-std::pow(beta/x, alpha)); }
+
+
+inline Real FrechetRandomVariable::
+inverse_cdf(Real p_cdf, Real alpha, Real beta)
+{
+  // p = std::exp(-std::pow(beta/x, alpha))
+  // beta/x = std::pow( -log p, 1/alpha)
+  return beta * std::pow(-std::log(p_cdf), -1./alpha);
+}
 
 
 inline void FrechetRandomVariable::

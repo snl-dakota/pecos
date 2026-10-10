@@ -88,6 +88,8 @@ public:
   static Real pdf(Real x, Real alpha, Real beta);
   static Real cdf(Real x, Real alpha, Real beta);
 
+  static Real inverse_cdf(Real p_cdf, Real alpha, Real beta);
+
   static void moments_from_params(Real alpha, Real beta,
 				  Real& mean, Real& std_dev);
 
@@ -367,6 +369,15 @@ inline Real WeibullRandomVariable::cdf(Real x, Real alpha, Real beta)
   return bmth::cdf(weibull1, x);
   // avoid numerical probs when exp()~1
   //return -std::expm1(-std::pow(x/beta, alpha));
+}
+
+
+inline Real WeibullRandomVariable::
+inverse_cdf(Real p_cdf, Real alpha, Real beta)
+{
+  weibull_dist weibull1(alpha, beta);
+  return bmth::quantile(weibull1, p_cdf);
+  //return beta * std::pow(-bmth::log1p(-p), 1./alpha);
 }
 
 
