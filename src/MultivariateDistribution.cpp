@@ -298,6 +298,20 @@ pull_distribution_parameters(const MultivariateDistribution& mv_dist)
 
 
 void MultivariateDistribution::
+pull_active_distribution_parameters(const MultivariateDistribution& mv_dist)
+{
+  if (mvDistRep)
+    mvDistRep->pull_active_distribution_parameters(mv_dist);
+  else { // forward to letter
+    PCerr << "Error: pull_active_distribution_parameters("
+	  << "MultivariateDistribution) not supported for this "
+	  << "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::
 pull_distribution_parameters(const MultivariateDistribution& mv_dist,
 			     const StringArray& pull_labels,
 			     const StringArray& push_labels)
@@ -308,6 +322,23 @@ pull_distribution_parameters(const MultivariateDistribution& mv_dist,
     PCerr << "Error: pull_distribution_parameters(MultivariateDistribution, "
 	  << "StringArray, StringArray)\n       not supported for this "
 	  <<  "multivariate distribution type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void MultivariateDistribution::
+pull_active_distribution_parameters(const MultivariateDistribution& mv_dist,
+				    const StringArray& pull_labels,
+				    const StringArray& push_labels)
+{
+  if (mvDistRep)
+    mvDistRep->
+      pull_active_distribution_parameters(mv_dist, pull_labels, push_labels);
+  else { // forward to letter
+    PCerr << "Error: pull_active_distribution_parameters(Multivariate"
+	  << "Distribution, StringArray, StringArray)\n       not supported "
+	  << "for this multivariate distribution type." << std::endl;
     abort_handler(-1);
   }
 }
