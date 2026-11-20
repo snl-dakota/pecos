@@ -56,34 +56,26 @@ public:
   /// set ranVarTypes[i]
   void random_variable_type(short rv_type, size_t i);
 
-  // BMA TODO: Review why these don't follow typical letter/envelope
-  // pattern. Left them for now...
-
-  /// pull non-standardized distribution parameters from pull_mvd
+  /// pull mutable distribution parameters from pull_mvd
   void pull_distribution_parameters(const MultivariateDistribution& pull_mvd);
-  /// pull non-standardized distribution parameters from pull_mvd_rep
-  void pull_distribution_parameters
-  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep);
+  /// pull mutable distribution parameters from pull_mvd for active variables
+  void pull_active_distribution_parameters(
+    const MultivariateDistribution& pull_mvd);
 
-  /// pull non-standardized distribution parameters from pull_mvd, aligning
+  /// pull mutable distribution parameters from pull_mvd, aligning
   /// variables based on label lookups
   void pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
     const StringArray& pull_labels, const StringArray& push_labels);
-  /// pull non-standardized distribution parameters from pull_mvd_rep, aligning
-  /// variables based on label lookups
-  void pull_distribution_parameters
-  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
-   const StringArray& pull_labels, const StringArray& push_labels);
+  /// pull mutable distribution parameters from pull_mvd for active
+  /// variables, aligning variables based on label lookups
+  void pull_active_distribution_parameters(
+    const MultivariateDistribution& pull_mvd, const StringArray& pull_labels,
+    const StringArray& push_labels);
 
-  /// pull non-standardized distribution parameters for a particular
-  /// random variable from pull_mvd
+  /// pull mutable distribution parameters (i.e. not fixed due to
+  /// standardization) for a particular random variable from pull_mvd
   void pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
 				    size_t pull_index, size_t push_index);
-  /// pull non-standardized distribution parameters for a particular
-  /// random variable from pull_mvd_rep
-  void pull_distribution_parameters
-  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
-   size_t pull_index, size_t push_index);
 
   /// return activeVars
   const BitArray& active_variables() const;
@@ -472,52 +464,54 @@ correlation_matrix(const RealSymMatrix& corr)
 
 /** For consistent random variable ordering. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters
-(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep)
+pull_distribution_parameters(const MultivariateDistribution& pull_mvd)
 {
   size_t v, num_rv = ranVarTypes.size();
   for (v=0; v<num_rv; ++v)
-    pull_distribution_parameters(pull_mvd_rep, v, v);
+    pull_distribution_parameters(pull_mvd, v, v);
 }
 
 
+/** For consistent random variable ordering. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution& pull_mvd)
-{ pull_distribution_parameters(pull_mvd.multivar_dist_rep()); }
+pull_active_distribution_parameters(const MultivariateDistribution& pull_mvd)
+{
+  size_t v, num_rv = ranVarTypes.size();
+  for (v=0; v<num_rv; ++v)
+    if (activeVars[v])
+      pull_distribution_parameters(pull_mvd, v, v);
+}
 
 
 /** For potentially inconsistent random variable ordering that requires
     a lookup. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters
-(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
- const StringArray& pull_labels, const StringArray& push_labels)
+pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
+			     const StringArray& pull_labels,
+			     const StringArray& push_labels)
 {
   size_t v, num_rv = ranVarTypes.size();
   for (v=0; v<num_rv; ++v) {
     size_t push_index = find_index(push_labels, pull_labels[v]);
     if (push_index != _NPOS)
-      pull_distribution_parameters(pull_mvd_rep, v, push_index);
+      pull_distribution_parameters(pull_mvd, v, push_index);
   }
 }
 
 
+/** For consistent random variable ordering. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
-			     const StringArray& pull_labels,
-			     const StringArray& push_labels)
+pull_active_distribution_parameters(const MultivariateDistribution& pull_mvd,
+				    const StringArray& pull_labels,
+				    const StringArray& push_labels)
 {
-  pull_distribution_parameters(pull_mvd.multivar_dist_rep(),
-			       pull_labels, push_labels);
-}
-
-
-inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
-			     size_t pull_index, size_t push_index)
-{
-  pull_distribution_parameters(pull_mvd.multivar_dist_rep(),
-			       pull_index, push_index);
+  size_t v, num_rv = ranVarTypes.size();
+  for (v=0; v<num_rv; ++v)
+    if (activeVars[v]) {
+      size_t push_index = find_index(push_labels, pull_labels[v]);
+      if (push_index != _NPOS)
+	pull_distribution_parameters(pull_mvd, v, push_index);
+    }
 }
 
 

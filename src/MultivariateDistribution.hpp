@@ -72,15 +72,24 @@ public:
   /// set corrMatrix
   virtual void correlation_matrix(const RealSymMatrix& corr);
 
-  /// pull non-standardized distribution parameters from mv_dist to this,
+  /// pull mutable distribution parameters from mv_dist to this,
   /// assuming a consistent variable ordering
-  virtual void
-    pull_distribution_parameters(const MultivariateDistribution& mv_dist);
-  /// pull non-standardized distribution parameters from mv_dist to this,
+  virtual void pull_distribution_parameters(
+    const MultivariateDistribution& mv_dist);
+  /// pull mutable distribution parameters for active variables from
+  /// mv_dist to this, assuming a consistent variable ordering
+  virtual void pull_active_distribution_parameters(
+    const MultivariateDistribution& mv_dist);
+  /// pull mutable distribution parameters from mv_dist to this,
   /// using label lookups to support potentially inconsistent ordering
-  virtual void
-    pull_distribution_parameters(const MultivariateDistribution& mv_dist,
-      const StringArray& pull_labels, const StringArray& push_labels);
+  virtual void pull_distribution_parameters(
+    const MultivariateDistribution& mv_dist, const StringArray& pull_labels,
+    const StringArray& push_labels);
+  /// pull mutable distribution parameters for active variables from mv_dist to
+  /// this, using label lookups to support potentially inconsistent ordering
+  virtual void pull_active_distribution_parameters(
+    const MultivariateDistribution& mv_dist, const StringArray& pull_labels,
+    const StringArray& push_labels);
 
   /// return marginal means,standard deviations for multivariate distribution
   virtual RealRealPairArray moments() const;

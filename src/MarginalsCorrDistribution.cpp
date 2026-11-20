@@ -91,16 +91,26 @@ void MarginalsCorrDistribution::initialize_correlations()
 }
 
 
+/*
+void MarginalsCorrDistribution::
+pull_standard_distribution_parameters(const MultivariateDistribution& pull_mvd,
+                                      size_t pull_index, size_t push_index)
+{
+  pull_distribution_parameters(pull_mvd, pull_index, push_index, false);
+}
+*/
+
+
 /** For general random variable ordering (e.g., NestedModel mappings). */
 void MarginalsCorrDistribution::
-pull_distribution_parameters
-(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
- size_t pull_index, size_t push_index)
+pull_distribution_parameters(const MultivariateDistribution& pull_mvd,
+			     size_t pull_index, size_t push_index)//,
+                           //bool expanded_dist_param_set = true)
 {
   RandomVariable&       push_rv = randomVars[push_index];
-  const RandomVariable& pull_rv = pull_mvd_rep->random_variable(pull_index);
+  const RandomVariable& pull_rv = pull_mvd.random_variable(pull_index);
   short push_type = ranVarTypes[push_index],
-        pull_type = pull_mvd_rep->random_variable_type(pull_index);
+        pull_type = pull_mvd.random_variable_type(pull_index);
   switch (push_type) {
 
   // push RV are fully standardized: no updates to perform
@@ -120,7 +130,7 @@ pull_distribution_parameters
     break;
   }
 
-  // push RV are non-standard, pull all non-standard data from rv_in
+  // push RV are non-standard, pull mutable data from pull_rv
   default:
     switch (pull_type) {
     // pull RV are fully standardized: no data to pull
@@ -142,7 +152,15 @@ pull_distribution_parameters
 
     // pull and push RV are non-standardized; copy all params
     default:
-      push_rv.copy_parameters(pull_rv);                         break;
+      //if (expanded_dist_param_set)
+      if (pull_type == push_type)
+	push_rv.copy_parameters(pull_rv);
+      else {
+	PCerr << "Error: inconsistent types in MarginalsCorrDistribution::"
+	      << "pull_distribution_parameters()." << std::endl;
+	abort_handler(-1);
+      }
+      break;
     }
     break;
   }
@@ -159,7 +177,7 @@ copy_rep(std::shared_ptr<MultivariateDistribution> source_rep)
     std::static_pointer_cast<MarginalsCorrDistribution>(source_rep);
   initialize_types(mcd_rep->ranVarTypes, mcd_rep->activeVars);
   initialize_correlations(mcd_rep->corrMatrix, mcd_rep->activeCorr);
-  pull_distribution_parameters(source_rep);
+  pull_distribution_parameters(*source_rep);
 }
 
 

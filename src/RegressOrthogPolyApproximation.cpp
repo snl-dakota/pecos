@@ -124,8 +124,10 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
   CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION) ? -1. :
     data_rep->expConfigOptions.convergenceTol;
   CSOpts.verbosity = std::max(0, data_rep->expConfigOptions.outputLevel - 1);
-  if ( data_rep->expConfigOptions.maxSolverIterations != SZ_MAX )
-    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxSolverIterations;
+  size_t max_solver_iter = data_rep->expConfigOptions.maxSolverIterations;
+  int u_bnd = std::numeric_limits<int>::max();
+  CSOpts.maxNumIterations = (max_solver_iter > (size_t)u_bnd) ?
+    u_bnd : (int)max_solver_iter;
 
   // define global flags
   // Previous default assignments + method overrides simplifies this logic

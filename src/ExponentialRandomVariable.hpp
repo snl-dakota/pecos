@@ -111,6 +111,7 @@ public:
 
   static Real pdf(Real x, Real beta);
   static Real cdf(Real x, Real beta);
+  static Real inverse_cdf(Real p_cdf, Real beta);
 
   // TODO: Remove in favor of base class impl?
   template <typename Engine> 
@@ -418,6 +419,15 @@ inline Real ExponentialRandomVariable::inverse_std_cdf(Real p_cdf)
   if (p_cdf <= 0.)      return 0.;
   else if (p_cdf >= 1.) return std::numeric_limits<Real>::infinity();
   else return -bmth::log1p(-p_cdf);
+}
+
+
+inline Real ExponentialRandomVariable::inverse_cdf(Real p_cdf, Real beta)
+{
+  // p_cdf = 1 - exp(-x/beta)  -->  -x/beta = log(1-p_cdf)
+  if (p_cdf <= 0.)      return 0.;
+  else if (p_cdf >= 1.) return std::numeric_limits<Real>::infinity();
+  else return -beta * bmth::log1p(-p_cdf);
 }
 
 

@@ -90,6 +90,8 @@ public:
   static Real pdf(Real x, Real alpha, Real beta);
   static Real cdf(Real x, Real alpha, Real beta);
 
+  static Real inverse_cdf(Real p_cdf, Real alpha, Real beta);
+
   static void moments_from_params(Real alpha, Real beta,
 				  Real& mean, Real& std_dev);
 
@@ -402,6 +404,15 @@ inline Real GumbelRandomVariable::cdf(Real x, Real alpha, Real beta)
     //extreme_value_dist gumbel1(beta, 1./alpha); // location, scale
     //return bmth::cdf(gumbel1, x);
   }
+}
+
+
+inline Real GumbelRandomVariable::inverse_cdf(Real p_cdf, Real alpha, Real beta)
+{
+  // p = std::exp(-std::exp(alpha*(beta-x)))
+
+  //return bmth::quantile(*gumbelDist, p_cdf);
+  return beta - std::log(-std::log(p_cdf)) / alpha;
 }
 
 

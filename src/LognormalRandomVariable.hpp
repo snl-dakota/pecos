@@ -99,6 +99,13 @@ public:
   static void params_from_moments(Real mean, Real std_dev, Real& lambda,
 				  Real& zeta);
 
+  static void std_deviations_from_error_factors(const RealVector& means,
+						const RealVector& err_facts,
+						RealVector& std_devs);
+  static void params_from_moments(const RealVector& means,
+				  const RealVector& std_devs,
+				  RealVector& lambdas, RealVector& zetas);
+
 protected:
 
   //
@@ -505,6 +512,29 @@ params_from_moments(Real mean, Real std_dev, Real& lambda, Real& zeta)
   zeta_sq_from_moments(mean, std_dev, zeta_sq);
   lambda = std::log(mean) - zeta_sq/2.;
   zeta   = std::sqrt(zeta_sq);
+}
+
+inline void LognormalRandomVariable::
+std_deviations_from_error_factors(const RealVector& means,
+				  const RealVector& err_facts,
+				  RealVector& std_devs)
+{
+  size_t i, n = means.length();
+  if (std_devs.length() != n) std_devs.sizeUninitialized(n);
+  for (i=0; i<n; ++i)
+    std_deviation_from_error_factor(means[i], err_facts[i], std_devs[i]);
+}
+
+
+inline void LognormalRandomVariable::
+params_from_moments(const RealVector& means, const RealVector& std_devs,
+		    RealVector& lambdas, RealVector& zetas)
+{
+  size_t i, n = means.length();
+  if (lambdas.length() != n) lambdas.sizeUninitialized(n);
+  if (zetas.length()   != n)   zetas.sizeUninitialized(n);
+  for (i=0; i<n; ++i)
+    params_from_moments(means[i], std_devs[i], lambdas[i], zetas[i]);
 }
 
 } // namespace Pecos
