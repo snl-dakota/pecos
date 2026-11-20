@@ -2211,7 +2211,13 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
     for (j=0; j<num_v; ++j)
       points(j,i) = c_vars[j];
   }
-  //points.print(std::cout);
+
+#ifdef DEBUG
+  PCout << "A:\n";       write_data(PCout, A);
+  PCout << "B:\n";       write_data(PCout, A);
+  PCout << "points:\n";  write_data(PCout, points);
+  PCout << "multi-index:\n" << multi_index;
+#endif // DEBUG
 }
 
 
